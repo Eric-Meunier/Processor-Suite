@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gpx
+ xmlns="http://www.topografix.com/GPX/1/1"
+ creator="OziExplorer Version 3956f - http://www.oziexplorer.com"
+ version="1.1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+<metadata>
+ <time>2021-06-02T23:47:32Z</time>
+ <bounds minlat="52.241790" minlon="-72.155640" maxlat="52.336887" maxlon="-72.046641"/>
+</metadata>
+<wpt lat="52.3226886" lon="-72.1434999">
+ <time>2021-04-12T01:58:42.092Z</time>
+ <name>800 0</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3333235" lon="-72.1325672">
+ <time>2021-04-12T02:02:24.371Z</time>
+ <name>800 1400</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3226886" lon="-72.1434999">
+ <time>2021-06-02T07:59:09.546Z</time>
+ <name>800 0</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3333235" lon="-72.1325672">
+ <time>2021-06-02T07:59:09.546Z</time>
+ <name>800 1400</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3268680" lon="-72.1391890">
+ <ele>492.861603</ele>
+ <time>2021-05-31T16:16:26.000Z</time>
+ <name>800 550</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3272380" lon="-72.1388000">
+ <ele>494.385590</ele>
+ <time>2021-05-31T16:20:34.002Z</time>
+ <name>800 600</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3276270" lon="-72.1384160">
+ <ele>493.776001</ele>
+ <time>2021-05-31T16:21:52.004Z</time>
+ <name>800 650</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3291690" lon="-72.1368650">
+ <ele>492.556793</ele>
+ <time>2021-05-31T16:30:45.999Z</time>
+ <name>800 850</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3295330" lon="-72.1364620">
+ <ele>498.043213</ele>
+ <time>2021-05-31T16:32:36.004Z</time>
+ <name>800 900</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3299100" lon="-72.1360800">
+ <ele>500.481598</ele>
+ <time>2021-05-31T16:35:26.998Z</time>
+ <name>800 950</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3302990" lon="-72.1356990">
+ <ele>502.920013</ele>
+ <time>2021-05-31T16:37:48.003Z</time>
+ <name>800 1000</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3306420" lon="-72.1353240">
+ <ele>503.834412</ele>
+ <time>2021-05-31T16:39:44.997Z</time>
+ <name>800 1050</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3310370" lon="-72.1349450">
+ <ele>504.748810</ele>
+ <time>2021-05-31T16:41:20.996Z</time>
+ <name>800 1100</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3314190" lon="-72.1345210">
+ <ele>504.748810</ele>
+ <time>2021-05-31T16:43:05.998Z</time>
+ <name>800 1150</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3317920" lon="-72.1341550">
+ <ele>503.529602</ele>
+ <time>2021-05-31T16:44:57.998Z</time>
+ <name>800 1200</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3321840" lon="-72.1337470">
+ <ele>500.786407</ele>
+ <time>2021-05-31T16:46:56.997Z</time>
+ <name>800 1250</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3325460" lon="-72.1333930">
+ <ele>497.738403</ele>
+ <time>2021-05-31T16:48:59.003Z</time>
+ <name>800 1300</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3329490" lon="-72.1329480">
+ <ele>492.252014</ele>
+ <time>2021-05-31T16:50:48.998Z</time>
+ <name>800 1350</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3280386" lon="-72.1380496">
+ <ele>493.166412</ele>
+ <time>2021-06-02T23:36:14.884Z</time>
+ <name>800 700</name>
+ <sym>Flag, Red</sym>
+</wpt>
+</gpx>

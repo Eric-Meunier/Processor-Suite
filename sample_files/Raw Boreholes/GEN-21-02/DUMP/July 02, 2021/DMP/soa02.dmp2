@@ -1,0 +1,180 @@
+name: soa02
+Boot_Block_Release_Date: Mar 19, 2020
+Boot_Block_Version: 3.02
+Bootloader_Release_Date: Sep 24, 2019
+Bootloader_Version: 3.00
+Channel_Config: 60Hz Standard
+Channel_Config_Index: 1
+Channel_Number: -20	-19	-18	-17	-16	-15	-14	-13	-12	-11	-10	-9	-8	-7	-6	-5	-4	-3	-2	-1	0	1	2	3	4	5	6	7	8	9	10	11	12	13	14	15	16	17	18	19	20	21	22	23	24	25	26	27	28	29	30	31	32	33	34	35	36	37	38	39	40	41	42	43	44	45
+Channel_Time: -2000	-1900	-1800	-1700	-1600	-1500	-1400	-1300	-1200	-1100	-1000	-900	-800	-700	-600	-500	-400	-300	-200	-100	0	50	60	80	110	150	200	270	360	480	640	850	1130	1500	1990	2640	3510	4660	6190	8220	10920	14400	14960	15160	15210	15220	15240	15270	15310	15360	15430	15520	15640	15800	16010	16290	16660	17150	17800	18670	19820	21350	23380	26080	29560	31130	31330
+Client_Name: laurentia
+Clock_Version: 1.07
+Coil_Area: 3.150000E+3
+Crone_Digital_PEM_Receiver: 304
+Current: 20
+Date: 7/2/2021
+File_Name: soa02
+File_Notes: 
+Firmware_Release_Date: May 26, 2020
+Firmware_Version: 3.02
+Grid_Name: belvais
+Last_Group: 2
+Last_Reading: 4
+Line_Hole_Name: gen-21-02
+Loop_Length: 200
+Loop_Name: 02-01
+Loop_Width: 300
+MCU_ID: 17492
+Number_Of_Channels: 66
+Off_Time_Last_Channel: 41
+Operator_Name: guy
+Ramp_Length: 1500
+Ramp_Length_Index: 3
+Rejection_Threshold_Base_[pT]: 5E+3
+Sample: 6667
+Sensor_Number: 58
+Software_Release_Date: Nov 19, 2020
+Software_Version: 3.03
+Survey_Type: BH XY Fast RAD
+Survey_Type_Index: 12
+Sync_Type: Crystal Clock
+Sync_Type_Index: 0
+Time_Base: 16.66 ms
+Time_Base_Index: 2
+Tool_Number: 114
+Tx_Delay: 500 
+ZTS_Offset: =Tx_Delay+Ramp_Length+ZTS_Adjust
+Units: Tesla/s
+Azimuth_Ref: 0.000000E+0
+Declination: 0.000000E+0
+Total_Readings:4
+$$
+
+name: 0,-,R1
+Clock_Time: 8296
+Control_Sensor: Magnetometer
+Date_Time: 7/2/2021,9:12:02
+Good_Bad_Array: 
+GPS: 
+Group: 1
+Number_of_Components: RAD XX YY RAD
+Number_of_Components_Index: 4
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: -1.251000E-2	1.335500E-1	-5.501800E-1	-9.753900E-1	1.164000E-2	-1.877400E-1	0.000000E+0
+Reading_Notes: 
+Reading_Number: 1
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 5
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 40
+ZTS_Offset: 2040
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 1.760948E+0
+Smart_Stacking: 2
+RAD_Post: -1.251000E-2	1.334100E-1	-5.502100E-1	-9.750900E-1	1.169000E-2	-1.871300E-1	0.000000E+0
+Deleted: F
+dataX: -1.835043E-8	-3.639892E-8	-2.890683E-8	-2.801270E-8	-2.311815E-8	-6.660623E-6	-1.962969E-5	-2.006019E-5	-2.014503E-5	-2.000332E-5	-1.973983E-5	-1.948778E-5	-1.922882E-5	-1.892612E-5	-1.864343E-5	-1.833894E-5	-1.800766E-5	-1.764676E-5	-1.725846E-5	-1.649813E-5	-9.980815E-6	-4.774889E-6	-3.286029E-6	-1.677630E-6	-5.440279E-7	-8.343420E-8	5.270787E-8	8.482506E-8	1.127037E-7	9.914553E-8	1.291571E-7	1.218288E-7	1.199699E-7	1.294190E-7	1.153819E-7	9.823129E-8	8.491988E-8	6.339966E-8	4.643170E-8	3.273044E-8	2.187974E-8	1.952519E-8	2.598520E-8	-2.051571E-6	-1.176993E-5	-2.035288E-5	-3.023150E-5	-3.564793E-5	-3.648878E-5	-3.408529E-5	-3.010494E-5	-2.541727E-5	-2.029647E-5	-1.507397E-5	-1.020014E-5	-6.111992E-6	-3.093497E-6	-1.245721E-6	-3.284732E-7	-7.205776E-10	7.514369E-8	7.734672E-8	6.141754E-8	4.778634E-8	3.485488E-8	3.755202E-8
+
+name: 0,-,R1
+Clock_Time: 8301
+Control_Sensor: Magnetometer
+Date_Time: 7/2/2021,9:12:07
+Good_Bad_Array: 
+GPS: 
+Group: 1
+Number_of_Components: RAD XX YY RAD
+Number_of_Components_Index: 4
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: -1.251000E-2	1.335500E-1	-5.501800E-1	-9.753900E-1	1.164000E-2	-1.877400E-1	0.000000E+0
+Reading_Notes: 
+Reading_Number: 2
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 10
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 40
+ZTS_Offset: 2040
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 1.760948E+0
+Smart_Stacking: 2
+RAD_Post: -1.251000E-2	1.334100E-1	-5.502100E-1	-9.750900E-1	1.169000E-2	-1.871300E-1	0.000000E+0
+Deleted: F
+dataY: 5.897294E-8	4.608291E-8	-1.004480E-8	-4.054180E-9	6.219212E-8	-2.515921E-5	-9.103863E-5	-9.086429E-5	-9.173136E-5	-9.140429E-5	-9.061074E-5	-8.965100E-5	-8.861205E-5	-8.754941E-5	-8.639535E-5	-8.516809E-5	-8.386112E-5	-8.244055E-5	-8.074457E-5	-7.775933E-5	-5.229143E-5	-2.648156E-5	-1.760111E-5	-9.216783E-6	-4.765164E-6	-3.079552E-6	-2.443277E-6	-2.079853E-6	-1.811351E-6	-1.554708E-6	-1.318773E-6	-1.089807E-6	-8.695858E-7	-6.581274E-7	-4.758812E-7	-3.457734E-7	-2.492107E-7	-1.790180E-7	-1.234095E-7	-8.328856E-8	-5.354089E-8	-2.377454E-8	-3.101972E-8	-6.320407E-6	-3.977145E-5	-7.763051E-5	-1.326710E-4	-1.657298E-4	-1.675530E-4	-1.554584E-4	-1.379149E-4	-1.173716E-4	-9.453519E-5	-7.104440E-5	-4.901301E-5	-3.034992E-5	-1.636520E-5	-7.579061E-6	-3.046748E-6	-1.160964E-6	-5.231224E-7	-2.865543E-7	-1.732094E-7	-9.703509E-8	-7.487859E-8	-1.141233E-7
+
+name: 90,-,R1
+Clock_Time: 8345
+Control_Sensor: Magnetometer
+Date_Time: 7/2/2021,9:12:51
+Good_Bad_Array: 
+GPS: 
+Group: 2
+Number_of_Components: RAD XX YY RAD
+Number_of_Components_Index: 4
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: -2.549000E-2	1.336900E-1	5.142000E-2	-1.134600E-1	5.466400E-1	9.855400E-1	0.000000E+0
+Reading_Notes: 
+Reading_Number: 3
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 5
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 40
+ZTS_Offset: 2040
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 1.146201E-1
+Smart_Stacking: 2
+RAD_Post: -2.522000E-2	1.330700E-1	5.045000E-2	-1.126800E-1	5.478700E-1	9.846000E-1	0.000000E+0
+Deleted: F
+dataX: -2.978139E-8	-7.217413E-8	-2.033441E-8	-4.737931E-8	-1.137162E-7	2.581283E-5	9.249856E-5	9.197648E-5	9.286792E-5	9.253879E-5	9.170323E-5	9.075359E-5	8.971505E-5	8.859755E-5	8.747666E-5	8.622495E-5	8.486354E-5	8.341268E-5	8.171608E-5	7.866347E-5	5.266368E-5	2.620046E-5	1.720800E-5	8.910079E-6	4.645284E-6	3.095652E-6	2.442067E-6	2.080491E-6	1.798531E-6	1.548353E-6	1.301189E-6	1.088165E-6	8.669187E-7	6.478244E-7	4.934641E-7	3.542293E-7	2.393500E-7	1.534498E-7	1.094344E-7	6.444167E-8	4.849479E-8	5.542477E-8	6.669535E-8	6.485255E-6	4.071275E-5	7.958247E-5	1.359176E-4	1.688503E-4	1.697722E-4	1.573363E-4	1.395554E-4	1.186687E-4	9.547244E-5	7.182325E-5	4.960234E-5	3.061906E-5	1.652927E-5	7.649332E-6	3.052118E-6	1.183846E-6	5.062582E-7	2.737736E-7	1.548721E-7	9.427505E-8	7.778162E-8	5.961062E-8
+
+name: 90,-,R1
+Clock_Time: 8349
+Control_Sensor: Magnetometer
+Date_Time: 7/2/2021,9:12:55
+Good_Bad_Array: 
+GPS: 
+Group: 2
+Number_of_Components: RAD XX YY RAD
+Number_of_Components_Index: 4
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: -2.549000E-2	1.336900E-1	5.142000E-2	-1.134600E-1	5.466400E-1	9.855400E-1	0.000000E+0
+Reading_Notes: 
+Reading_Number: 4
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 10
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 40
+ZTS_Offset: 2040
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 1.146201E-1
+Smart_Stacking: 2
+RAD_Post: -2.522000E-2	1.330700E-1	5.045000E-2	-1.126800E-1	5.478700E-1	9.846000E-1	0.000000E+0
+Deleted: F
+dataY: -3.621497E-8	-2.025080E-8	-3.203519E-8	-2.806155E-8	-3.931648E-8	-3.027439E-6	-1.434305E-5	-1.339775E-5	-1.346768E-5	-1.333989E-5	-1.315190E-5	-1.293914E-5	-1.274888E-5	-1.252882E-5	-1.233268E-5	-1.211269E-5	-1.190873E-5	-1.164784E-5	-1.137152E-5	-1.095610E-5	-7.755349E-6	-3.240393E-6	-1.486236E-6	-9.816495E-8	2.416133E-7	2.018512E-7	2.439543E-7	2.510572E-7	2.501776E-7	2.294637E-7	2.056949E-7	1.948494E-7	1.927093E-7	1.657134E-7	1.455711E-7	1.297538E-7	9.948095E-8	7.602724E-8	5.927750E-8	3.906196E-8	2.398660E-8	2.423559E-8	2.054199E-8	-3.159908E-7	-3.371128E-6	-9.188277E-6	-2.002067E-5	-2.640539E-5	-2.544627E-5	-2.292109E-5	-2.011775E-5	-1.692618E-5	-1.345236E-5	-9.919769E-6	-6.647441E-6	-3.905686E-6	-1.909495E-6	-6.978108E-7	-1.137074E-7	7.689822E-8	1.131954E-7	9.977560E-8	7.472400E-8	5.613904E-8	4.348350E-8	4.014728E-8
+

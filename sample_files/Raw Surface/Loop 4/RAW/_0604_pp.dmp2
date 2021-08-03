@@ -1,0 +1,114 @@
+name: pp
+Boot_Block_Release_Date: Mar 19, 2020
+Boot_Block_Version: 3.02
+Bootloader_Release_Date: Sep 24, 2019
+Bootloader_Version: 3.00
+Channel_Config: PP
+Channel_Config_Index: 0
+Channel_Number: -9	-8	-7	-6	-5	-4	-3	-2	-1	0	1	2	3	4	5	6	7	8	9
+Channel_Time: -90	-80	-70	-60	-50	-40	-30	-20	-10	0	10	20	30	40	50	60	70	80	90	100
+Client_Name: nantou explo
+Clock_Version: 1.10
+Coil_Area: 4.000000E+3
+Crone_Digital_PEM_Receiver: 401
+Current: 10
+Date: 6/4/2021
+File_Name: pp
+File_Notes: 
+Firmware_Release_Date: May 26, 2020
+Firmware_Version: 3.02
+Grid_Name: perkoa south trend
+Last_Group: 0
+Last_Reading: 2
+Line_Hole_Name: tx
+Loop_Length: 2000
+Loop_Name: loop4
+Loop_Width: 2000
+MCU_ID: 17492
+Number_Of_Channels: 19
+Off_Time_Last_Channel: 20
+Operator_Name: denis ilboudo
+Ramp_Length: 1500
+Ramp_Length_Index: 3
+Rejection_Threshold_Base_[pT]: 5E+2
+Sample: 120000
+Sensor_Number: 167
+Software_Release_Date: Nov 19, 2020
+Software_Version: 3.03
+Survey_Type: SF Coil
+Survey_Type_Index: 0
+Sync_Type: Crystal Clock
+Sync_Type_Index: 0
+Time_Base: 300 ms
+Time_Base_Index: 8
+Tool_Number: 0
+Tx_Delay: 500 
+ZTS_Offset: =Tx_Delay+Ramp_Length+ZTS_Adjust
+Units: Tesla/s
+Azimuth_Ref: 0.000000E+0
+Declination: 0.000000E+0
+Total_Readings:2
+$$
+
+name: 0E,-,R1
+Clock_Time: 928
+Control_Sensor: Magnetometer
+Date_Time: 6/4/2021,7:06:50 AM
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 1
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 0
+ZTS_Offset: 2000
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -1.123458E-5	-1.120882E-5	-1.118100E-5	-1.114932E-5	-1.111348E-5	-1.107271E-5	-1.103044E-5	-1.098518E-5	-1.093063E-5	-1.085739E-5	-1.074949E-5	-1.059124E-5	-1.037854E-5	-1.010849E-5	-9.783676E-6	-9.404233E-6	-8.973130E-6	-8.493925E-6	-7.968552E-6
+
+name: 50E,-,R1
+Clock_Time: 21099
+Control_Sensor: Magnetometer
+Date_Time: 6/4/2021,12:43:01 PM
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 2
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 0
+ZTS_Offset: 2000
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -1.118138E-5	-1.115492E-5	-1.112547E-5	-1.109147E-5	-1.105059E-5	-1.100809E-5	-1.096697E-5	-1.093246E-5	-1.089762E-5	-1.084511E-5	-1.075288E-5	-1.060832E-5	-1.040990E-5	-1.016111E-5	-9.867655E-6	-9.531445E-6	-9.147563E-6	-8.708998E-6	-8.216706E-6
+

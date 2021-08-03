@@ -568,17 +568,18 @@ class SurveyLine(BaseGPS):
         gps = sorted(self.df.to_numpy(), key=lambda x: x[-1])  # Sorted by station number
         azimuths = []
         for ind, point in enumerate(gps):
+            station = point[-1]
             # Repeat the last azimuth for the last point
             if ind == len(gps) - 1:
-                azimuths.append(azimuths[-1])
+                azimuths.append((station, azimuths[-1][-1]))
                 break
 
             next_point = gps[ind + 1]
             angle = math.degrees(math.atan2(next_point[1] - point[1], next_point[0] - point[0]))
             azimuth = 90 - angle
-            azimuths.append(azimuth)
+            azimuths.append((station, azimuth))
 
-        return azimuths
+        return pd.DataFrame.from_records(azimuths, columns=["Station", "Azimuth"])
 
 
 class BoreholeCollar(BaseGPS):

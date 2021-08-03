@@ -1056,60 +1056,103 @@ class PEMFile:
             depths = segments.Depth
             azimuths = segments.Azimuth
             geometry = BoreholeGeometry(self.collar, self.segments)
-            proj = geometry.get_projection(stations=self.get_stations(converted=True))
-        else:
-            azimuths = self.line.get_azimuths()
+            proj = geometry.get_projection(stations=stations)
 
-        # Use the segment azimuth and dip of the next segment (as per Bill's cross)
-        # Find the next station. If it's the last station, re-use the last station.
-        for station in stations:
-            station_ind = stations.index(station)
-            # Re-use the last station if it's the current index
-            if stations.index(station) == len(stations) - 1:
-                next_station = convert_station(station)
-            else:
-                next_station = convert_station(stations[station_ind + 1])
+            # Use the segment azimuth and dip of the next segment (as per Bill's cross)
+            # Find the next station. If it's the last station, re-use the last station.
+            for station in stations:
+                station_ind = stations.index(station)
+                convert_station(station)
 
-            # Calculate the dip and azimuth at the next station, interpolating in case the station
-            # is not in the segments.
-            if borehole:
+                # Re-use the last station if it's the current index
+                if stations.index(station) == len(stations) - 1:
+                    next_station = station
+                else:
+                    next_station = stations[station_ind + 1]
+
                 dip = np.interp(int(next_station), depths, dips)
                 azimuth = np.interp(int(next_station), depths, azimuths)
-
                 # Find the location in 3D space of the station
                 filt = proj.loc[:, 'Relative_depth'] == float(station)
                 x_pos, y_pos, z_pos = proj[filt].iloc[0]['Easting'], \
                                       proj[filt].iloc[0]['Northing'], \
                                       proj[filt].iloc[0]['Elevation']
-            else:
+
+                # Calculate the theoretical magnetic field strength of each component at that point (in nT/s)
+                Tx, Ty, Tz = mag_calc.calc_total_field(x_pos, y_pos, z_pos,
+                                                       amps=self.current,
+                                                       out_units='nT/s',
+                                                       ramp=self.ramp / 10 ** 6)
+                # Rotate the theoretical values into the same frame of reference used with boreholes/surface lines
+                rTx, rTy, rTz = R.from_euler('Z', -90, degrees=True).apply([Tx, Ty, Tz])
+
+                # Rotate the theoretical values by the azimuth/dip
+                r = R.from_euler('YZ', [90 - dip, azimuth], degrees=True)
+                rT = r.apply([rTx, rTy, rTz])  # The rotated theoretical values
+                pps.append(rT)
+
+        else:  # Surface survey
+            azimuths = self.line.get_azimuths()
+
+            for station in stations:
+                station = convert_station(station)
+
                 dip = 0
-                azimuth = np.interp(int(next_station), stations, azimuths)
+                azimuth = azimuths[azimuths.Station == station]
+                if azimuth.empty:
+                    logger.warning(f"{station} not in list of GPS stations")
+                    continue
+                azimuth = azimuth.iloc[0].Azimuth
 
                 filt = self.line.df.loc[:, 'Station'] == float(station)
                 x_pos, y_pos, z_pos = self.line.df[filt].iloc[0]['Easting'], \
                                       self.line.df[filt].iloc[0]['Northing'], \
                                       self.line.df[filt].iloc[0]['Elevation']
 
-            # Calculate the theoretical magnetic field strength of each component at that point (in nT/s)
-            Tx, Ty, Tz = mag_calc.calc_total_field(x_pos, y_pos, z_pos,
-                                                   amps=self.current,
-                                                   out_units='nT/s',
-                                                   ramp=self.ramp / 10 ** 6)
-            # Rotate the theoretical values into the same frame of reference used with boreholes/surface lines
-            rTx, rTy, rTz = R.from_euler('Z', -90, degrees=True).apply([Tx, Ty, Tz])
+                # Calculate the theoretical magnetic field strength of each component at that point (in nT/s)
+                Tx, Ty, Tz = mag_calc.calc_total_field(x_pos, y_pos, z_pos,
+                                                       amps=self.current,
+                                                       out_units='nT/s',
+                                                       ramp=self.ramp / 10 ** 6)
+                # Rotate the theoretical values into the same frame of reference used with boreholes/surface lines
+                rTx, rTy, rTz = R.from_euler('Z', -90, degrees=True).apply([Tx, Ty, Tz])
 
-            # Rotate the theoretical values by the azimuth/dip
-            if borehole:
-                r = R.from_euler('YZ', [90 - dip, azimuth], degrees=True)
-            else:
+                # Rotate the theoretical values by the azimuth/dip
                 r = R.from_euler('YZ', [dip, azimuth], degrees=True)
+                rT = r.apply([rTx, rTy, rTz])  # The rotated theoretical values
+                pps.append([station, rT[0], rT[1], rT[2]])
 
-            rT = r.apply([rTx, rTy, rTz])  # The rotated theoretical values
-            pps.append(rT)
-
-        df = pd.DataFrame.from_records(pps, columns=["X", "Y", "Z"])
-        df["Station"] = stations
+        df = pd.DataFrame.from_records(pps, columns=["Station", "X", "Y", "Z"])
         return df
+
+    def get_reversed_components(self):
+        """
+        Return which components may have the polarity reserved. File must have all GPS information.
+        :return: list of components
+        """
+        reversed_components = []
+        theory_pp_data = self.get_theory_pp().set_index("Station", drop=True)
+
+        if not theory_pp_data.empty:
+            for component in self.get_components():
+                pp_data = self.get_profile_data(component,
+                                                averaged=True,
+                                                converted=True,
+                                                ontime=True,
+                                                incl_deleted=True).loc[:, 0]
+
+                # Only include common stations. PP represents the measured data, XYZ are theoretical.
+                df = pd.concat([pp_data, theory_pp_data], axis=1).rename({0: 'PP'}, axis=1).dropna(axis=0)
+                theory_pp = df.loc[:, component].to_numpy()
+                pp = df.loc[:, 'PP'].to_numpy()
+
+                diff = sum(np.abs(theory_pp - pp))
+                reversed_diff = sum(np.abs(theory_pp - (pp * -1)))
+                # print(f"Component: {component}\nDiff: {diff}\nReversed Diff: {reversed_diff}\n")
+                if abs(reversed_diff) < abs(diff):
+                    logger.info(f"{self.filepath.name} {component} component may be reversed.")
+                    reversed_components.append(component)
+        return reversed_components
 
     def set_crs(self, crs):
         """
@@ -1337,24 +1380,24 @@ class PEMFile:
 
         return self
 
-    def remove_channels(self, n: [int]):
-        """
-        Remove n channels from the PEMFile
-        :return: PEM file object
-        """
-        logger.info(f"Removing channel(s) {n} for {self.filepath.name}.")
-
-        # Delete the channels from each reading
-        for i, r in enumerate(self.data.Reading):
-            self.data.Reading[i] = np.delete(r, n)
-
-        # Create a filter and update the channels table
-        self.channel_times.drop(n, inplace=True)
-        self.channel_times.reset_index(drop=True, inplace=True)
-        # Update the PEM file's number of channels attribute
-        self.number_of_channels = len(self.channel_times)
-
-        return self
+    # def remove_channels(self, n: [int]):
+    #     """
+    #     Remove n channels from the PEMFile
+    #     :return: PEM file object
+    #     """
+    #     logger.info(f"Removing channel(s) {n} for {self.filepath.name}.")
+    #
+    #     # Delete the channels from each reading
+    #     for i, r in enumerate(self.data.Reading):
+    #         self.data.Reading[i] = np.delete(r, n)
+    #
+    #     # Create a filter and update the channels table
+    #     self.channel_times.drop(n, inplace=True)
+    #     self.channel_times.reset_index(drop=True, inplace=True)
+    #     # Update the PEM file's number of channels attribute
+    #     self.number_of_channels = len(self.channel_times)
+    #
+    #     return self
 
     def scale_coil_area(self, coil_area):
         """
@@ -3628,10 +3671,12 @@ if __name__ == '__main__':
     # file = r"C:\_Data\2021\Iscaycruz\Borehole\LS-27-21-07\RAW\xy_0704.PEM"
     # pem_files = pem_g.get_pems(random=True, number=1)
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
-    pem_files = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")
+    # pem_files = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")
+    pem_files = pem_g.get_pems(folder="Raw Surface", subfolder=r"Loop 1\Final\Perkoa South", file="11200E.PEM")
 
     pem_file = pem_files[0]
-    pem_file.get_theory_pp()
+    # pem_file.get_theory_pp()
+    pem_file.get_reversed_components()
     # pem_file.rotate(method="unrotate")
     # pem_file.filepath = pem_file.filepath.with_name(pem_file.filepath.stem + "(unrotated)" + ".PEM")
     # pem_file.save()

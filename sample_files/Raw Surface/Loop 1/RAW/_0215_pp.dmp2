@@ -1,0 +1,145 @@
+name: pp
+Boot_Block_Release_Date: Mar 19, 2020
+Boot_Block_Version: 3.02
+Bootloader_Release_Date: Sep 24, 2019
+Bootloader_Version: 3.00
+Channel_Config: PP
+Channel_Config_Index: 0
+Channel_Number: -9	-8	-7	-6	-5	-4	-3	-2	-1	0	1	2	3	4	5	6	7	8	9
+Channel_Time: -90	-80	-70	-60	-50	-40	-30	-20	-10	0	10	20	30	40	50	60	70	80	90	100
+Client_Name: nantou exploration
+Clock_Version: 1.10
+Coil_Area: 4.000000E+3
+Crone_Digital_PEM_Receiver: 401
+Current: 9
+Date: 2/15/2021
+File_Name: pp
+File_Notes: 
+Firmware_Release_Date: May 26, 2020
+Firmware_Version: 3.02
+Grid_Name: perkoa south trend
+Last_Group: 0
+Last_Reading: 5
+Line_Hole_Name: tx
+Loop_Length: 2000
+Loop_Name: loop1
+Loop_Width: 2000
+MCU_ID: 17492
+Number_Of_Channels: 19
+Off_Time_Last_Channel: 20
+Operator_Name: denis ilboudo
+Ramp_Length: 1500
+Ramp_Length_Index: 3
+Rejection_Threshold_Base_[pT]: 5E+2
+Sample: 120000
+Sensor_Number: 167
+Software_Release_Date: Nov 19, 2020
+Software_Version: 3.03
+Survey_Type: SF Coil
+Survey_Type_Index: 0
+Sync_Type: Crystal Clock
+Sync_Type_Index: 0
+Time_Base: 300 ms
+Time_Base_Index: 8
+Tool_Number: 0
+Tx_Delay: 500 
+ZTS_Offset: =Tx_Delay+Ramp_Length+ZTS_Adjust
+Units: Tesla/s
+Azimuth_Ref: 0.000000E+0
+Declination: 0.000000E+0
+Total_Readings:3
+$$
+
+name: 10E,-,R1
+Clock_Time: 1848
+Control_Sensor: Magnetometer
+Date_Time: 2/15/2021,2:25:34 AM
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 64
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 3
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 0
+ZTS_Offset: 2000
+Number_of_Stacks_Acquired: 66
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -3.523141E-5	-3.512076E-5	-3.499975E-5	-3.486508E-5	-3.470890E-5	-3.451896E-5	-3.427554E-5	-3.394248E-5	-3.342654E-5	-3.252056E-5	-3.093177E-5	-2.845722E-5	-2.517307E-5	-2.142098E-5	-1.759303E-5	-1.392512E-5	-1.047151E-5	-7.221217E-6	-4.209612E-6
+
+name: 10E,-,R2
+Clock_Time: 1905
+Control_Sensor: Magnetometer
+Date_Time: 2/15/2021,2:26:32 AM
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 64
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 4
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 0
+ZTS_Offset: 2000
+Number_of_Stacks_Acquired: 66
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -3.520739E-5	-3.509266E-5	-3.496838E-5	-3.483045E-5	-3.467180E-5	-3.447951E-5	-3.423574E-5	-3.390306E-5	-3.338985E-5	-3.249272E-5	-3.091553E-5	-2.845556E-5	-2.518449E-5	-2.143937E-5	-1.761230E-5	-1.394108E-5	-1.048269E-5	-7.227070E-6	-4.210770E-6
+
+name: 30E,-,R1
+Clock_Time: 26613
+Control_Sensor: Magnetometer
+Date_Time: 2/15/2021,9:18:21 AM
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 64
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 5
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 0
+ZTS_Offset: 2000
+Number_of_Stacks_Acquired: 66
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -3.506802E-5	-3.497365E-5	-3.486766E-5	-3.474988E-5	-3.462129E-5	-3.447956E-5	-3.431763E-5	-3.412342E-5	-3.387634E-5	-3.353614E-5	-3.300935E-5	-3.209570E-5	-3.052033E-5	-2.808915E-5	-2.486876E-5	-2.117913E-5	-1.740286E-5	-1.378542E-5	-1.038972E-5
+
