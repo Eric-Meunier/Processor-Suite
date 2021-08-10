@@ -328,7 +328,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if not files:
             return
 
-        self.add_gps(files)
+        self.open_gps_files(files)
 
     def open_gps_files(self, files):
         """
