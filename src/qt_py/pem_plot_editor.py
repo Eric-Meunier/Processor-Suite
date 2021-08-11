@@ -218,6 +218,14 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 for ax in self.mag_profile_axes:
                     ax.hide()
 
+        def toggle_tau_plots():
+            if self.plot_tau_cbox.isChecked():
+                for ax in self.tau_profile_axes:
+                    ax.show()
+            else:
+                for ax in self.tau_profile_axes:
+                    ax.hide()
+
         def select_all_stations():
             stations = self.pem_file.get_stations(converted=True)
             self.box_select_profile_plot((stations.min(), stations.max()), start=False)
@@ -239,6 +247,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Checkboxes
         self.show_average_cbox.toggled.connect(lambda: self.plot_profiles(components='all'))
         self.show_scatter_cbox.toggled.connect(lambda: self.plot_profiles(components='all'))
+        self.plot_tau_cbox.toggled.connect(toggle_tau_plots)
         self.plot_mag_cbox.toggled.connect(toggle_mag_plots)
         self.auto_range_cbox.toggled.connect(self.reset_range)
 
@@ -734,7 +743,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             def plot_theory_pp(df, ax):
                 """
                 Plot the theoretical PP values
-                :param df: DataFrame
+                :param df: DataFrame, calculated theoretical total magnetic field strength.
                 :param ax: pyqtgraph PlotItem for the PP frame
                 :return: None
                 """
@@ -796,6 +805,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         channel_bounds = file.get_channel_bounds()
 
         theory_data = self.pem_file.get_theory_pp()
+        # theory_data_2 = self.pem_file.get_theory_data()
 
         for component in components:
             profile_data = file.get_profile_data(component,
@@ -899,6 +909,67 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             # Add the plot item to the list of plotted items
             self.plotted_decay_lines.append(decay_line)
 
+        def plot_auto_clean():
+            """
+            Plot the median line (__main__ only) and auto-clean threshold lines.
+            :return: None
+            """
+            if self.plot_auto_clean_lines_cbox.isChecked():
+                window_size = self.auto_clean_window_sbox.value()
+                for ax in self.decay_axes:
+                    if ax == self.x_decay_plot:
+                        comp_filt = self.plotted_decay_data.Component == "X"
+                    elif ax == self.y_decay_plot:
+                        comp_filt = self.plotted_decay_data.Component == "Y"
+                    else:
+                        comp_filt = self.plotted_decay_data.Component == "Z"
+
+                    # Ignore deleted data when calculating median
+                    existing_data = self.plotted_decay_data[comp_filt][~self.plotted_decay_data[comp_filt].Deleted]
+                    median_data = DataFrame.from_records(existing_data.Reading.reset_index(drop=True))
+                    if median_data.empty:
+                        continue
+
+                    median = median_data.median(axis=0).to_numpy()
+                    if self.pem_file.number_of_channels > 10:
+                        median = signal.savgol_filter(median, 5, 3)
+                    if not self.plot_ontime_decays_cbox.isChecked():
+                        median = median[~self.pem_file.channel_times.Remove]
+
+                    std = np.array([self.auto_clean_std_sbox.value()] * window_size)
+
+                    off_time_median_data = median_data.loc[:, ~self.pem_file.channel_times.Remove]
+                    if not self.plot_ontime_decays_cbox.isChecked():
+                        off_time_median_data.rename(dict(zip(off_time_median_data.columns,
+                                                             range(len(off_time_median_data.columns)))),
+                                                    inplace=True,
+                                                    axis=1)  # Resets for the X axis values when not plotting on-time
+                    off_time_median = off_time_median_data.median().to_numpy()
+                    if self.pem_file.number_of_channels > 10:
+                        # off_time_median = signal.savgol_filter(off_time_median, 5, 3)
+                        off_time_median = signal.medfilt(off_time_median, 3)
+                    limits_data = off_time_median_data.loc[:, len(off_time_median_data.columns) - window_size:]
+
+                    thresh_line_1 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
+                                                     y=off_time_median[-window_size:] + std,
+                                                     pen=pg.mkPen("m", width=1., style=Qt.DashLine),
+                                                     setClickable=False,
+                                                     name='median limit')
+                    thresh_line_2 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
+                                                     y=off_time_median[-window_size:] - std,
+                                                     pen=pg.mkPen("m", width=1., style=Qt.DashLine),
+                                                     setClickable=False,
+                                                     name='median limit')
+                    ax.addItem(thresh_line_1)
+                    ax.addItem(thresh_line_2)
+
+                    if __name__ == "__main__":
+                        median_line = pg.PlotCurveItem(y=median,
+                                                       pen=pg.mkPen("m", width=2.),
+                                                       setClickable=False,
+                                                       name='median line')
+                        ax.addItem(median_line)
+
         self.selected_station = station
 
         # Move the selected vertical line
@@ -938,63 +1009,66 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Plot the decays
         self.plotted_decay_data.apply(plot_decay, axis=1)
 
-        # Plot the median and auto-clean limits
-        if self.plot_auto_clean_lines_cbox.isChecked():
-            window_size = self.auto_clean_window_sbox.value()
-            for ax in self.decay_axes:
-                if ax == self.x_decay_plot:
-                    comp_filt = self.plotted_decay_data.Component == "X"
-                elif ax == self.y_decay_plot:
-                    comp_filt = self.plotted_decay_data.Component == "Y"
-                else:
-                    comp_filt = self.plotted_decay_data.Component == "Z"
+        plot_auto_clean()
 
-                # Ignore deleted data when calculating median
-                existing_data = self.plotted_decay_data[comp_filt][~self.plotted_decay_data[comp_filt].Deleted]
-                median_data = DataFrame.from_records(existing_data.Reading.reset_index(drop=True))
-                if median_data.empty:
-                    continue
+        # # Plot the median and auto-clean limits
+        # if self.plot_auto_clean_lines_cbox.isChecked():
+        #     window_size = self.auto_clean_window_sbox.value()
+        #     for ax in self.decay_axes:
+        #         if ax == self.x_decay_plot:
+        #             comp_filt = self.plotted_decay_data.Component == "X"
+        #         elif ax == self.y_decay_plot:
+        #             comp_filt = self.plotted_decay_data.Component == "Y"
+        #         else:
+        #             comp_filt = self.plotted_decay_data.Component == "Z"
+        #
+        #         # Ignore deleted data when calculating median
+        #         existing_data = self.plotted_decay_data[comp_filt][~self.plotted_decay_data[comp_filt].Deleted]
+        #         median_data = DataFrame.from_records(existing_data.Reading.reset_index(drop=True))
+        #         if median_data.empty:
+        #             continue
+        #
+        #         median = median_data.median(axis=0).to_numpy()
+        #         if self.pem_file.number_of_channels > 10:
+        #             median = signal.savgol_filter(median, 5, 3)
+        #         std = np.array([self.auto_clean_std_sbox.value()] * window_size)
+        #
+        #         off_time_median_data = median_data.loc[:, ~self.pem_file.channel_times.Remove]
+        #         off_time_median = off_time_median_data.median().to_numpy()
+        #         if self.pem_file.number_of_channels > 10:
+        #             # off_time_median = signal.savgol_filter(off_time_median, 5, 3)
+        #             off_time_median = signal.medfilt(off_time_median, 3)
+        #         limits_data = off_time_median_data.loc[:, len(off_time_median_data.columns) - window_size:]
+        #
+        #         thresh_line_1 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
+        #                                          y=off_time_median[-window_size:] + std,
+        #                                          pen=pg.mkPen("m", width=1., style=Qt.DashLine),
+        #                                          setClickable=False,
+        #                                          name='median limit')
+        #         thresh_line_2 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
+        #                                          y=off_time_median[-window_size:] - std,
+        #                                          pen=pg.mkPen("m", width=1., style=Qt.DashLine),
+        #                                          setClickable=False,
+        #                                          name='median limit')
+        #         ax.addItem(thresh_line_1)
+        #         ax.addItem(thresh_line_2)
+        #
+        #         # error_bars = ErrorBarItem(x=data.columns,
+        #         #                              y=median,
+        #         #                              height=std,
+        #         #                              width=0,
+        #         #                              beam=1,
+        #         #                              pen=pg.mkPen("b", width=1.))
+        #         #
+        #         # error_line = pg.PlotCurveItem(y=median.to_numpy(),
+        #         #                               pen=pg.mkPen("b", width=1., style=Qt.DashLine))
 
-                median = median_data.median(axis=0).to_numpy()
-                if self.pem_file.number_of_channels > 10:
-                    median = signal.savgol_filter(median, 5, 3)
-                std = np.array([self.auto_clean_std_sbox.value()] * window_size)
-
-                off_time_median_data = median_data.loc[:, ~self.pem_file.channel_times.Remove]
-                off_time_median = off_time_median_data.median().to_numpy()
-                if self.pem_file.number_of_channels > 10:
-                    off_time_median = signal.savgol_filter(off_time_median, 5, 3)
-                limits_data = off_time_median_data.loc[:, len(off_time_median_data.columns) - window_size:]
-
-                thresh_line_1 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
-                                                 y=off_time_median[-window_size:] + std,
-                                                 pen=pg.mkPen("m", width=1., style=Qt.DashLine),
-                                                 setClickable=False,
-                                                 name='median limit')
-                thresh_line_2 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
-                                                 y=off_time_median[-window_size:] - std,
-                                                 pen=pg.mkPen("m", width=1., style=Qt.DashLine),
-                                                 setClickable=False,
-                                                 name='median limit')
-                ax.addItem(thresh_line_1)
-                ax.addItem(thresh_line_2)
-
-                # error_bars = ErrorBarItem(x=data.columns,
-                #                              y=median,
-                #                              height=std,
-                #                              width=0,
-                #                              beam=1,
-                #                              pen=pg.mkPen("b", width=1.))
-                #
-                # error_line = pg.PlotCurveItem(y=median.to_numpy(),
-                #                               pen=pg.mkPen("b", width=1., style=Qt.DashLine))
-
-                if __name__ == "__main__":
-                    median_line = pg.PlotCurveItem(y=median,
-                                                   pen=pg.mkPen("m", width=2.),
-                                                   setClickable=False,
-                                                   name='median line')
-                    ax.addItem(median_line)
+                # if __name__ == "__main__":
+                #     median_line = pg.PlotCurveItem(y=median,
+                #                                    pen=pg.mkPen("m", width=2.),
+                #                                    setClickable=False,
+                #                                    name='median line')
+                #     ax.addItem(median_line)
 
         # Update the plot limits
         for ax in self.decay_axes:
@@ -2102,7 +2176,8 @@ if __name__ == '__main__':
     # pem_files = pem_getter.get_pems(random=True, number=1)
 
     # pem_file = pem_g.get_pems(folder="Raw Boreholes", file=r"SR-15-04 Z.PEM")[0]
-    pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")[0]
+    pem_file = pem_g.get_pems(folder="Raw Boreholes", file="em21-155 z_0415.PEM")[0]
+    # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\800E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\1200E.PEM")[0]  # TODO Test this for ordering worse to best readings
     # pem_file = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]

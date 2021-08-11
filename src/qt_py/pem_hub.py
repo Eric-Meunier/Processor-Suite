@@ -59,6 +59,9 @@ logger = logging.getLogger(__name__)
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO Create a theory vs measured plot (similar to step)
 # TODO Look into slowness when changing station number and such in pem plot editor
+# TODO Add more theory responses to plot editor.
+# TODO Look into data filtering (median filter, adaptive LMS filter)
+# TODO reset profile window selection info in pem_plot_editor when de-selecting stations
 
 
 class PEMHub(QMainWindow, Ui_PEMHub):
@@ -1496,7 +1499,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     except Exception as e:
                         logger.critical(str(e))
                         self.error.setWindowTitle('Error parsing PEM file')
-                        self.error.showMessage(f"Error parsing PEM file: {str(e)}")
+                        self.error.showMessage(f"Error parsing {pem_file}: {str(e)}")
                         dlg += 1
                         continue
 
@@ -1528,11 +1531,12 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         else:
                             if pem_crs != current_crs:
                                 response = self.message.question(self, "Change CRS",
-                                                                 F"CRS from {pem_file.filepath.name} is different then the"
+                                                                 F"CRS from {pem_file.filepath.name} is different than the "
                                                                  F"current project CRS ({pem_crs.name} vs {current_crs.name}).\n"
                                                                  F"Change CRS to {pem_crs.name}?", self.message.Yes, self.message.No)
                                 if response == self.message.Yes:
                                     self.set_crs(pem_crs)
+                                    current_crs = pem_crs
                                 else:
                                     pass
 
@@ -1718,9 +1722,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         def close_editor(editor):
             """
-            Remove the editor from the list of pem_editors
+            Remove the editor from the list of pem_editors, and update the information in the table.
             :param editor: PEMPlotEditor object emitted by the signal
             """
+            self.refresh_pem(editor.pem_file)
             self.pem_editor_widgets.remove(editor)
 
         def reset_file(files):
@@ -3375,7 +3380,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                             item.setBackground(QColor('red'))
                             item.setForeground(QColor('white'))
                     elif col == polarity_col:
-                        if len(value) > 0:
+                        if re.match("[XYZ]", value):
                             item.setBackground(QColor('red'))
                             item.setForeground(QColor('white'))
 
@@ -3608,7 +3613,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             pem_file.is_split(),
             len(pem_file.get_suffix_warnings()),
             len(pem_file.get_repeats()),
-            ', '.join(pem_file.get_reversed_components())
+            "N/A" if not pem_file.has_all_gps() else ', '.join(pem_file.get_reversed_components())
         ]
 
         # Set the information into each cell. Columns from First Station and on can't be edited.

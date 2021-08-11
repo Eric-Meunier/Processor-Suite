@@ -12,7 +12,6 @@ class MagneticFieldCalculator:
     Class that calculates magnetic field for a given transmitter loop.
     :param: wire: list or DataFrame of wire (loop) coordinates
     """
-
     def __init__(self, wire, closed_loop=True):
         self.closed_loop = closed_loop
         if isinstance(wire, pd.DataFrame):
@@ -64,7 +63,6 @@ class MagneticFieldCalculator:
         :param ramp: float, ramp length (in seconds), used only for nT/s units
         :return: tuple, (x, y, z) Magnetic field strength (in Teslas by default)
         """
-
         # Permeability of free space
         u0 = 1.25663706e-6
         pts = np.array([x, y, z])
@@ -122,76 +120,6 @@ class MagneticFieldCalculator:
                 raise ValueError('Invalid output unit')
 
         return field[0], field[1], field[2]
-
-    # def calc_total_field(self, x, y, z, amps=1, out_units='pT', ramp=None):
-    #     """
-    #     Calculate the magnetic field at position (x, y, z) with current I using Biot-Savart Law. Uses the geometry of
-    #     wire_coords for the wire.
-    #     :param x, y, z: Position at which the magnetic field is calculated
-    #     :param amps: float, Current (Amps)
-    #     :param out_units: str, desired output units. Can be either nT, pT, or nT/s (ramp required)
-    #     :param ramp: float, ramp length (in seconds), used only for nT/s units
-    #     :return: tuple, (x, y, z) Magnetic field strength (in Teslas by default)
-    #     """
-    #
-    #     def loop_difference():
-    #         """
-    #         Returns an array of segment lengths for each component of self.wire
-    #         :return: np.array
-    #         """
-    #         loop_diff = np.append(np.diff(self.wire, axis=0), [self.wire[0] - self.wire[-1]], axis=0)
-    #         return loop_diff
-    #
-    #     def array_shift(arr, shift_num):
-    #         result = np.empty_like(arr)
-    #         if shift_num > 0:
-    #             result[:shift_num] = arr[-shift_num:]
-    #             result[shift_num:] = arr[:-shift_num]
-    #         elif shift_num < 0:
-    #             result[shift_num:] = arr[:-shift_num]
-    #             result[:shift_num] = arr[-shift_num:]
-    #         else:
-    #             result[:] = arr
-    #         return result
-    #
-    #     u0 = 1.25663706e-6  # Constant
-    #     loop_diff = np.diff(self.wire, axis=0)
-    #
-    #     AP = np.array([x, y, z]) - self.wire
-    #     BP = array_shift(AP, -1)
-    #
-    #     r1 = np.sqrt((AP ** 2).sum(-1))[..., np.newaxis].T.squeeze()
-    #     r2 = np.sqrt((BP ** 2).sum(-1))[..., np.newaxis].T.squeeze()
-    #     Dot1 = np.multiply(AP, loop_diff).sum(1)
-    #     Dot2 = np.multiply(BP, loop_diff).sum(1)
-    #     cross = np.cross(loop_diff, AP)
-    #
-    #     CrossSqrd = (np.sqrt((cross ** 2).sum(-1))[..., np.newaxis]).squeeze() ** 2
-    #     top = (Dot1 / r1 - Dot2 / r2) * u0 * amps
-    #     bottom = (CrossSqrd * 4 * np.pi)
-    #     factor = (top / bottom)
-    #
-    #     cross = cross[~np.isnan(factor)]  # filter out any NaN
-    #     factor = factor[~np.isnan(factor)]  # filter out any NaN
-    #     factor = factor[..., np.newaxis]
-    #
-    #     field = cross * factor
-    #     field = np.sum(field, axis=0)
-    #
-    #     if out_units:
-    #         if out_units == 'nT':
-    #             field = field * (10 ** 9)
-    #         elif out_units == 'pT':
-    #             field = field * (10 ** 12)
-    #         elif out_units == 'nT/s':
-    #             if ramp is None:
-    #                 raise ValueError('For units of nT/s, a ramp time (in seconds) must be given')
-    #             else:
-    #                 field = (field * (10 ** 9)) / ramp
-    #         else:
-    #             raise ValueError('Invalid output unit')
-    #
-    #     return field[0], field[1], field[2]
 
     def get_3d_magnetic_field(self, c1, c2, spacing=None, arrow_len=None, num_rows=12):
         """
@@ -327,3 +255,26 @@ class MagneticFieldCalculator:
 
         return xx, yy, zz, uproj, vproj, wproj, plotx, plotz, arrow_len
 
+    def get_decay(self, x, y, z, times, tau=50e-3, B=1):
+        """
+        Calculate the decay of a total magnetic field at each time in variable 'times'.
+        Calculated from https://merc.laurentian.ca/sites/default/files/guoetal_2013_eg13042.pdf page 3.
+        :param x: float, X component total field strength
+        :param y: float, X component total field strength
+        :param z: float, X component total field strength
+        :param times: list, times to calculate the EM decay value in seconds.
+        :param tau: time constant, usually the timebase value in seconds.
+        :param B: Arbitrary constant.
+        :return: list
+        """
+        x_decay, y_decay, z_decay = [], [], []
+
+        for time in times[1:]:  # Skip the PP channel
+            xi = x * math.exp(-(time / tau))
+            yi = y * math.exp(-(time / tau))
+            zi = z * math.exp(-(time / tau))
+            x_decay.append(xi)
+            y_decay.append(yi)
+            z_decay.append(zi)
+
+        return x_decay, y_decay, z_decay

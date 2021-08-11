@@ -10,6 +10,7 @@ import natsort
 import numpy as np
 import pandas as pd
 from pyproj import CRS
+import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
 
 from src.pem import convert_station
@@ -1049,6 +1050,8 @@ class PEMFile:
         borehole = self.is_borehole()
         loop = self.get_loop(sorted=False, closed=False)
         mag_calc = MagneticFieldCalculator(loop, closed_loop=not self.is_mmr())
+        # columns = ["Station"]
+        # columns.extend(self.get_components())
 
         if borehole:
             segments = self.get_segments()
@@ -1089,7 +1092,9 @@ class PEMFile:
                 # Rotate the theoretical values by the azimuth/dip
                 r = R.from_euler('YZ', [90 - dip, azimuth], degrees=True)
                 rT = r.apply([rTx, rTy, rTz])  # The rotated theoretical values
-                pps.append(rT)
+                pp = [station]
+                pp.extend(rT)
+                pps.append(pp)
 
         else:  # Surface survey
             azimuths = self.line.get_azimuths()
@@ -1125,6 +1130,111 @@ class PEMFile:
         df = pd.DataFrame.from_records(pps, columns=["Station", "X", "Y", "Z"])
         return df
 
+    def get_theory_data(self):
+        """
+        Calculate the theoretical PP value for each station
+        :return: DataFrame
+        """
+        if not self.has_all_gps():
+            return pd.DataFrame()
+
+        stations = list(self.get_stations(converted=True))
+        pps = []
+        borehole = self.is_borehole()
+        loop = self.get_loop(sorted=False, closed=False)
+        mag_calc = MagneticFieldCalculator(loop, closed_loop=not self.is_mmr())
+        # columns = ["Station"]
+        # columns.extend(self.get_components())
+
+        if borehole:
+            segments = self.get_segments()
+            dips = segments.Dip
+            depths = segments.Depth
+            azimuths = segments.Azimuth
+            geometry = BoreholeGeometry(self.collar, self.segments)
+            proj = geometry.get_projection(stations=stations)
+
+            # Use the segment azimuth and dip of the next segment (as per Bill's cross)
+            # Find the next station. If it's the last station, re-use the last station.
+            for station in stations:
+                station_ind = stations.index(station)
+                convert_station(station)
+
+                # Re-use the last station if it's the current index
+                if stations.index(station) == len(stations) - 1:
+                    next_station = station
+                else:
+                    next_station = stations[station_ind + 1]
+
+                dip = np.interp(int(next_station), depths, dips)
+                azimuth = np.interp(int(next_station), depths, azimuths)
+                # Find the location in 3D space of the station
+                filt = proj.loc[:, 'Relative_depth'] == float(station)
+                x_pos, y_pos, z_pos = proj[filt].iloc[0]['Easting'], \
+                                      proj[filt].iloc[0]['Northing'], \
+                                      proj[filt].iloc[0]['Elevation']
+
+                # Calculate the theoretical magnetic field strength of each component at that point (in nT/s)
+                Tx, Ty, Tz = mag_calc.calc_total_field(x_pos, y_pos, z_pos,
+                                                       amps=self.current,
+                                                       out_units='nT/s',
+                                                       ramp=self.ramp / 10 ** 6)
+                # Rotate the theoretical values into the same frame of reference used with boreholes/surface lines
+                rTx, rTy, rTz = R.from_euler('Z', -90, degrees=True).apply([Tx, Ty, Tz])
+
+                # Rotate the theoretical values by the azimuth/dip
+                r = R.from_euler('YZ', [90 - dip, azimuth], degrees=True)
+                rT = r.apply([rTx, rTy, rTz])  # The rotated theoretical values
+                pp = [station]
+                pp.extend(rT)
+                pps.append(pp)
+
+        else:  # Surface survey
+            azimuths = self.line.get_azimuths()
+
+            for station in stations:
+                station = convert_station(station)
+
+                dip = 0
+                azimuth = azimuths[azimuths.Station == station]
+                if azimuth.empty:
+                    logger.warning(f"{station} not in list of GPS stations")
+                    continue
+                azimuth = azimuth.iloc[0].Azimuth
+
+                filt = self.line.df.loc[:, 'Station'] == float(station)
+                x_pos, y_pos, z_pos = self.line.df[filt].iloc[0]['Easting'], \
+                                      self.line.df[filt].iloc[0]['Northing'], \
+                                      self.line.df[filt].iloc[0]['Elevation']
+
+                # Calculate the theoretical magnetic field strength of each component at that point (in nT/s)
+                Tx, Ty, Tz = mag_calc.calc_total_field(x_pos, y_pos, z_pos,
+                                                       amps=self.current,
+                                                       out_units='nT/s',
+                                                       ramp=self.ramp / 10 ** 6)
+
+                # Rotate the theoretical values into the same frame of reference used with boreholes/surface lines
+                rTx, rTy, rTz = R.from_euler('Z', -90, degrees=True).apply([Tx, Ty, Tz])
+
+                # Rotate the theoretical values by the azimuth/dip
+                r = R.from_euler('YZ', [dip, azimuth], degrees=True)
+                rT = r.apply([rTx, rTy, rTz])  # The rotated theoretical values
+                x_decay, y_decay, z_decay = mag_calc.get_decay(rT[0], rT[1], rT[2], self.channel_times.Center.to_numpy(),
+                                                               tau=(self.timebase / 1000) * 1e-3)
+                plt.yscale("symlog")
+                plt.xscale("log")
+
+                measured_decay = self.data.loc[(self.data.Station == f"{station}N") & (self.data.Component == "X")].Reading.mean()[1:]
+
+                x = self.channel_times.Center.to_numpy()[1:]
+                plt.plot(x, x_decay, "b--")
+                plt.plot(x, measured_decay, "k")
+                plt.show()
+                pps.append([station, rT[0], rT[1], rT[2]])
+
+        df = pd.DataFrame.from_records(pps, columns=["Station", "X", "Y", "Z"])
+        return df
+
     def get_reversed_components(self):
         """
         Return which components may have the polarity reserved. File must have all GPS information.
@@ -1132,6 +1242,8 @@ class PEMFile:
         """
         reversed_components = []
         theory_pp_data = self.get_theory_pp().set_index("Station", drop=True)
+        # Find the PP channel
+        pp_ch_num = self.channel_times[self.channel_times.Remove == False].iloc[0].name
 
         if not theory_pp_data.empty:
             for component in self.get_components():
@@ -1139,10 +1251,10 @@ class PEMFile:
                                                 averaged=True,
                                                 converted=True,
                                                 ontime=True,
-                                                incl_deleted=True).loc[:, 0]
+                                                incl_deleted=True).loc[:, pp_ch_num]
 
                 # Only include common stations. PP represents the measured data, XYZ are theoretical.
-                df = pd.concat([pp_data, theory_pp_data], axis=1).rename({0: 'PP'}, axis=1).dropna(axis=0)
+                df = pd.concat([pp_data, theory_pp_data], axis=1).rename({pp_ch_num: 'PP'}, axis=1).dropna(axis=0)
                 theory_pp = df.loc[:, component].to_numpy()
                 pp = df.loc[:, 'PP'].to_numpy()
 
@@ -3666,17 +3778,21 @@ if __name__ == '__main__':
     pem_g = PEMGetter()
 
     # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
-    # file = r"C:\_Data\2021\Geoken\Borehole\SAPR-21-005\DUMP\XY.PEM"
+    # file = r"C:\_Data\2021\TMC\Murchison\Landrienne B\Final\MURCHISON_LANDRIENNE B\L200E.PEM"
     # file = r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\1338-19-036 XY.PEM"
     # file = r"C:\_Data\2021\Iscaycruz\Borehole\LS-27-21-07\RAW\xy_0704.PEM"
+    # pemparser.parse(file)
+
     # pem_files = pem_g.get_pems(random=True, number=1)
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
-    # pem_files = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")
-    pem_files = pem_g.get_pems(folder="Raw Surface", subfolder=r"Loop 1\Final\Perkoa South", file="11200E.PEM")
+    pem_files = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")
+    # pem_files = pem_g.get_pems(folder="Raw Surface", subfolder=r"Loop 1\Final\Perkoa South", file="11200E.PEM")
+    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155 z_0415.PEM")
 
     pem_file = pem_files[0]
     # pem_file.get_theory_pp()
-    pem_file.get_reversed_components()
+    pem_file.get_theory_data()
+    # pem_file.get_reversed_components()
     # pem_file.rotate(method="unrotate")
     # pem_file.filepath = pem_file.filepath.with_name(pem_file.filepath.stem + "(unrotated)" + ".PEM")
     # pem_file.save()

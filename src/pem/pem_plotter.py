@@ -19,6 +19,7 @@ import natsort
 import numpy as np
 import pyqtgraph as pg
 from matplotlib.backends.backend_pdf import PdfPages
+from matplotlib import patheffects, patches, ticker, text, transforms, lines
 from scipy import stats
 
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
@@ -77,7 +78,7 @@ class ProfilePlotter:
             """
             Add the surrounding rectangle
             """
-            rect = mpl.patches.Rectangle(xy=(0.02, 0.02),
+            rect = patches.Rectangle(xy=(0.02, 0.02),
                                          width=0.96,
                                          height=0.96,
                                          linewidth=0.7,
@@ -165,8 +166,8 @@ class ProfilePlotter:
             if self.x_max is None:
                 self.x_max = component_stations.max()
 
-            x_label_locator = mpl.ticker.AutoLocator()
-            major_locator = mpl.ticker.FixedLocator(sorted(component_stations))
+            x_label_locator = ticker.AutoLocator()
+            major_locator = ticker.FixedLocator(sorted(component_stations))
             plt.xlim(self.x_min, self.x_max)
             # for some reason this seems to apply to all axes
             self.figure.axes[0].xaxis.set_major_locator(major_locator)
@@ -200,9 +201,9 @@ class ProfilePlotter:
                             new_low = math.floor(min(y_limits[0], 0))
 
                     ax.set_ylim(new_low, new_high)
-                    ax.yaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins='auto', integer=True, steps=[1, 2, 5, 10]))
+                    ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', integer=True, steps=[1, 2, 5, 10]))
                     ax.set_yticks(ax.get_yticks())
-                    # ax.yaxis.set_major_locator(mpl.ticker.AutoLocator())
+                    # ax.yaxis.set_major_locator(ticker.AutoLocator())
                     # ax.set_yticks(ax.get_yticks())  # This is used twice to avoid half-integer tick values
 
                 elif ax.get_yscale() == 'symlog':
@@ -214,7 +215,7 @@ class ProfilePlotter:
                     ax.tick_params(axis='y', which='major', labelrotation=90)
                     plt.setp(ax.get_yticklabels(), va='center')
 
-                ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%d'))  # Prevent scientific notation
+                ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))  # Prevent scientific notation
 
         def format_spines(ax):
             ax.spines['right'].set_visible(False)
@@ -483,12 +484,12 @@ class STEPPlotter(ProfilePlotter):
                     new_low = math.floor(min(y_limits[0], 0))
 
             ax.set_ylim(new_low, new_high)
-            ax.yaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins='auto', integer=True, steps=[1, 2, 5, 10]))
+            ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', integer=True, steps=[1, 2, 5, 10]))
             ax.set_yticks(ax.get_yticks())
-            # ax.yaxis.set_major_locator(mpl.ticker.AutoLocator())
+            # ax.yaxis.set_major_locator(ticker.AutoLocator())
             # ax.set_yticks(ax.get_yticks())  # This is used twice to avoid half-integer tick values
 
-            ax.yaxis.set_major_formatter(mpl.ticker.FormatStrFormatter('%d'))  # Prevent scientific notation
+            ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))  # Prevent scientific notation
 
     def plot(self, component):
 
@@ -583,13 +584,13 @@ class STEPPlotter(ProfilePlotter):
             new_high = math.ceil(max(y_limits[1] + 6, 0))
             new_low = math.floor(min(y_limits[0] - 6, 0))
             ax.set_ylim(new_low, new_high)
-            ax.yaxis.set_major_locator(mpl.ticker.MaxNLocator(nbins='auto', integer=True, steps=[1, 2, 5, 10]))
+            ax.yaxis.set_major_locator(ticker.MaxNLocator(nbins='auto', integer=True, steps=[1, 2, 5, 10]))
             ax.set_yticks(ax.get_yticks())
 
         return self.figure
 
 
-class RotnAnnotation(mpl.text.Annotation):
+class RotnAnnotation(text.Annotation):
     """
     Text label object that rotates relative to the plot data based on the angle between the points given
     :param label_str: label str
@@ -611,8 +612,8 @@ class RotnAnnotation(mpl.text.Annotation):
         self.calc_angle_data()
         self.kwargs.update(rotation_mode=kwargs.get("rotation_mode", "anchor"))
 
-        mpl.text.Annotation.__init__(self, label_str, label_xy, **kwargs)
-        self.set_transform(mpl.transforms.IdentityTransform())
+        text.Annotation.__init__(self, label_str, label_xy, **kwargs)
+        self.set_transform(transforms.IdentityTransform())
         if 'clip_on' in kwargs:
             self.set_clip_path(self.ax.patch)
         self.ax._add_text(self)
@@ -650,7 +651,7 @@ class MapPlotter:
     """
 
     def __init__(self):
-        self.label_buffer = [mpl.patheffects.Stroke(linewidth=1.5, foreground='white'), mpl.patheffects.Normal()]
+        self.label_buffer = [patheffects.Stroke(linewidth=1.5, foreground='white'), patheffects.Normal()]
 
     def plot_loop(self, pem_file, figure, annotate=True, label=True, color='black', zorder=6, is_mmr=False):
         """
@@ -962,7 +963,7 @@ class MapPlotter:
             # Adding the small rectangles
             for i, rect_x in enumerate(sm_rect_xs):  # Top set of small rectangles
                 fill = 'w' if i % 2 == 0 else 'k'
-                patch = mpl.patches.Rectangle((rect_x, y), sm_rect_width, rect_height,
+                patch = patches.Rectangle((rect_x, y), sm_rect_width, rect_height,
                                           ec='k',
                                           linewidth=line_width,
                                           facecolor=fill,
@@ -971,7 +972,7 @@ class MapPlotter:
                 ax.add_patch(patch)
             for i, rect_x in enumerate(sm_rect_xs):  # Bottom set of small rectangles
                 fill = 'k' if i % 2 == 0 else 'w'
-                patch = mpl.patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height,
+                patch = patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height,
                                           ec='k',
                                           zorder=9,
                                           linewidth=line_width,
@@ -980,13 +981,13 @@ class MapPlotter:
                 ax.add_patch(patch)
 
             # Adding the big rectangles
-            patch1 = mpl.patches.Rectangle((big_rect_x, y), big_rect_width, rect_height,
+            patch1 = patches.Rectangle((big_rect_x, y), big_rect_width, rect_height,
                                            ec='k',
                                            facecolor='k',
                                            linewidth=line_width,
                                            transform=ax.transAxes,
                                            zorder=9)
-            patch2 = mpl.patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height,
+            patch2 = patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height,
                                            ec='k',
                                            facecolor='w',
                                            linewidth=line_width,
@@ -995,7 +996,7 @@ class MapPlotter:
             ax.add_patch(patch1)
             ax.add_patch(patch2)
 
-        buffer = [mpl.patheffects.Stroke(linewidth=1, foreground='white'), mpl.patheffects.Normal()]
+        buffer = [patheffects.Stroke(linewidth=1, foreground='white'), patheffects.Normal()]
 
         map_width = ax.get_xlim()[1] - ax.get_xlim()[0]
         # map_width = ax.get_extent()[1] - ax.get_extent()[0]
@@ -1165,8 +1166,8 @@ class MapPlotter:
         x1 = [x_pos - ax_len(31) - ax_len(36), x_pos - ax_len(31)]
         x2 = [x_pos + ax_len(31) + ax_len(36), x_pos + ax_len(31)]
         y = [y_pos] * 2
-        tick_line1 = mpl.lines.Line2D(x1, y, color='k', lw=line_width, transform=ax.transAxes)
-        tick_line2 = mpl.lines.Line2D(x2, y, color='k', lw=line_width, transform=ax.transAxes)
+        tick_line1 = lines.Line2D(x1, y, color='k', lw=line_width, transform=ax.transAxes)
+        tick_line2 = lines.Line2D(x2, y, color='k', lw=line_width, transform=ax.transAxes)
 
         ax.add_line(tick_line1)
         ax.add_line(tick_line2)
@@ -1300,26 +1301,26 @@ class PlanMap(MapPlotter):
 
             def draw_box():
                 # Separating lines
-                line_1 = mpl.lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .045, top_pos - .045],
+                line_1 = lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .045, top_pos - .045],
                                        linewidth=1,
                                        color='gray',
                                        transform=self.ax.transAxes,
                                        zorder=10)
 
-                line_2 = mpl.lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .115, top_pos - .115],
+                line_2 = lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .115, top_pos - .115],
                                        linewidth=1,
                                        color='gray',
                                        transform=self.ax.transAxes,
                                        zorder=10)
 
-                line_3 = mpl.lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .160, top_pos - .160],
+                line_3 = lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .160, top_pos - .160],
                                        linewidth=.5,
                                        color='gray',
                                        transform=self.ax.transAxes,
                                        zorder=10)
 
                 # Title box rectangle
-                rect = mpl.patches.FancyBboxPatch(xy=(b_xmin, b_ymin),
+                rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin),
                                               width=b_width,
                                               height=b_height,
                                               edgecolor='k',
@@ -1329,7 +1330,7 @@ class PlanMap(MapPlotter):
                                               transform=self.ax.transAxes)
 
                 self.ax.add_patch(rect)
-                shadow = mpl.patches.Shadow(rect, 0.002, -0.002)
+                shadow = patches.Shadow(rect, 0.002, -0.002)
                 self.ax.add_patch(shadow)
                 self.ax.add_line(line_1)
                 self.ax.add_line(line_2)
@@ -1468,11 +1469,11 @@ class PlanMap(MapPlotter):
             # Manually add the hole trace legend handle
             if self.draw_hole_traces and self.pem_files[0].is_borehole():
                 legend_handles.append(
-                    mpl.lines.Line2D([], [],
-                                  linestyle='--',
-                                  color=self.color,
-                                  marker='|',
-                                  label='Borehole Trace'))
+                    lines.Line2D([], [],
+                                 linestyle='--',
+                                 color=self.color,
+                                 marker='|',
+                                 label='Borehole Trace'))
 
             self.ax.legend(handles=legend_handles,
                            title='Legend',
@@ -1481,6 +1482,12 @@ class PlanMap(MapPlotter):
                            shadow=True,
                            edgecolor='k')
 
+        if 'UTM' in self.crs.name:
+            self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m N'))
+            self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m E'))
+        else:
+            raise NotImplemented(f"{self.crs.name} is not currently supported for map creation.")
+
         # Add the X and Y axes UTM labels and format the labels
         self.ax.xaxis.set_visible(True)  # Required to actually get the labels to show in UTM
         self.ax.yaxis.set_visible(True)
@@ -1488,11 +1495,6 @@ class PlanMap(MapPlotter):
             tick.set_rotation(90)
             tick.set_verticalalignment('center')
 
-        if 'UTM' in self.crs.name:
-            self.ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}m N'))
-            self.ax.xaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}m E'))
-        else:
-            raise NotImplemented(f"{self.crs.name} is not currently supported for map creation.")
         self.ax.xaxis.set_ticks_position('top')
         plt.setp(self.ax.get_xticklabels(), fontname='Century Gothic')
         plt.setp(self.ax.get_yticklabels(), fontname='Century Gothic', va='center')
@@ -1506,7 +1508,7 @@ class SectionPlot(MapPlotter):
 
     def __init__(self):
         super().__init__()
-        self.buffer = [mpl.patheffects.Stroke(linewidth=3, foreground='white'), mpl.patheffects.Normal()]
+        self.buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
         self.color = 'black'
 
         self.figure = None
@@ -1610,7 +1612,7 @@ class SectionPlot(MapPlotter):
 
             # Label hole name
             hole_name = self.pem_file.line_name
-            trans = mpl.transforms.blended_transform_factory(self.ax.transData, self.ax.transAxes)
+            trans = transforms.blended_transform_factory(self.ax.transData, self.ax.transAxes)
             self.ax.annotate(f"{hole_name}", (plotx[0], collar_elevation),
                              xytext=(0, 12),
                              textcoords='offset pixels',
@@ -1798,26 +1800,26 @@ class SectionPlot(MapPlotter):
             top_pos = b_ymin + b_height - 0.013
 
             # Separating lines
-            line_1 = mpl.lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .045, top_pos - .045],
+            line_1 = lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .045, top_pos - .045],
                                    linewidth=1,
                                    color='gray',
                                    transform=self.ax.transAxes,
                                    zorder=10)
 
-            line_2 = mpl.lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .098, top_pos - .098],
+            line_2 = lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .098, top_pos - .098],
                                    linewidth=1,
                                    color='gray',
                                    transform=self.ax.transAxes,
                                    zorder=10)
 
-            line_3 = mpl.lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .135, top_pos - .135],
+            line_3 = lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .135, top_pos - .135],
                                    linewidth=.5,
                                    color='gray',
                                    transform=self.ax.transAxes,
                                    zorder=10)
 
             # Title box rectangle
-            rect = mpl.patches.FancyBboxPatch(xy=(b_xmin, b_ymin),
+            rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin),
                                           width=b_width,
                                           height=b_height,
                                           edgecolor='k',
@@ -1893,7 +1895,7 @@ class SectionPlot(MapPlotter):
                          transform=self.ax.transAxes)
 
             self.ax.add_patch(rect)
-            shadow = mpl.patches.Shadow(rect, 0.002, -0.002)
+            shadow = patches.Shadow(rect, 0.002, -0.002)
             self.ax.add_patch(shadow)
             self.ax.add_line(line_1)
             self.ax.add_line(line_2)
@@ -1926,9 +1928,9 @@ class SectionPlot(MapPlotter):
 
         units = self.pem_file.collar.get_units()
         if units == 'm':
-            self.ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f} m'))
+            self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f} m'))
         else:
-            self.ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f} ft'))
+            self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f} ft'))
 
         add_coord_labels()
         add_title()
@@ -2374,7 +2376,7 @@ class SectionPlot(MapPlotter):
 #                 # Adding the small rectangles
 #                 for i, rect_x in enumerate(sm_rect_xs):  # Top set of small rectangles
 #                     fill = 'w' if i % 2 == 0 else 'k'
-#                     patch = mpl.patches.Rectangle((rect_x, y), sm_rect_width, rect_height,
+#                     patch = patches.Rectangle((rect_x, y), sm_rect_width, rect_height,
 #                                               ec='k',
 #                                               linewidth=line_width,
 #                                               facecolor=fill,
@@ -2383,7 +2385,7 @@ class SectionPlot(MapPlotter):
 #                     self.ax.add_patch(patch)
 #                 for i, rect_x in enumerate(sm_rect_xs):  # Bottom set of small rectangles
 #                     fill = 'k' if i % 2 == 0 else 'w'
-#                     patch = mpl.patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height,
+#                     patch = patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height,
 #                                               ec='k',
 #                                               zorder=9,
 #                                               linewidth=line_width,
@@ -2392,13 +2394,13 @@ class SectionPlot(MapPlotter):
 #                     self.ax.add_patch(patch)
 #
 #                 # Adding the big rectangles
-#                 patch1 = mpl.patches.Rectangle((big_rect_x, y), big_rect_width, rect_height,
+#                 patch1 = patches.Rectangle((big_rect_x, y), big_rect_width, rect_height,
 #                                            ec='k',
 #                                            facecolor='k',
 #                                            linewidth=line_width,
 #                                            transform=self.ax.transAxes,
 #                                            zorder=9)
-#                 patch2 = mpl.patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height,
+#                 patch2 = patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height,
 #                                            ec='k',
 #                                            facecolor='w', linewidth=line_width,
 #                                            transform=self.ax.transAxes,
@@ -2535,26 +2537,26 @@ class SectionPlot(MapPlotter):
 #             top_pos = b_ymin + b_height - 0.020
 #
 #             # Separating lines
-#             line_1 = mpl.lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .045, top_pos - .045],
+#             line_1 = lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .045, top_pos - .045],
 #                                    linewidth=1,
 #                                    color='gray',
 #                                    transform=self.ax.transAxes,
 #                                    zorder=10)
 #
-#             line_2 = mpl.lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .115, top_pos - .115],
+#             line_2 = lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .115, top_pos - .115],
 #                                    linewidth=1,
 #                                    color='gray',
 #                                    transform=self.ax.transAxes,
 #                                    zorder=10)
 #
-#             line_3 = mpl.lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .160, top_pos - .160],
+#             line_3 = lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .160, top_pos - .160],
 #                                    linewidth=.5,
 #                                    color='gray',
 #                                    transform=self.ax.transAxes,
 #                                    zorder=10)
 #
 #             # Title box rectangle
-#             rect = mpl.patches.FancyBboxPatch(xy=(b_xmin, b_ymin),
+#             rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin),
 #                                           width=b_width,
 #                                           height=b_height,
 #                                           edgecolor='k',
@@ -2644,7 +2646,7 @@ class SectionPlot(MapPlotter):
 #                          transform=self.ax.transAxes)
 #
 #             self.ax.add_patch(rect)
-#             shadow = mpl.patches.Shadow(rect, 0.002, -0.002)
+#             shadow = patches.Shadow(rect, 0.002, -0.002)
 #             self.ax.add_patch(shadow)
 #             self.ax.add_line(line_1)
 #             self.ax.add_line(line_2)
@@ -2685,8 +2687,8 @@ class SectionPlot(MapPlotter):
 #             x1 = [ca - ax_len(31) - ax_len(36), ca - ax_len(31)]
 #             x2 = [ca + ax_len(31) + ax_len(36), ca + ax_len(31)]
 #             y = [mid] * 2
-#             tick_line1 = mpl.lines.Line2D(x1, y, color='k', lw=l_width, transform=self.ax.transAxes)
-#             tick_line2 = mpl.lines.Line2D(x2, y, color='k', lw=l_width, transform=self.ax.transAxes)
+#             tick_line1 = lines.Line2D(x1, y, color='k', lw=l_width, transform=self.ax.transAxes)
+#             tick_line2 = lines.Line2D(x2, y, color='k', lw=l_width, transform=self.ax.transAxes)
 #
 #             self.ax.add_line(tick_line1)
 #             self.ax.add_line(tick_line2)
@@ -2817,8 +2819,8 @@ class SectionPlot(MapPlotter):
 #         self.ax.yaxis.set_visible(True)
 #         self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=90, ha='center')
 #         if self.system == 'UTM':
-#             self.ax.yaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}m N'))
-#             self.ax.xaxis.set_major_formatter(mpl.ticker.StrMethodFormatter('{x:,.0f}m E'))
+#             self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m N'))
+#             self.ax.xaxis.set_major_formatter(ticker.StrMethodFormatter('{x:,.0f}m E'))
 #         self.ax.xaxis.set_ticks_position('top')
 #         plt.setp(self.ax.get_xticklabels(), fontname='Century Gothic')
 #         plt.setp(self.ax.get_yticklabels(), fontname='Century Gothic', va='center')
@@ -2873,7 +2875,7 @@ class SectionPlot(MapPlotter):
 #             # Manually add the hole trace legend handle because of the marker angle
 #             if self.draw_hole_traces:
 #                 legend_handles.append(
-#                     mpl.lines.Line2D([], [],
+#                     lines.Line2D([], [],
 #                                   linestyle='--',
 #                                   color=self.color,
 #                                   marker='|',
@@ -3273,31 +3275,33 @@ if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser
 
-    app = QtWidgets.QApplication(sys.argv)
+    app = QApplication(sys.argv)
     pem_getter = PEMGetter()
     # pem_files = pem_getter.get_pems(folder='RI files', subfolder=r"PEMPro RI and Suffix Error Files/KBNorth", file="2200EAv KBNorth.PEM")
-    pem_files = [PEMParser().parse(r"C:\_Data\2021\TMC\131-21-38\Final\131-21-38 XYT.PEM")]
+    # pem_files = [PEMParser().parse(r"C:\_Data\2021\TMC\131-21-38\Final\131-21-38 XYT.PEM")]
+    pem_files = pem_getter.get_pems(folder="Raw Surface", subfolder=r"Loop L\Final", file="100E.PEM")
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
     # planner = LoopPlanner()
 
-    # map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
+    map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
     # map_plot = PlanMap(pem_files, map_fig, CRS.from_epsg(32644)).plot()
-    # plt.show()
+    map_plot = PlanMap(pem_files, map_fig, pem_files[0].get_crs()).plot()
+    plt.show()
 
     # fig = plt.figure(figsize=(8.5, 11), dpi=100)
     # sp = SectionPlot()
     # sp.plot(pem_files[0], figure=fig)
     # plt.show()
 
-    lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
-    ax6 = ax5.twiny()
-    ax6.get_shared_x_axes().join(ax5, ax6)
-    # pem = r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.PEM'
-    lin_plot = LINPlotter(pem_files[0], lin_fig)
-    lin_plot.plot('X')
-    lin_plot.plot('Y')
-    plt.show()
+    # lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
+    # ax6 = ax5.twiny()
+    # ax6.get_shared_x_axes().join(ax5, ax6)
+    # # pem = r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.PEM'
+    # lin_plot = LINPlotter(pem_files[0], lin_fig)
+    # lin_plot.plot('X')
+    # lin_plot.plot('Y')
+    # plt.show()
 
     # log_fig, ax = plt.subplots(1, 1, num=1, clear=True, figsize=(8.5, 11))
     # ax2 = ax.twiny()
