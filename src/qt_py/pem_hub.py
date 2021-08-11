@@ -60,7 +60,6 @@ logger = logging.getLogger(__name__)
 # TODO Create a theory vs measured plot (similar to step)
 # TODO Look into slowness when changing station number and such in pem plot editor
 # TODO Add more theory responses to plot editor.
-# TODO Look into data filtering (median filter, adaptive LMS filter)
 
 
 class PEMHub(QMainWindow, Ui_PEMHub):

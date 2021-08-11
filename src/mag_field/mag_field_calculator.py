@@ -258,7 +258,7 @@ class MagneticFieldCalculator:
     def get_decay(self, x, y, z, times, tau=50e-3, B=1):
         """
         Calculate the decay of a total magnetic field at each time in variable 'times'.
-        Calculated from https://merc.laurentian.ca/sites/default/files/guoetal_2013_eg13042.pdf page 3.
+        Calculated from https://en.wikipedia.org/wiki/Exponential_decay.
         :param x: float, X component total field strength
         :param y: float, X component total field strength
         :param z: float, X component total field strength

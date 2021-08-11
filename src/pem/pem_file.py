@@ -1092,9 +1092,7 @@ class PEMFile:
                 # Rotate the theoretical values by the azimuth/dip
                 r = R.from_euler('YZ', [90 - dip, azimuth], degrees=True)
                 rT = r.apply([rTx, rTy, rTz])  # The rotated theoretical values
-                pp = [station]
-                pp.extend(rT)
-                pps.append(pp)
+                pps.append([station, rT[0], rT[1], rT[2]])
 
         else:  # Surface survey
             azimuths = self.line.get_azimuths()
@@ -1132,7 +1130,7 @@ class PEMFile:
 
     def get_theory_data(self):
         """
-        Calculate the theoretical PP value for each station
+        Calculate the theoretical value for each station at each channel time. Not currently used.
         :return: DataFrame
         """
         if not self.has_all_gps():
@@ -1143,8 +1141,6 @@ class PEMFile:
         borehole = self.is_borehole()
         loop = self.get_loop(sorted=False, closed=False)
         mag_calc = MagneticFieldCalculator(loop, closed_loop=not self.is_mmr())
-        # columns = ["Station"]
-        # columns.extend(self.get_components())
 
         if borehole:
             segments = self.get_segments()
@@ -1185,10 +1181,22 @@ class PEMFile:
                 # Rotate the theoretical values by the azimuth/dip
                 r = R.from_euler('YZ', [90 - dip, azimuth], degrees=True)
                 rT = r.apply([rTx, rTy, rTz])  # The rotated theoretical values
-                pp = [station]
-                pp.extend(rT)
-                pps.append(pp)
+                pps.append([station, rT[0], rT[1], rT[2]])
 
+                """
+                # Theory calculations
+                x_decay, y_decay, z_decay = mag_calc.get_decay(rT[0], rT[1], rT[2], self.channel_times.Center.to_numpy(),
+                                                               tau=(self.timebase / 1000) * 1e-3)
+                plt.yscale("symlog")
+                plt.xscale("log")
+
+                measured_decay = self.data.loc[(self.data.Station == f"{station}") & (self.data.Component == "Z")].Reading.mean()[1:]
+
+                x = self.channel_times.Center.to_numpy()[1:]
+                plt.plot(x, x_decay, "b--")
+                plt.plot(x, measured_decay, "k")
+                plt.show()
+                """
         else:  # Surface survey
             azimuths = self.line.get_azimuths()
 
@@ -1219,10 +1227,14 @@ class PEMFile:
                 # Rotate the theoretical values by the azimuth/dip
                 r = R.from_euler('YZ', [dip, azimuth], degrees=True)
                 rT = r.apply([rTx, rTy, rTz])  # The rotated theoretical values
+                pps.append([station, rT[0], rT[1], rT[2]])
+
+                """
+                # Theoretical decay calculations
                 x_decay, y_decay, z_decay = mag_calc.get_decay(rT[0], rT[1], rT[2], self.channel_times.Center.to_numpy(),
-                                                               tau=(self.timebase / 1000) * 1e-3)
-                plt.yscale("symlog")
-                plt.xscale("log")
+                                                               tau=(self.timebase / 100) * 1e-3)
+                # plt.yscale("symlog")
+                # plt.xscale("log")
 
                 measured_decay = self.data.loc[(self.data.Station == f"{station}N") & (self.data.Component == "X")].Reading.mean()[1:]
 
@@ -1230,7 +1242,7 @@ class PEMFile:
                 plt.plot(x, x_decay, "b--")
                 plt.plot(x, measured_decay, "k")
                 plt.show()
-                pps.append([station, rT[0], rT[1], rT[2]])
+                """
 
         df = pd.DataFrame.from_records(pps, columns=["Station", "X", "Y", "Z"])
         return df
@@ -3784,8 +3796,8 @@ if __name__ == '__main__':
     # pemparser.parse(file)
 
     # pem_files = pem_g.get_pems(random=True, number=1)
-    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
-    pem_files = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")
+    pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"EB-21-52\Final\z.PEM")
+    # pem_files = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")
     # pem_files = pem_g.get_pems(folder="Raw Surface", subfolder=r"Loop 1\Final\Perkoa South", file="11200E.PEM")
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155 z_0415.PEM")
 
