@@ -28,7 +28,7 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         self.parent = parent
         self.setupUi(self)
         self.setWindowTitle("GPX Creator")
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'gpx_creator_4.svg')))
+        self.setWindowIcon(QIcon(os.path.join(icons_path, 'gpx_creator.png')))
 
         self.dialog = QFileDialog()
         self.message = QMessageBox()
