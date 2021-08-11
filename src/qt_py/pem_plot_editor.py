@@ -145,7 +145,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.x_ax2 = self.x_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
         self.x_ax3 = self.x_profile_layout.addPlot(3, 0, viewBox=ProfileViewBox())
         self.x_ax4 = self.x_profile_layout.addPlot(4, 0, viewBox=ProfileViewBox())
-        self.mag_x_ax = self.x_profile_layout.addPlot(5, 0, viewBox=ProfileViewBox())
+        self.mag_x_ax = self.x_profile_layout.addPlot(6, 0, viewBox=ProfileViewBox())
 
         # Y axis lin plots
         self.y_ax0 = self.y_profile_layout.addPlot(0, 0, viewBox=ProfileViewBox())
@@ -153,7 +153,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.y_ax2 = self.y_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
         self.y_ax3 = self.y_profile_layout.addPlot(3, 0, viewBox=ProfileViewBox())
         self.y_ax4 = self.y_profile_layout.addPlot(4, 0, viewBox=ProfileViewBox())
-        self.mag_y_ax = self.y_profile_layout.addPlot(5, 0, viewBox=ProfileViewBox())
+        self.mag_y_ax = self.y_profile_layout.addPlot(6, 0, viewBox=ProfileViewBox())
 
         # Z axis lin plots
         self.z_ax0 = self.z_profile_layout.addPlot(0, 0, viewBox=ProfileViewBox())
@@ -161,7 +161,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.z_ax2 = self.z_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
         self.z_ax3 = self.z_profile_layout.addPlot(3, 0, viewBox=ProfileViewBox())
         self.z_ax4 = self.z_profile_layout.addPlot(4, 0, viewBox=ProfileViewBox())
-        self.mag_z_ax = self.z_profile_layout.addPlot(5, 0, viewBox=ProfileViewBox())
+        self.mag_z_ax = self.z_profile_layout.addPlot(6, 0, viewBox=ProfileViewBox())
 
         self.x_layout_axes = [self.x_ax0, self.x_ax1, self.x_ax2, self.x_ax3, self.x_ax4, self.mag_x_ax]
         self.y_layout_axes = [self.y_ax0, self.y_ax1, self.y_ax2, self.y_ax3, self.y_ax4, self.mag_y_ax]
@@ -218,14 +218,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 for ax in self.mag_profile_axes:
                     ax.hide()
 
-        def toggle_tau_plots():
-            if self.plot_tau_cbox.isChecked():
-                for ax in self.tau_profile_axes:
-                    ax.show()
-            else:
-                for ax in self.tau_profile_axes:
-                    ax.hide()
-
         def select_all_stations():
             stations = self.pem_file.get_stations(converted=True)
             self.box_select_profile_plot((stations.min(), stations.max()), start=False)
@@ -245,9 +237,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.actionCopy_Screenshot.triggered.connect(self.copy_img)
 
         # Checkboxes
-        self.show_average_cbox.toggled.connect(lambda: self.plot_profiles(components='all'))
         self.show_scatter_cbox.toggled.connect(lambda: self.plot_profiles(components='all'))
-        self.plot_tau_cbox.toggled.connect(toggle_tau_plots)
         self.plot_mag_cbox.toggled.connect(toggle_mag_plots)
         self.auto_range_cbox.toggled.connect(self.reset_range)
 
@@ -740,6 +730,20 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
                 ax.addItem(scatter)
 
+            def plot_mag():
+                """Plot the mag profile if available. Disable the plot mag button if it's not applicable."""
+
+                if all([self.pem_file.is_borehole(), self.pem_file.has_xy(), self.pem_file.has_d7()]):
+                    mag_df = self.pem_file.get_mag(average=True)
+                    if mag_df.Mag.any():
+                        self.plot_mag_cbox.setEnabled(True)
+                        # Save the mag curves so they can be toggled easily.
+                        x, y = mag_df.Station.to_numpy(), mag_df.Mag.to_numpy()
+                        for ax in self.mag_profile_axes:
+                            mag_plot_item = pg.PlotCurveItem(x=x, y=y, pen=pg.mkPen('1DD219', width=2.))
+                            ax.getAxis("left").setLabel("Total Magnetic Field", units="pT")
+                            ax.addItem(mag_plot_item)
+
             def plot_theory_pp(df, ax):
                 """
                 Plot the theoretical PP values
@@ -747,10 +751,11 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 :param ax: pyqtgraph PlotItem for the PP frame
                 :return: None
                 """
-                pp_plot_item = pg.PlotCurveItem(x=df.Station.to_numpy(), y=df[component].to_numpy(),
-                                                pen=pg.mkPen('b', width=1.5, style=Qt.DotLine),
-                                                name="PP Theory")
-                ax.addItem(pp_plot_item)
+                if not df.empty:
+                    pp_plot_item = pg.PlotCurveItem(x=df.Station.to_numpy(), y=df[component].to_numpy(),
+                                                    pen=pg.mkPen('b', width=1.5, style=Qt.DotLine),
+                                                    name="PP Theory")
+                    ax.addItem(pp_plot_item)
 
             # Plotting
             for i, bounds in enumerate(channel_bounds):
@@ -766,25 +771,12 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 for channel in range(bounds[0], bounds[1] + 1):
                     data = profile_data.iloc[:, channel]
 
-                    if self.show_average_cbox.isChecked():
-                        plot_lines(data, ax)
+                    plot_lines(data, ax)
                     if self.show_scatter_cbox.isChecked():
                         plot_scatters(data, ax)
 
-            if not theory_data.empty:
-                plot_theory_pp(theory_data, axes[0])
-
-            # Plot the mag profile if available. Disable the plot mag button if it's not applicable.
-            if all([self.pem_file.is_borehole(), self.pem_file.has_xy(), self.pem_file.has_d7()]):
-                mag_df = self.pem_file.get_mag(average=True)
-                if mag_df.Mag.any():
-                    self.plot_mag_cbox.setEnabled(True)
-                    # Save the mag curves so they can be toggled easily.
-                    x, y = mag_df.Station.to_numpy(), mag_df.Mag.to_numpy()
-                    for ax in self.mag_profile_axes:
-                        mag_plot_item = pg.PlotCurveItem(x=x, y=y, pen=pg.mkPen('1DD219', width=2.))
-                        ax.getAxis("left").setLabel("Total Magnetic Field", units="pT")
-                        ax.addItem(mag_plot_item)
+            plot_theory_pp(theory_data, axes[0])
+            plot_mag()
 
         self.update_file()
 
@@ -1289,6 +1281,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Hide any profile box-selection
         for ax in self.profile_axes:
             ax.vb.lr.hide()
+
+        self.profile_selection_text.setText("")
 
     def decay_line_clicked(self, line):
         """
@@ -2176,7 +2170,8 @@ if __name__ == '__main__':
     # pem_files = pem_getter.get_pems(random=True, number=1)
 
     # pem_file = pem_g.get_pems(folder="Raw Boreholes", file=r"SR-15-04 Z.PEM")[0]
-    pem_file = pem_g.get_pems(folder="Raw Boreholes", file="em21-155 z_0415.PEM")[0]
+    # pem_file = pem_g.get_pems(folder="Raw Boreholes", file="em21-155 z_0415.PEM")[0]
+    pem_file = pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\800E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\1200E.PEM")[0]  # TODO Test this for ordering worse to best readings

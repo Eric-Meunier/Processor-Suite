@@ -517,16 +517,6 @@
            <number>9</number>
           </property>
           <item>
-           <widget class="QCheckBox" name="plot_tau_cbox">
-            <property name="text">
-             <string>Plot Tau</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
-            </property>
-           </widget>
-          </item>
-          <item>
            <widget class="QCheckBox" name="plot_mag_cbox">
             <property name="text">
              <string>Plot Mag</string>
@@ -540,19 +530,6 @@
            <widget class="Line" name="line_3">
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QCheckBox" name="show_average_cbox">
-            <property name="focusPolicy">
-             <enum>Qt::NoFocus</enum>
-            </property>
-            <property name="text">
-             <string>Show Average</string>
-            </property>
-            <property name="checked">
-             <bool>true</bool>
             </property>
            </widget>
           </item>

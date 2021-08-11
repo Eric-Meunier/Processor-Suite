@@ -61,7 +61,6 @@ logger = logging.getLogger(__name__)
 # TODO Look into slowness when changing station number and such in pem plot editor
 # TODO Add more theory responses to plot editor.
 # TODO Look into data filtering (median filter, adaptive LMS filter)
-# TODO reset profile window selection info in pem_plot_editor when de-selecting stations
 
 
 class PEMHub(QMainWindow, Ui_PEMHub):
