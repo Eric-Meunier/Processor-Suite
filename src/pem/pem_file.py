@@ -465,12 +465,16 @@ class PEMFile:
 
         else:
             for note in self.notes:
-                if '<CRS>' in note:
+                if 'EPSG' in note:
+                    epsg_code = re.search(r"EPSG:(\d+)", note.strip()).group(1)
+                    crs = CRS.from_epsg(epsg_code)
+                    logger.info(f"{self.filepath.name} CRS is {crs.name}.")
+                    return crs
+                elif '<CRS>' in note:
                     crs_str = re.split('<CRS>', note)[-1].strip()
                     crs = CRS.from_string(crs_str)
                     logger.info(f"{self.filepath.name} CRS is {crs.name}.")
                     return crs
-
                 # For older PEM files that used the <GEN> tag
                 elif 'CRS:' in note:
                     crs_str = re.split('CRS: ', note)[-1]

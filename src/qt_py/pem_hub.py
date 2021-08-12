@@ -601,7 +601,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             elif col == self.table_columns.index('Current'):
                 try:
-                    float(value)
+                    value = float(value)
                 except ValueError:
                     logger.error(f"{value} is not a number.")
                     self.message.critical(self, 'Invalid Value', f"Current must be a number")
@@ -2728,7 +2728,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 if '<GEN> CRS' in note or '<CRS>' in note:
                     del pem_file.notes[pem_file.notes.index(note)]
 
-            pem_file.notes.append(f"<GEN>/<CRS> {crs.name}")
+            pem_file.notes.append(f"<GEN>/<CRS> {crs.name} (EPSG:{crs.to_epsg()})")
 
         pem_files, rows = self.get_pem_files(selected=selected)
         crs = self.get_crs()
@@ -5170,7 +5170,8 @@ def main():
 
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
     # pem_files = pem_g.get_pems(number=3, random=True)
-    pem_files = pem_g.get_pems(folder="Raw Surface", subfolder=r"Loop 4\Final", number=3)
+    # pem_files = pem_g.get_pems(folder="Raw Surface", subfolder=r"Loop 4\Final", number=3)
+    pem_files = pem_g.get_pems(folder='Iscaycruz', subfolder='Loop 1')
     # pem_files = pem_g.get_pems(folder="Raw Boreholes\EB-21-68\RAW", number=2)
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
@@ -5179,6 +5180,7 @@ def main():
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
     mw.add_pem_files(pem_files)
+    mw.open_3d_map()
     # mw.add_dmp_files(dmp_files)
     # mw.table.selectRow(0)
     # mw.table.selectAll()
