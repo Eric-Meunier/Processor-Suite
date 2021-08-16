@@ -2167,11 +2167,13 @@ if __name__ == '__main__':
     pem_g = PEMGetter()
     parser = PEMParser()
     dmp_parser = DMPParser()
-    # pem_files = pem_getter.get_pems(random=True, number=1)
 
+    file = r"C:\_Data\2021\Nantou BF\Surface\Loop 5\RAW\_0816_pp.DMP2"
+    pem_file, errors = dmp_parser.parse(file)
+    # pem_file = parser.parse(r"C:\_Data\2021\Nantou BF\Surface\Loop 5\RAW\_0816_pp.PEM")
     # pem_file = pem_g.get_pems(folder="Raw Boreholes", file=r"SR-15-04 Z.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Boreholes", file="em21-155 z_0415.PEM")[0]
-    pem_file = pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM")[0]
+    # pem_file = pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\800E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\1200E.PEM")[0]  # TODO Test this for ordering worse to best readings

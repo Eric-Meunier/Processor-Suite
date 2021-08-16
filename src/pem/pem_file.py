@@ -147,7 +147,7 @@ class PEMFile:
 
         self.total_scale_factor = 0.
         self.soa = 0  # For XY SOA rotation
-        self.pp_table = None
+        self.pp_table = None  # PP de-rotation information
         self.prepped_for_rotation = False
         self.legacy = False
 
@@ -3313,12 +3313,11 @@ class PEMSerializer:
         return result
 
     def serialize_data(self, legacy=False):
-        df = self.pem_file.get_data(sorted=True)
-
-        # Remove deleted readings
-        filt = ~df.Deleted.astype(bool)
-        df = df[filt]
-
+        """
+        Print the data to text for a PEM file format.
+        :param legacy: bool, will remove the timestamp and deleted status if True.
+        :return: string
+        """
         def serialize_reading(reading):
             reading_header = [reading['Station'],
                               reading['Component'] + 'R' + f"{reading['Reading_index']:g}",
@@ -3355,7 +3354,16 @@ class PEMSerializer:
 
             return result + '\n'
 
-        return ''.join(df.apply(serialize_reading, axis=1))
+        df = self.pem_file.get_data(sorted=True)
+
+        # Remove deleted readings
+        filt = ~df.Deleted.astype(bool)
+        df = df[filt]
+        if df.empty:
+            logger.warning(f"No valid data found to print in {self.pem_file.filepath.name}.")
+            return ""
+        else:
+            return ''.join(df.apply(serialize_reading, axis=1))
 
     def serialize(self, pem_file, legacy=False):
         """
@@ -3789,25 +3797,27 @@ if __name__ == '__main__':
     import timeit
     sample_folder = Path(__file__).parents[2].joinpath("sample_files")
 
-    dparser = DMPParser()
+    dmpparser = DMPParser()
     pemparser = PEMParser()
     pem_g = PEMGetter()
 
     # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
-    # file = r"C:\_Data\2021\TMC\Murchison\Landrienne B\Final\MURCHISON_LANDRIENNE B\L200E.PEM"
+    file = r"C:\_Data\2021\Nantou BF\Surface\Loop 5\RAW\_0816_pp.DMP2"
+    pem_file, errors = dmpparser.parse(file)
+    pem_file.to_string()
     # file = r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\1338-19-036 XY.PEM"
     # file = r"C:\_Data\2021\Iscaycruz\Borehole\LS-27-21-07\RAW\xy_0704.PEM"
     # pemparser.parse(file)
 
     # pem_files = pem_g.get_pems(random=True, number=1)
-    pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"EB-21-52\Final\z.PEM")
+    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"EB-21-52\Final\z.PEM")
     # pem_files = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")
     # pem_files = pem_g.get_pems(folder="Raw Surface", subfolder=r"Loop 1\Final\Perkoa South", file="11200E.PEM")
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155 z_0415.PEM")
 
-    pem_file = pem_files[0]
+    # pem_file = pem_files[0]
     # pem_file.get_theory_pp()
-    pem_file.get_theory_data()
+    # pem_file.get_theory_data()
     # pem_file.get_reversed_components()
     # pem_file.rotate(method="unrotate")
     # pem_file.filepath = pem_file.filepath.with_name(pem_file.filepath.stem + "(unrotated)" + ".PEM")

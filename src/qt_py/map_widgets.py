@@ -76,9 +76,7 @@ class MapboxViewer(QMainWindow):
 
         self.file_menu = self.menuBar().addMenu('&File')
         self.file_menu.addAction(self.save_img_action)
-        self.file_menu.setIcon(QIcon(str(icons_path.joinpath("save.png"))))
         self.file_menu.addAction(self.copy_image_action)
-        self.file_menu.setIcon(QIcon(str(icons_path.joinpath("copy.png"))))
 
         self.map_figure = go.Figure(go.Scattermapbox(mode="markers+lines"))
 
