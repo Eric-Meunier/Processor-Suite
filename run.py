@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PySide2.QtCore import Qt, QTimer
 from PySide2.QtGui import (QColor, QIcon)
-from PySide2.QtWidgets import (QWidget, QErrorMessage, QProgressBar, QApplication, QGraphicsDropShadowEffect)
+from PySide2.QtWidgets import (QWidget, QErrorMessage, QApplication, QGraphicsDropShadowEffect)
 
 from src import __version__, app_data_dir
 from src.ui.splash_screen import Ui_SplashScreen

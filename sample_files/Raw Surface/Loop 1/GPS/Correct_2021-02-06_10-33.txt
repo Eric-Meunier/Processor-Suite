@@ -1,0 +1,393 @@
+Searching for base files...
+ 
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Daily\ykro0250.21d.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/025/auto0250.21n.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/rinex/2021/026/ykro0260.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/026/auto0260.21n.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Daily\ykro0270.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Daily\auto0270.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/027/auto0270.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/rinex/2021/028/ykro0280.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/028/auto0280.21n.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/rinex/2021/033/ykro0330.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Daily\auto0330.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/033/auto0330.21g.Z.
+Successfully found or downloaded 4 of 12 files.
+Failed to load Nav data from file C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Daily\auto0250.21n.Z
+Search complete.
+ 
+--------Base Data Details:--------------------
+Using reference position from base provider: 
+  Name: SOPAC, Yamoussoukro Tracking Station Daily
+  Position: 6°52'13.99778"N,  5°14'24.40025"W,  271.48 m
+Source: C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Daily
+  ykro0270.21d.Z
+    Local time: 1/26/2021 6:59:42 PM to 1/27/2021 6:59:12 PM
+    Position: 6°52'14.01701"N, 5°14'24.33469"W, 270.29 m, 0.05 m Antenna height
+    Distance from base provider: 2.10m
+ 
+--------Coverage Details:--------------------
+Rover file: LINE 10200E SUITE_02.SSF
+  Local time: 2/2/2021 3:43:33 AM to 2/2/2021 7:24:30 AM
+  0% total coverage.  No matching base data found.
+ 
+Rover file: PEK-SOUTH -LOOP 1.SSF
+  Local time: 1/25/2021 5:15:46 AM to 1/28/2021 7:34:40 AM
+30% total coverage
+  30% coverage by ykro0270.21d.Z
+ 
+--------------------------------------------------
+Searching for base files...
+ 
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/025/10/ykro025k.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Hourly\auto0250.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/025/auto0250.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/025/11/ykro025l.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/025/12/ykro025m.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/025/13/ykro025n.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/026/09/ykro026j.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Hourly\auto0260.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/026/auto0260.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/026/10/ykro026k.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/026/11/ykro026l.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/026/12/ykro026m.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/026/13/ykro026n.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/026/14/ykro026o.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/027/09/ykro027j.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Hourly\auto0270.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/027/auto0270.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/027/10/ykro027k.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/027/11/ykro027l.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/027/12/ykro027m.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/027/13/ykro027n.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Hourly\ykro028k.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Hourly\auto0280.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/028/auto0280.21g.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Hourly\ykro028l.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Hourly\ykro028m.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Hourly\ykro033i.21d.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/033/auto0330.21n.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/033/09/ykro033j.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Hourly\ykro033k.21d.Z downloaded.
+Successfully found or downloaded 9 of 30 files.
+Failed to load Nav data from file C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Hourly\auto0330.21n.Z
+Failed to load Nav data from file C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Hourly\auto0330.21n.Z
+Search complete.
+ 
+--------Base Data Details:--------------------
+Using reference position from base provider: 
+  Name: SOPAC, Yamoussoukro Tracking Station Hourly
+  Position: 6°52'13.99778"N,  5°14'24.40025"W,  271.48 m
+Source: C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Yamoussoukro Tracking Station Hourly
+  ykro028k.21d.Z
+    Local time: 1/28/2021 4:59:42 AM to 1/28/2021 5:59:12 AM
+    Position: 6°52'14.01701"N, 5°14'24.33469"W, 270.29 m, 0.05 m Antenna height
+    Distance from base provider: 2.10m
+  ykro028l.21d.Z
+    Local time: 1/28/2021 5:59:42 AM to 1/28/2021 6:59:12 AM
+    Position: 6°52'14.01701"N, 5°14'24.33469"W, 270.29 m, 0.05 m Antenna height
+    Distance from base provider: 2.10m
+  ykro028m.21d.Z
+    Local time: 1/28/2021 6:59:42 AM to 1/28/2021 7:59:12 AM
+    Position: 6°52'14.01701"N, 5°14'24.33469"W, 270.29 m, 0.05 m Antenna height
+    Distance from base provider: 2.10m
+ 
+--------Coverage Details:--------------------
+Rover file: LINE 10200E SUITE_02.SSF
+  Local time: 2/2/2021 3:43:33 AM to 2/2/2021 7:24:30 AM
+  0% total coverage.  No matching base data found.
+ 
+Rover file: PEK-SOUTH -LOOP 1.SSF
+  Local time: 1/25/2021 5:15:46 AM to 1/28/2021 7:34:40 AM
+17% total coverage
+  6% coverage by ykro028k.21d.Z
+  7% coverage by ykro028l.21d.Z
+  4% coverage by ykro028m.21d.Z
+ 
+--------------------------------------------------
+Searching for base files...
+ 
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/rinex/2021/025/dakr0250.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, DAKR Daily\auto0250.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/025/auto0250.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/rinex/2021/026/dakr0260.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, DAKR Daily\auto0260.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/026/auto0260.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/rinex/2021/027/dakr0270.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, DAKR Daily\auto0270.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/027/auto0270.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/rinex/2021/028/dakr0280.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, DAKR Daily\auto0280.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/028/auto0280.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/rinex/2021/033/dakr0330.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, DAKR Daily\auto0330.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/033/auto0330.21g.Z.
+Successfully found or downloaded 5 of 15 files.
+Search complete.
+ 
+--------------------------------------------------
+Searching for base files...
+ 
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/025/10/dakr025k.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, DAKR Hourly\auto0250.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/025/auto0250.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/025/11/dakr025l.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/025/12/dakr025m.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/025/13/dakr025n.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/026/09/dakr026j.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, DAKR Hourly\auto0260.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/026/auto0260.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/026/10/dakr026k.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/026/11/dakr026l.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/026/12/dakr026m.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/026/13/dakr026n.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/026/14/dakr026o.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/027/09/dakr027j.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, DAKR Hourly\auto0270.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/027/auto0270.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/027/10/dakr027k.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/027/11/dakr027l.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/027/12/dakr027m.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/027/13/dakr027n.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/028/10/dakr028k.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, DAKR Hourly\auto0280.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/028/auto0280.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/028/11/dakr028l.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/028/12/dakr028m.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/033/08/dakr033i.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, DAKR Hourly\auto0330.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/033/auto0330.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/033/09/dakr033j.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/033/10/dakr033k.21d.Z.
+Successfully found or downloaded 5 of 31 files.
+Search complete.
+ 
+--------------------------------------------------
+Searching for base files...
+ 
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/rinex/2021/025/nklg0250.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, N'Koltang, daily\auto0250.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/025/auto0250.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/rinex/2021/026/nklg0260.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, N'Koltang, daily\auto0260.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/026/auto0260.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/rinex/2021/027/nklg0270.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, N'Koltang, daily\auto0270.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/027/auto0270.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/rinex/2021/028/nklg0280.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, N'Koltang, daily\auto0280.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/028/auto0280.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/rinex/2021/033/nklg0330.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, N'Koltang, daily\auto0330.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/033/auto0330.21g.Z.
+Successfully found or downloaded 5 of 15 files.
+Search complete.
+ 
+--------------------------------------------------
+Searching for base files...
+ 
+Unable to transfer files.
+Unable to download file from url ftp://gnss.bev.gv.at/pub/obs/2021/025/izan0250.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://gnss.bev.gv.at/pub/obs/2021/025/izan0250.21n.Z.
+Unable to transfer files.
+Unable to download file from url ftp://gnss.bev.gv.at/pub/obs/2021/026/izan0260.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://gnss.bev.gv.at/pub/obs/2021/026/izan0260.21n.Z.
+Unable to transfer files.
+Unable to download file from url ftp://gnss.bev.gv.at/pub/obs/2021/027/izan0270.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://gnss.bev.gv.at/pub/obs/2021/027/izan0270.21n.Z.
+Unable to transfer files.
+Unable to download file from url ftp://gnss.bev.gv.at/pub/obs/2021/028/izan0280.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://gnss.bev.gv.at/pub/obs/2021/028/izan0280.21n.Z.
+Unable to transfer files.
+Unable to download file from url ftp://gnss.bev.gv.at/pub/obs/2021/033/izan0330.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://gnss.bev.gv.at/pub/obs/2021/033/izan0330.21n.Z.
+Successfully found or downloaded 0 of 10 files.
+Search complete.
+ 
+--------------------------------------------------
+Searching for base files...
+ 
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr10250.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto0250.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr10260.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto0260.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr10270.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto0270.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr10280.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto0280.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr10330.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto0330.21n.Z downloaded.
+Successfully found or downloaded 10 of 10 files.
+Search complete.
+ 
+--------Base Data Details:--------------------
+Using reference position from base provider: 
+  Name: SOPAC, IFRANE SEISMIC STATION Daily
+  Position: 33°30'50.11992"N,  5°07'31.94206"W,  1,709.52 m
+Source: C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily
+  ifr10250.21d.Z
+    Local time: 1/24/2021 6:59:42 PM to 1/25/2021 6:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr10260.21d.Z
+    Local time: 1/25/2021 6:59:42 PM to 1/26/2021 6:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr10270.21d.Z
+    Local time: 1/26/2021 6:59:42 PM to 1/27/2021 6:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr10280.21d.Z
+    Local time: 1/27/2021 6:59:42 PM to 1/28/2021 6:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr10330.21d.Z
+    Local time: 2/1/2021 6:59:42 PM to 2/2/2021 6:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+ 
+--------Coverage Details:--------------------
+Rover file: LINE 10200E SUITE_02.SSF
+  Local time: 2/2/2021 3:43:33 AM to 2/2/2021 7:24:30 AM
+100% total coverage
+  100% coverage by ifr10330.21d.Z
+ 
+Rover file: PEK-SOUTH -LOOP 1.SSF
+  Local time: 1/25/2021 5:15:46 AM to 1/28/2021 7:34:40 AM
+100% total coverage
+  18% coverage by ifr10250.21d.Z
+  35% coverage by ifr10260.21d.Z
+  30% coverage by ifr10270.21d.Z
+  17% coverage by ifr10280.21d.Z
+ 
+--------------------------------------------------
+Differentially correcting...
+  Differential correction settings:
+    Use smart automatic filtering: On
+    Re-correct real-time positions: On
+    Output positions: Corrected and uncorrected
+
+--------------------------------------------------
+Processing rover file, LINE 10200E SUITE_02.SSF ...
+...to output file, C:\_Data\2021\Nantou BF\Surface\Perkoa South\GPS\LINE 10200E SUITE_02.cor
+    Carrier processing...
+Maximum allowed baseline length exceeded.
+        Corrected 0 positions
+    Code processing...
+    Reference station data gap encountered:  30:00,  2/2/2021 6:00:00 AM
+    Possible reduced accuracy
+    Reference station data gap encountered:  30:30,  2/2/2021 6:00:00 AM
+    Possible reduced accuracy
+        Selected 1097 positions for post-processing
+        Corrected 1097 positions
+ 
+--------------------------------------------------
+Processing rover file, PEK-SOUTH -LOOP 1.SSF ...
+...to output file, C:\_Data\2021\Nantou BF\Surface\Perkoa South\GPS\PEK-SOUTH -LOOP 1.cor
+    Carrier processing...
+Maximum allowed baseline length exceeded.
+        Corrected 0 positions
+    Code processing...
+        Selected 6314 positions for post-processing
+        Corrected 6314 positions
+ 
+--------------------------------------------------
+Differential Correction Summary:
+    2 files processed.  In these files:
+        7411 (100.00%) of 7411 selected positions were code corrected by post-processing
+        0 (0.00%) of 0 selected positions were carrier corrected by post-processing
+
+    Estimated accuracies for 7411 corrected positions are as follows:
+            Range	Percentage
+            ----------	----------
+              0-5cm	     -
+             5-15cm	     -
+            15-30cm	     -
+            30-50cm	     -
+             0.5-1m	57.06%
+               1-2m	36.54%
+               2-5m	 6.22%
+                >5m	 0.18%
+
+Differential correction complete.
+ 

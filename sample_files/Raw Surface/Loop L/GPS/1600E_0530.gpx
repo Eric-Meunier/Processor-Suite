@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gpx
+ xmlns="http://www.topografix.com/GPX/1/1"
+ creator="OziExplorer Version 3956f - http://www.oziexplorer.com"
+ version="1.1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+<metadata>
+ <time>2021-05-30T00:25:55Z</time>
+ <bounds minlat="52.241790" minlon="-72.155640" maxlat="52.336890" maxlon="-72.071780"/>
+</metadata>
+<wpt lat="52.3275400" lon="-72.1246300">
+ <ele>480.974396</ele>
+ <time>2021-05-29T20:25:55.467Z</time>
+ <name>1600 1150</name>
+ <cmt>29-MAI-21 11:25:47</cmt>
+ <desc>29-MAI-21 11:25:47</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3271600" lon="-72.1250000">
+ <ele>481.888794</ele>
+ <time>2021-05-29T20:25:55.472Z</time>
+ <name>1600 1100</name>
+ <cmt>29-MAI-21 11:29:47</cmt>
+ <desc>29-MAI-21 11:29:47</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3267800" lon="-72.1254300">
+ <ele>482.803192</ele>
+ <time>2021-05-29T20:25:55.472Z</time>
+ <name>1600 1050</name>
+ <cmt>29-MAI-21 11:32:57</cmt>
+ <desc>29-MAI-21 11:32:57</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3264000" lon="-72.1258200">
+ <ele>483.717590</ele>
+ <time>2021-05-29T20:25:55.472Z</time>
+ <name>1600 1000</name>
+ <cmt>29-MAI-21 11:35:48</cmt>
+ <desc>29-MAI-21 11:35:48</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3260300" lon="-72.1262100">
+ <ele>484.631989</ele>
+ <time>2021-05-29T20:25:55.472Z</time>
+ <name>1600 950</name>
+ <cmt>29-MAI-21 11:38:16</cmt>
+ <desc>29-MAI-21 11:38:16</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3256600" lon="-72.1265800">
+ <ele>488.594391</ele>
+ <time>2021-05-29T20:25:55.472Z</time>
+ <name>1600 900</name>
+ <cmt>29-MAI-21 11:41:57</cmt>
+ <desc>29-MAI-21 11:41:57</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3252700" lon="-72.1269700">
+ <ele>490.118408</ele>
+ <time>2021-05-29T20:25:55.472Z</time>
+ <name>1600 850</name>
+ <cmt>29-MAI-21 11:44:47</cmt>
+ <desc>29-MAI-21 11:44:47</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3248800" lon="-72.1273600">
+ <ele>490.727997</ele>
+ <time>2021-05-29T20:25:55.472Z</time>
+ <name>1600 800</name>
+ <cmt>29-MAI-21 11:46:55</cmt>
+ <desc>29-MAI-21 11:46:55</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3245100" lon="-72.1277700">
+ <ele>490.423187</ele>
+ <time>2021-05-29T20:25:55.472Z</time>
+ <name>1600 750</name>
+ <cmt>29-MAI-21 11:56:12</cmt>
+ <desc>29-MAI-21 11:56:12</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3241300" lon="-72.1281400">
+ <ele>491.947205</ele>
+ <time>2021-05-29T20:25:55.472Z</time>
+ <name>1600 700</name>
+ <cmt>29-MAI-21 11:59:24</cmt>
+ <desc>29-MAI-21 11:59:24</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3237500" lon="-72.1285300">
+ <ele>491.947205</ele>
+ <time>2021-05-29T20:25:55.472Z</time>
+ <name>1600 650</name>
+ <cmt>29-MAI-21 12:01:56</cmt>
+ <desc>29-MAI-21 12:01:56</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3233700" lon="-72.1289400">
+ <ele>496.214386</ele>
+ <time>2021-05-29T20:25:55.472Z</time>
+ <name>1600 600</name>
+ <cmt>29-MAI-21 12:05:00</cmt>
+ <desc>29-MAI-21 12:05:00</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3230000" lon="-72.1293500">
+ <ele>499.567200</ele>
+ <time>2021-05-29T20:25:55.472Z</time>
+ <name>1600 550</name>
+ <cmt>29-MAI-21 12:08:08</cmt>
+ <desc>29-MAI-21 12:08:08</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3226300" lon="-72.1297400">
+ <ele>502.310394</ele>
+ <time>2021-05-29T20:25:55.472Z</time>
+ <name>1600 500</name>
+ <cmt>29-MAI-21 12:22:40</cmt>
+ <desc>29-MAI-21 12:22:40</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3222400" lon="-72.1301400">
+ <ele>504.139191</ele>
+ <time>2021-05-29T20:25:55.472Z</time>
+ <name>1600 450</name>
+ <cmt>29-MAI-21 12:25:08</cmt>
+ <desc>29-MAI-21 12:25:08</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3218500" lon="-72.1305200">
+ <ele>506.577606</ele>
+ <time>2021-05-29T20:25:55.472Z</time>
+ <name>1600 400</name>
+ <cmt>29-MAI-21 12:27:44</cmt>
+ <desc>29-MAI-21 12:27:44</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3214900" lon="-72.1308800">
+ <ele>506.882385</ele>
+ <time>2021-05-29T20:25:55.477Z</time>
+ <name>1600 350</name>
+ <cmt>29-MAI-21 12:30:39</cmt>
+ <desc>29-MAI-21 12:30:39</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3211100" lon="-72.1312600">
+ <ele>505.358398</ele>
+ <time>2021-05-29T20:25:55.477Z</time>
+ <name>1600 300</name>
+ <cmt>29-MAI-21 12:34:09</cmt>
+ <desc>29-MAI-21 12:34:09</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3207300" lon="-72.1316700">
+ <ele>503.834412</ele>
+ <time>2021-05-29T20:25:55.477Z</time>
+ <name>1600 250</name>
+ <cmt>29-MAI-21 12:37:04</cmt>
+ <desc>29-MAI-21 12:37:04</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3203600" lon="-72.1320500">
+ <ele>504.139191</ele>
+ <time>2021-05-29T20:25:55.477Z</time>
+ <name>1600 200</name>
+ <cmt>29-MAI-21 12:43:48</cmt>
+ <desc>29-MAI-21 12:43:48</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3199800" lon="-72.1324600">
+ <ele>502.005615</ele>
+ <time>2021-05-29T20:25:55.477Z</time>
+ <name>1600 150</name>
+ <cmt>29-MAI-21 12:49:06</cmt>
+ <desc>29-MAI-21 12:49:06</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3196000" lon="-72.1328500">
+ <ele>496.519196</ele>
+ <time>2021-05-29T20:25:55.477Z</time>
+ <name>1600 100</name>
+ <cmt>29-MAI-21 12:51:28</cmt>
+ <desc>29-MAI-21 12:51:28</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3192100" lon="-72.1332500">
+ <ele>495.299988</ele>
+ <time>2021-05-29T20:25:55.477Z</time>
+ <name>1600 50</name>
+ <cmt>29-MAI-21 12:54:07</cmt>
+ <desc>29-MAI-21 12:54:07</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+</gpx>

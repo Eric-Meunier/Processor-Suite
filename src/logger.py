@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 from copy import copy
 from logging.config import dictConfig
+from src import app_data_dir
 
 logger = logging.getLogger('decorator-log')
 
@@ -40,8 +41,6 @@ class ColoredFormatter(logging.Formatter):
 
 
 # Create the .log file in the AppData folder.
-app_data_dir = Path(os.path.join(os.getenv('APPDATA'), r"PEMPro"))
-app_data_dir.mkdir(parents=True, exist_ok=True)  # Create the PEMPro AppData folder
 f = open(app_data_dir.joinpath("logs.txt"), "w")  # Create the file
 f.close()
 
@@ -69,7 +68,7 @@ log_config = {
             'level': 'DEBUG',
             'formatter': 'file',
             'class': 'logging.FileHandler',
-            'filename': os.path.join(os.getenv('APPDATA'), r"PEMPro\.log"),
+            'filename': str(app_data_dir.joinpath("logs.txt")),
             'mode': 'w',
         }
     },
@@ -103,5 +102,5 @@ class Log(object):
             except Exception as ex:
                 self.logger.info(f"Exception {ex}")
                 raise ex
-            return result
+            # return result
         return decorated

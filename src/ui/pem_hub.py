@@ -441,8 +441,8 @@ class Ui_PEMHub(object):
         self.splitter.setHandleWidth(3)
         self.splitter.setChildrenCollapsible(False)
         self.table = QTableWidget(self.splitter)
-        if (self.table.columnCount() < 14):
-            self.table.setColumnCount(14)
+        if (self.table.columnCount() < 15):
+            self.table.setColumnCount(15)
         __qtablewidgetitem = QTableWidgetItem()
         self.table.setHorizontalHeaderItem(0, __qtablewidgetitem)
         __qtablewidgetitem1 = QTableWidgetItem()
@@ -471,6 +471,8 @@ class Ui_PEMHub(object):
         self.table.setHorizontalHeaderItem(12, __qtablewidgetitem12)
         __qtablewidgetitem13 = QTableWidgetItem()
         self.table.setHorizontalHeaderItem(13, __qtablewidgetitem13)
+        __qtablewidgetitem14 = QTableWidgetItem()
+        self.table.setHorizontalHeaderItem(14, __qtablewidgetitem14)
         self.table.setObjectName(u"table")
         sizePolicy6 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy6.setHorizontalStretch(0)
@@ -1170,6 +1172,9 @@ class Ui_PEMHub(object):
 "Warnings", None));
         ___qtablewidgetitem13 = self.table.horizontalHeaderItem(13)
         ___qtablewidgetitem13.setText(QCoreApplication.translate("PEMHub", u"Repeat\n"
+"Warnings", None));
+        ___qtablewidgetitem14 = self.table.horizontalHeaderItem(14)
+        ___qtablewidgetitem14.setText(QCoreApplication.translate("PEMHub", u"Polarity\n"
 "Warnings", None));
 #if QT_CONFIG(tooltip)
         self.table.setToolTip("")

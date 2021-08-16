@@ -276,13 +276,6 @@ class Ui_PEMPlotEditor(object):
 
         self.verticalLayout_10.addWidget(self.line_3)
 
-        self.show_average_cbox = QCheckBox(self.groupBox)
-        self.show_average_cbox.setObjectName(u"show_average_cbox")
-        self.show_average_cbox.setFocusPolicy(Qt.NoFocus)
-        self.show_average_cbox.setChecked(True)
-
-        self.verticalLayout_10.addWidget(self.show_average_cbox)
-
         self.show_scatter_cbox = QCheckBox(self.groupBox)
         self.show_scatter_cbox.setObjectName(u"show_scatter_cbox")
         self.show_scatter_cbox.setFocusPolicy(Qt.NoFocus)
@@ -483,7 +476,6 @@ class Ui_PEMPlotEditor(object):
         self.label_2.setText(QCoreApplication.translate("PEMPlotEditor", u"Profile Options", None))
         self.groupBox.setTitle(QCoreApplication.translate("PEMPlotEditor", u"View", None))
         self.plot_mag_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Plot Mag", None))
-        self.show_average_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Show Average", None))
         self.show_scatter_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Show Scatter", None))
         self.groupBox_3.setTitle(QCoreApplication.translate("PEMPlotEditor", u"Edit", None))
         self.change_comp_profile_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Components", None))

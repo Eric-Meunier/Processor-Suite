@@ -26,7 +26,7 @@ from scipy import interpolate as interp
 
 from src.gps.gps_editor import BoreholeGeometry
 from src.pem.pem_plotter import MapPlotter
-from src.qt_py import icons_path, CustomProgressBar
+from src.qt_py import icons_path, CustomProgressBar, NonScientific
 from src.ui.contour_map import Ui_ContourMap
 
 logger = logging.getLogger(__name__)
@@ -76,7 +76,9 @@ class MapboxViewer(QMainWindow):
 
         self.file_menu = self.menuBar().addMenu('&File')
         self.file_menu.addAction(self.save_img_action)
+        self.file_menu.setIcon(QIcon(str(icons_path.joinpath("save.png"))))
         self.file_menu.addAction(self.copy_image_action)
+        self.file_menu.setIcon(QIcon(str(icons_path.joinpath("copy.png"))))
 
         self.map_figure = go.Figure(go.Scattermapbox(mode="markers+lines"))
 
@@ -334,9 +336,11 @@ class Map3DViewer(QMainWindow):
 
         self.save_img_action = QAction('Save Image')
         self.save_img_action.setShortcut("Ctrl+S")
+        self.save_img_action.setIcon(QIcon(str(icons_path.joinpath("save_as.png"))))
         self.save_img_action.triggered.connect(self.save_img)
         self.copy_image_action = QAction('Copy Image')
         self.copy_image_action.setShortcut("Ctrl+C")
+        self.copy_image_action.setIcon(QIcon(str(icons_path.joinpath("copy.png"))))
         self.copy_image_action.triggered.connect(self.copy_img)
 
         self.file_menu = self.menuBar().addMenu('&File')
@@ -1238,15 +1242,15 @@ class GPSViewer(QMainWindow):
                 dlg += 1
 
 
-class NonScientific(pg.AxisItem):
-    def __init__(self, *args, **kwargs):
-        super(NonScientific, self).__init__(*args, **kwargs)
-
-    def tickStrings(self, values, scale, spacing):
-        return [int(value*1) for value in values]  # This line return the NonScientific notation value
-
-    def logTickStrings(self, values, scale, spacing):
-        return [int(value*1) for value in values]  # This line return the NonScientific notation value
+# class NonScientific(pg.AxisItem):
+#     def __init__(self, *args, **kwargs):
+#         super(NonScientific, self).__init__(*args, **kwargs)
+#
+#     def tickStrings(self, values, scale, spacing):
+#         return [int(value*1) for value in values]  # This line return the NonScientific notation value
+#
+#     def logTickStrings(self, values, scale, spacing):
+#         return [int(value*1) for value in values]  # This line return the NonScientific notation value
 
 
 if __name__ == '__main__':
@@ -1260,17 +1264,17 @@ if __name__ == '__main__':
 
     # m = TileMapViewer()
     # m = GPSViewer()
-    # m = Map3DViewer()
-    # m.open(files)
-    # m.show()
+    m = Map3DViewer()
+    m.open(files)
+    m.show()
 
     # map = Map3DViewer()
     # map.show()
     # map.open(files)
 
-    cmap = ContourMapViewer()
-    cmap.open(files)
-    cmap.show()
+    # cmap = ContourMapViewer()
+    # cmap.open(files)
+    # cmap.show()
     # cmap.channel_list_edit.setText("1, 3, 100, 4")
     # cmap.channel_list_rbtn.setChecked(True)
     # cmap.save_figure()

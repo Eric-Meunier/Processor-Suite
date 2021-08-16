@@ -9,7 +9,7 @@ def convert_station(station):
     # Ensure station is a string
     station = str(station).upper()
     if re.match(r"-?\d+(S|W)", station):
-        station = (-int(re.sub(r"[SW]", "", station)))
+        station = (-int(float(re.sub(r"[SW]", "", station))))
     else:
-        station = (int(re.sub(r"[EN]", "", station)))
+        station = (int(float(re.sub(r"[EN]", "", station))))
     return station

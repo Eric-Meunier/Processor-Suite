@@ -673,6 +673,12 @@ Warnings</string>
 Warnings</string>
                </property>
               </column>
+              <column>
+               <property name="text">
+                <string>Polarity
+Warnings</string>
+               </property>
+              </column>
              </widget>
              <widget class="QFrame" name="directory_frame">
               <property name="sizePolicy">

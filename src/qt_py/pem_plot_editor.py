@@ -145,7 +145,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.x_ax2 = self.x_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
         self.x_ax3 = self.x_profile_layout.addPlot(3, 0, viewBox=ProfileViewBox())
         self.x_ax4 = self.x_profile_layout.addPlot(4, 0, viewBox=ProfileViewBox())
-        self.mag_x_ax = self.x_profile_layout.addPlot(5, 0, viewBox=ProfileViewBox())
+        self.mag_x_ax = self.x_profile_layout.addPlot(6, 0, viewBox=ProfileViewBox())
 
         # Y axis lin plots
         self.y_ax0 = self.y_profile_layout.addPlot(0, 0, viewBox=ProfileViewBox())
@@ -153,7 +153,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.y_ax2 = self.y_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
         self.y_ax3 = self.y_profile_layout.addPlot(3, 0, viewBox=ProfileViewBox())
         self.y_ax4 = self.y_profile_layout.addPlot(4, 0, viewBox=ProfileViewBox())
-        self.mag_y_ax = self.y_profile_layout.addPlot(5, 0, viewBox=ProfileViewBox())
+        self.mag_y_ax = self.y_profile_layout.addPlot(6, 0, viewBox=ProfileViewBox())
 
         # Z axis lin plots
         self.z_ax0 = self.z_profile_layout.addPlot(0, 0, viewBox=ProfileViewBox())
@@ -161,7 +161,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.z_ax2 = self.z_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
         self.z_ax3 = self.z_profile_layout.addPlot(3, 0, viewBox=ProfileViewBox())
         self.z_ax4 = self.z_profile_layout.addPlot(4, 0, viewBox=ProfileViewBox())
-        self.mag_z_ax = self.z_profile_layout.addPlot(5, 0, viewBox=ProfileViewBox())
+        self.mag_z_ax = self.z_profile_layout.addPlot(6, 0, viewBox=ProfileViewBox())
 
         self.x_layout_axes = [self.x_ax0, self.x_ax1, self.x_ax2, self.x_ax3, self.x_ax4, self.mag_x_ax]
         self.y_layout_axes = [self.y_ax0, self.y_ax1, self.y_ax2, self.y_ax3, self.y_ax4, self.mag_y_ax]
@@ -237,7 +237,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.actionCopy_Screenshot.triggered.connect(self.copy_img)
 
         # Checkboxes
-        self.show_average_cbox.toggled.connect(lambda: self.plot_profiles(components='all'))
         self.show_scatter_cbox.toggled.connect(lambda: self.plot_profiles(components='all'))
         self.plot_mag_cbox.toggled.connect(toggle_mag_plots)
         self.auto_range_cbox.toggled.connect(self.reset_range)
@@ -731,17 +730,32 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
                 ax.addItem(scatter)
 
+            def plot_mag():
+                """Plot the mag profile if available. Disable the plot mag button if it's not applicable."""
+
+                if all([self.pem_file.is_borehole(), self.pem_file.has_xy(), self.pem_file.has_d7()]):
+                    mag_df = self.pem_file.get_mag(average=True)
+                    if mag_df.Mag.any():
+                        self.plot_mag_cbox.setEnabled(True)
+                        # Save the mag curves so they can be toggled easily.
+                        x, y = mag_df.Station.to_numpy(), mag_df.Mag.to_numpy()
+                        for ax in self.mag_profile_axes:
+                            mag_plot_item = pg.PlotCurveItem(x=x, y=y, pen=pg.mkPen('1DD219', width=2.))
+                            ax.getAxis("left").setLabel("Total Magnetic Field", units="pT")
+                            ax.addItem(mag_plot_item)
+
             def plot_theory_pp(df, ax):
                 """
                 Plot the theoretical PP values
-                :param df: DataFrame
+                :param df: DataFrame, calculated theoretical total magnetic field strength.
                 :param ax: pyqtgraph PlotItem for the PP frame
                 :return: None
                 """
-                pp_plot_item = pg.PlotCurveItem(x=df.Station.to_numpy(), y=df[component].to_numpy(),
-                                                pen=pg.mkPen('b', width=1.5, style=Qt.DotLine),
-                                                name="PP Theory")
-                ax.addItem(pp_plot_item)
+                if not df.empty:
+                    pp_plot_item = pg.PlotCurveItem(x=df.Station.to_numpy(), y=df[component].to_numpy(),
+                                                    pen=pg.mkPen('b', width=1.5, style=Qt.DotLine),
+                                                    name="PP Theory")
+                    ax.addItem(pp_plot_item)
 
             # Plotting
             for i, bounds in enumerate(channel_bounds):
@@ -757,25 +771,12 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 for channel in range(bounds[0], bounds[1] + 1):
                     data = profile_data.iloc[:, channel]
 
-                    if self.show_average_cbox.isChecked():
-                        plot_lines(data, ax)
+                    plot_lines(data, ax)
                     if self.show_scatter_cbox.isChecked():
                         plot_scatters(data, ax)
 
-            if not theory_data.empty:
-                plot_theory_pp(theory_data, axes[0])
-
-            # Plot the mag profile if available. Disable the plot mag button if it's not applicable.
-            if all([self.pem_file.is_borehole(), self.pem_file.has_xy(), self.pem_file.has_d7()]):
-                mag_df = self.pem_file.get_mag(average=True)
-                if mag_df.Mag.any():
-                    self.plot_mag_cbox.setEnabled(True)
-                    # Save the mag curves so they can be toggled easily.
-                    x, y = mag_df.Station.to_numpy(), mag_df.Mag.to_numpy()
-                    for ax in self.mag_profile_axes:
-                        mag_plot_item = pg.PlotCurveItem(x=x, y=y, pen=pg.mkPen('1DD219', width=2.))
-                        ax.getAxis("left").setLabel("Total Magnetic Field", units="pT")
-                        ax.addItem(mag_plot_item)
+            plot_theory_pp(theory_data, axes[0])
+            plot_mag()
 
         self.update_file()
 
@@ -796,6 +797,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         channel_bounds = file.get_channel_bounds()
 
         theory_data = self.pem_file.get_theory_pp()
+        # theory_data_2 = self.pem_file.get_theory_data()
 
         for component in components:
             profile_data = file.get_profile_data(component,
@@ -899,6 +901,67 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             # Add the plot item to the list of plotted items
             self.plotted_decay_lines.append(decay_line)
 
+        def plot_auto_clean():
+            """
+            Plot the median line (__main__ only) and auto-clean threshold lines.
+            :return: None
+            """
+            if self.plot_auto_clean_lines_cbox.isChecked():
+                window_size = self.auto_clean_window_sbox.value()
+                for ax in self.decay_axes:
+                    if ax == self.x_decay_plot:
+                        comp_filt = self.plotted_decay_data.Component == "X"
+                    elif ax == self.y_decay_plot:
+                        comp_filt = self.plotted_decay_data.Component == "Y"
+                    else:
+                        comp_filt = self.plotted_decay_data.Component == "Z"
+
+                    # Ignore deleted data when calculating median
+                    existing_data = self.plotted_decay_data[comp_filt][~self.plotted_decay_data[comp_filt].Deleted]
+                    median_data = DataFrame.from_records(existing_data.Reading.reset_index(drop=True))
+                    if median_data.empty:
+                        continue
+
+                    median = median_data.median(axis=0).to_numpy()
+                    if self.pem_file.number_of_channels > 10:
+                        median = signal.savgol_filter(median, 5, 3)
+                    if not self.plot_ontime_decays_cbox.isChecked():
+                        median = median[~self.pem_file.channel_times.Remove]
+
+                    std = np.array([self.auto_clean_std_sbox.value()] * window_size)
+
+                    off_time_median_data = median_data.loc[:, ~self.pem_file.channel_times.Remove]
+                    if not self.plot_ontime_decays_cbox.isChecked():
+                        off_time_median_data.rename(dict(zip(off_time_median_data.columns,
+                                                             range(len(off_time_median_data.columns)))),
+                                                    inplace=True,
+                                                    axis=1)  # Resets for the X axis values when not plotting on-time
+                    off_time_median = off_time_median_data.median().to_numpy()
+                    if self.pem_file.number_of_channels > 10:
+                        # off_time_median = signal.savgol_filter(off_time_median, 5, 3)
+                        off_time_median = signal.medfilt(off_time_median, 3)
+                    limits_data = off_time_median_data.loc[:, len(off_time_median_data.columns) - window_size:]
+
+                    thresh_line_1 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
+                                                     y=off_time_median[-window_size:] + std,
+                                                     pen=pg.mkPen("m", width=1., style=Qt.DashLine),
+                                                     setClickable=False,
+                                                     name='median limit')
+                    thresh_line_2 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
+                                                     y=off_time_median[-window_size:] - std,
+                                                     pen=pg.mkPen("m", width=1., style=Qt.DashLine),
+                                                     setClickable=False,
+                                                     name='median limit')
+                    ax.addItem(thresh_line_1)
+                    ax.addItem(thresh_line_2)
+
+                    if __name__ == "__main__":
+                        median_line = pg.PlotCurveItem(y=median,
+                                                       pen=pg.mkPen("m", width=2.),
+                                                       setClickable=False,
+                                                       name='median line')
+                        ax.addItem(median_line)
+
         self.selected_station = station
 
         # Move the selected vertical line
@@ -938,63 +1001,66 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Plot the decays
         self.plotted_decay_data.apply(plot_decay, axis=1)
 
-        # Plot the median and auto-clean limits
-        if self.plot_auto_clean_lines_cbox.isChecked():
-            window_size = self.auto_clean_window_sbox.value()
-            for ax in self.decay_axes:
-                if ax == self.x_decay_plot:
-                    comp_filt = self.plotted_decay_data.Component == "X"
-                elif ax == self.y_decay_plot:
-                    comp_filt = self.plotted_decay_data.Component == "Y"
-                else:
-                    comp_filt = self.plotted_decay_data.Component == "Z"
+        plot_auto_clean()
 
-                # Ignore deleted data when calculating median
-                existing_data = self.plotted_decay_data[comp_filt][~self.plotted_decay_data[comp_filt].Deleted]
-                median_data = DataFrame.from_records(existing_data.Reading.reset_index(drop=True))
-                if median_data.empty:
-                    continue
+        # # Plot the median and auto-clean limits
+        # if self.plot_auto_clean_lines_cbox.isChecked():
+        #     window_size = self.auto_clean_window_sbox.value()
+        #     for ax in self.decay_axes:
+        #         if ax == self.x_decay_plot:
+        #             comp_filt = self.plotted_decay_data.Component == "X"
+        #         elif ax == self.y_decay_plot:
+        #             comp_filt = self.plotted_decay_data.Component == "Y"
+        #         else:
+        #             comp_filt = self.plotted_decay_data.Component == "Z"
+        #
+        #         # Ignore deleted data when calculating median
+        #         existing_data = self.plotted_decay_data[comp_filt][~self.plotted_decay_data[comp_filt].Deleted]
+        #         median_data = DataFrame.from_records(existing_data.Reading.reset_index(drop=True))
+        #         if median_data.empty:
+        #             continue
+        #
+        #         median = median_data.median(axis=0).to_numpy()
+        #         if self.pem_file.number_of_channels > 10:
+        #             median = signal.savgol_filter(median, 5, 3)
+        #         std = np.array([self.auto_clean_std_sbox.value()] * window_size)
+        #
+        #         off_time_median_data = median_data.loc[:, ~self.pem_file.channel_times.Remove]
+        #         off_time_median = off_time_median_data.median().to_numpy()
+        #         if self.pem_file.number_of_channels > 10:
+        #             # off_time_median = signal.savgol_filter(off_time_median, 5, 3)
+        #             off_time_median = signal.medfilt(off_time_median, 3)
+        #         limits_data = off_time_median_data.loc[:, len(off_time_median_data.columns) - window_size:]
+        #
+        #         thresh_line_1 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
+        #                                          y=off_time_median[-window_size:] + std,
+        #                                          pen=pg.mkPen("m", width=1., style=Qt.DashLine),
+        #                                          setClickable=False,
+        #                                          name='median limit')
+        #         thresh_line_2 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
+        #                                          y=off_time_median[-window_size:] - std,
+        #                                          pen=pg.mkPen("m", width=1., style=Qt.DashLine),
+        #                                          setClickable=False,
+        #                                          name='median limit')
+        #         ax.addItem(thresh_line_1)
+        #         ax.addItem(thresh_line_2)
+        #
+        #         # error_bars = ErrorBarItem(x=data.columns,
+        #         #                              y=median,
+        #         #                              height=std,
+        #         #                              width=0,
+        #         #                              beam=1,
+        #         #                              pen=pg.mkPen("b", width=1.))
+        #         #
+        #         # error_line = pg.PlotCurveItem(y=median.to_numpy(),
+        #         #                               pen=pg.mkPen("b", width=1., style=Qt.DashLine))
 
-                median = median_data.median(axis=0).to_numpy()
-                if self.pem_file.number_of_channels > 10:
-                    median = signal.savgol_filter(median, 5, 3)
-                std = np.array([self.auto_clean_std_sbox.value()] * window_size)
-
-                off_time_median_data = median_data.loc[:, ~self.pem_file.channel_times.Remove]
-                off_time_median = off_time_median_data.median().to_numpy()
-                if self.pem_file.number_of_channels > 10:
-                    off_time_median = signal.savgol_filter(off_time_median, 5, 3)
-                limits_data = off_time_median_data.loc[:, len(off_time_median_data.columns) - window_size:]
-
-                thresh_line_1 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
-                                                 y=off_time_median[-window_size:] + std,
-                                                 pen=pg.mkPen("m", width=1., style=Qt.DashLine),
-                                                 setClickable=False,
-                                                 name='median limit')
-                thresh_line_2 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
-                                                 y=off_time_median[-window_size:] - std,
-                                                 pen=pg.mkPen("m", width=1., style=Qt.DashLine),
-                                                 setClickable=False,
-                                                 name='median limit')
-                ax.addItem(thresh_line_1)
-                ax.addItem(thresh_line_2)
-
-                # error_bars = ErrorBarItem(x=data.columns,
-                #                              y=median,
-                #                              height=std,
-                #                              width=0,
-                #                              beam=1,
-                #                              pen=pg.mkPen("b", width=1.))
-                #
-                # error_line = pg.PlotCurveItem(y=median.to_numpy(),
-                #                               pen=pg.mkPen("b", width=1., style=Qt.DashLine))
-
-                if __name__ == "__main__":
-                    median_line = pg.PlotCurveItem(y=median,
-                                                   pen=pg.mkPen("m", width=2.),
-                                                   setClickable=False,
-                                                   name='median line')
-                    ax.addItem(median_line)
+                # if __name__ == "__main__":
+                #     median_line = pg.PlotCurveItem(y=median,
+                #                                    pen=pg.mkPen("m", width=2.),
+                #                                    setClickable=False,
+                #                                    name='median line')
+                #     ax.addItem(median_line)
 
         # Update the plot limits
         for ax in self.decay_axes:
@@ -1215,6 +1281,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Hide any profile box-selection
         for ax in self.profile_axes:
             ax.vb.lr.hide()
+
+        self.profile_selection_text.setText("")
 
     def decay_line_clicked(self, line):
         """
@@ -2102,7 +2170,9 @@ if __name__ == '__main__':
     # pem_files = pem_getter.get_pems(random=True, number=1)
 
     # pem_file = pem_g.get_pems(folder="Raw Boreholes", file=r"SR-15-04 Z.PEM")[0]
-    pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")[0]
+    # pem_file = pem_g.get_pems(folder="Raw Boreholes", file="em21-155 z_0415.PEM")[0]
+    pem_file = pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM")[0]
+    # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\800E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\1200E.PEM")[0]  # TODO Test this for ordering worse to best readings
     # pem_file = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]

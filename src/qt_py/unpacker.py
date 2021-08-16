@@ -28,7 +28,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         self.setupUi(self)
 
         self.setWindowTitle('Unpacker')
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'unpacker_1.png')))
+        self.setWindowIcon(QIcon(os.path.join(icons_path, 'unpacker.png')))
 
         self.setAcceptDrops(True)
 

@@ -59,6 +59,7 @@ logger = logging.getLogger(__name__)
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO Create a theory vs measured plot (similar to step)
 # TODO Look into slowness when changing station number and such in pem plot editor
+# TODO Add more theory responses to plot editor.
 
 
 class PEMHub(QMainWindow, Ui_PEMHub):
@@ -183,7 +184,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             'Averaged',
             'Split',
             'Suffix\nWarnings',
-            'Repeat\nWarnings'
+            'Repeat\nWarnings',
+            'Polarity\nWarnings'
         ]
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.Stretch)
@@ -599,7 +601,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             elif col == self.table_columns.index('Current'):
                 try:
-                    float(value)
+                    value = float(value)
                 except ValueError:
                     logger.error(f"{value} is not a number.")
                     self.message.critical(self, 'Invalid Value', f"Current must be a number")
@@ -1231,23 +1233,17 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         file being dragged, and which widget they are being dragged onto.
         :param e: PyQT event
         """
-        urls = [url.toLocalFile() for url in e.mimeData().urls()]
+        urls = [Path(url.toLocalFile()) for url in e.mimeData().urls()]
 
         # PEM, DMP, and DUMP folders can be opened with no PEM files currently opened.
-        # PEM files
-        if all([Path(file).suffix.lower() in ['.pem'] for file in urls]):
-            if e.answerRect().intersects(self.table.geometry()):
-                e.acceptProposedAction()
-                return
-
-        # DMP files
-        elif all([Path(file).suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4'] for file in urls]):
+        # PEM and DMP files
+        if all([file.suffix.lower() in ['.pem'] or file.suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4'] for file in urls]):
             if e.answerRect().intersects(self.table.geometry()):
                 e.acceptProposedAction()
                 return
 
         # Dump folder
-        elif len(urls) == 1 and (Path(urls[0]).is_dir() or Path(urls[0]).suffix.lower() in ['.zip', '.7z', '.rar']):
+        elif len(urls) == 1 and (urls[0].is_dir() or urls[0].suffix.lower() in ['.zip', '.7z', '.rar']):
             e.acceptProposedAction()
             return
 
@@ -1271,14 +1267,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     return
 
             # RI files
-            elif all([Path(file).suffix.lower() in ['.ri1', '.ri2', '.ri3'] for file in urls]):
+            elif all([file.suffix.lower() in ['.ri1', '.ri2', '.ri3'] for file in urls]):
                 if all([e.answerRect().intersects(self.piw_frame.geometry()),
                         current_piw.tabs.currentWidget() == current_piw.ri_tab,
                         self.pem_files]):
                     e.acceptProposedAction()
                     return
 
-            elif all([Path(file).suffix.lower() in ['.inf', '.log', '.gpx'] for file in urls]):
+            elif all([file.suffix.lower() in ['.inf', '.log', '.gpx'] for file in urls]):
                 if e.answerRect().intersects(self.project_crs_box.geometry()):
                     e.acceptProposedAction()
                     return
@@ -1287,10 +1283,17 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 e.ignore()
 
     def dropEvent(self, e):
-        urls = [url.toLocalFile() for url in e.mimeData().urls()]
+        urls = [Path(url.toLocalFile()) for url in e.mimeData().urls()]
 
-        if all([Path(file).suffix.lower() in ['.pem'] for file in urls]):
-            self.add_pem_files(urls)
+        if all([file.suffix.lower() in ['.pem'] or
+                file.suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4']
+                for file in urls]):
+            pem_files = [url for url in urls if url.suffix.lower() == '.pem']
+            dmp_files = [url for url in urls if url.suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4']]
+            if pem_files:
+                self.add_pem_files(pem_files)
+            if dmp_files:
+                self.add_dmp_files(dmp_files)
 
         elif all([Path(file).suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4'] for file in urls]):
             self.add_dmp_files(urls)
@@ -1494,7 +1497,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     except Exception as e:
                         logger.critical(str(e))
                         self.error.setWindowTitle('Error parsing PEM file')
-                        self.error.showMessage(f"Error parsing PEM file: {str(e)}")
+                        self.error.showMessage(f"Error parsing {pem_file}: {str(e)}")
                         dlg += 1
                         continue
 
@@ -1526,11 +1529,12 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         else:
                             if pem_crs != current_crs:
                                 response = self.message.question(self, "Change CRS",
-                                                                 F"CRS from {pem_file.filepath.name} is different then the"
+                                                                 F"CRS from {pem_file.filepath.name} is different than the "
                                                                  F"current project CRS ({pem_crs.name} vs {current_crs.name}).\n"
                                                                  F"Change CRS to {pem_crs.name}?", self.message.Yes, self.message.No)
                                 if response == self.message.Yes:
                                     self.set_crs(pem_crs)
+                                    current_crs = pem_crs
                                 else:
                                     pass
 
@@ -1716,9 +1720,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         def close_editor(editor):
             """
-            Remove the editor from the list of pem_editors
+            Remove the editor from the list of pem_editors, and update the information in the table.
             :param editor: PEMPlotEditor object emitted by the signal
             """
+            self.refresh_pem(editor.pem_file)
             self.pem_editor_widgets.remove(editor)
 
         def reset_file(files):
@@ -2005,7 +2010,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         Open the MapboxViewer if there's any GPS in any of the opened PEM files.
         """
         if not self.get_crs():
-            self.status_bar.showMessage(f"No CRS selected.", 2000)
+            self.message.information(self, 'Error', 'No CRS selected.')
             return
 
         global tile_map
@@ -2013,7 +2018,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         if not self.pem_files:
             logger.warning(f"No PEM files opened.")
-            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            self.status_bar.showMessage(f"No PEM files opened.", 1500)
 
         elif not any([f.has_any_gps() for f in self.pem_files]):
             logger.warning(f"No GPS found in any file.")
@@ -2565,7 +2570,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             gps_files = get_filtered_gps()
             for file in gps_files:
                 if file.stem != '.txt':
-                    self.gps_list.addItem(QListWidgetItem(get_icon(file), 
+                    self.gps_list.addItem(QListWidgetItem(get_icon(file),
                                                                     f"{str(file.relative_to(self.project_dir))}"))
 
     def fill_pem_list(self):
@@ -2729,7 +2734,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 if '<GEN> CRS' in note or '<CRS>' in note:
                     del pem_file.notes[pem_file.notes.index(note)]
 
-            pem_file.notes.append(f"<GEN>/<CRS> {crs.name}")
+            pem_file.notes.append(f"<GEN>/<CRS> {crs.name} (EPSG:{crs.to_epsg()})")
 
         pem_files, rows = self.get_pem_files(selected=selected)
         crs = self.get_crs()
@@ -3350,12 +3355,13 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             split_col = self.table_columns.index('Split')
             suffix_col = self.table_columns.index('Suffix\nWarnings')
             repeat_col = self.table_columns.index('Repeat\nWarnings')
+            polarity_col = self.table_columns.index('Polarity\nWarnings')
             pem_has_gps = has_all_gps(self.pem_info_widgets[row])
 
             if not pem_has_gps:
                 color_row_background(row, 'blue')
 
-            for col in [average_col, split_col, suffix_col, repeat_col]:
+            for col in [average_col, split_col, suffix_col, repeat_col, polarity_col]:
                 item = self.table.item(row, col)
                 if item:
                     value = item.text()
@@ -3373,16 +3379,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         if int(value) > 0:
                             item.setBackground(QColor('red'))
                             item.setForeground(QColor('white'))
-                        # else:
-                        #     item.setBackground(QColor('white'))
-                        #     item.setForeground(QColor('black'))
                     elif col == repeat_col:
                         if int(value) > 0:
                             item.setBackground(QColor('red'))
                             item.setForeground(QColor('white'))
-                        # else:
-                        #     item.setBackground(QColor('white'))
-                        #     item.setForeground(QColor('black'))
+                    elif col == polarity_col:
+                        if re.match("[XYZ]", value):
+                            item.setBackground(QColor('red'))
+                            item.setForeground(QColor('white'))
 
         def color_anomalies():
             """
@@ -3441,7 +3445,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         pem_file = self.pem_files[row]
         color_row()
         color_anomalies()
-        color_changes()
+        # color_changes()
 
         if self.allow_signals:
             self.table.blockSignals(False)
@@ -3594,7 +3598,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         :param row: int, row of the PEM file in the table
         :return: None
         """
-
         logger.info(f"Adding {pem_file.filepath.name} to the table.")
         self.table.blockSignals(True)
 
@@ -3614,6 +3617,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             pem_file.is_split(),
             len(pem_file.get_suffix_warnings()),
             len(pem_file.get_repeats()),
+            "N/A" if not pem_file.has_all_gps() else ', '.join(pem_file.get_reversed_components())
         ]
 
         # Set the information into each cell. Columns from First Station and on can't be edited.
@@ -4718,9 +4722,13 @@ class ChannelTimeViewer(QMainWindow):
         self.df = pd.DataFrame()
         self.text_format = ""
 
+        self.table = pg.TableWidget()
+
         # Format window
         self.setLayout(QVBoxLayout())
         self.layout().setContentsMargins(0, 0, 0, 0)
+        self.layout().addWidget(self.table)
+        self.setCentralWidget(self.table)
 
         self.sizePolicy().setHorizontalPolicy(QSizePolicy.Maximum)
         self.resize(600, 600)
@@ -4746,16 +4754,23 @@ class ChannelTimeViewer(QMainWindow):
         self.statusBar().addPermanentWidget(self.units_combo)
         self.statusBar().show()
 
-        # Format table
-        self.table = pg.TableWidget()
-        self.layout().addWidget(self.table)
-        self.setCentralWidget(self.table)
+        # Right-click menu
+        self.table.setContextMenuPolicy(Qt.ActionsContextMenu)
+        # self.table.viewport().installEventFilter(self)
+        self.table.installEventFilter(self)
+        self.menu = QMenu(self.table)
+        delete_action = QAction('Delete', self)
+        delete_action.triggered.connect(self.delete_channel)
+        self.menu.addAction(delete_action)
 
+        # Format table
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.sizePolicy().setHorizontalPolicy(QSizePolicy.Maximum)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.table.setFrameStyle(QFrame.NoFrame)
 
         # Signals
+        self.table.cellDoubleClicked.connect(self.change_remove_flag)
         self.units_combo.currentTextChanged.connect(self.fill_channel_table)
         self.copy_table_action = QShortcut("Ctrl+C", self)
         self.copy_table_action.activated.connect(self.copy_table)
@@ -4766,6 +4781,14 @@ class ChannelTimeViewer(QMainWindow):
         self.close_request.emit(self)
         e.accept()
         self.deleteLater()
+
+    def contextMenuEvent(self, event):
+        print(f"Table right-clicked.")
+        self.menu.popup(QCursor.pos())
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Delete:
+            self.delete_channel()
 
     def copy_table(self):
         df = self.df.loc[:, "Start":"Width"].copy()
@@ -4849,6 +4872,36 @@ class ChannelTimeViewer(QMainWindow):
         self.table.resizeRowsToContents()
 
         color_table()
+
+    def delete_channel(self):
+        """
+        Delete a channel from the table and the EM data.
+        :return: None
+        """
+        print("Deleting channels")
+        selected_rows = [model.row() for model in self.table.selectionModel().selectedRows()]
+        if selected_rows:
+            self.pem_file.channel_times = self.pem_file.channel_times.drop(selected_rows).reset_index(drop=True)
+            self.pem_file.number_of_channels = len(self.pem_file.channel_times)
+            self.pem_file.data.Reading = self.pem_file.data.Reading.map(lambda x: np.delete(x, selected_rows))
+            self.fill_channel_table()
+
+    def change_remove_flag(self, row, col):
+        print(f"Changing remove flag of row {row}")
+        self.df.loc[row, "Remove"] = not self.df.loc[row, "Remove"]
+
+        if self.units_combo.currentText() == 'µs':
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'] / 1000000
+            self.text_format = '%0.0f'
+        elif self.units_combo.currentText() == 'ms':
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'] / 1000
+            self.text_format = '%0.3f'
+        else:
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width']
+            self.text_format = '%0.6f'
+
+        self.pem_file.channel_times = self.df
+        self.fill_channel_table()
 
 
 class SuffixWarningViewer(QMainWindow):
@@ -5122,7 +5175,9 @@ def main():
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
 
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
-    pem_files = pem_g.get_pems(number=3, random=True)
+    # pem_files = pem_g.get_pems(number=3, random=True)
+    # pem_files = pem_g.get_pems(folder="Raw Surface", subfolder=r"Loop 4\Final", number=3)
+    pem_files = pem_g.get_pems(folder='Iscaycruz', subfolder='Loop 1')
     # pem_files = pem_g.get_pems(folder="Raw Boreholes\EB-21-68\RAW", number=2)
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
@@ -5131,6 +5186,7 @@ def main():
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
     mw.add_pem_files(pem_files)
+    mw.open_3d_map()
     # mw.add_dmp_files(dmp_files)
     # mw.table.selectRow(0)
     # mw.table.selectAll()
