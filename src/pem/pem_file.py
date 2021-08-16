@@ -1296,6 +1296,12 @@ class PEMFile:
         else:
             self.line.crs = crs
 
+        # Add the note, removing any existing ones.
+        for note in reversed(self.notes):
+            if '<GEN> CRS' in note or '<CRS>' in note:
+                del self.notes[self.notes.index(note)]
+        self.notes.append(f"<GEN>/<CRS> {crs.name} (EPSG:{crs.to_epsg()})")
+
     def to_string(self, legacy=False):
         """
         Return the text format of the PEM file
@@ -1408,7 +1414,7 @@ class PEMFile:
                     f"Rename: {rename}, Tag: {tag})")
 
         # Once legacy is saved once, it will always save as legacy.
-        if legacy is True:
+        if legacy is True or processed is True:
             self.legacy = True
 
         if processed is True:

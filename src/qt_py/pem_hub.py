@@ -2719,17 +2719,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         Save PEM files.
         :param selected: Bool: if True, saves all opened PEM files instead of only the selected ones.
         """
-        def add_crs_tag():
-            """
-            Add the CRS from the table as a note to the PEM file.
-            """
-            # Remove any existing CRS tag
-            for note in reversed(pem_file.notes):
-                if '<GEN> CRS' in note or '<CRS>' in note:
-                    del pem_file.notes[pem_file.notes.index(note)]
-
-            pem_file.notes.append(f"<GEN>/<CRS> {crs.name} (EPSG:{crs.to_epsg()})")
-
         pem_files, rows = self.get_pem_files(selected=selected)
         crs = self.get_crs()
 
@@ -2749,7 +2738,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 # Add the CRS note if CRS isn't None
                 if crs:
                     pem_file.set_crs(crs)
-                    add_crs_tag()
 
                 # Save the PEM file and refresh it in the table
                 pem_file.save()
@@ -3065,15 +3053,15 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         :param processed: bool, Save the PEM files as processed and legacy format. Will average, split,
         de-rotated (if applicable), and re-name the file names.
         """
-
         pem_files, rows = self.get_pem_files(selected=selected)
+        crs = self.get_crs()
+
         if not pem_files:
             logger.error(f"No PEM files opened.")
             return
 
         # Make sure there's a valid CRS when doing a final export
         if processed is True:
-            crs = self.get_crs()
             if not crs:
                 response = self.message.question(self, 'Invalid CRS',
                                                  'The CRS information is invalid. '
@@ -3111,6 +3099,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 if dlg.wasCanceled():
                     break
 
+                pem_file.set_crs(crs)
                 if all([pem_file.is_borehole(), pem_file.has_xy(), not pem_file.is_derotated(), processed is True]):
                     response = self.message.question(self, 'Rotated XY',
                                                      f'File {pem_file.filepath.name} has not been de-rotated. '
