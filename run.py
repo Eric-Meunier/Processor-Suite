@@ -5,6 +5,7 @@ from pathlib import Path
 
 from PySide2.QtCore import Qt, QTimer
 from PySide2.QtGui import (QColor, QIcon)
+from PySide2.QtWebEngineWidgets import QWebEngineView  # If loaded after QApplication, will break OpenGL, which breaks 3D map and Tile map.
 from PySide2.QtWidgets import (QWidget, QErrorMessage, QApplication, QGraphicsDropShadowEffect)
 
 from src import __version__, app_data_dir
@@ -55,11 +56,6 @@ class SplashScreen(QWidget, Ui_SplashScreen):
         self.shadow.setColor(QColor(0, 0, 0, 60))
         self.frame.setGraphicsEffect(self.shadow)
 
-        # Progress bar
-        # self.timer = QTimer()
-        # self.timer.timeout.connect(self.progress)
-        # self.timer.start(35)
-
         self.counter = 0
         self.progressBar.setMaximum(10)
         self.show()
@@ -77,8 +73,6 @@ class SplashScreen(QWidget, Ui_SplashScreen):
 # Splash screen
 app = QApplication(sys.argv)
 path = icons_path.joinpath(r"crone_logo.png")
-# pixmap = QPixmap(str(path))
-# splash = QSplashScreen(pixmap)
 splash = SplashScreen(__version__)
 app.processEvents()
 
