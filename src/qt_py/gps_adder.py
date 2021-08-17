@@ -14,7 +14,7 @@ from PySide2.QtWidgets import (QMainWindow, QMessageBox, QWidget, QFileDialog, Q
                                QFrame, QHBoxLayout, QHeaderView, QInputDialog, QPushButton, QTabWidget, QTableWidgetItem)
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser
-from src.qt_py import icons_path, NonScientific, read_file
+from src.qt_py import icons_path, NonScientific, read_file, table_to_df, df_to_table
 from src.ui.line_adder import Ui_LineAdder
 from src.ui.loop_adder import Ui_LoopAdder
 
@@ -153,54 +153,29 @@ class GPSAdder(QMainWindow):
         """
         self.table.blockSignals(True)
 
-        def write_row(series):
-            """
-             Add items from a pandas data frame row to a Qpg.TableWidget row
-             :param series: pandas Series object
-             :return: None
-             """
-            def series_to_items(x):
-                if isinstance(x, float):
-                    return QTableWidgetItem(f"{x}")
-                    # return Qpg.TableWidgetItem(f"{x:.2f}")
-                else:
-                    return QTableWidgetItem(str(x))
-
-            row_pos = self.table.rowCount()
-            # Add a new row to the table
-            self.table.insertRow(row_pos)
-
-            items = series.map(series_to_items).to_list()
-            # Format each item of the table to be centered
-            for m, item in enumerate(items):
-                item.setTextAlignment(Qt.AlignCenter)
-                self.table.setItem(row_pos, m, item)
-
         if df.empty:
             logger.error(f"No GPS found.")
             self.message.error(self, 'Error', 'No GPS was found.')
         else:
             self.clear_table()
-            columns = df.columns.to_list()
-            self.table.setColumnCount(len(columns))
-            self.table.setHorizontalHeaderLabels(columns)
-            df.apply(write_row, axis=1)
+            df_to_table(df, self.table)
+
         self.table.blockSignals(False)
 
-    def table_to_df(self):
-        """
-        Return a data frame from the information in the table
-        :return: pandas pd.DataFrame
-        """
-        gps = []
-        for row in range(self.table.rowCount()):
-            gps_row = list()
-            for col in range(self.table.columnCount()):
-                gps_row.append(self.table.item(row, col).text())
-            gps.append(gps_row)
-
-        df = pd.DataFrame(gps, columns=self.df.columns).astype(dtype=self.df.dtypes)
-        return df
+    # def table_to_df(self):
+    #     """
+    #     Return a data frame from the information in the table
+    #     :return: pandas pd.DataFrame
+    #     """
+    #     # gps = []
+    #     # for row in range(self.table.rowCount()):
+    #     #     gps_row = list()
+    #     #     for col in range(self.table.columnCount()):
+    #     #         gps_row.append(self.table.item(row, col).text())
+    #     #     gps.append(gps_row)
+    #     #
+    #     # df = pd.DataFrame(gps, columns=self.df.columns).astype(dtype=self.df.dtypes)
+    #     return df
 
     def refresh_table(self):
         """
@@ -209,7 +184,7 @@ class GPSAdder(QMainWindow):
         """
         self.table.blockSignals(True)
 
-        df = self.table_to_df()
+        df = table_to_df(self.table, dtypes=self.df.dtypes)
 
         # Store vertical scroll bar position to be restored after
         slider_position = self.table.verticalScrollBar().sliderPosition()
@@ -247,7 +222,7 @@ class GPSAdder(QMainWindow):
             """
             indexes = self.selection
             # Create the data frame
-            df = self.table_to_df()
+            df = table_to_df(self.table, dtypes=self.df.dtypes)
             # Create a copy of the two rows.
             a, b = df.iloc[indexes[0]].copy(), df.iloc[indexes[1]].copy()
             # Allocate the two rows in reverse order
@@ -295,7 +270,6 @@ class GPSAdder(QMainWindow):
         :param row: int
         :param col: int
         """
-
         def get_errors():
             """
             Count any incorrect data types
@@ -496,7 +470,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         Plot the data from the table to the axes.
         :return: None
         """
-        df = self.table_to_df()
+        df = table_to_df(self.table, dtypes=self.df.dtypes)
         if df.empty:
             return
 
@@ -559,7 +533,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
 
         color = (255, 0, 0, 150) if keyboard.is_pressed('ctrl') else (0, 0, 255, 150)
 
-        df = self.table_to_df()
+        df = table_to_df(self.table, dtypes=self.df.dtypes)
         df['Station'] = df['Station'].astype(int)
 
         # Plot on the plan map
@@ -631,7 +605,8 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             Color the background of the station cells if the station number is out of order
             """
             global errors
-            df_stations = self.table_to_df().Station.map(lambda x: re.search(r'-?\d+', str(x)).group())
+            df_stations = table_to_df(self.table, dtypes=self.df.dtypes).Station.map(
+                lambda x: re.search(r'-?\d+', str(x)).group())
 
             table_stations = df_stations.astype(int).to_list()
 
@@ -798,7 +773,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         Plot the data from the table to the axes.
         :return: None
         """
-        df = self.table_to_df()
+        df = table_to_df(self.table, dtypes=self.df.dtypes)
 
         if df.empty:
             return
@@ -861,7 +836,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
 
         color = (255, 0, 0, 150) if keyboard.is_pressed('ctrl') else (0, 0, 255, 150)
 
-        df = self.table_to_df()
+        df = table_to_df(self.table, dtypes=self.df.dtypes)
 
         # Plot on the plan map
         plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
@@ -1060,7 +1035,7 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         Plot the data from the table to the axes.
         :return: None
         """
-        df = self.table_to_df()
+        df = table_to_df(self.table, dtypes=self.df.dtypes)
 
         if df.empty:
             return
@@ -1124,7 +1099,7 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
 
         color = (255, 0, 0, 150) if keyboard.is_pressed('ctrl') else (0, 0, 255, 150)
 
-        df = self.table_to_df()
+        df = table_to_df(self.table, dtypes=self.df.dtypes)
 
         # Plot on the plan map
         plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']

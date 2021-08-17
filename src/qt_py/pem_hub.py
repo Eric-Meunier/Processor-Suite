@@ -63,6 +63,30 @@ logger = logging.getLogger(__name__)
 # TODO add icons to plot editor menu
 # TODO Add default elevation for GPX points which don't have any
 
+
+white_palette = QPalette()
+dark_palette = QPalette()
+dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
+dark_palette.setColor(QPalette.WindowText, Qt.white)
+dark_palette.setColor(QPalette.Disabled, QPalette.WindowText, QColor(127, 127, 127))
+dark_palette.setColor(QPalette.Base, QColor(42, 42, 42))
+dark_palette.setColor(QPalette.AlternateBase, QColor(66, 66, 66))
+dark_palette.setColor(QPalette.ToolTipBase, Qt.white)
+dark_palette.setColor(QPalette.ToolTipText, Qt.white)
+dark_palette.setColor(QPalette.Text, Qt.white)
+dark_palette.setColor(QPalette.Disabled, QPalette.Text, QColor(127, 127, 127))
+dark_palette.setColor(QPalette.Dark, QColor(35, 35, 35))
+dark_palette.setColor(QPalette.Shadow, QColor(20, 20, 20))
+dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
+dark_palette.setColor(QPalette.ButtonText, Qt.white)
+dark_palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor(127, 127, 127))
+dark_palette.setColor(QPalette.BrightText, Qt.red)
+dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
+dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+dark_palette.setColor(QPalette.Disabled, QPalette.Highlight, QColor(80, 80, 80))
+dark_palette.setColor(QPalette.HighlightedText, Qt.white)
+dark_palette.setColor(QPalette.Disabled, QPalette.HighlightedText, QColor(127, 127, 127))
+
 # Keep a list of widgets so they don't get garbage collected
 refs = []
 
@@ -147,6 +171,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         if splash_screen:
             splash_screen.showMessage("Initializing directory")
+
         # Project tree
         self.project_dir = None
         self.file_sys_model = QFileSystemModel()
@@ -404,26 +429,15 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         Initializing the UI.
         :return: None
         """
-        def center_window():
-            qt_rectangle = self.frameGeometry()
-            center_point = QDesktopWidget().availableGeometry().center()
-            qt_rectangle.moveCenter(center_point)
-            self.move(qt_rectangle.topLeft())
-
         self.setupUi(self)
+        self.app.setStyle("Fusion")
         self.setAcceptDrops(True)
+
         self.setWindowTitle("PEMPro  v" + str(__version__))
         self.setWindowIcon(QIcon(str(icons_path.joinpath('conder.png'))))
         self.resize(1700, 900)
-        self.app.setStyle("Fusion")
-        # center_window()
 
         self.table.horizontalHeader().hide()
-        # self.table.setStyleSheet('''
-        #                         QTableView::item::selected {
-        #                           background-color: darkgray;
-        #                         }
-        #                         ''')
 
         # Set icons
         self.actionOpenFile.setIcon(QIcon(str(icons_path.joinpath("open.png"))))
@@ -489,29 +503,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.statusBar().showMessage("Mapbox token updated.", 1500)
 
         def toggle_theme():
-            white_palette = QPalette()
-            dark_palette = QPalette()
-            dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
-            dark_palette.setColor(QPalette.WindowText, Qt.white)
-            dark_palette.setColor(QPalette.Disabled, QPalette.WindowText, QColor(127, 127, 127))
-            dark_palette.setColor(QPalette.Base, QColor(42, 42, 42))
-            dark_palette.setColor(QPalette.AlternateBase, QColor(66, 66, 66))
-            dark_palette.setColor(QPalette.ToolTipBase, Qt.white)
-            dark_palette.setColor(QPalette.ToolTipText, Qt.white)
-            dark_palette.setColor(QPalette.Text, Qt.white)
-            dark_palette.setColor(QPalette.Disabled, QPalette.Text, QColor(127, 127, 127))
-            dark_palette.setColor(QPalette.Dark, QColor(35, 35, 35))
-            dark_palette.setColor(QPalette.Shadow, QColor(20, 20, 20))
-            dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
-            dark_palette.setColor(QPalette.ButtonText, Qt.white)
-            dark_palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor(127, 127, 127))
-            dark_palette.setColor(QPalette.BrightText, Qt.red)
-            dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
-            dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
-            dark_palette.setColor(QPalette.Disabled, QPalette.Highlight, QColor(80, 80, 80))
-            dark_palette.setColor(QPalette.HighlightedText, Qt.white)
-            dark_palette.setColor(QPalette.Disabled, QPalette.HighlightedText, QColor(127, 127, 127))
-
             if self.actionDark_Theme.isChecked():
                 self.app.setPalette(dark_palette)
             else:
@@ -1049,186 +1040,187 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         :param event: Right-click event.
         :return: None
         """
+        if not self.table.underMouse():
+            return
 
-        if self.table.underMouse():
-            if self.table.selectionModel().selectedIndexes():
-                selected_pems, rows = self.get_pem_files(selected=True)
+        if self.table.selectionModel().selectedIndexes():
+            selected_pems, rows = self.get_pem_files(selected=True)
 
-                # Clear the menu
-                self.menu.clear()
-                self.view_menu.clear()
-                self.extract_menu.clear()
-                self.export_menu.clear()
-                self.share_menu.clear()
-                self.reverse_menu.clear()
+            # Clear the menu
+            self.menu.clear()
+            self.view_menu.clear()
+            self.extract_menu.clear()
+            self.export_menu.clear()
+            self.share_menu.clear()
+            self.reverse_menu.clear()
 
-                # Add all the actions to the menu
-                self.menu.addAction(self.open_file_action)
-                self.menu.addAction(self.save_file_action)
+            # Add all the actions to the menu
+            self.menu.addAction(self.open_file_action)
+            self.menu.addAction(self.save_file_action)
 
-                # Only for single file selection
-                if len(self.table.selectionModel().selectedRows()) == 1:
-                    pem_file = selected_pems[0]
+            # Only for single file selection
+            if len(self.table.selectionModel().selectedRows()) == 1:
+                pem_file = selected_pems[0]
 
-                    self.menu.addAction(self.save_file_as_action)
-                    self.menu.addAction(self.copy_to_cliboard_action)
-                    self.menu.addSeparator()
+                self.menu.addAction(self.save_file_as_action)
+                self.menu.addAction(self.copy_to_cliboard_action)
+                self.menu.addSeparator()
 
-                    # View menu
-                    self.menu.addMenu(self.view_menu)
-                    self.view_menu.addAction(self.calc_mag_dec_action)
-                    if pem_file.has_any_gps():
-                        self.calc_mag_dec_action.setDisabled(False)
-                    else:
-                        self.calc_mag_dec_action.setDisabled(True)
-                    self.view_menu.addAction(self.action_view_channels)
-                    self.view_menu.addSeparator()
-
-                    # View Loop
-                    self.view_menu.addAction(self.view_loop_action)
-                    if not pem_file.has_loop_gps():
-                        self.view_loop_action.setDisabled(True)
-                    else:
-                        self.view_loop_action.setDisabled(False)
-
-                    # View Line
-                    if not pem_file.is_borehole():
-                        self.view_menu.addAction(self.view_line_action)
-                        if not pem_file.has_station_gps():
-                            self.view_line_action.setDisabled(True)
-                        else:
-                            self.view_line_action.setDisabled(False)
-
-                    # self.menu.addSeparator()
-
-                    # Add the export menu
-                    self.menu.addMenu(self.export_menu)
-                    self.export_menu.addAction(self.export_pem_action)
-                    if pem_file.is_borehole():
-                        self.export_menu.addAction(self.export_dad_action)
-                        # Disable the export dad button if there's no geometry and it's not an XY file
-                        if not any([pem_file.has_geometry(), pem_file.has_xy()]):
-                            self.export_dad_action.setDisabled(True)
-                        else:
-                            self.export_dad_action.setDisabled(False)
-                    self.export_menu.addAction(self.export_gps_action)
-                    if not pem_file.has_any_gps():
-                        self.export_gps_action.setDisabled(True)
-                    else:
-                        self.export_gps_action.setDisabled(False)
-
-                    # Add the extract menu
-                    self.menu.addMenu(self.extract_menu)
-                    self.extract_menu.addAction(self.extract_stations_action)
-                    self.extract_menu.addSeparator()
-
-                    components = pem_file.get_components()
-                    self.extract_menu.addAction(self.extract_x_action)
-                    self.extract_menu.addAction(self.extract_y_action)
-                    self.extract_menu.addAction(self.extract_z_action)
-                    if "X" not in components:
-                        self.extract_x_action.setDisabled(True)
-                    else:
-                        self.extract_x_action.setDisabled(False)
-                    if "Y" not in components:
-                        self.extract_y_action.setDisabled(True)
-                    else:
-                        self.extract_y_action.setDisabled(False)
-                    if "Z" not in components:
-                        self.extract_z_action.setDisabled(True)
-                    else:
-                        self.extract_z_action.setDisabled(False)
-
-                    # Add the share menu
-                    self.menu.addMenu(self.share_menu)
-
-                    # Share loop
-                    self.share_menu.addAction(self.share_loop_action)
-                    if pem_file.has_loop_gps() and len(self.pem_files) > 1:
-                        self.share_loop_action.setDisabled(False)
-                    else:
-                        self.share_loop_action.setDisabled(True)
-
-                    # Share line GPS
-                    if not pem_file.is_borehole():
-                        self.share_menu.addAction(self.share_line_action)
-                        if pem_file.has_station_gps() and len(self.pem_files) > 1:
-                            self.share_line_action.setDisabled(False)
-                        else:
-                            self.share_line_action.setDisabled(True)
-
-                    # Share Collar and Segments
-                    else:
-                        self.share_menu.addAction(self.share_collar_action)
-                        self.share_menu.addAction(self.share_segments_action)
-                        if pem_file.has_collar_gps() and len(self.pem_files) > 1:
-                            self.share_collar_action.setDisabled(False)
-                        else:
-                            self.share_collar_action.setDisabled(True)
-                        if pem_file.has_geometry() and len(self.pem_files) > 1:
-                            self.share_segments_action.setDisabled(False)
-                        else:
-                            self.share_segments_action.setDisabled(True)
-
-                    self.share_menu.addSeparator()
-                    self.share_menu.addAction(self.share_all_action)
-                    if pem_file.has_any_gps() and len(self.pem_files) > 1:
-                        self.share_all_action.setDisabled(False)
-                    else:
-                        self.share_all_action.setDisabled(True)
+                # View menu
+                self.menu.addMenu(self.view_menu)
+                self.view_menu.addAction(self.calc_mag_dec_action)
+                if pem_file.has_any_gps():
+                    self.calc_mag_dec_action.setDisabled(False)
                 else:
-                    self.menu.addAction(self.copy_to_cliboard_action)
+                    self.calc_mag_dec_action.setDisabled(True)
+                self.view_menu.addAction(self.action_view_channels)
+                self.view_menu.addSeparator()
 
+                # View Loop
+                self.view_menu.addAction(self.view_loop_action)
+                if not pem_file.has_loop_gps():
+                    self.view_loop_action.setDisabled(True)
+                else:
+                    self.view_loop_action.setDisabled(False)
+
+                # View Line
+                if not pem_file.is_borehole():
+                    self.view_menu.addAction(self.view_line_action)
+                    if not pem_file.has_station_gps():
+                        self.view_line_action.setDisabled(True)
+                    else:
+                        self.view_line_action.setDisabled(False)
+
+                # self.menu.addSeparator()
+
+                # Add the export menu
+                self.menu.addMenu(self.export_menu)
+                self.export_menu.addAction(self.export_pem_action)
+                if pem_file.is_borehole():
+                    self.export_menu.addAction(self.export_dad_action)
+                    # Disable the export dad button if there's no geometry and it's not an XY file
+                    if not any([pem_file.has_geometry(), pem_file.has_xy()]):
+                        self.export_dad_action.setDisabled(True)
+                    else:
+                        self.export_dad_action.setDisabled(False)
+                self.export_menu.addAction(self.export_gps_action)
+                if not pem_file.has_any_gps():
+                    self.export_gps_action.setDisabled(True)
+                else:
+                    self.export_gps_action.setDisabled(False)
+
+                # Add the extract menu
+                self.menu.addMenu(self.extract_menu)
+                self.extract_menu.addAction(self.extract_stations_action)
+                self.extract_menu.addSeparator()
+
+                components = pem_file.get_components()
+                self.extract_menu.addAction(self.extract_x_action)
+                self.extract_menu.addAction(self.extract_y_action)
+                self.extract_menu.addAction(self.extract_z_action)
+                if "X" not in components:
+                    self.extract_x_action.setDisabled(True)
+                else:
+                    self.extract_x_action.setDisabled(False)
+                if "Y" not in components:
+                    self.extract_y_action.setDisabled(True)
+                else:
+                    self.extract_y_action.setDisabled(False)
+                if "Z" not in components:
+                    self.extract_z_action.setDisabled(True)
+                else:
+                    self.extract_z_action.setDisabled(False)
+
+                # Add the share menu
+                self.menu.addMenu(self.share_menu)
+
+                # Share loop
+                self.share_menu.addAction(self.share_loop_action)
+                if pem_file.has_loop_gps() and len(self.pem_files) > 1:
+                    self.share_loop_action.setDisabled(False)
+                else:
+                    self.share_loop_action.setDisabled(True)
+
+                # Share line GPS
+                if not pem_file.is_borehole():
+                    self.share_menu.addAction(self.share_line_action)
+                    if pem_file.has_station_gps() and len(self.pem_files) > 1:
+                        self.share_line_action.setDisabled(False)
+                    else:
+                        self.share_line_action.setDisabled(True)
+
+                # Share Collar and Segments
+                else:
+                    self.share_menu.addAction(self.share_collar_action)
+                    self.share_menu.addAction(self.share_segments_action)
+                    if pem_file.has_collar_gps() and len(self.pem_files) > 1:
+                        self.share_collar_action.setDisabled(False)
+                    else:
+                        self.share_collar_action.setDisabled(True)
+                    if pem_file.has_geometry() and len(self.pem_files) > 1:
+                        self.share_segments_action.setDisabled(False)
+                    else:
+                        self.share_segments_action.setDisabled(True)
+
+                self.share_menu.addSeparator()
+                self.share_menu.addAction(self.share_all_action)
+                if pem_file.has_any_gps() and len(self.pem_files) > 1:
+                    self.share_all_action.setDisabled(False)
+                else:
+                    self.share_all_action.setDisabled(True)
+            else:
+                self.menu.addAction(self.copy_to_cliboard_action)
+
+            self.menu.addSeparator()
+            # Plot
+            self.menu.addAction(self.open_plot_editor_action)
+            self.menu.addAction(self.open_quick_map_action)
+            self.menu.addSeparator()
+
+            # Merge PEMs
+            if len(self.table.selectionModel().selectedRows()) == 2:
+                self.menu.addAction(self.merge_action)
+
+            # Data editing
+            self.menu.addAction(self.average_action)
+            self.menu.addAction(self.split_action)
+            self.menu.addAction(self.scale_current_action)
+            self.menu.addAction(self.scale_ca_action)
+            # self.menu.addAction(self.mag_offset_action)
+            self.menu.addSeparator()
+
+            # Add the reverse data menu
+            self.menu.addMenu(self.reverse_menu)
+            self.reverse_menu.addAction(self.reverse_x_component_action)
+            self.reverse_menu.addAction(self.reverse_y_component_action)
+            self.reverse_menu.addAction(self.reverse_z_component_action)
+            self.reverse_menu.addSeparator()
+            self.reverse_menu.addAction(self.reverse_station_order_action)
+
+            self.menu.addSeparator()
+
+            # For boreholes only, do-rotate and geometry
+            if all([f.is_borehole() for f in selected_pems]):
+                if len(self.table.selectionModel().selectedRows()) == 1:
+                    self.menu.addAction(self.derotate_action)
+                    if not pem_file.has_xy():
+                        self.derotate_action.setDisabled(True)
+                    else:
+                        self.derotate_action.setDisabled(False)
+                self.menu.addAction(self.get_geometry_action)
                 self.menu.addSeparator()
-                # Plot
-                self.menu.addAction(self.open_plot_editor_action)
-                self.menu.addAction(self.open_quick_map_action)
+
+            if len(self.table.selectionModel().selectedRows()) > 1:
                 self.menu.addSeparator()
+                self.menu.addAction(self.rename_files_action)
+                self.menu.addAction(self.rename_lines_action)
 
-                # Merge PEMs
-                if len(self.table.selectionModel().selectedRows()) == 2:
-                    self.menu.addAction(self.merge_action)
+            self.menu.addSeparator()
+            self.menu.addAction(self.print_plots_action)
+            self.menu.addSeparator()
+            self.menu.addAction(self.remove_file_action)
 
-                # Data editing
-                self.menu.addAction(self.average_action)
-                self.menu.addAction(self.split_action)
-                self.menu.addAction(self.scale_current_action)
-                self.menu.addAction(self.scale_ca_action)
-                # self.menu.addAction(self.mag_offset_action)
-                self.menu.addSeparator()
-
-                # Add the reverse data menu
-                self.menu.addMenu(self.reverse_menu)
-                self.reverse_menu.addAction(self.reverse_x_component_action)
-                self.reverse_menu.addAction(self.reverse_y_component_action)
-                self.reverse_menu.addAction(self.reverse_z_component_action)
-                self.reverse_menu.addSeparator()
-                self.reverse_menu.addAction(self.reverse_station_order_action)
-
-                self.menu.addSeparator()
-
-                # For boreholes only, do-rotate and geometry
-                if all([f.is_borehole() for f in selected_pems]):
-                    if len(self.table.selectionModel().selectedRows()) == 1:
-                        self.menu.addAction(self.derotate_action)
-                        if not pem_file.has_xy():
-                            self.derotate_action.setDisabled(True)
-                        else:
-                            self.derotate_action.setDisabled(False)
-                    self.menu.addAction(self.get_geometry_action)
-                    self.menu.addSeparator()
-
-                if len(self.table.selectionModel().selectedRows()) > 1:
-                    self.menu.addSeparator()
-                    self.menu.addAction(self.rename_files_action)
-                    self.menu.addAction(self.rename_lines_action)
-
-                self.menu.addSeparator()
-                self.menu.addAction(self.print_plots_action)
-                self.menu.addSeparator()
-                self.menu.addAction(self.remove_file_action)
-
-                self.menu.popup(QCursor.pos())
+            self.menu.popup(QCursor.pos())
 
     def eventFilter(self, source, event):
         # # Clear the selection when clicking away from any file
@@ -1263,7 +1255,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         return super(QWidget, self).eventFilter(source, event)
 
     def dragEnterEvent(self, e):
-        e.accept()
+        e.acceptProposedAction()
 
     def dragMoveEvent(self, e):
         """
@@ -5180,7 +5172,7 @@ def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
     mw = PEMHub(app)
-    # mw.actionDark_Theme.trigger()
+    mw.actionDark_Theme.trigger()
     pem_g = PEMGetter()
     pem_parser = PEMParser()
     dmp_parser = DMPParser()

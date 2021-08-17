@@ -16,7 +16,7 @@ from PySide2.QtWidgets import (QMessageBox, QWidget, QAction, QErrorMessage,
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
     GPXParser
 from src.pem import convert_station
-from src.qt_py import clear_table, read_file
+from src.qt_py import clear_table, read_file, table_to_df, df_to_table
 from src.qt_py.gps_adder import LoopAdder, LineAdder, CollarPicker, ExcelTablePicker
 from src.qt_py.pem_geometry import PEMGeometry
 from src.qt_py.ri_importer import RIFile
@@ -130,6 +130,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.ri_table.remove_ri_file_action.setEnabled(False)
 
     def init_signals(self):
+        def refresh_line_table():
+            df = table_to_df(self.line_table)
+            self.fill_gps_table(df, self.line_table)
+
         # Buttons
         self.cullStationGPSButton.clicked.connect(self.cull_station_gps)
 
@@ -158,9 +162,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.share_segments_btn.clicked.connect(lambda: self.share_segments_signal.emit(self.get_segments()))
 
         # Table changes
-        self.line_table.cellChanged.connect(self.check_station_duplicates)
-        self.line_table.cellChanged.connect(self.color_line_table)
-        self.line_table.cellChanged.connect(self.check_missing_gps)
+        self.line_table.cellChanged.connect(refresh_line_table)
         self.line_table.cellChanged.connect(lambda: self.gps_object_changed(self.line_table, refresh=True))
         self.line_table.itemSelectionChanged.connect(self.calc_distance)
         self.line_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationGPSSpinbox))
@@ -259,12 +261,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_loop_elev_shift_amt = 0
         self.last_stn_shift_amt = 0
         spinbox.blockSignals(False)
-
-    # def refresh(self):
-    #     """
-    #     Updates all information in the widget. Used to prevent a crash when changing loop elevation values that arises
-    #     in init_tables().
-    #     """
 
     def open_file(self, pem_file):
         """
@@ -426,7 +422,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param line_content: str or Path, SurveyLine object, or pd DataFrame. If None is passed, will take the line
         in the line_table.
         """
-
         def line_accept_sig_wrapper(data):
             self.fill_gps_table(data, self.line_table)
 
@@ -592,7 +587,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param table: QTableWidget to fill
         :return: None
         """
-
         def write_row(df_row, table):
             """
             Add items from a pandas data frame row to a QTableWidget row
@@ -618,9 +612,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 table.setItem(row_pos, m, item)
 
-        data = deepcopy(data)
+        # data = deepcopy(data)
         if data.empty:
             return
+
+        # Store vertical scroll bar position to be restored after
+        slider_position = table.verticalScrollBar().sliderPosition()
 
         # data.reset_index(inplace=True)
         clear_table(table)
@@ -641,6 +638,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.check_station_duplicates()
             self.color_line_table()
             self.check_missing_gps()
+
+        # Restore scroll bar position
+        table.verticalScrollBar().setSliderPosition(slider_position)
+
         table.blockSignals(False)
 
     def color_line_table(self):

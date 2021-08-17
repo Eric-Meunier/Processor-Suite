@@ -209,6 +209,7 @@ class Ui_PEMHub(object):
         self.actionDark_Theme.setCheckable(True)
         self.centralwidget = QWidget(PEMHub)
         self.centralwidget.setObjectName(u"centralwidget")
+        self.centralwidget.setAcceptDrops(True)
         self.gridLayout_15 = QGridLayout(self.centralwidget)
         self.gridLayout_15.setSpacing(0)
         self.gridLayout_15.setObjectName(u"gridLayout_15")

@@ -3,9 +3,12 @@ import chardet
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import pyqtgraph as pg
-from PySide2 import QtCore, QtWidgets
+from PySide2 import QtWidgets
+from PySide2.QtCore import Qt, QSizeF, QPointF
 from PySide2.QtGui import QPixmap, QIcon
+from PySide2.QtWidgets import QTableWidgetItem
 from src.logger import logger
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -78,6 +81,12 @@ def clear_table(table):
 
 
 def read_file(file, as_list=False):
+    """
+    Read an ascii file with automatic decoding.
+    :param file: str
+    :param as_list: Bool, return the contents as a single list (True) or str (False)
+    :return: list or str
+    """
     with open(file, 'rb') as byte_file:
         byte_content = byte_file.read()
         encoding = chardet.detect(byte_content).get('encoding')
@@ -86,6 +95,66 @@ def read_file(file, as_list=False):
     if as_list is True:
         contents = [c.strip().split() for c in contents.splitlines()]
     return contents
+
+
+def df_to_table(df, table):
+    """
+    Add the contents of the data frame to the table
+    :param df: pandas pd.DataFrame of the GPS
+    :param table: QTableWidget
+    :return: None
+    """
+    def write_row(series):
+        """
+         Add items from a pandas data frame row to a Qpg.TableWidget row
+         :param series: pandas Series object
+         :return: None
+         """
+        def series_to_items(x):
+            if isinstance(x, float):
+                return QTableWidgetItem(f"{x}")
+                # return Qpg.TableWidgetItem(f"{x:.2f}")
+            else:
+                return QTableWidgetItem(str(x))
+
+        row_pos = table.rowCount()
+        # Add a new row to the table
+        table.insertRow(row_pos)
+
+        items = series.map(series_to_items).to_list()
+        # Format each item of the table to be centered
+        for m, item in enumerate(items):
+            item.setTextAlignment(Qt.AlignCenter)
+            table.setItem(row_pos, m, item)
+
+    if df.empty:
+        logger.error(f"No GPS found.")
+        raise ValueError("No GPS found.")
+    else:
+        columns = df.columns.to_list()
+        table.setColumnCount(len(columns))
+        table.setHorizontalHeaderLabels(columns)
+        df.apply(write_row, axis=1)
+
+
+def table_to_df(table, dtypes=None):
+    """
+    Return a data frame from the information in the table.
+    :param table: QTableWidget
+    :return: pandas pd.DataFrame
+    """
+    header = [table.horizontalHeaderItem(i).text() for i in range(table.columnCount())]
+    gps = []
+    for row in range(table.rowCount()):
+        gps_row = list()
+        for col in range(table.columnCount()):
+            gps_row.append(table.item(row, col).text())
+        gps.append(gps_row)
+
+    df = pd.DataFrame(gps, columns=header)
+    if dtypes is not None:
+        df = df.astype(dtypes)
+    return df
 
 
 class CustomProgressBar(QtWidgets.QProgressBar):
@@ -132,7 +201,7 @@ class NonScientific(pg.AxisItem):
         self._nudge = nudge
         s = self.size()
         # call resizeEvent indirectly
-        self.resize(s + QtCore.QSizeF(1, 1))
+        self.resize(s + QSizeF(1, 1))
         self.resize(s)
 
     def resizeEvent(self, ev=None):
@@ -141,7 +210,7 @@ class NonScientific(pg.AxisItem):
         # Set the position of the label
         nudge = self.nudge
         br = self.label.boundingRect()
-        p = QtCore.QPointF(0, 0)
+        p = QPointF(0, 0)
         if self.orientation == "left":
             p.setY(int(self.size().height() / 2 + br.width() / 2))
             p.setX(-nudge)
