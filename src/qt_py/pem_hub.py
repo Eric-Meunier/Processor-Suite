@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PySide2.QtGui import QIcon, QColor, QFont, QIntValidator, QCursor
+from PySide2.QtGui import QIcon, QColor, QFont, QIntValidator, QCursor, QPalette
 from PySide2.QtCore import Qt, QDir, Signal, QEvent, QTimer
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QMenu, QAction, QErrorMessage,
                                QFileDialog, QVBoxLayout, QLabel, QApplication, QFrame, QHBoxLayout, QLineEdit,
@@ -29,7 +29,8 @@ from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
 from pyproj import CRS
 
-from src.qt_py import (icons_path, get_icon, CustomProgressBar)
+from src import __version__, app_data_dir
+from src.qt_py import (icons_path, get_icon, CustomProgressBar, read_file)
 from src.qt_py.db_plot import DBPlotter
 from src.qt_py.pem_geometry import PEMGeometry
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
@@ -52,7 +53,6 @@ from src.qt_py.unpacker import Unpacker
 from src.ui.pdf_plot_printer import Ui_PDFPlotPrinter
 from src.ui.pem_hub import Ui_PEMHub
 from src.ui.plan_map_options import Ui_PlanMapOptions
-from src import __version__, app_data_dir
 
 logger = logging.getLogger(__name__)
 
@@ -60,12 +60,17 @@ logger = logging.getLogger(__name__)
 # TODO Create a theory vs measured plot (similar to step)
 # TODO Look into slowness when changing station number and such in pem plot editor
 # TODO Add more theory responses to plot editor.
+# TODO add icons to plot editor menu
+
+# Keep a list of widgets so they don't get garbage collected
+refs = []
 
 
 class PEMHub(QMainWindow, Ui_PEMHub):
 
-    def __init__(self, parent=None, splash_screen=None):
+    def __init__(self, app, parent=None, splash_screen=None):
         super().__init__()
+        self.app = app
         self.parent = parent
         if splash_screen:
             splash_screen.showMessage("Initializing UI")
@@ -123,6 +128,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         if splash_screen:
             splash_screen.showMessage("Initializing widgets")
+
         # Widgets
         self.file_dialog = QFileDialog()
         self.message = QMessageBox()
@@ -408,6 +414,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.setWindowTitle("PEMPro  v" + str(__version__))
         self.setWindowIcon(QIcon(str(icons_path.joinpath('conder.png'))))
         self.resize(1700, 900)
+        self.app.setStyle("Fusion")
         # center_window()
 
         self.table.horizontalHeader().hide()
@@ -480,6 +487,35 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 token_file.close()
                 self.statusBar().showMessage("Mapbox token updated.", 1500)
 
+        def toggle_theme():
+            white_palette = QPalette()
+            dark_palette = QPalette()
+            dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
+            dark_palette.setColor(QPalette.WindowText, Qt.white)
+            dark_palette.setColor(QPalette.Disabled, QPalette.WindowText, QColor(127, 127, 127))
+            dark_palette.setColor(QPalette.Base, QColor(42, 42, 42))
+            dark_palette.setColor(QPalette.AlternateBase, QColor(66, 66, 66))
+            dark_palette.setColor(QPalette.ToolTipBase, Qt.white)
+            dark_palette.setColor(QPalette.ToolTipText, Qt.white)
+            dark_palette.setColor(QPalette.Text, Qt.white)
+            dark_palette.setColor(QPalette.Disabled, QPalette.Text, QColor(127, 127, 127))
+            dark_palette.setColor(QPalette.Dark, QColor(35, 35, 35))
+            dark_palette.setColor(QPalette.Shadow, QColor(20, 20, 20))
+            dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
+            dark_palette.setColor(QPalette.ButtonText, Qt.white)
+            dark_palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor(127, 127, 127))
+            dark_palette.setColor(QPalette.BrightText, Qt.red)
+            dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
+            dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+            dark_palette.setColor(QPalette.Disabled, QPalette.Highlight, QColor(80, 80, 80))
+            dark_palette.setColor(QPalette.HighlightedText, Qt.white)
+            dark_palette.setColor(QPalette.Disabled, QPalette.HighlightedText, QColor(127, 127, 127))
+
+            if self.actionDark_Theme.isChecked():
+                self.app.setPalette(dark_palette)
+            else:
+                self.app.setPalette(white_palette)
+
         # 'File' menu
         self.actionOpenFile.triggered.connect(self.open_file_dialog)
         self.actionSaveFiles.triggered.connect(lambda: self.save_pem_files(selected=False))
@@ -538,6 +574,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         # Settings menu
         self.actionAdd_Mapbox_Token.triggered.connect(add_mapbox_token)
+        self.actionDark_Theme.triggered.connect(toggle_theme)
 
         # Help menu
         self.actionView_Logs.triggered.connect(open_logs)
@@ -620,7 +657,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     pem_file.coil_area = value
 
             self.format_row(row)
-            self.color_table_numbers()
+            self.color_table_by_values()
 
             if self.allow_signals:
                 self.table.blockSignals(False)
@@ -652,8 +689,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             elif col == self.table_columns.index('Suffix\nWarnings'):
                 if self.table.item(row, col).text() != '0' and not pem_file.is_borehole():
 
-                    global suffix_viewer
                     suffix_viewer = WarningViewer(pem_file, warning_type='suffix')
+                    refs.append(suffix_viewer)
                     suffix_viewer.accept_sig.connect(accept_change)
                 else:
                     self.status_bar.showMessage(f"No suffix warnings to show.", 1000)
@@ -661,8 +698,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             elif col == self.table_columns.index('Repeat\nWarnings'):
                 if self.table.item(row, col).text() != '0':
 
-                    global repeat_viewer
                     repeat_viewer = WarningViewer(pem_file, warning_type='repeat')
+                    refs.append(repeat_viewer)
                     repeat_viewer.accept_sig.connect(accept_change)
                 else:
                     self.status_bar.showMessage(f"No repeats to show.", 1000)
@@ -1549,7 +1586,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     # Progress the progress bar
                     dlg += 1
 
-        self.color_table_numbers()
+        self.color_table_by_values()
 
         self.allow_signals = True
         self.table.setUpdatesEnabled(True)
@@ -1667,7 +1704,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.enable_menus(False)
         else:
             # Only color the number columns if there are PEM files left
-            self.color_table_numbers()
+            self.color_table_by_values()
 
         reset_selection_labels()
         self.setUpdatesEnabled(True)
@@ -1702,7 +1739,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         Open files through the file dialog
         """
-        files = self.file_dialog.getOpenFileNames(self, 'Open PEM Files', filter='PEM files (*.pem)')[0]
+        files = QFileDialog().getOpenFileNames(self, 'Open PEM Files', filter='PEM files (*.pem)')[0]
         if files:
             self.add_pem_files(files)
 
@@ -1764,9 +1801,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         pem_file, row = pem_files[0], rows[0]
 
-        self.derotator = Derotator(parent=self)
-        self.derotator.accept_sig.connect(accept_file)
-        self.derotator.open(pem_file)
+        derotator = Derotator(parent=self)
+        refs.append(derotator)
+        derotator.accept_sig.connect(accept_file)
+        derotator.open(pem_file)
 
     def open_pem_geometry(self):
         """
@@ -1782,10 +1820,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         pem_files, rows = self.get_pem_files(selected=True)
 
-        # global pem_geometry
-        self.pem_geometry = PEMGeometry(parent=self)
-        self.pem_geometry.accepted_sig.connect(accept_geometry)
-        self.pem_geometry.open(pem_files)
+        pem_geometry = PEMGeometry(parent=self)
+        refs.append(pem_geometry)
+        pem_geometry.accepted_sig.connect(accept_geometry)
+        pem_geometry.open(pem_files)
 
     def open_pem_merger(self):
         """
@@ -1851,8 +1889,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             return
 
         if check_pems():
-            global merger
             merger = PEMMerger(parent=self)
+            refs.append(merger)
             merger.accept_sig.connect(accept_merge)
             merger.open(pem_files)
 
@@ -1873,7 +1911,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         for row, pem_file in zip(rows, pem_files):
             ri_files.append(self.pem_info_widgets[row].ri_file)
 
-        self.pdf_plot_printer = PDFPlotPrinter(parent=self)
+        pdf_plot_printer = PDFPlotPrinter(parent=self)
+        refs.append(pdf_plot_printer)
 
         # Disable plan map creation if no CRS is selected or if the CRS is geographic.
         crs = self.get_crs()
@@ -1886,8 +1925,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.status_bar.showMessage("Cancelled.", 1000)
                 return
             else:
-                self.pdf_plot_printer.make_plan_maps_gbox.setChecked(False)
-                self.pdf_plot_printer.make_plan_maps_gbox.setEnabled(False)
+                pdf_plot_printer.make_plan_maps_gbox.setChecked(False)
+                pdf_plot_printer.make_plan_maps_gbox.setEnabled(False)
 
         elif crs.is_geographic:
             response = self.message.question(self, 'Geographic CRS',
@@ -1898,15 +1937,15 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.status_bar.showMessage("Cancelled.", 1000)
                 return
             else:
-                self.pdf_plot_printer.make_plan_maps_gbox.setChecked(False)
-                self.pdf_plot_printer.make_plan_maps_gbox.setEnabled(False)
+                pdf_plot_printer.make_plan_maps_gbox.setChecked(False)
+                pdf_plot_printer.make_plan_maps_gbox.setEnabled(False)
 
         # Disable the section plots if no file can produce one
         if not any([f.is_borehole() and f.has_all_gps() for f in pem_files]):
-            self.pdf_plot_printer.make_section_plots_gbox.setChecked(False)
-            self.pdf_plot_printer.make_section_plots_gbox.setEnabled(False)
+            pdf_plot_printer.make_section_plots_gbox.setChecked(False)
+            pdf_plot_printer.make_section_plots_gbox.setEnabled(False)
 
-        self.pdf_plot_printer.open(pem_files, ri_files=ri_files, crs=self.get_crs())
+        pdf_plot_printer.open(pem_files, ri_files=ri_files, crs=self.get_crs())
 
     def open_mag_dec(self):
         """
@@ -1919,15 +1958,15 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.message.information(self, 'Error', 'GPS coordinate system information is incomplete')
             return
 
-        global m
-        m = MagDeclinationCalculator(parent=self)
-        m.calc_mag_dec(pem_files[0])
-        m.show()
+        mag_calculator = MagDeclinationCalculator(parent=self)
+        refs.append(mag_calculator)
+        mag_calculator.calc_mag_dec(pem_files[0])
+        mag_calculator.show()
 
     def open_db_plot(self):
         """Open the damping box plotter."""
-        global db_plot
         db_plot = DBPlotter(parent=self)
+        refs.append(db_plot)
         db_plot.show()
 
     def open_name_editor(self, kind, selected=False):
@@ -1960,8 +1999,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(f"No PEM files selected.", 2000)
             return
 
-        global batch_name_editor
         batch_name_editor = BatchNameEditor(parent=self)
+        refs.append(batch_name_editor)
         batch_name_editor.open(pem_files, kind=kind)
         batch_name_editor.acceptChangesSignal.connect(rename_pem_files)
 
@@ -1980,8 +2019,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             else:
                 pass
 
-        global ri_importer
         ri_importer = BatchRIImporter(parent=self)
+        refs.append(ri_importer)
         ri_importer.open_pem_files(self.pem_files)
         ri_importer.acceptImportSignal.connect(open_ri_files)
         ri_importer.show()
@@ -1990,8 +2029,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         Open the GPSViewer if there's any GPS in any of the opened PEM files.
         """
-        global quick_map
         quick_map = GPSViewer(parent=self)
+        refs.append(quick_map)
 
         pem_files, rows = self.get_pem_files(selected=selected)
 
@@ -2013,8 +2052,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.message.information(self, 'Error', 'No CRS selected.')
             return
 
-        global tile_map
         tile_map = TileMapViewer(parent=self)
+        refs.append(tile_map)
 
         if not self.pem_files:
             logger.warning(f"No PEM files opened.")
@@ -2030,8 +2069,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         Open the Map3DViewer if there's any GPS in any of the opened PEM files.
         """
-        global map_3d
         map_3d = Map3DViewer(parent=self)
+        refs.append(map_3d)
 
         if not self.pem_files:
             logger.warning(f"No PEM files opened.")
@@ -2107,8 +2146,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.message.critical(self, 'Invalid CRS', 'Project CRS is invalid.')
             return
 
-        global converter
         converter = GPSConversionWidget()
+        refs.append(converter)
         converter.open(crs)
         converter.accept_signal.connect(convert_gps)
 
@@ -2229,10 +2268,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         source_index = piws.index(source_widget)
 
-        # global gps_share
-        self.gps_share = GPSShareWidget()
-        self.gps_share.open(pem_files, source_index)
-        self.gps_share.accept_sig.connect(share_gps)
+        gps_share = GPSShareWidget()
+        refs.append(gps_share)
+        gps_share.open(pem_files, source_index)
+        gps_share.accept_sig.connect(share_gps)
 
     def open_channel_table_viewer(self):
         """
@@ -2253,14 +2292,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
     def open_grid_planner(self):
         """Open the Grid Planner"""
-        global grid_planner
         grid_planner = GridPlanner(parent=self)
+        refs.append(grid_planner)
         grid_planner.show()
 
     def open_loop_planner(self):
         """Open the Loop Planner"""
-        global loop_planner
         loop_planner = LoopPlanner(parent=self)
+        refs.append(loop_planner)
         loop_planner.show()
 
     def open_project_dir(self):
@@ -2347,22 +2386,21 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.project_dir_edit.setText(str(folder_dir))
             self.open_project_dir()
 
-        # global unpacker
-        self.unpacker = Unpacker(parent=self)
-        self.unpacker.open_project_folder_sig.connect(open_unpacker_dir)
+        unpacker = Unpacker(parent=self)
+        refs.append(unpacker)
+        unpacker.open_project_folder_sig.connect(open_unpacker_dir)
         if folder:
-            self.unpacker.open_folder(folder, project_dir=self.project_dir)
-        self.unpacker.show()
+            unpacker.open_folder(folder, project_dir=self.project_dir)
+        unpacker.show()
 
     def open_gpx_creator(self):
         """Open the GPX Creator"""
-        global gpx_creator
         gpx_creator = GPXCreator(parent=self)
+        refs.append(gpx_creator)
         gpx_creator.show()
 
     def open_contour_map(self):
         """Open the Contour Map"""
-        global contour_map
 
         if not self.pem_files:
             logger.warning(f"No PEM files opened.")
@@ -2380,25 +2418,26 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             dlg.setBar(bar)
             dlg.setWindowTitle("Plotting PEM Files")
             contour_map = ContourMapViewer(parent=self)
+            refs.append(contour_map)
             contour_map.open(self.pem_files, dlg)
         bar.deleteLater()
 
     def open_freq_converter(self):
         """Open the Frequency Converter"""
-        global freq_converter
         freq_converter = FrequencyConverter(parent=self)
+        refs.append(freq_converter)
         freq_converter.show()
 
     def open_gps_converter(self):
         """Open the GPS converter"""
-        global gps_converter
         gps_converter = GPSConversionWidget(parent=self)
+        refs.append(gps_converter)
         gps_converter.show()
 
     def open_loop_calculator(self):
         """Open the Loop Calculator"""
-        global loop_calculator
         loop_calculator = LoopCalculator()
+        refs.append(loop_calculator)
         loop_calculator.show()
 
     def open_station_splitter(self):
@@ -2413,8 +2452,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         pem_file = pem_files[0]
 
-        global ss
         ss = StationSplitter(pem_file, parent=self)
+        refs.append(ss)
         ss.show()
 
     def make_dxf(self):
@@ -2432,6 +2471,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         for pf in pem_files:
             pf: PEMFile
             dwg = PEMDXFDrawing()
+            refs.append(dwg)
             if choice == "Loop" or choice == "Both" and not pf.loop.df.empty:
                 dwg.add_loop(pf)
             if choice == "Survey Line/Borehole" or choice == "Both":
@@ -2571,7 +2611,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         Populate the pem_list with all *.pem files found in the project_dir.
         """
-
         @stopit.threading_timeoutable(default='timeout')
         def find_pem_files():
             files = []
@@ -2678,8 +2717,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         :param filepath: str
         :return: dict with crs system, zone, and datum
         """
-        with open(filepath, 'rt') as f:
-            file = f.read()
+        file = read_file(filepath)
         crs_dict = dict()
         crs_dict['System'] = re.search(r'Coordinate System:\W+(?P<System>.*)', file).group(1)
         crs_dict['Zone'] = re.search(r'Coordinate Zone:\W+(?P<Zone>.*)', file).group(1)
@@ -2983,8 +3021,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
     def export_pem_headers(self):
         """
-        We want to convert the PEMs into report friendly information into a single csv
-
+        Export PEMFile information into report-friendly information into a single csv
         """
         pem_files, rows = self.get_pem_files(selected=False)
         if not pem_files:
@@ -3006,7 +3043,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         Save the selected PEM files as XYZ files
         :return: None
         """
-
         pem_files, rows = self.get_pem_files(selected=False)
 
         if not pem_files:
@@ -3351,13 +3387,13 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     if col == average_col:
                         if value == 'False':
                             item.setForeground(QColor('red'))
-                        else:
-                            item.setForeground(QColor('black'))
+                        # else:
+                        #     item.setForeground(QColor('black'))
                     elif col == split_col:
                         if value == 'False':
                             item.setForeground(QColor('red'))
-                        else:
-                            item.setForeground(QColor('black'))
+                        # else:
+                        #     item.setForeground(QColor('black'))
                     elif col == suffix_col:
                         if int(value) > 0:
                             item.setBackground(QColor('red'))
@@ -3433,7 +3469,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         if self.allow_signals:
             self.table.blockSignals(False)
 
-    def color_table_numbers(self):
+    def color_table_by_values(self):
         """
         Color the background of the cells based on their values for the current, coil area, and station ranges.
         """
@@ -3629,7 +3665,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.pem_info_widgets[ind].open_file(pem_file)
             self.add_pem_to_table(pem_file, ind)
             self.format_row(ind)
-            self.color_table_numbers()
+            self.color_table_by_values()
         else:
             logger.error(f"PEMFile ID {id(pem_file)} is not in the table.")
             raise IndexError(f"PEMFile ID {id(pem_file)} is not in the table.")
@@ -4542,13 +4578,10 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
 
         save_dir = self.save_path_edit.text()
         if save_dir:
-
             save_dir = os.path.splitext(save_dir)[0]
-            # global printer
             self.printer = PEMPrinter(**plot_kwargs)
             self.printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
             os.startfile(save_dir + ".PDF")
-            # self.hide()
             self.close()
         else:
             logger.error(f"No file name passed.")
@@ -5145,7 +5178,8 @@ class BatchNameEditor(QWidget):
 def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
-    mw = PEMHub()
+    mw = PEMHub(app)
+    mw.actionDark_Theme.trigger()
     pem_g = PEMGetter()
     pem_parser = PEMParser()
     dmp_parser = DMPParser()
@@ -5160,7 +5194,7 @@ def main():
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
     # pem_files = pem_g.get_pems(number=3, random=True)
     # pem_files = pem_g.get_pems(folder="Raw Surface", subfolder=r"Loop 4\Final", number=3)
-    pem_files = pem_g.get_pems(folder='Iscaycruz', subfolder='Loop 1')
+    pem_files = pem_g.get_pems(folder='Iscaycruz', subfolder='Loop 1', number=4)
     # pem_files = pem_g.get_pems(folder="Raw Boreholes\EB-21-68\RAW", number=2)
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
@@ -5169,7 +5203,7 @@ def main():
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
     mw.add_pem_files(pem_files)
-    mw.open_3d_map()
+    # mw.open_3d_map()
     # mw.add_dmp_files(dmp_files)
     # mw.table.selectRow(0)
     # mw.table.selectAll()

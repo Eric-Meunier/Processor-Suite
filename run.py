@@ -72,6 +72,7 @@ class SplashScreen(QWidget, Ui_SplashScreen):
 
 # Splash screen
 app = QApplication(sys.argv)
+
 path = icons_path.joinpath(r"crone_logo.png")
 splash = SplashScreen(__version__)
 app.processEvents()
@@ -84,7 +85,7 @@ def main():
     print(f"Time to import PEMHub: {time.time() - t:.2f}s")
 
     splash.showMessage("Initializing PEMHub")
-    window = PEMHub(splash_screen=splash)
+    window = PEMHub(app, splash_screen=splash)
     window.show()
     splash.close()
 
