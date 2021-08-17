@@ -655,10 +655,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         sorted_stations = sorted(stations, reverse=bool(stations[0] > stations[-1]))
         em_stations = self.pem_file.data.Station.map(convert_station).unique().astype(int)
 
-        blue_color, red_color, gray_color, white_color = QColor('blue'), \
-                                                         QColor('red'), \
-                                                         QColor('grey'), \
-                                                         QColor('white')
+        blue_color, red_color, gray_color = QColor("blue"), QColor("red"), QColor("darkGray")
         blue_color.setAlpha(50)
         red_color.setAlpha(50)
         gray_color.setAlpha(50)
@@ -669,17 +666,16 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             sorted_value = sorted_stations[row]
 
             for col in range(self.line_table.columnCount()):
-                # if col != station_col:
-                self.line_table.item(row, col).setBackground(
-                    white_color if table_value in em_stations else gray_color)
+                # self.line_table.item(row, col).setBackground(
+                #     white_color if table_value in em_stations else gray_color)
+                if table_value not in em_stations:
+                    self.line_table.item(row, col).setBackground(gray_color)
 
             # Color errors
             if self.line_table.item(row, station_col) and table_value > sorted_value:
                 self.line_table.item(row, station_col).setBackground(blue_color)
             elif self.line_table.item(row, station_col) and table_value < sorted_value:
                 self.line_table.item(row, station_col).setBackground(red_color)
-            # else:
-            #     self.line_table.item(row, station_col).setBackground(QColor('white'))
 
         self.line_table.blockSignals(False)
 
@@ -698,8 +694,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     other_station_index = stations.index(station)
                     self.line_table.item(row, stations_column).setForeground(QColor('red'))
                     self.line_table.item(other_station_index, stations_column).setForeground(QColor('red'))
-                else:
-                    self.line_table.item(row, stations_column).setForeground(QColor('black'))
+                # else:
+                #     self.line_table.item(row, stations_column).setForeground(QColor('black'))
                 stations.append(station)
         self.line_table.blockSignals(False)
 

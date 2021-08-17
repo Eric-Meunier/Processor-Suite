@@ -25,6 +25,8 @@ pg.setConfigOption('background', 'w')
 pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
 
+empty_background = QColor(255, 255, 255, 0)
+
 
 class GPSAdder(QMainWindow):
     """
@@ -122,6 +124,16 @@ class GPSAdder(QMainWindow):
             self.table.removeRow(0)
         self.table.blockSignals(True)
 
+    def clear_selection(self):
+        self.table.clearSelection()
+        if self.plan_lx in self.plan_view.items():
+            self.plan_view.removeItem(self.plan_highlight)
+            self.plan_view.removeItem(self.plan_lx)
+            self.plan_view.removeItem(self.plan_ly)
+            self.section_view.removeItem(self.section_highlight)
+            self.section_view.removeItem(self.section_lx)
+            self.section_view.removeItem(self.section_ly)
+
     def open(self, o, name=''):
         pass
 
@@ -189,6 +201,29 @@ class GPSAdder(QMainWindow):
 
         df = pd.DataFrame(gps, columns=self.df.columns).astype(dtype=self.df.dtypes)
         return df
+
+    def refresh_table(self):
+        """
+        Re-draw the table, resetting all coloring and keeping the vertical scroll bar position the same.
+        :return: None
+        """
+        self.table.blockSignals(True)
+
+        df = self.table_to_df()
+
+        # Store vertical scroll bar position to be restored after
+        slider_position = self.table.verticalScrollBar().sliderPosition()
+
+        self.df_to_table(df)  # Clears previous contents
+
+        # Restore scroll bar position
+        self.table.verticalScrollBar().setSliderPosition(slider_position)
+
+        # Color the table if it's LineAdder running
+        if 'color_table' in dir(self):
+            self.color_table()
+
+        self.table.blockSignals(False)
 
     def plot_table(self, preserve_limits=False):
         pass
@@ -266,7 +301,6 @@ class GPSAdder(QMainWindow):
             Count any incorrect data types
             :return: int, number of errors found
             """
-
             def has_na(row):
                 """
                 Return True if any cell in the row can't be converted to a float
@@ -294,19 +328,19 @@ class GPSAdder(QMainWindow):
 
         # Reject the change if it causes an error.
         if errors > 0:
-            self.table.blockSignals(True)
-            logger.critical(f"{self.table.item(row, col).text()} is not a number.")
+            logger.info(f"{self.table.item(row, col).text()} is not a number.")
             self.message.critical(self, 'Error', f"{self.table.item(row, col).text()} cannot be converted to a number.")
 
+            self.table.blockSignals(True)
             self.table.setItem(row, col, self.selected_row_info[col])
             self.table.blockSignals(False)
         else:
             self.plot_table()
             self.highlight_point(row=row)
 
-        # Color the table if it's LineAdder running
+        # Refresh the table if it's LineAdder running
         if 'color_table' in dir(self):
-            self.color_table()
+            self.refresh_table()
 
 
 class LineAdder(GPSAdder, Ui_LineAdder):
@@ -321,6 +355,9 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.line = None
         self.selected_row_info = None
         self.name_edit = None
+
+        # Icons
+        self.actionOpen.setIcon(QIcon(str(icons_path.joinpath("open.png"))))
 
         # Table
         self.table.setFixedWidth(400)
@@ -396,14 +433,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             self.section_view.autoRange()
 
         elif e.key() == Qt.Key_Escape:  # Clear the selection
-            self.table.clearSelection()
-            if self.plan_lx in self.plan_view.items():
-                self.plan_view.removeItem(self.plan_highlight)
-                self.plan_view.removeItem(self.plan_lx)
-                self.plan_view.removeItem(self.plan_ly)
-                self.section_view.removeItem(self.section_highlight)
-                self.section_view.removeItem(self.section_lx)
-                self.section_view.removeItem(self.section_ly)
+            self.clear_selection()
 
     def edit_names(self):
         """
@@ -411,6 +441,8 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         """
         trunc_amt, _ = QInputDialog().getInt(self, "Edit Station Names", "Amount to truncate:")
         if trunc_amt:
+            # Remove any selections/highlights
+            self.clear_selection()
             print(f"Truncating {trunc_amt}")
             self.df.Station.loc[:] = self.df.Station.loc[:].map(lambda x: str(x)[trunc_amt:]).astype(int)
             self.df_to_table(self.df)
@@ -514,7 +546,6 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         :param row: Int: table row to highlight
         :return: None
         """
-
         if row is None:
             selected_row = self.table.selectionModel().selectedRows()
             if selected_row:
@@ -591,8 +622,8 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                         self.table.item(row, stations_column).setForeground(QColor('red'))
                         self.table.item(other_station_index, stations_column).setForeground(QColor('red'))
                         errors += 1
-                    else:
-                        self.table.item(row, stations_column).setForeground(QColor('black'))
+                    # else:
+                    #     self.table.item(row, stations_column).setForeground(QColor('lightGray'))
                     stations.append(station)
 
         def color_order():
@@ -626,7 +657,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                         station_item.setBackground(red_color)
                         errors += 1
                     else:
-                        station_item.setBackground(QColor('white'))
+                        station_item.setBackground(empty_background)
 
         self.table.blockSignals(True)
         global errors
@@ -649,6 +680,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.loop = None
         self.selected_row_info = None
         self.setWindowTitle('Loop Adder')
+
         self.status_bar.hide()
 
         # Status bar widgets
@@ -657,6 +689,9 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
 
         # self.status_bar.addPermanentWidget(self.auto_sort_cbox, 0)
         # self.status_bar.addPermanentWidget(QLabel(), 1)
+
+        # Icons
+        self.actionOpen.setIcon(QIcon(str(icons_path.joinpath("open.png"))))
 
         self.table.setFixedWidth(400)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -1176,7 +1211,7 @@ class ExcelTablePicker(QWidget):
 
     def reset(self):
         for item in self.selected_cells:
-            item.setBackground(QColor("white"))
+            item.setBackground(empty_background)
 
         for table in self.tables:
             table.clearSelection()
@@ -1220,7 +1255,7 @@ class ExcelTablePicker(QWidget):
 
         self.selected_cells.append(item)
         if len(self.selected_cells) > 3:
-            self.selected_cells[0].setBackground(QColor('white'))
+            self.selected_cells[0].setBackground(QColor('darkGray'))
             self.selected_cells.pop(0)
 
     def open(self, content):
@@ -1288,7 +1323,7 @@ class DADSelector(QWidget):
     def reset(self):
         for range in self.selected_ranges:
             for item in range:
-                item.setBackground(QColor("white"))
+                item.setBackground(empty_background)
 
         for table in self.tables:
             table.clearSelection()
@@ -1320,7 +1355,7 @@ class DADSelector(QWidget):
         # Remove the 3rd last selected range
         if len(self.selected_ranges) == 3:
             for item in self.selected_ranges[0]:
-                item.setBackground(QColor('white'))
+                item.setBackground(empty_background)
             self.selected_ranges.pop(0)
 
         values = []
@@ -1387,27 +1422,27 @@ class DADSelector(QWidget):
 def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
     samples_folder = Path(__file__).absolute().parents[2].joinpath(r'sample_files')
     line_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Line GPS'))
     loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Loop GPS'))
     pg = PEMGetter()
 
-    mw = CollarPicker()
-    file = r"C:\_Data\2021\Canadian Palladium\EB-21-68\GPS\LOOP EB-1_0718.txt"
+    # mw = CollarPicker()
+    # file = r"C:\_Data\2021\Canadian Palladium\EB-21-68\GPS\LOOP EB-1_0718.txt"
 
     # mw = LoopAdder()
     # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
     # loop = TransmitterLoop(file)
 
-    # mw = LineAdder()
+    mw = LineAdder()
     # mw = ExcelTablePicker()
     # mw = DADSelector()
 
-    # file = samples_folder.joinpath(r'GPX files\Loop01 L200_0624.gpx')
+    file = samples_folder.joinpath(r'GPX files\Loop01 L200_0624.gpx')
     # file = samples_folder.joinpath(r'Raw Boreholes\HOLE STE-21-02\RAW\3-Forage_2021_Coordonnées.xlsx')
     # file = samples_folder.joinpath(r'Raw Boreholes\HOLE STE-21-02\RAW\3-Forage_2021_Déviation.xlsx')
     # file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')
-    # mw.open(file)
     # line = SurveyLine(str(file))
 
     mw.open(file)

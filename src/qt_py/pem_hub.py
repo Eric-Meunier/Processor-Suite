@@ -61,6 +61,7 @@ logger = logging.getLogger(__name__)
 # TODO Look into slowness when changing station number and such in pem plot editor
 # TODO Add more theory responses to plot editor.
 # TODO add icons to plot editor menu
+# TODO Add default elevation for GPX points which don't have any
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
@@ -5179,7 +5180,7 @@ def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
     mw = PEMHub(app)
-    mw.actionDark_Theme.trigger()
+    # mw.actionDark_Theme.trigger()
     pem_g = PEMGetter()
     pem_parser = PEMParser()
     dmp_parser = DMPParser()
@@ -5214,7 +5215,7 @@ def main():
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.save_pem_file_as()¶
-    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"TMC\Loop G\GPS\L100E_16.gpx")])
     # gps_files = [samples_folder.joinpath(r"GPX files/loop-SAPR-21-004_0614.gpx")]
     # mw.add_gps_files(gps_files)

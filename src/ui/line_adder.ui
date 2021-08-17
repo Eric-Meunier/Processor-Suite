@@ -16,16 +16,19 @@
   <widget class="QWidget" name="layout">
    <layout class="QGridLayout" name="gridLayout">
     <property name="leftMargin">
-     <number>0</number>
+     <number>3</number>
     </property>
     <property name="topMargin">
-     <number>0</number>
+     <number>3</number>
     </property>
     <property name="rightMargin">
-     <number>0</number>
+     <number>3</number>
     </property>
     <property name="bottomMargin">
-     <number>0</number>
+     <number>3</number>
+    </property>
+    <property name="spacing">
+     <number>3</number>
     </property>
     <item row="0" column="0">
      <widget class="QSplitter" name="splitter_2">
@@ -55,7 +58,10 @@
         </size>
        </property>
        <property name="frameShape">
-        <enum>QFrame::Box</enum>
+        <enum>QFrame::StyledPanel</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Plain</enum>
        </property>
        <property name="selectionMode">
         <enum>QAbstractItemView::SingleSelection</enum>
@@ -66,10 +72,10 @@
       </widget>
       <widget class="QFrame" name="frame_2">
        <property name="frameShape">
-        <enum>QFrame::Box</enum>
+        <enum>QFrame::StyledPanel</enum>
        </property>
        <property name="frameShadow">
-        <enum>QFrame::Sunken</enum>
+        <enum>QFrame::Plain</enum>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout">
         <property name="spacing">
@@ -102,6 +108,12 @@
              <verstretch>2</verstretch>
             </sizepolicy>
            </property>
+           <property name="frameShape">
+            <enum>QFrame::NoFrame</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Plain</enum>
+           </property>
           </widget>
           <widget class="PlotWidget" name="section_view">
            <property name="sizePolicy">
@@ -109,6 +121,12 @@
              <horstretch>0</horstretch>
              <verstretch>1</verstretch>
             </sizepolicy>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::NoFrame</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Plain</enum>
            </property>
           </widget>
          </widget>
@@ -129,22 +147,25 @@
        <enum>QFrame::StyledPanel</enum>
       </property>
       <property name="frameShadow">
-       <enum>QFrame::Raised</enum>
+       <enum>QFrame::Plain</enum>
       </property>
-      <layout class="QtWidgets.QHBoxLayout" name="horizontalLayout">
+      <layout class="QGridLayout" name="horizontalLayout">
        <property name="leftMargin">
-        <number>0</number>
+        <number>3</number>
        </property>
        <property name="topMargin">
-        <number>0</number>
+        <number>3</number>
        </property>
        <property name="rightMargin">
-        <number>0</number>
+        <number>3</number>
        </property>
        <property name="bottomMargin">
-        <number>6</number>
+        <number>3</number>
        </property>
-       <item>
+       <property name="spacing">
+        <number>3</number>
+       </property>
+       <item row="0" column="0">
         <widget class="QDialogButtonBox" name="button_box">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>

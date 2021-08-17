@@ -1300,7 +1300,8 @@ class PEMFile:
         for note in reversed(self.notes):
             if '<GEN> CRS' in note or '<CRS>' in note:
                 del self.notes[self.notes.index(note)]
-        self.notes.append(f"<GEN>/<CRS> {crs.name} (EPSG:{crs.to_epsg()})")
+        if self.crs is not None:
+            self.notes.append(f"<GEN>/<CRS> {crs.name} (EPSG:{crs.to_epsg()})")
 
     def to_string(self, legacy=False):
         """
