@@ -70,8 +70,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.segments_table.setFocusPolicy(Qt.StrongFocus)
         self.ri_table.setFocusPolicy(Qt.StrongFocus)
 
-        self.line_table_columns = ['Easting', 'Northing', 'Elevation', 'Units', 'Station']
-        self.loop_table_columns = ['Easting', 'Northing', 'Elevation', 'Units']
+        self.line_table_columns = ['Easting', 'Northing', 'Elevation', 'Station']
+        self.loop_table_columns = ['Easting', 'Northing', 'Elevation']
 
         float_delegate = QItemDelegate()  # Must keep this reference or else it is garbage collected
         self.line_table.setItemDelegateForColumn(0, float_delegate)
