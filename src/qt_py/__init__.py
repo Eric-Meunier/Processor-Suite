@@ -111,14 +111,13 @@ def df_to_table(df, table):
          :return: None
          """
         def series_to_items(x):
-            if isinstance(x, float):
-                return QTableWidgetItem(f"{x}")
-                # return Qpg.TableWidgetItem(f"{x:.2f}")
-            else:
-                return QTableWidgetItem(str(x))
+            # if isinstance(x, float):
+            #     return QTableWidgetItem(f"{x}")
+            #     # return Qpg.TableWidgetItem(f"{x:.2f}")
+            # else:
+            return QTableWidgetItem(str(x))
 
         row_pos = table.rowCount()
-        # Add a new row to the table
         table.insertRow(row_pos)
 
         items = series.map(series_to_items).to_list()
@@ -134,7 +133,8 @@ def df_to_table(df, table):
         columns = df.columns.to_list()
         table.setColumnCount(len(columns))
         table.setHorizontalHeaderLabels(columns)
-        df.apply(write_row, axis=1)
+        # Cast as type "object" to prevent ints being upcasted as floats
+        df.astype("O").apply(write_row, axis=1)
 
 
 def table_to_df(table, dtypes=None):

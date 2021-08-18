@@ -112,7 +112,7 @@ class GPSAdder(QMainWindow):
         Signal slot: Adds the data from the table to the write_widget's (pem_info_widget object) table.
         :return: None
         """
-        self.accept_sig.emit(self.table_to_df().dropna())
+        self.accept_sig.emit(table_to_df(self.table).dropna())
         # self.hide()
 
         self.close()
@@ -185,7 +185,7 @@ class GPSAdder(QMainWindow):
         """
         self.table.blockSignals(True)
 
-        df = table_to_df(self.table, dtypes=float)
+        df = table_to_df(self.table)
 
         # Store vertical scroll bar position to be restored after
         slider_position = self.table.verticalScrollBar().sliderPosition()
@@ -223,7 +223,7 @@ class GPSAdder(QMainWindow):
             """
             indexes = self.selection
             # Create the data frame
-            df = table_to_df(self.table, dtypes=float)
+            df = table_to_df(self.table)
             # Create a copy of the two rows.
             a, b = df.iloc[indexes[0]].copy(), df.iloc[indexes[1]].copy()
             # Allocate the two rows in reverse order
@@ -325,6 +325,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.setupUi(self)
         self.setWindowTitle('Line Adder')
         self.actionOpen.setIcon(QIcon(str(icons_path.joinpath("open.png"))))
+        self.actionEdit_Names.setIcon(QIcon(str(icons_path.joinpath("edit.png"))))
         self.status_bar.hide()
 
         self.parent = parent
@@ -389,6 +390,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         # Signals
         self.actionOpen.triggered.connect(self.open_file_dialog)
         self.actionEdit_Names.triggered.connect(self.edit_names)
+        self.actionInterp_Null_Elevation.triggered.connect(self.interp_elevation)
 
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.close)
@@ -412,7 +414,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         """
         Remove text from station names. Useful for GPX files.
         """
-        trunc_amt, _ = QInputDialog().getInt(self, "Edit Station Names", "Amount to truncate:")
+        trunc_amt, _ = QInputDialog().getInt(self, "Edit Station Names", "Amount to truncate:", 1)
         if trunc_amt:
             # Remove any selections/highlights
             self.clear_selection()
@@ -420,6 +422,19 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             self.df.Station.loc[:] = self.df.Station.loc[:].map(lambda x: str(x)[trunc_amt:]).astype(int)
             self.df_to_table(self.df)
             self.plot_table(preserve_limits=True)
+
+    def interp_elevation(self):
+        """
+        Interpolate missing ("0.0") elevation values.
+        :return: None
+        """
+        df = table_to_df(self.table)
+        elevation = df.Elevation
+        filt = elevation == 0
+        interp_elevation = np.interp(df.index, df[~filt.astype(bool)].index, df[~filt.astype(bool)].Elevation)
+        df.Elevation = interp_elevation
+        self.df_to_table(df)
+        self.plot_table(preserve_limits=False)
 
     def open(self, gps, name=''):
         """
@@ -470,10 +485,9 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         Plot the data from the table to the axes.
         :return: None
         """
-        df = table_to_df(self.table, dtypes=float)
+        df = table_to_df(self.table)
         if df.empty:
             return
-
         df['Station'] = df['Station'].astype(int)
 
         # Plot the plan map
@@ -519,7 +533,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
 
         color = (255, 0, 0, 150) if keyboard.is_pressed('ctrl') else (0, 0, 255, 150)
 
-        df = table_to_df(self.table, dtypes=float)
+        df = table_to_df(self.table)
         df['Station'] = df['Station'].astype(int)
 
         # Plot on the plan map
@@ -591,7 +605,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             Color the background of the station cells if the station number is out of order
             """
             global errors
-            df_stations = table_to_df(self.table, dtypes=float).Station.map(
+            df_stations = table_to_df(self.table).Station.map(
                 lambda x: re.search(r'-?\d+', str(x)).group())
 
             table_stations = df_stations.astype(int).to_list()
@@ -757,7 +771,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         Plot the data from the table to the axes.
         :return: None
         """
-        df = table_to_df(self.table, dtypes=float)
+        df = table_to_df(self.table)
 
         if df.empty:
             return
@@ -808,7 +822,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
 
         color = (255, 0, 0, 150) if keyboard.is_pressed('ctrl') else (0, 0, 255, 150)
 
-        df = table_to_df(self.table, dtypes=float)
+        df = table_to_df(self.table)
 
         # Plot on the plan map
         plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
@@ -1368,13 +1382,13 @@ def main():
     # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
     # loop = TransmitterLoop(file)
 
-    # mw = LineAdder()
+    mw = LineAdder()
     # mw = ExcelTablePicker()
-    mw = DADSelector()
+    # mw = DADSelector()
 
-    # file = samples_folder.joinpath(r'GPX files\Loop01 L200_0624.gpx')
+    file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
     # file = samples_folder.joinpath(r'Raw Boreholes\OBS-88-027\RAW\Obalski.xlsx')
-    file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')
+    # file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')
     # line = SurveyLine(str(file))
 
     mw.open(file)

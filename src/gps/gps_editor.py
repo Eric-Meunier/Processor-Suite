@@ -74,6 +74,8 @@ def parse_gps(file, gps_object):
         :param file: input, can be list, dict, str, dataframe, or GPSObject.
         :return: dataframe
         """
+        global error_msg
+
         if isinstance(file, list):
             gps = pd.DataFrame(file)
         elif isinstance(file, dict):

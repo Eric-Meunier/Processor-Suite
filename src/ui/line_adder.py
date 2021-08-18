@@ -30,6 +30,8 @@ class Ui_LineAdder(object):
         self.actionEdit_Station_Names.setObjectName(u"actionEdit_Station_Names")
         self.actionEdit_Names = QAction(LineAdder)
         self.actionEdit_Names.setObjectName(u"actionEdit_Names")
+        self.actionInterp_Null_Elevation = QAction(LineAdder)
+        self.actionInterp_Null_Elevation.setObjectName(u"actionInterp_Null_Elevation")
         self.layout = QWidget(LineAdder)
         self.layout.setObjectName(u"layout")
         self.gridLayout = QGridLayout(self.layout)
@@ -137,6 +139,7 @@ class Ui_LineAdder(object):
         self.menuFile.addAction(self.actionOpen)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionEdit_Names)
+        self.menuFile.addAction(self.actionInterp_Null_Elevation)
         self.menuSettings.addAction(self.auto_sort_cbox)
 
         self.retranslateUi(LineAdder)
@@ -150,6 +153,7 @@ class Ui_LineAdder(object):
         self.auto_sort_cbox.setText(QCoreApplication.translate("LineAdder", u"Auto-Sort By Position", None))
         self.actionEdit_Station_Names.setText(QCoreApplication.translate("LineAdder", u"Edit Station Names", None))
         self.actionEdit_Names.setText(QCoreApplication.translate("LineAdder", u"Edit Station Names", None))
+        self.actionInterp_Null_Elevation.setText(QCoreApplication.translate("LineAdder", u"Interpolate Null Elevation", None))
         self.menuFile.setTitle(QCoreApplication.translate("LineAdder", u"File", None))
         self.menuSettings.setTitle(QCoreApplication.translate("LineAdder", u"Settings", None))
     # retranslateUi
