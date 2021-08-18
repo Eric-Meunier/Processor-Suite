@@ -34,125 +34,153 @@ def has_na(series):
 
 
 def parse_gps(file, gps_object):
-    units = None
+    def get_init_gps():
+        """
+        Create the empty dataframe, and initialize the units, columns and error message.
+        :return: tuple, (dataframe, units, columns, error message)
+        """
+        units = "m"
+        error_msg = ''
 
-    survey_line = bool(gps_object == SurveyLine)
-    if survey_line:
-        empty_gps = pd.DataFrame(columns=[
-            'Easting',
-            'Northing',
-            'Elevation',
-            'Station'
-        ])
-        cols = {
-            0: 'Easting',
-            1: 'Northing',
-            2: 'Elevation',
-            3: 'Station'
-        }
-    else:
-        empty_gps = pd.DataFrame(columns=[
-            'Easting',
-            'Northing',
-            'Elevation',
-        ])
-        cols = {
-            0: 'Easting',
-            1: 'Northing',
-            2: 'Elevation',
-        }
-    error_msg = ''
-
-    if isinstance(file, list):
-        gps = pd.DataFrame(file)
-
-    elif isinstance(file, dict):
-        gps = pd.DataFrame(file, index=[0])
-
-    elif isinstance(file, pd.DataFrame):
-        gps = file
-
-    elif isinstance(file, str) or isinstance(file, Path):
-        if not Path(file).is_file():
-            raise ValueError(f"File {file} does not exist.")
-
-        if Path(file).suffix.lower() == '.gpx':
-            # Convert the GPX file to string
-            gps, zone, hemisphere, crs, gpx_errors = GPXParser().get_utm(file, as_string=True)
-            if gpx_errors:
-                error_msg += '\n'.join(gpx_errors)
-            contents = [c.strip().split() for c in gps]
+        if survey_line:
+            empty_gps = pd.DataFrame(columns=[
+                'Easting',
+                'Northing',
+                'Elevation',
+                'Station'
+            ])
+            cols = {
+                0: 'Easting',
+                1: 'Northing',
+                2: 'Elevation',
+                3: 'Station'
+            }
         else:
-            contents = read_file(file, as_list=True)
-        gps = pd.DataFrame(contents)
+            empty_gps = pd.DataFrame(columns=[
+                'Easting',
+                'Northing',
+                'Elevation',
+            ])
+            cols = {
+                0: 'Easting',
+                1: 'Northing',
+                2: 'Elevation',
+            }
+        return empty_gps, units, cols, error_msg
 
-    elif file is None:
-        logger.warning(f"No GPS passed.")
-        return empty_gps, pd.DataFrame(), 'No GPS passed.'
+    def read_file(file):
+        """
+        Create a dataframe from the contents of the input. Accepts many different input formats.
+        :param file: input, can be list, dict, str, dataframe, or GPSObject.
+        :return: dataframe
+        """
+        if isinstance(file, list):
+            gps = pd.DataFrame(file)
+        elif isinstance(file, dict):
+            gps = pd.DataFrame(file, index=[0])
+        elif isinstance(file, pd.DataFrame):
+            gps = file
+        elif isinstance(file, str) or isinstance(file, Path):
+            if not Path(file).is_file():
+                raise ValueError(f"File {file} does not exist.")
 
-    else:
-        logger.error(f"Invalid input: {file}.")
-        raise TypeError(f'Invalid input for collar GPS parsing: {file}')
-
-    nan_rows = gps.iloc[:, 0: 3].apply(has_na, axis=1)
-    error_gps = gps.loc[nan_rows].copy()
-
-    # Remove NaN before converting to str
-    gps = gps[~nan_rows]
-    if gps.empty:
-        logger.warning("No GPS found after removing NaNs.")
-        error_msg = f"No GPS found after removing NaNs."
-        return empty_gps, gps, error_msg
-
-    gps = gps.astype(str)
-    # Remove P tags and units columns
-    cols_to_drop = []
-    for i, col in gps.dropna(axis=0).iteritems():
-        if col.empty:
-            continue
-        # Remove P tag column
-        if col.map(lambda x: str(x).startswith('<')).all():
-            logger.debug(f"Removing P-tag column.")
-            cols_to_drop.append(i)
-        # Remove units column (except borehole collars if it's the elevation value)
-        elif col.map(lambda x: str(x) == '0').all():
-            if gps_object == BoreholeCollar and len(gps.columns) == 3:
-                pass
+            if Path(file).suffix.lower() == '.gpx':
+                # Convert the GPX file to string
+                gps, zone, hemisphere, crs, gpx_errors = GPXParser().get_utm(file, as_string=True)
+                if gpx_errors:
+                    error_msg += '\n'.join(gpx_errors)
+                contents = [c.strip().split() for c in gps]
             else:
-                units = 'm'
-                logger.debug(f"Removing column of 0s.")
-                cols_to_drop.append(i)
-    gps = gps.drop(cols_to_drop, axis=1)
+                contents = read_file(file, as_list=True)
+            gps = pd.DataFrame(contents)
+        else:
+            logger.error(f"Invalid input: {file}.")
+            raise TypeError(f'Invalid input for collar GPS parsing: {file}')
 
-    if survey_line:
-        if len(gps.columns) < 4:
-            error_msg = f"{len(gps.columns)} column(s) of values were found instead of 4."
-            logger.info(error_msg)
-            return empty_gps, gps, error_msg
-        elif len(gps.columns) > 4:
-            gps = gps.drop(gps.columns[4:], axis=1)
+        return gps
+
+    def cull_gps(gps):
+        """
+        Remove empty rows or rows in NaNs, remove <P> and <L> tags, units column, and any extra columns.
+        :param gps: dataframe
+        :return: tuple, (dataframe, dataframe of error rows)
+        """
+        global units, error_msg
+
+        nan_rows = gps.iloc[:, 0: 3].apply(has_na, axis=1)
+        error_gps = gps.loc[nan_rows].copy()
+        gps = gps[~nan_rows]  # Remove NaN before converting to str
+        if gps.empty:
+            logger.warning("No GPS found after removing NaNs.")
+            error_msg = f"No GPS found after removing NaNs."
+            return gps, error_gps
+
+        gps = gps.astype(str)
+        # Remove P tags and units columns
+        cols_to_drop = []
+        for i, col in gps.dropna(axis=0).iteritems():
+            if col.empty:
+                continue
+            # Remove P tag column
+            if col.map(lambda x: str(x).startswith('<')).all():
+                logger.debug(f"Removing <P> or <L> tag column.")
+                cols_to_drop.append(i)
+            # Remove units column (except borehole collars if it's the elevation value)
+            elif col.map(lambda x: str(x) == '0').all():
+                if gps_object == BoreholeCollar and len(gps.columns) == 3:
+                    pass
+                else:
+                    units = 'm'
+                    logger.debug(f"Removing column of 0s.")
+                    cols_to_drop.append(i)
+            elif col.map(lambda x: str(x) == '1').all():
+                if gps_object == BoreholeCollar and len(gps.columns) == 3:
+                    pass
+                else:
+                    units = 'ft'
+                    logger.debug(f"Removing column of 1s.")
+                    cols_to_drop.append(i)
+        gps = gps.drop(cols_to_drop, axis=1)
+
+        if survey_line:
+            if len(gps.columns) < 4:
+                error_msg = f"{len(gps.columns)} column(s) of values were found instead of 4."
+                logger.info(error_msg)
+                # return empty_gps, units, gps, error_msg
+            elif len(gps.columns) > 4:
+                gps = gps.drop(gps.columns[4:], axis=1)
+        else:
+            if len(gps.columns) < 3:
+                error_msg = f"{len(gps.columns)} column(s) of values were found instead of 3."
+                logger.info(error_msg)
+                # return empty_gps, units, gps, error_msg
+            elif len(gps.columns) > 3:
+                logger.warning(F"Removing extra column.")
+                gps = gps.drop(gps.columns[3:], axis=1)  # Remove extra columns
+
+        return gps, error_gps
+
+    global survey_line, units, error_msg
+    survey_line = bool(gps_object == SurveyLine)
+    empty_gps, units, cols, error_msg = get_init_gps()
+
+    if file is None:
+        logger.warning(f"No GPS passed.")
+        return empty_gps, units, pd.DataFrame(), 'No GPS passed.'
     else:
-        if len(gps.columns) < 3:
-            error_msg = f"{len(gps.columns)} column(s) of values were found instead of 3."
-            logger.info(error_msg)
-            return empty_gps, gps, error_msg
-        elif len(gps.columns) > 3:
-            logger.warning(F"Removing extra column.")
-            gps = gps.drop(gps.columns[3:], axis=1)  # Remove extra columns
+        gps = read_file(file)
+
+    gps, error_gps = cull_gps(gps)  # Remove tags, units, extra columns and empty/NaN rows
+    if gps.empty:
+        return gps, units, gps, error_msg
 
     gps.columns = range(gps.shape[1])  # Reset the columns
-
-    # Add the units column
-    # gps.insert(3, 'Unit', '0')
-
-    # Add the column names to the two data frames
-    gps.rename(columns=cols, inplace=True)
+    gps.rename(columns=cols, inplace=True) # Add the column names to the two data frames
     error_gps.rename(columns=cols, inplace=True)
 
     # Remove the NaNs from the good data frame
     gps = gps.dropna(axis=0).drop_duplicates()
     gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
-    # gps['Unit'] = gps['Unit'].astype(str)
     if survey_line:
         gps['Station'] = gps['Station'].map(convert_station)
 
@@ -188,6 +216,16 @@ class BaseGPS:
         #     return 'ft'
         # else:
         #     raise ValueError(f"'{units}'' is not a valid unit code. Must either be '0', '1', or '2'.")
+
+    def get_units_code(self):
+        if self.units == "m":
+            return "0"
+        elif self.units == "ft":
+            return "1"
+        elif self.units is None:
+            return
+        else:
+            raise ValueError(f"{self.units} does not have an associated units code.")
 
     def get_errors(self):
         return self.errors
@@ -384,7 +422,6 @@ class TransmitterLoop(BaseGPS):
         #     self.cull_loop()
 
     @staticmethod
-    # @Log()
     def parse_loop_gps(file):
         """
         Parse a text file or data frame for loop GPS.
@@ -393,7 +430,7 @@ class TransmitterLoop(BaseGPS):
         """
         if isinstance(file, TransmitterLoop):
             logger.info(f"SurveyLine passed.")
-            return file.df, None, file.errors, ''
+            return file.df, file.units, file.errors, ''
         else:
             gps, units, error_gps, error_msg = parse_gps(file, TransmitterLoop)
             return gps, units, error_gps, error_msg
@@ -468,7 +505,6 @@ class SurveyLine(BaseGPS):
         self.df, self.units, self.errors, self.error_msg = self.parse_station_gps(line)
 
     @staticmethod
-    # @Log()
     def parse_station_gps(file):
         """
         Parse a text file or data frame for station GPS.
@@ -478,49 +514,10 @@ class SurveyLine(BaseGPS):
 
         if isinstance(file, SurveyLine):
             logger.info(f"SurveyLine passed.")
-            return file.df, None, file.errors, ''
+            return file.df, file.units, file.errors, ''
         else:
             gps, units, error_gps, error_msg = parse_gps(file, SurveyLine)
             return gps, units, error_gps, error_msg
-
-        # # Capture rows with NaN in the first three columns
-        # nan_rows = gps.iloc[:, 0: 2].apply(has_na, axis=1)
-        # error_gps = gps.loc[nan_rows].copy()
-        #
-        # # Remove NaN before converting to str
-        # gps = gps[~nan_rows]
-        #
-        # gps = gps.astype(str)
-        # # Remove P tags and units columns
-        # cols_to_drop = []
-        # for i, col in gps.dropna(axis=0).iteritems():
-        #     # Remove P tag column
-        #     if col.map(lambda x: x.startswith('<')).all():
-        #         cols_to_drop.append(i)
-        #     # Remove units column
-        #     elif col.map(lambda x: x == '0').all():
-        #         cols_to_drop.append(i)
-        #
-        # gps = gps.drop(cols_to_drop, axis=1)
-        #
-        # # Add the units column
-        # gps.insert(3, 'Unit', '0')
-        #
-        # cols = {
-        #     0: 'Easting',
-        #     1: 'Northing',
-        #     2: 'Elevation',
-        #     3: 'Station'
-        # }
-        # # Add the column names to the two data frames
-        # gps.rename(columns=cols, inplace=True)
-        # error_gps.rename(columns=cols, inplace=True)
-        #
-        # # Remove the NaNs from the good data frame
-        # gps = gps.dropna(axis=0).drop_duplicates()
-        # gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
-        # gps['Unit'] = gps['Unit'].astype(str)
-        # gps['Station'] = gps['Station'].map(convert_station)
 
     def get_sorted_line(self):
         """
@@ -610,7 +607,7 @@ class BoreholeCollar(BaseGPS):
         """
         if isinstance(file, BoreholeCollar):
             logger.info(f"SurveyLine passed.")
-            return file.df, None, file.errors, ''
+            return file.df, file.units, file.errors, ''
         else:
             gps, units, error_gps, error_msg = parse_gps(file, BoreholeCollar)
 
@@ -652,7 +649,7 @@ class BoreholeSegments(BaseGPS):
             'Depth'
         ])
         error_msg = ''
-        units = None
+        units = "m"
 
         if isinstance(file, list):
             # split_file = [r.strip().split() for r in file]
@@ -734,6 +731,15 @@ class BoreholeSegments(BaseGPS):
     def get_segments(self):
         return self.df
 
+    def get_units_code(self):
+        if self.units == "m":
+            return "2"
+        elif self.units == "ft":
+            return "1"
+        elif self.units is None:
+            return
+        else:
+            raise ValueError(f"{self.units} does not have an associated units code.")
 
 class BoreholeGeometry(BaseGPS):
     """
