@@ -154,6 +154,8 @@ def table_to_df(table, dtypes=None):
     df = pd.DataFrame(gps, columns=header)
     if dtypes is not None:
         df = df.astype(dtypes)
+    else:
+        df = df.apply(pd.to_numeric, errors='ignore')
     return df
 
 

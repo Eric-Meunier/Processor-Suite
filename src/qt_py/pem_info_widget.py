@@ -324,7 +324,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if not files:
             return
 
-        self.add_gps(files)
+        self.open_gps_files(files)
 
     def open_gps_files(self, files):
         """
@@ -473,10 +473,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     def add_collar(self, collar_content=None):
         """
         Open the CollarPicker (if needed) and add the collarGPS.
-        :param collar_content: list of GPS points. If more than 1, uses the CollarPicker widget.
-        :param excel: Bool, whether to open the excel table picker or not for excel files.
+        :param collar_content: list or dict of GPS points. If more than 1, uses the CollarPicker widget.
         """
-
         def accept_collar(data):
             try:
                 collar = BoreholeCollar(data)

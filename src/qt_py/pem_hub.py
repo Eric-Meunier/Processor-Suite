@@ -5181,13 +5181,14 @@ def main():
     # dmp_files = samples_folder.joinpath(r"TMC/1338-18-19/RAW/_16_1338-18-19ppz.dmp2")
     # dmp_files = samples_folder.joinpath(r"TMC/Loop G/RAW/_31_ppp0131.dmp2")
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
-    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155xy_0415.PEM")
+    # pem_files = [pem_parser.parse(r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW\l31eb_0814.PEM")]
+    # gps_files = r"C:\_Data\2021\TMC\Murchison\Barraute B\GPS\L3100E_0814.GPX"
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
 
-    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY test.PEM")
+    pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"EB-21-52\RAW\xy_0720.PEM")
     # pem_files = pem_g.get_pems(number=3, random=True)
     # pem_files = pem_g.get_pems(folder="Raw Surface", subfolder=r"Loop 4\Final", number=3)
-    pem_files = pem_g.get_pems(folder='Iscaycruz', subfolder='Loop 1', number=4)
+    # pem_files = pem_g.get_pems(folder='Iscaycruz', subfolder='Loop 1', number=4)
     # pem_files = pem_g.get_pems(folder="Raw Boreholes\EB-21-68\RAW", number=2)
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
@@ -5207,9 +5208,9 @@ def main():
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.save_pem_file_as()¶
-    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.pem_info_widgets[0].open_gps_files([samples_folder.joinpath(r"TMC\Loop G\GPS\L100E_16.gpx")])
-    # gps_files = [samples_folder.joinpath(r"GPX files/loop-SAPR-21-004_0614.gpx")]
+    # gps_files = [samples_folder.joinpath(r"Raw Boreholes\EB-21-52\GPS\LOOP EB-1_0718.txt")]
     # mw.add_gps_files(gps_files)
 
     """ Attempting to re-create printing bug """

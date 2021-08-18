@@ -29,14 +29,13 @@ class PEMGetter:
         :param incl: str, text to include in the file name.
         :return: list of PEMFile objects.
         """
-
         def add_pem(filepath):
             """
             Parse and add the PEMFile to the list of pem_files.
             :param filepath: Path object of the PEMFile
             """
             if not filepath.exists():
-                raise ValueError(f"File {filepath.name} does not exists.")
+                raise ValueError(f"File {filepath} does not exists.")
 
             logger.info(f'Getting File {filepath}.')
             try:

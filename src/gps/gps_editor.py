@@ -832,7 +832,7 @@ class BoreholeGeometry(BaseGPS):
             northings = np.append(northings, northings[-1] + dy)
             depths = np.append(depths, depths[-1] - dz)
             # relative_depth = np.append(relative_depth, relative_depth[-1] + seg_l)
-            relative_depth = np.append(relative_depth, segment[4])
+            relative_depth = np.append(relative_depth, segment[3])
 
         projection.Easting = pd.Series(eastings, dtype=float)
         projection.Northing = pd.Series(northings, dtype=float)
@@ -887,12 +887,11 @@ class GPXParser:
                 # name = re.sub(r'\s', '_', waypoint.name)
                 name = re.sub(r'\W', '', waypoint.name)
                 name = re.sub(r"[^nsewNSEW\d]", "", name)
-                if not all([waypoint.latitude, waypoint.longitude, waypoint.elevation]):
-                    points_str = ', '.join([str(waypoint.latitude), str(waypoint.longitude), str(waypoint.elevation)])
-                    logger.warning(F"Skipping point {name} as the GPS is incomplete.")
-                    errors.append(F"Skipping point {name} as the GPS is incomplete. (Lat, Lon, Elev = {points_str})")
-                else:
-                    gps.append([waypoint.latitude, waypoint.longitude, waypoint.elevation, '0', name])
+                if not waypoint.elevation:
+                    logger.warning(F"{name} has no elevation value. Using '0.0' instead.")
+                    errors.append(F"{name} has no elevation value. Using '0.0' instead.")
+                    waypoint.elevation = 0.
+                gps.append([waypoint.latitude, waypoint.longitude, waypoint.elevation, '0', name])
             if len(gpx.waypoints) != len(gps):
                 logger.warning(f"{len(gpx.waypoints)} waypoints found in GPX file but {len(gps)} points parsed.")
         elif gpx.routes:
@@ -900,12 +899,11 @@ class GPXParser:
             for point in route.points:
                 # name = re.sub(r'\s', '_', point.name)
                 name = re.sub(r'\W', '', point.name)
-                if not all([point.latitude, point.longitude, point.elevation]):
-                    points_str = ', '.join([str(point.latitude), str(point.longitude), str(point.elevation)])
-                    logger.warning(F"Skipping point {name} as the GPS is incomplete.")
-                    errors.append(F"Skipping point {name} as the GPS is incomplete. (Lat, Lon, Elev = {points_str})")
-                else:
-                    gps.append([point.latitude, point.longitude, 0., '0', name])  # Routes have no elevation data, thus 0.
+                if not point.elevation:
+                    logger.warning(F"{name} has no elevation value. Using '0.0' instead.")
+                    errors.append(F"{name} has no elevation value. Using '0.0' instead.")
+                    point.elevation = 0.
+                gps.append([point.latitude, point.longitude, 0., '0', name])  # Routes have no elevation data, thus 0.
             if len(route.points) != len(gps):
                 logger.warning(f"{len(route.points)} points found in GPX file but {len(gps)} points parsed.")
         else:
@@ -986,24 +984,25 @@ if __name__ == '__main__':
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     # gps_parser = GPSParser()
-    # gpx_editor = GPXParser()
+    gpx_editor = GPXParser()
     # crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 1983'})
-    # gpx_file = samples_folder.joinpath(r'GPX files\L77+25_0515.gpx')
+    gpx_file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
     # gpx_file = samples_folder.joinpath(r'GPX files\2000E_0524.gpx')
 
-    # result = gpx_editor.get_utm(gpx_file)
+    print(gpx_editor.get_utm(gpx_file))
+    file, errors = gpx_editor.parse_gpx(gpx_file)
 
     # file = samples_folder.joinpath(r'Line GPS\LINE 0S.txt')
-    file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\LT19003_collar.txt'
+    # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\LT19003_collar.txt'
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Loop GPS\PERKOA SW LOOP 1.txt'
-    collar = BoreholeCollar(samples_folder.joinpath(r'Collar GPS\LT19003_collar.txt'))
-    segments = BoreholeSegments(samples_folder.joinpath(r'Segments\718-3759gyro.seg'))
-    geometry = BoreholeGeometry(collar, segments)
-    print(geometry.to_string())
+    # collar = BoreholeCollar(samples_folder.joinpath(r'Collar GPS\LT19003_collar.txt'))
+    # segments = BoreholeSegments(samples_folder.joinpath(r'Segments\718-3759gyro.seg'))
+    # geometry = BoreholeGeometry(collar, segments)
+    # print(geometry.to_string())
     # geometry.get_projection(num_segments=1000)
     # loop = TransmitterLoop(file)
     # loop.to_nad83()
-    # line = SurveyLine(file)
+    line = SurveyLine(file)
     # print(loop.get_sorted_loop(), '\n', loop.get_loop())
     # collar = BoreholeCollar(file)
     # seg = BoreholeSegments(file)
