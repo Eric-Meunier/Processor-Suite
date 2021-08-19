@@ -2474,6 +2474,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         # Set the model to be selected in the tree
         self.project_tree.setCurrentIndex(model)
+        self.project_tree.expand(model)
 
         # Adds a timer or else it doesn't actually scroll to it properly.
         QTimer.singleShot(100, lambda: self.project_tree.scrollTo(self.project_tree.currentIndex(),

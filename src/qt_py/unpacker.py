@@ -104,21 +104,21 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         self.geometry_frame.layout().setContentsMargins(0, 0, 0, 0)
         self.other_frame.layout().setContentsMargins(0, 0, 0, 0)
 
-        self.dump_table = UnpackerTable()
+        self.receiver_table = UnpackerTable()
         self.damp_table = UnpackerTable()
         self.dmp_table = UnpackerTable()
         self.gps_table = UnpackerTable()
         self.geometry_table = UnpackerTable()
         self.other_table = UnpackerTable()
 
-        self.dump_frame.layout().addWidget(self.dump_table)
+        self.dump_frame.layout().addWidget(self.receiver_table)
         self.damp_frame.layout().addWidget(self.damp_table)
         self.dmp_frame.layout().addWidget(self.dmp_table)
         self.gps_frame.layout().addWidget(self.gps_table)
         self.geometry_frame.layout().addWidget(self.geometry_table)
         self.other_frame.layout().addWidget(self.other_table)
 
-        self.dump_table.setColumnWidth(0, 225)
+        self.receiver_table.setColumnWidth(0, 225)
         self.damp_table.setColumnWidth(0, 225)
         self.dmp_table.setColumnWidth(0, 225)
         self.gps_table.setColumnWidth(0, 225)
@@ -160,7 +160,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         Reset everything in the window as if it were opened anew.
         :return: None
         """
-        tables = [self.dump_table, self.damp_table, self.dmp_table, self.gps_table, self.geometry_table,
+        tables = [self.receiver_table, self.damp_table, self.dmp_table, self.gps_table, self.geometry_table,
                   self.other_table]
         for table in tables:
             clear_table(table)
@@ -176,10 +176,10 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         :param path: str, file path of the desired directory
         :return: None
         """
-        # Adds a timer or else it doesn't actually scroll to it properly.
-        QTimer.singleShot(50, lambda: self.dir_tree.scrollTo(self.model.index(path),
-                                                                    QAbstractItemView.EnsureVisible))
         self.dir_tree.setCurrentIndex(self.model.index(path))
+        # Adds a timer or else it doesn't actually scroll to it properly.
+        QTimer.singleShot(100, lambda: self.dir_tree.scrollTo(self.dir_tree.currentIndex(),
+                                                                    QAbstractItemView.PositionAtCenter))
 
     def get_current_path(self):
         """
@@ -313,7 +313,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
 
                 elif any([ext in dump_extensions]) and \
                         not root_as_path.name.lower() == 'gps':
-                    add_to_table(file, root, self.dump_table, icon)
+                    add_to_table(file, root, self.receiver_table, icon)
 
                 elif any([ext in gps_extensions]):
                     add_to_table(file, root, self.gps_table, icon)
@@ -442,7 +442,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         else:
             new_folder.mkdir(parents=True, exist_ok=False)
 
-        make_move('Dump', self.dump_table)
+        make_move('Receiver', self.receiver_table)
         make_move('Damp', self.damp_table, additional_folder=self.get_current_path().parent.joinpath('DAMP'))
         make_move('DMP', self.dmp_table, additional_folder=self.get_current_path().parent.joinpath('RAW'))
         make_move('GPS', self.gps_table, additional_folder=self.get_current_path().parent.joinpath('GPS'))

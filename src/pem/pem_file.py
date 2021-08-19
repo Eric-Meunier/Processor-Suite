@@ -3820,10 +3820,10 @@ if __name__ == '__main__':
     pem_g = PEMGetter()
 
     # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
-    file = r"C:\_Data\2021\Nantou BF\Surface\Loop 5\RAW"
+    file = r"C:\_Data\2021\TMC\Laurentia\STE-21-50-W3\RAW\ste-21-50w3xy_0819.dmp2"
     # file = r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW\l35eb2_0817.dmp2"
-    pem_file = pemparser.parse(file)
-    # pem_file, errors = dmpparser.parse(file)
+    # pem_file = pemparser.parse(file)
+    pem_file, errors = dmpparser.parse(file)
     print(pem_file.to_string())
     # file = r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\1338-19-036 XY.PEM"
     # file = r"C:\_Data\2021\Iscaycruz\Borehole\LS-27-21-07\RAW\xy_0704.PEM"

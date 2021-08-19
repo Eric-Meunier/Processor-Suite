@@ -671,7 +671,7 @@ class BoreholeSegments(BaseGPS):
             gps = pd.DataFrame(contents)
         elif file is None:
             logger.warning(f"No GPS passed.")
-            return empty_gps, pd.DataFrame(), 'No GPS passed.'
+            return empty_gps, units, pd.DataFrame(), 'No GPS passed.'
         else:
             logger.warning(f"Invalid input: {file}.")
             raise TypeError(f'{file} is not a valid input for segments parsing')
