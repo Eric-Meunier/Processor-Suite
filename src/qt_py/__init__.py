@@ -159,6 +159,13 @@ def table_to_df(table, dtypes=None):
     return df
 
 
+class CustomProgressDialog(pg.ProgressDialog):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.setWindowFlags(Qt.CustomizeWindowHint | Qt.WindowStaysOnTopHint)
+        self.setStyleSheet("background-color: rgb(255, 255, 255);")
+
+
 class CustomProgressBar(QtWidgets.QProgressBar):
 
     def __init__(self):
@@ -178,8 +185,9 @@ class CustomProgressBar(QtWidgets.QProgressBar):
             width: 20px;
         }
         """
+
         # '#37DA7E' for green
-        self.setStyleSheet(COMPLETED_STYLE)
+        self.setStyleSheet(COMPLETED_STYLE)  # Old style
 
 
 class NonScientific(pg.AxisItem):

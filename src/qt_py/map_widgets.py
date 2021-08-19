@@ -24,9 +24,9 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from scipy import interpolate as interp
 
+from src.qt_py import icons_path, CustomProgressDialog, NonScientific
 from src.gps.gps_editor import BoreholeGeometry
 from src.pem.pem_plotter import MapPlotter
-from src.qt_py import icons_path, CustomProgressBar, NonScientific
 from src.ui.contour_map import Ui_ContourMap
 
 logger = logging.getLogger(__name__)
@@ -240,13 +240,7 @@ class TileMapViewer(MapboxViewer):
                 #     text=['Montreal'],
                 # ))
 
-        bar = CustomProgressBar()
-        bar.setMaximum(len(self.pem_files))
-
-        with pg.ProgressDialog("Plotting PEM Files", 0, len(self.pem_files)) as dlg:
-            dlg.setBar(bar)
-            dlg.setWindowTitle("Plotting PEM Files")
-
+        with CustomProgressDialog("Plotting PEM Files", 0, len(self.pem_files)) as dlg:
             # Plot the PEMs
             for pem_file in self.pem_files:
                 pem_file = pem_file.copy()  # Copy the PEM file so GPS conversions don't affect the original file
@@ -272,8 +266,6 @@ class TileMapViewer(MapboxViewer):
             raise Exception(f"No Lat/Lon GPS after plotting all PEM files.")
 
         # Pass the mapbox token, for access to better map tiles. If none is passed, it uses the free open street map.
-        # app_data_dir = Path(os.getenv('APPDATA'))
-        # token = open(app_data_dir.joinpath(r"PEMPro\.mapbox", 'r')).read()
         app_data_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro")
         token = open(str(app_data_dir.joinpath(".mapbox")), 'r').read()
         if not token:
@@ -282,7 +274,6 @@ class TileMapViewer(MapboxViewer):
         else:
             map_style = "outdoors"
 
-        # TODO Decide what to do with tokens
         # Format the figure margins and legend
         self.map_figure.update_layout(
             margin={"r": 0,
@@ -1217,13 +1208,7 @@ class GPSViewer(QMainWindow):
         loop_color = '#2A2B2DFF'
         hole_color = '#D9514EFF'
 
-        bar = CustomProgressBar()
-        bar.setMaximum(len(self.pem_files))
-
-        with pg.ProgressDialog("Plotting PEM files", 0, len(self.pem_files)) as dlg:
-            dlg.setWindowTitle("Plotting PEM files")
-            dlg.setBar(bar)
-
+        with CustomProgressDialog("Plotting PEM files", 0, len(self.pem_files)) as dlg:
             for pem_file in self.pem_files:
                 if dlg.wasCanceled():
                     break

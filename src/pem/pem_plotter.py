@@ -22,10 +22,10 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib import patheffects, patches, ticker, text, transforms, lines
 from scipy import stats
 
+from src.qt_py import CustomProgressDialog
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 from src.pem import convert_station
 from src.pem.pem_file import PEMParser
-from src.qt_py import CustomProgressBar
 from src.qt_py.ri_importer import RIFile
 
 logger = logging.getLogger(__name__)
@@ -3191,16 +3191,9 @@ class PEMPrinter:
             unique_grids[loop] = list(files)
 
         num_pages = count_pdf_pages(unique_bhs, unique_grids)  # for the progress bar
-        bar = CustomProgressBar()
-        bar.setMaximum(num_pages)
-
         with PdfPages(save_path + '.PDF') as pdf:
-
             global dlg
-            with pg.ProgressDialog("Printing PDFs..", 0, num_pages, busyCursor=True) as dlg:
-                dlg.setWindowTitle('Printing PDFs')
-                dlg.setBar(bar)
-
+            with CustomProgressDialog("Printing PDFs..", 0, num_pages, busyCursor=True) as dlg:
                 # Save the borehole PDFs
                 for survey, files in unique_bhs.items():
 

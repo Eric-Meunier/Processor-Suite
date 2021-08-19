@@ -18,7 +18,7 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from PySide2.QtGui import QIcon, QColor, QFont, QIntValidator, QCursor, QPalette
-from PySide2.QtCore import Qt, QDir, Signal, QEvent, QTimer
+from PySide2.QtCore import Qt, QDir, Signal, QEvent, QTimer, QSettings, QSize, QPoint
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QMenu, QAction, QErrorMessage,
                                QFileDialog, QVBoxLayout, QLabel, QApplication, QFrame, QHBoxLayout, QLineEdit,
                                QCalendarWidget, QFileSystemModel, QDoubleSpinBox, QHeaderView, QDesktopWidget,
@@ -30,7 +30,7 @@ from matplotlib.colors import LinearSegmentedColormap as LCMap
 from pyproj import CRS
 
 from src import __version__, app_data_dir
-from src.qt_py import (icons_path, get_icon, CustomProgressBar, read_file)
+from src.qt_py import (icons_path, get_icon, CustomProgressDialog, read_file)
 from src.qt_py.db_plot import DBPlotter
 from src.qt_py.pem_geometry import PEMGeometry
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
@@ -61,7 +61,7 @@ logger = logging.getLogger(__name__)
 # TODO Look into slowness when changing station number and such in pem plot editor
 # TODO Add more theory responses to plot editor.
 # TODO add icons to plot editor menu
-# TODO Add default elevation for GPX points which don't have any
+# TODO Add option for alt-click plotting, and add it to settings.
 
 
 white_palette = QPalette()
@@ -433,9 +433,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.app.setStyle("Fusion")
         self.setAcceptDrops(True)
 
+        self.load_settings()
         self.setWindowTitle("PEMPro  v" + str(__version__))
         self.setWindowIcon(QIcon(str(icons_path.joinpath('conder.png'))))
-        self.resize(1700, 900)
+        self.load_settings()
 
         self.table.horizontalHeader().hide()
 
@@ -567,6 +568,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         # Settings menu
         self.actionAdd_Mapbox_Token.triggered.connect(add_mapbox_token)
         self.actionDark_Theme.triggered.connect(toggle_theme)
+        self.actionReset_Settings.triggered.connect(self.reset_settings)
 
         # Help menu
         self.actionView_Logs.triggered.connect(open_logs)
@@ -1034,6 +1036,39 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.epsg_edit.editingFinished.connect(check_epsg)
         self.epsg_edit.editingFinished.connect(update_pem_files_crs)
 
+    def center(self):
+        frame_geo = self.frameGeometry()
+        screen = self.window().windowHandle().screen()
+        center_loc = screen.geometry().center()
+        frame_geo.moveCenter(center_loc)
+        self.move(frame_geo.topLeft())
+
+    def save_settings(self):
+        settings = QSettings("Crone Geophysics", "PEMPro")
+
+        settings.beginGroup("MainWindow")
+        settings.setValue("size", self.size())
+        settings.setValue("pos", self.pos())
+        settings.endGroup()
+
+    def load_settings(self):
+        settings = QSettings("Crone Geophysics", "PEMPro")
+
+        settings.beginGroup("MainWindow")
+        self.resize(settings.value("size", QSize(1700, 900)))
+        self.move(settings.value("pos", QPoint(100, 50)))
+        settings.endGroup()
+
+    def reset_settings(self):
+        settings = QSettings("Crone Geophysics", "PEMPro")
+        settings.clear()
+        self.resize(1700, 900)
+        self.center()
+        if self.actionDark_Theme.isChecked():
+            self.actionDark_Theme.trigger()
+
+        self.save_settings()
+
     def contextMenuEvent(self, event):
         """
         Right-click context menu items.
@@ -1340,6 +1375,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         elif len(urls) == 1 and (Path(urls[0]).is_dir() or Path(urls[0]).suffix.lower() in ['.zip', '.7z', '.rar']):
             self.open_unpacker(folder=urls[0])
 
+    def closeEvent(self, e):
+        self.save_settings()
+        e.accept()
+
     def is_opened(self, file):
         """
         Check if the PEMFile is currently opened.
@@ -1384,13 +1423,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         dmp_parser = DMPParser()
         pem_files = []
-        bar = CustomProgressBar()
-        bar.setMaximum(len(dmp_files))
 
-        with pg.ProgressDialog("Converting DMP Files...", 0, len(dmp_files)) as dlg:
-            dlg.setBar(bar)
-            dlg.setWindowTitle("Converting DMP Files")
-
+        with CustomProgressDialog("Converting DMP Files...", 0, len(dmp_files)) as dlg:
             for file in dmp_files:
                 if dlg.wasCanceled():
                     break
@@ -1416,7 +1450,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 finally:
                     dlg += 1
 
-        bar.deleteLater()
         self.add_pem_files(pem_files)
 
     def add_pem_files(self, pem_files):
@@ -1508,14 +1541,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.allow_signals = False
         self.table.setUpdatesEnabled(False)  # Suspends the animation of the table getting populated
         current_crs = self.get_crs()
-        # Start the progress bar
-        bar = CustomProgressBar()
-        bar.setMaximum(len(pem_files))
 
-        with pg.ProgressDialog("Opening PEMs Files...", 0, len(pem_files), busyCursor=False) as dlg:
-            dlg.setBar(bar)
-            dlg.setWindowTitle('Opening PEM Files')
-
+        with CustomProgressDialog("Opening PEMs Files...", 0, len(pem_files)) as dlg:
             for pem_file in pem_files:
                 if dlg.wasCanceled():
                     break
@@ -1587,8 +1614,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         self.table.horizontalHeader().show()
         self.status_bar.showMessage(f"{count} PEM files opened.", 2000)
-
-        bar.deleteLater()
 
     def add_gps_files(self, gps_files):
         """
@@ -1868,6 +1893,11 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             Open the new merged PEMFile, and remove the old ones if the delete_merged_files_cbox is checked.
             :param filepath: Path object.
             """
+            if self.actionRename_Merged_Files.isChecked():
+                for row in rows:
+                    new_name = "[M]" + self.table.item(row, self.table_columns.index("File")).text()
+                    # Also triggers file re-name.
+                    self.table.item(row, self.table_columns.index("File")).setText(new_name)
 
             if self.delete_merged_files_cbox.isChecked():
                 self.remove_pem_file(rows)
@@ -2090,13 +2120,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             """
             logger.info(f"Converting all GPS to EPSG:{epsg_code} ({CRS(epsg_code).name})")
 
-            # Set up the progress bar
-            bar = CustomProgressBar()
-            bar.setMaximum(len(self.pem_files))
-
-            with pg.ProgressDialog("Converting DMP Files...", 0, len(self.pem_files)) as dlg:
-                dlg.setBar(bar)
-                dlg.setWindowTitle("Converting DMP Files")
+            with CustomProgressDialog("Converting DMP Files...", 0, len(self.pem_files)) as dlg:
 
                 # Convert all GPS of each PEMFile
                 for pem_file in self.pem_files:
@@ -2129,7 +2153,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                 self.status_bar.showMessage(f"Process complete. GPS converted to {crs.name}.", 2000)
 
-            bar.deleteLater()
             self.set_crs(crs)
 
         crs = self.get_crs()
@@ -2158,12 +2181,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             """
             pem_info_widgets = np.array(piws)[mask]  # Filtered PIWs
 
-            bar = CustomProgressBar()
-            bar.setMaximum(len(pem_files))
-
-            with pg.ProgressDialog('Sharing GPS...', 0, len(pem_info_widgets)) as dlg:
-                dlg.setBar(bar)
-                dlg.setWindowTitle('Sharing GPS')
+            with CustomProgressDialog('Sharing GPS...', 0, len(pem_info_widgets)) as dlg:
 
                 # Share each GPS object
                 if gps_object == 'all':
@@ -2229,8 +2247,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                             widget.fill_gps_table(gps_object.df, widget.segments_table)
                             widget.gps_object_changed(widget.segments_table, refresh=True)
                             dlg += 1
-
-            bar.deleteLater()
 
         if gps_object == 'all':
             is_borehole = source_widget.pem_file.is_borehole()
@@ -2405,15 +2421,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.message.information(self, 'Error', 'No file has any GPS to plot.')
             return
 
-        bar = CustomProgressBar()
-        bar.setMaximum(len(self.pem_files))
-        with pg.ProgressDialog("Plotting PEM Files...", 0, 1) as dlg:
-            dlg.setBar(bar)
-            dlg.setWindowTitle("Plotting PEM Files")
+        with CustomProgressDialog("Plotting PEM Files...", 0, 1) as dlg:
             contour_map = ContourMapViewer(parent=self)
             refs.append(contour_map)
             contour_map.open(self.pem_files, dlg)
-        bar.deleteLater()
 
     def open_freq_converter(self):
         """Open the Frequency Converter"""
@@ -2753,13 +2764,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         pem_files, rows = self.get_pem_files(selected=selected)
         crs = self.get_crs()
 
-        bar = CustomProgressBar()
-        bar.setMaximum(len(pem_files))
-
-        with pg.ProgressDialog('Saving PEM Files...', 0, len(pem_files)) as dlg:
-            dlg.setBar(bar)
-            dlg.setWindowTitle('Saving PEM Files')
-
+        with CustomProgressDialog('Saving PEM Files...', 0, len(pem_files)) as dlg:
             for pem_file in pem_files:
                 if dlg.wasCanceled():
                     break
@@ -2775,7 +2780,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.refresh_pem(pem_file)
                 dlg += 1
 
-        bar.deleteLater()
         self.fill_pem_list()
         self.status_bar.showMessage(f'Save Complete. {len(pem_files)} file(s) saved.', 2000)
 
@@ -3046,12 +3050,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         file_dir = self.file_dialog.getExistingDirectory(self, '', str(self.project_dir))
 
         if file_dir:
-            bar = CustomProgressBar()
-            bar.setMaximum(len(pem_files))
-
-            with pg.ProgressDialog("Exporting XYZ Files...", 0, len(pem_files)) as dlg:
-                dlg.setBar(bar)
-                dlg.setWindowTitle('Exporting XYZ Files')
+            with CustomProgressDialog("Exporting XYZ Files...", 0, len(pem_files)) as dlg:
 
                 for pem_file in pem_files:
                     if dlg.wasCanceled():
@@ -3071,8 +3070,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                             file.write(xyz_file)
                     finally:
                         dlg += 1
-
-            bar.deleteLater()
 
     def export_pem_files(self, selected=False, legacy=False, processed=False):
         """
@@ -3118,12 +3115,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage('Cancelled.', 2000)
             return
 
-        bar = CustomProgressBar()
-        bar.setMaximum(len(pem_files))
-        with pg.ProgressDialog("Exporting PEM Files...", 0, len(pem_files)) as dlg:
-            dlg.setBar(bar)
-            dlg.setWindowTitle('Exporting PEM Files')
-
+        with CustomProgressDialog("Exporting PEM Files...", 0, len(pem_files)) as dlg:
             for pem_file, row in zip(pem_files, rows):
                 if dlg.wasCanceled():
                     break
@@ -3147,7 +3139,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 dlg += 1
 
         self.fill_pem_list()
-        bar.deleteLater()
         self.status_bar.showMessage(f"Save complete. {len(pem_files)} PEM file(s) exported", 2000)
 
     def export_gps(self, selected=False):
@@ -3177,12 +3168,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         export_folder = self.file_dialog.getExistingDirectory(self, 'Select Destination Folder', default_path)
 
         if export_folder:
-            bar = CustomProgressBar()
-            bar.setMaximum(len(pem_files))
-            with pg.ProgressDialog("Exporting GPS...", 0, len(pem_files)) as dlg:
-                dlg.setBar(bar)
-                dlg.setWindowTitle('Exporting GPS')
-
+            with CustomProgressDialog("Exporting GPS...", 0, len(pem_files)) as dlg:
                 for loop, pem_files in groupby(pem_files, key=lambda x: x.loop_name):
                     if dlg.wasCanceled():
                         break
@@ -3254,7 +3240,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                         dlg += 1
 
-            bar.deleteLater()
             self.status_bar.showMessage("Export complete.", 2000)
 
     def export_dad(self):
@@ -3271,12 +3256,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage('Cancelled.', 2000)
             return
 
-        bar = CustomProgressBar()
-        bar.setMaximum(len(pem_files))
-        with pg.ProgressDialog("Exporting PEM Files...", 0, len(pem_files)) as dlg:
-            dlg.setBar(bar)
-            dlg.setWindowTitle('Exporting PEM Files')
-
+        with CustomProgressDialog("Exporting PEM Files...", 0, len(pem_files)) as dlg:
             for pem_file, row in zip(pem_files, rows):
                 if dlg.wasCanceled():
                     break
@@ -3293,7 +3273,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                 dlg += 1
 
-        bar.deleteLater()
         self.status_bar.showMessage('Export complete.', 1000)
 
     def extract_component(self, component):
@@ -3857,13 +3836,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(f"No un-averaged PEM files opened.", 2000)
             return
 
-        bar = CustomProgressBar()
-        bar.setMaximum(len(pem_files))
-
-        with pg.ProgressDialog('Averaging PEM Files...', 0, len(pem_files)) as dlg:
-            dlg.setBar(bar)
-            dlg.setWindowTitle('Averaging PEM Files')
-
+        with CustomProgressDialog('Averaging PEM Files...', 0, len(pem_files)) as dlg:
             for pem_file in pem_files:
                 if dlg.wasCanceled():
                     break
@@ -3889,7 +3862,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.refresh_pem(pem_file)
                 dlg += 1
 
-        bar.deleteLater()
         self.status_bar.showMessage(f"Process complete. {len(pem_files)} PEM files averaged.", 2000)
 
     def split_pem_channels(self, selected=False):
@@ -3912,13 +3884,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(f"No un-split PEM files opened.", 2000)
             return
 
-        bar = CustomProgressBar()
-        bar.setMaximum(len(filt_list))
-
-        with pg.ProgressDialog('Splitting PEM Files...', 0, len(filt_list)) as dlg:
-            dlg.setBar(bar)
-            dlg.setWindowTitle('Splitting PEM File Channels')
-
+        with CustomProgressDialog('Splitting PEM Files...', 0, len(filt_list)) as dlg:
             for pem_file in filt_list:
                 if dlg.wasCanceled():
                     break
@@ -3933,7 +3899,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.refresh_pem(pem_file)
                 dlg += 1
 
-        bar.deleteLater()
         self.status_bar.showMessage(f"Process complete. {len(filt_list)} PEM files split.", 2000)
 
     def scale_pem_coil_area(self, coil_area=None, selected=False):
@@ -3956,13 +3921,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             if not ok_pressed:
                 return
 
-        bar = CustomProgressBar()
-        bar.setMaximum(len(pem_files))
-
-        with pg.ProgressDialog('Scaling PEM File Coil Area...', 0, len(pem_files)) as dlg:
-            dlg.setBar(bar)
-            dlg.setWindowTitle('Scaling PEM File Coil Area')
-
+        with CustomProgressDialog('Scaling PEM File Coil Area...', 0, len(pem_files)) as dlg:
             for pem_file, row in zip(pem_files, rows):
                 if dlg.wasCanceled():
                     break
@@ -3972,7 +3931,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.refresh_pem(pem_file)
                 dlg += 1
 
-        bar.deleteLater()
         self.status_bar.showMessage(f"Process complete. "
                                     f"Coil area of {len(pem_files)} PEM files scaled to {coil_area}.", 2000)
 
@@ -3991,13 +3949,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         default = pem_files[0].current
         current, ok_pressed = QInputDialog.getDouble(self, "Scale Current", "Current:", default)
         if ok_pressed:
-            bar = CustomProgressBar()
-            bar.setMaximum(len(pem_files))
-
-            with pg.ProgressDialog('Scaling PEM File Current...', 0, len(pem_files)) as dlg:
-                dlg.setBar(bar)
-                dlg.setWindowTitle('Scaling PEM File Current')
-
+            with CustomProgressDialog('Scaling PEM File Current...', 0, len(pem_files)) as dlg:
                 for pem_file, row in zip(pem_files, rows):
                     dlg.setLabelText(f"Scaling current of {pem_file.filepath.name}")
 
@@ -4005,7 +3957,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     self.refresh_pem(pem_file)
                     dlg += 1
 
-            bar.deleteLater()
             self.status_bar.showMessage(f"Process complete. "
                                         f"Current of {len(pem_files)} PEM files scaled to {current}.", 2000)
 
@@ -4020,13 +3971,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        bar = CustomProgressBar()
-        bar.setMaximum(len(pem_files))
-
-        with pg.ProgressDialog(f'Mag offsetting to last channel...', 0, len(pem_files)) as dlg:
-            dlg.setBar(bar)
-            dlg.setWindowTitle(f'Mag Offset')
-
+        with CustomProgressDialog(f'Mag offsetting to last channel...', 0, len(pem_files)) as dlg:
             for pem_file, row in zip(pem_files, rows):
                 dlg.setLabelText(f"Mag offsetting data of {pem_file.filepath.name}")
                 pem_file: PEMFile
@@ -4034,7 +3979,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.refresh_pem(pem_file)
                 dlg += 1
 
-        bar.deleteLater()
         self.status_bar.showMessage(f"Process complete. "
                                     f"Mag offset of {len(pem_files)} PEM file(s) complete.", 2000)
 
@@ -4051,20 +3995,13 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        bar = CustomProgressBar()
-        bar.setMaximum(len(pem_files))
-
-        with pg.ProgressDialog(f'Reversing {comp} Component Polarity...', 0, len(pem_files)) as dlg:
-            dlg.setBar(bar)
-            dlg.setWindowTitle(f'Reversing {comp} Component Polarity')
-
+        with CustomProgressDialog(f'Reversing {comp} Component Polarity...', 0, len(pem_files)) as dlg:
             for pem_file, row in zip(pem_files, rows):
                 dlg.setLabelText(f"Reversing {comp} component data of {pem_file.filepath.name}")
                 pem_file = pem_file.reverse_component(comp)
                 self.refresh_pem(pem_file)
                 dlg += 1
 
-        bar.deleteLater()
         self.status_bar.showMessage(f"Process complete. "
                                     f"{comp.upper()} of {len(pem_files)} PEM file(s) reversed.", 2000)
 
@@ -4076,20 +4013,13 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        bar = CustomProgressBar()
-        bar.setMaximum(len(pem_files))
-
-        with pg.ProgressDialog('Reversing Station Order...', 0, len(pem_files)) as dlg:
-            dlg.setBar(bar)
-            dlg.setWindowTitle('Reversing Station Order')
-
+        with CustomProgressDialog('Reversing Station Order...', 0, len(pem_files)) as dlg:
             for pem_file, row in zip(pem_files, rows):
                 dlg.setLabelText(f"Reversing station order of {pem_file.filepath.name}")
                 pem_file = pem_file.reverse_station_order()
                 self.refresh_pem(pem_file)
                 dlg += 1
 
-        bar.deleteLater()
         self.status_bar.showMessage(f"Process complete. "
                                     f"Station order of {len(pem_files)} PEM file(s) reversed.", 2000)
 
@@ -5169,24 +5099,25 @@ class BatchNameEditor(QWidget):
 
 
 def main():
+    import time
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
     mw = PEMHub(app)
-    mw.actionDark_Theme.trigger()
+    # mw.actionDark_Theme.trigger()
     pem_g = PEMGetter()
     pem_parser = PEMParser()
     dmp_parser = DMPParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
-    # dmp_files = samples_folder.joinpath(r"TMC/1338-18-19/RAW/_16_1338-18-19ppz.dmp2")
+    pem_files = [pem_parser.parse(samples_folder.joinpath(r"Test PEMS\223XYT.PEM"))]
     # dmp_files = samples_folder.joinpath(r"TMC/Loop G/RAW/_31_ppp0131.dmp2")
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
-    pem_files = [pem_parser.parse(r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW\3000E_0814.PEM")]
-    gps_files = r"C:\_Data\2021\TMC\Murchison\Barraute B\GPS\L3000E_0814.GPX"
+    # pem_files = [pem_parser.parse(r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW\3000E_0814.PEM")]
+    # gps_files = r"C:\_Data\2021\TMC\Murchison\Barraute B\GPS\L3000E_0814.GPX"
     # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
 
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"EB-21-52\RAW\xy_0720.PEM")
-    # pem_files = pem_g.get_pems(number=3, random=True)
+    # pem_files = pem_g.get_pems(number=15, random=True)
     # pem_files = pem_g.get_pems(folder="Raw Surface", subfolder=r"Loop 4\Final", number=3)
     # pem_files = pem_g.get_pems(folder='Iscaycruz', subfolder='Loop 1', number=4)
     # pem_files = pem_g.get_pems(folder="Raw Boreholes\EB-21-68\RAW", number=2)
@@ -5196,6 +5127,8 @@ def main():
 
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
+    mw.show()
+    app.processEvents()
     mw.add_pem_files(pem_files)
     # mw.open_3d_map()
     # mw.add_dmp_files(dmp_files)
@@ -5208,7 +5141,7 @@ def main():
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.save_pem_file_as()¶
-    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.add_gps_files(gps_files)
 
     """ Attempting to re-create printing bug """

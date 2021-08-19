@@ -326,6 +326,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.setWindowTitle('Line Adder')
         self.actionOpen.setIcon(QIcon(str(icons_path.joinpath("open.png"))))
         self.actionEdit_Names.setIcon(QIcon(str(icons_path.joinpath("edit.png"))))
+        self.actionInterp_Null_Elevation.setIcon(QIcon(str(icons_path.joinpath("grid_planner.png"))))
         self.status_bar.hide()
 
         self.parent = parent

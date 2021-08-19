@@ -72,8 +72,8 @@ class SplashScreen(QWidget, Ui_SplashScreen):
 
 # Splash screen
 app = QApplication(sys.argv)
+app.setStyle("Fusion")
 
-# path = icons_path.joinpath(r"crone_logo.png")
 splash = SplashScreen(__version__)
 app.processEvents()
 

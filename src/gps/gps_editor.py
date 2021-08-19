@@ -148,14 +148,16 @@ def parse_gps(file, gps_object):
             if len(gps.columns) < 4:
                 error_msg = f"{len(gps.columns)} column(s) of values were found instead of 4."
                 logger.info(error_msg)
-                # return empty_gps, units, gps, error_msg
+                error_gps = gps.copy()
+                gps = empty_gps.copy()
             elif len(gps.columns) > 4:
                 gps = gps.drop(gps.columns[4:], axis=1)
         else:
             if len(gps.columns) < 3:
                 error_msg = f"{len(gps.columns)} column(s) of values were found instead of 3."
                 logger.info(error_msg)
-                # return empty_gps, units, gps, error_msg
+                error_gps = gps.copy()
+                gps = empty_gps.copy()
             elif len(gps.columns) > 3:
                 logger.warning(F"Removing extra column.")
                 gps = gps.drop(gps.columns[3:], axis=1)  # Remove extra columns
