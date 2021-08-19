@@ -127,15 +127,16 @@ def parse_gps(file, gps_object):
             if col.map(lambda x: str(x).startswith('<')).all():
                 logger.debug(f"Removing <P> or <L> tag column.")
                 cols_to_drop.append(i)
-            # Remove units column (except borehole collars if it's the elevation value)
-            elif col.map(lambda x: str(x) == '0').all():
+            # Remove units column (except borehole collars, and when number of columns would be less than 3,
+            # in which case it is assumed it's the elevation value)
+            elif col.map(lambda x: str(x) == '0').all() and len(gps.columns) - len(cols_to_drop) > 3:
                 if gps_object == BoreholeCollar and len(gps.columns) == 3:
                     pass
                 else:
                     units = 'm'
                     logger.debug(f"Removing column of 0s.")
                     cols_to_drop.append(i)
-            elif col.map(lambda x: str(x) == '1').all():
+            elif col.map(lambda x: str(x) == '1').all() and len(gps.columns) - len(cols_to_drop) > 3:
                 if gps_object == BoreholeCollar and len(gps.columns) == 3:
                     pass
                 else:

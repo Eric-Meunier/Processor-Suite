@@ -1444,7 +1444,7 @@ Warnings</string>
     <addaction name="separator"/>
     <addaction name="actionBackup_Files"/>
     <addaction name="actionImport_RI_Files"/>
-    <addaction name="actionAdd_Mapbox_Token_3"/>
+    <addaction name="actionAdd_Mapbox_Token"/>
     <addaction name="separator"/>
     <addaction name="actionPrint_Plots_to_PDF"/>
    </widget>
@@ -2093,11 +2093,6 @@ Warnings</string>
     <string>Station Order</string>
    </property>
   </action>
-  <action name="actionAdd_Mapbox_Token">
-   <property name="text">
-    <string>Add Mapbox Token</string>
-   </property>
-  </action>
   <action name="actionMake_DXF">
    <property name="text">
     <string>Make DXF</string>
@@ -2121,16 +2116,6 @@ Warnings</string>
     <string>Reset Settings</string>
    </property>
   </action>
-  <action name="actionAdd_Mapbox_Token_2">
-   <property name="text">
-    <string>Add Mapbox Token</string>
-   </property>
-  </action>
-  <action name="actionAdd_Mapbox_Token_3">
-   <property name="text">
-    <string>Add Mapbox Token</string>
-   </property>
-  </action>
   <action name="actionRename_Merged_Files">
    <property name="checkable">
     <bool>true</bool>
@@ -2151,6 +2136,14 @@ Warnings</string>
    </property>
    <property name="text">
     <string>Alt-Click Plotting</string>
+   </property>
+  </action>
+  <action name="actionAdd_Mapbox_Token">
+   <property name="text">
+    <string>Add Mapbox Token</string>
+   </property>
+   <property name="toolTip">
+    <string>Mapbox tokens are used in by Tools &gt; Tilemap.</string>
    </property>
   </action>
  </widget>

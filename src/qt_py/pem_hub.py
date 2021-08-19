@@ -62,6 +62,7 @@ logger = logging.getLogger(__name__)
 # TODO Add more theory responses to plot editor.
 # TODO add icons to plot editor menu
 # TODO Add option for alt-click plotting, and add it to settings.
+# TODO add NRcan website for magnetic decl as webengine view
 
 
 # Keep a list of widgets so they don't get garbage collected
@@ -88,7 +89,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         if splash_screen:
             splash_screen.showMessage("Initializing status bar")
-        # Status bar formatting
+
+       # Status bar formatting
         self.selection_files_label = QLabel()
         self.selection_files_label.setMargin(3)
         self.selection_files_label.setStyleSheet('color: blue')
@@ -160,6 +162,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.project_tree.setHeaderHidden(True)
         self.project_tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.project_tree.customContextMenuRequested.connect(self.open_dir_tree_context_menu)
+        # self.project_tree.setAutoScroll(False)
         # self.move_dir_tree_to(self.file_sys_model.rootPath())
         self.pem_dir = None
         self.gps_dir = None
@@ -210,10 +213,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.actionDel_File.triggered.connect(self.remove_pem_file)
         self.addAction(self.actionDel_File)
         self.actionDel_File.setEnabled(False)
-
-        # self.merge_action = QAction("&Merge", self)
-        # self.merge_action.triggered.connect(lambda: self.merge_pem_files(selected=True))
-        # self.merge_action.setShortcut("Shift+M")
 
         """ Right-click context menus and actions """
 
@@ -401,6 +400,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.reverse_menu = QMenu('Reverse', self.menu)
         self.reverse_menu.setIcon(QIcon(str(icons_path.joinpath('reverse.png'))))
 
+        self.load_settings()
+        self.set_dark_mode()
+
     def init_ui(self):
         """
         Initializing the UI.
@@ -410,10 +412,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.app.setStyle("Fusion")
         self.setAcceptDrops(True)
 
-        self.load_settings()
         self.setWindowTitle("PEMPro  v" + str(__version__))
         self.setWindowIcon(QIcon(str(icons_path.joinpath('conder.png'))))
-        self.load_settings()
 
         self.table.horizontalHeader().hide()
 
@@ -480,12 +480,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 token_file.close()
                 self.statusBar().showMessage("Mapbox token updated.", 1500)
 
-        def toggle_theme():
-            if self.actionDark_Theme.isChecked():
-                self.app.setPalette(dark_palette)
-            else:
-                self.app.setPalette(light_palette)
-
         # 'File' menu
         self.actionOpenFile.triggered.connect(self.open_file_dialog)
         self.actionSaveFiles.triggered.connect(lambda: self.save_pem_files(selected=False))
@@ -544,7 +538,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         # Settings menu
         self.actionAdd_Mapbox_Token.triggered.connect(add_mapbox_token)
-        self.actionDark_Theme.triggered.connect(toggle_theme)
+        self.actionDark_Theme.triggered.connect(self.set_dark_mode)
         self.actionReset_Settings.triggered.connect(self.reset_settings)
 
         # Help menu
@@ -1025,16 +1019,42 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         settings = QSettings("Crone Geophysics", "PEMPro")
 
         settings.beginGroup("MainWindow")
+        # Window geometry
         settings.setValue("size", self.size())
         settings.setValue("pos", self.pos())
+
+        # Setting options
+        settings.setValue("actionDark_Theme", self.actionDark_Theme.isChecked())
+        settings.setValue("actionAlt_Click_Plotting", self.actionAlt_Click_Plotting.isChecked())
+        settings.setValue("auto_sort_files_cbox", self.auto_sort_files_cbox.isChecked())
+        settings.setValue("auto_create_backup_files_cbox", self.auto_create_backup_files_cbox.isChecked())
+        settings.setValue("delete_merged_files_cbox", self.delete_merged_files_cbox.isChecked())
+        settings.setValue("actionRename_Merged_Files", self.actionRename_Merged_Files.isChecked())
+
+        # Project directory
+        settings.setValue("project_dir", self.project_dir)
+
         settings.endGroup()
 
     def load_settings(self):
         settings = QSettings("Crone Geophysics", "PEMPro")
 
         settings.beginGroup("MainWindow")
+        # Window geometry
         self.resize(settings.value("size", QSize(1700, 900)))
         self.move(settings.value("pos", QPoint(100, 50)))
+
+        # Setting options
+        self.actionDark_Theme.setChecked(True if settings.value("actionDark_Theme") == "true" else False)
+        self.actionAlt_Click_Plotting.setChecked(True if settings.value("actionAlt_Click_Plotting") == "true" else False)
+        self.auto_sort_files_cbox.setChecked(False if settings.value("auto_sort_files_cbox") == "false" else True)
+        self.auto_create_backup_files_cbox.setChecked(False if settings.value("auto_create_backup_files_cbox") == "false" else True)
+        self.delete_merged_files_cbox.setChecked(False if settings.value("delete_merged_files_cbox") == "false" else True)
+        self.actionRename_Merged_Files.setChecked(False if settings.value("actionRename_Merged_Files") == "false" else True)
+
+        # Project directory
+        self.project_dir_edit.setText(str(settings.value("project_dir")))
+
         settings.endGroup()
 
     def reset_settings(self):
@@ -1044,6 +1064,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.center()
         if self.actionDark_Theme.isChecked():
             self.actionDark_Theme.trigger()
+        self.actionAlt_Click_Plotting.setChecked(True)
+        self.auto_sort_files_cbox.setChecked(True)
+        self.auto_create_backup_files_cbox.setChecked(True)
+        self.delete_merged_files_cbox.setChecked(True)
+        self.actionRename_Merged_Files.setChecked(True)
+
+        self.project_dir = None
+        self.project_dir_edit.setText("")
 
         self.save_settings()
 
@@ -1443,7 +1471,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             :param pem_file: PEMFile object
             :return: None
             """
-
             def share_gps_object(obj):
                 """
                 Share a GPS object (loop, line, collar, segments) of one file with all other opened PEM files.
@@ -1582,7 +1609,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     self.add_pem_to_table(pem_file, i)
 
                     count += 1
-                    # Progress the progress bar
                     dlg += 1
 
         self.color_table_by_values()
@@ -1592,7 +1618,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.table.blockSignals(False)
 
         self.table.horizontalHeader().show()
-        self.status_bar.showMessage(f"{count} PEM files opened.", 2000)
+        self.status_bar.showMessage(f"{count} PEM files opened.", 1500)
 
     def add_gps_files(self, gps_files):
         """
@@ -2282,6 +2308,78 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         refs.append(loop_planner)
         loop_planner.show()
 
+    def open_unpacker(self, folder=None):
+        """Open the Unpacker"""
+
+        def open_unpacker_dir(folder_dir):
+            self.project_dir_edit.setText(str(folder_dir))
+            self.open_project_dir()
+
+        unpacker = Unpacker(parent=self)
+        refs.append(unpacker)
+        unpacker.open_project_folder_sig.connect(open_unpacker_dir)
+        if folder:
+            unpacker.open_folder(folder, project_dir=self.project_dir)
+        unpacker.show()
+
+    def open_gpx_creator(self):
+        """Open the GPX Creator"""
+        gpx_creator = GPXCreator(parent=self)
+        refs.append(gpx_creator)
+        gpx_creator.show()
+
+    def open_contour_map(self):
+        """Open the Contour Map"""
+
+        if not self.pem_files:
+            logger.warning(f"No PEM files opened.")
+            self.status_bar.showMessage(f"No PEM files opened.", 2000)
+            return
+
+        elif not any([f.has_any_gps() for f in self.pem_files]):
+            logger.warning(f"No GPS found in any file.")
+            self.message.information(self, 'Error', 'No file has any GPS to plot.')
+            return
+
+        with CustomProgressDialog("Plotting PEM Files...", 0, 1) as dlg:
+            contour_map = ContourMapViewer(parent=self)
+            refs.append(contour_map)
+            contour_map.open(self.pem_files, dlg)
+
+    def open_freq_converter(self):
+        """Open the Frequency Converter"""
+        freq_converter = FrequencyConverter(parent=self)
+        refs.append(freq_converter)
+        freq_converter.show()
+
+    def open_gps_converter(self):
+        """Open the GPS converter"""
+        gps_converter = GPSConversionWidget(parent=self)
+        refs.append(gps_converter)
+        gps_converter.show()
+
+    def open_loop_calculator(self):
+        """Open the Loop Calculator"""
+        loop_calculator = LoopCalculator()
+        refs.append(loop_calculator)
+        loop_calculator.show()
+
+    def open_station_splitter(self):
+        """
+        Open the station splitter for the selected PEMFile
+        """
+        pem_files, rows = self.get_pem_files(selected=True)
+        if not self.pem_files:
+            logger.warning(f"No PEM files selected.")
+            self.status_bar.showMessage(f"No PEM files selected.", 2000)
+            return
+
+        pem_file = pem_files[0]
+
+        ss = StationSplitter(pem_file, parent=self)
+        refs.append(ss)
+        ss.show()
+
     def open_project_dir(self):
         """
         Move the directory tree when a path is entered in the status bar LineEdit widget.
@@ -2359,107 +2457,35 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         menu.addAction('Rename Folder', rename)
         menu.exec_(self.project_tree.viewport().mapToGlobal(position))
 
-    def open_unpacker(self, folder=None):
-        """Open the Unpacker"""
-
-        def open_unpacker_dir(folder_dir):
-            self.project_dir_edit.setText(str(folder_dir))
-            self.open_project_dir()
-
-        unpacker = Unpacker(parent=self)
-        refs.append(unpacker)
-        unpacker.open_project_folder_sig.connect(open_unpacker_dir)
-        if folder:
-            unpacker.open_folder(folder, project_dir=self.project_dir)
-        unpacker.show()
-
-    def open_gpx_creator(self):
-        """Open the GPX Creator"""
-        gpx_creator = GPXCreator(parent=self)
-        refs.append(gpx_creator)
-        gpx_creator.show()
-
-    def open_contour_map(self):
-        """Open the Contour Map"""
-
-        if not self.pem_files:
-            logger.warning(f"No PEM files opened.")
-            self.status_bar.showMessage(f"No PEM files opened.", 2000)
-            return
-
-        elif not any([f.has_any_gps() for f in self.pem_files]):
-            logger.warning(f"No GPS found in any file.")
-            self.message.information(self, 'Error', 'No file has any GPS to plot.')
-            return
-
-        with CustomProgressDialog("Plotting PEM Files...", 0, 1) as dlg:
-            contour_map = ContourMapViewer(parent=self)
-            refs.append(contour_map)
-            contour_map.open(self.pem_files, dlg)
-
-    def open_freq_converter(self):
-        """Open the Frequency Converter"""
-        freq_converter = FrequencyConverter(parent=self)
-        refs.append(freq_converter)
-        freq_converter.show()
-
-    def open_gps_converter(self):
-        """Open the GPS converter"""
-        gps_converter = GPSConversionWidget(parent=self)
-        refs.append(gps_converter)
-        gps_converter.show()
-
-    def open_loop_calculator(self):
-        """Open the Loop Calculator"""
-        loop_calculator = LoopCalculator()
-        refs.append(loop_calculator)
-        loop_calculator.show()
-
-    def open_station_splitter(self):
+    def move_dir_tree_to(self, dir_path):
         """
-        Open the station splitter for the selected PEMFile
+        Changes the directory tree to show the dir_path. Will find the nearest folder upward if dir_path is a file
+        :param dir_path: Path object or str, directory path of the desired directory
+        :return: None
         """
-        pem_files, rows = self.get_pem_files(selected=True)
-        if not self.pem_files:
-            logger.warning(f"No PEM files selected.")
-            self.status_bar.showMessage(f"No PEM files selected.", 2000)
-            return
+        if not isinstance(dir_path, Path):
+            dir_path = Path(dir_path)
 
-        pem_file = pem_files[0]
+        # Find the nearest (moving upwards) folder
+        while dir_path.is_file():
+            dir_path = dir_path.parent
 
-        ss = StationSplitter(pem_file, parent=self)
-        refs.append(ss)
-        ss.show()
+        model = self.file_sys_model.index(str(dir_path))
 
-    def make_dxf(self):
-        pem_files = self.get_pem_files(selected=False)[0]
-        if not pem_files:
-            logger.warning(f"No PEM files selected.")
-            self.status_bar.showMessage(f"No PEM files selected.", 2000)
-            return
+        # Set the model to be selected in the tree
+        self.project_tree.setCurrentIndex(model)
 
-        choices = ("Loop", "Survey Line/Borehole", "Both")
-        choice, ok = QInputDialog.getItem(self, "DXF", "DXF Plot Options", choices, 0, False)
-        # Escape statement
-        if not ok: return
+        # Adds a timer or else it doesn't actually scroll to it properly.
+        QTimer.singleShot(100, lambda: self.project_tree.scrollTo(self.project_tree.currentIndex(),
+                                                                 QAbstractItemView.PositionAtCenter))
+        # Update the GPS and PEM trees
+        self.project_dir_changed(model)
 
-        for pf in pem_files:
-            pf: PEMFile
-            dwg = PEMDXFDrawing()
-            refs.append(dwg)
-            if choice == "Loop" or choice == "Both" and not pf.loop.df.empty:
-                dwg.add_loop(pf)
-            if choice == "Survey Line/Borehole" or choice == "Both":
-                # Check if the pem even has a loaded segment or line
-                if not pf.segments.df.empty or not pf.line.df.empty:
-                    dwg.add_surveyline(pf)
-            # We'll just save it out to the input DIR
-            outpath = os.path.splitext(pf.filepath)[0] + ".dxf"
-            dwg.save_dxf(outpath)
+        self.project_tree.resizeColumnToContents(0)
 
     def project_dir_changed(self, model):
         """
-        Signal slot, changes the project director to the path clicked in the project_tree
+        Signal slot, changes the project directory to the path clicked in the project_tree
         :param model: signal passed var, QModelIndex
         :return:
         """
@@ -2473,6 +2499,11 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             self.fill_gps_list()
             self.fill_pem_list()
+
+        # self.app.sendPostedEvents()
+        # QTimer.singleShot(1500, lambda: self.project_tree.scrollTo(model, QAbstractItemView.EnsureVisible))
+
+        # QTimer.singleShot(1500, lambda: self.project_tree.scrollToBottom())
 
     def fill_gps_list(self):
         """
@@ -2701,32 +2732,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     f"System: {crs_dict['System']}. Zone: {crs_dict['Zone']}. Datum: {crs_dict['Datum']}")
         return crs_dict
 
-    def move_dir_tree_to(self, dir_path):
-        """
-        Changes the directory tree to show the dir_path. Will find the nearest folder upward if dir_path is a file
-        :param dir_path: Path object or str, directory path of the desired directory
-        :return: None
-        """
-        if not isinstance(dir_path, Path):
-            dir_path = Path(dir_path)
-
-        while dir_path.is_file():
-            dir_path = dir_path.parent
-
-        model = self.file_sys_model.index(str(dir_path))
-
-        # Adds a timer or else it doesn't actually scroll to it properly.
-        QTimer.singleShot(150, lambda: self.project_tree.scrollTo(model, QAbstractItemView.EnsureVisible))
-
-        # Expands the path folder
-        self.project_tree.expand(model)
-
-        # Set the model to be selected in the tree
-        self.project_tree.setCurrentIndex(model)
-
-        # Update the GPS and PEM trees
-        self.project_dir_changed(model)
-
     def save_pem_files(self, selected=False):
         """
         Save PEM files.
@@ -2824,6 +2829,32 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                                 self.status_bar.showMessage(f"Cancelled.", 2000)
                                 return
                 save_pem()
+
+    def make_dxf(self):
+        pem_files = self.get_pem_files(selected=False)[0]
+        if not pem_files:
+            logger.warning(f"No PEM files selected.")
+            self.status_bar.showMessage(f"No PEM files selected.", 2000)
+            return
+
+        choices = ("Loop", "Survey Line/Borehole", "Both")
+        choice, ok = QInputDialog.getItem(self, "DXF", "DXF Plot Options", choices, 0, False)
+        # Escape statement
+        if not ok: return
+
+        for pf in pem_files:
+            pf: PEMFile
+            dwg = PEMDXFDrawing()
+            refs.append(dwg)
+            if choice == "Loop" or choice == "Both" and not pf.loop.df.empty:
+                dwg.add_loop(pf)
+            if choice == "Survey Line/Borehole" or choice == "Both":
+                # Check if the pem even has a loaded segment or line
+                if not pf.segments.df.empty or not pf.line.df.empty:
+                    dwg.add_surveyline(pf)
+            # We'll just save it out to the input DIR
+            outpath = os.path.splitext(pf.filepath)[0] + ".dxf"
+            dwg.save_dxf(outpath)
 
     def copy_pems_to_clipboard(self):
         """
@@ -3797,6 +3828,15 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.gps_zone_cbox.setEnabled(False)
 
         self.status_bar.showMessage(f"CRS information changed to {crs.name}.", 2000)
+
+    def set_dark_mode(self):
+        self.app.setPalette(dark_palette if self.actionDark_Theme.isChecked() else light_palette)
+        text_color = "rgb(192, 192, 255)" if self.actionDark_Theme.isChecked() else "rgb(64, 64, 255)"
+        self.selection_files_label.setStyleSheet(f'color: {text_color}')
+        self.selection_timebase_label.setStyleSheet(f'color: {text_color}')
+        self.selection_zts_label.setStyleSheet(f'color: {text_color}')
+        self.selection_survey_label.setStyleSheet(f'color: {text_color}')
+        self.selection_derotation_label.setStyleSheet(f'color: {text_color}')
 
     def average_pem_data(self, selected=False):
         """
@@ -5108,7 +5148,10 @@ def main():
     # mw.open_project_dir()
     mw.show()
     app.processEvents()
-    mw.add_pem_files(pem_files)
+
+    mw.project_dir_edit.setText(r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW")
+    mw.move_dir_tree_to(r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW")
+    # mw.add_pem_files(pem_files)
     # mw.open_3d_map()
     # mw.add_dmp_files(dmp_files)
     # mw.table.selectRow(0)
