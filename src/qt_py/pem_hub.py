@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PySide2.QtGui import QIcon, QColor, QFont, QIntValidator, QCursor, QPalette
+from PySide2.QtGui import QIcon, QColor, QFont, QIntValidator, QCursor
 from PySide2.QtCore import Qt, QDir, Signal, QEvent, QTimer, QSettings, QSize, QPoint
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QMenu, QAction, QErrorMessage,
                                QFileDialog, QVBoxLayout, QLabel, QApplication, QFrame, QHBoxLayout, QLineEdit,
@@ -30,7 +30,7 @@ from matplotlib.colors import LinearSegmentedColormap as LCMap
 from pyproj import CRS
 
 from src import __version__, app_data_dir
-from src.qt_py import (icons_path, get_icon, CustomProgressDialog, read_file)
+from src.qt_py import (icons_path, get_icon, CustomProgressDialog, read_file, light_palette, dark_palette)
 from src.qt_py.db_plot import DBPlotter
 from src.qt_py.pem_geometry import PEMGeometry
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
@@ -63,29 +63,6 @@ logger = logging.getLogger(__name__)
 # TODO add icons to plot editor menu
 # TODO Add option for alt-click plotting, and add it to settings.
 
-
-white_palette = QPalette()
-dark_palette = QPalette()
-dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
-dark_palette.setColor(QPalette.WindowText, Qt.white)
-dark_palette.setColor(QPalette.Disabled, QPalette.WindowText, QColor(127, 127, 127))
-dark_palette.setColor(QPalette.Base, QColor(42, 42, 42))
-dark_palette.setColor(QPalette.AlternateBase, QColor(66, 66, 66))
-dark_palette.setColor(QPalette.ToolTipBase, Qt.white)
-dark_palette.setColor(QPalette.ToolTipText, Qt.white)
-dark_palette.setColor(QPalette.Text, Qt.white)
-dark_palette.setColor(QPalette.Disabled, QPalette.Text, QColor(127, 127, 127))
-dark_palette.setColor(QPalette.Dark, QColor(35, 35, 35))
-dark_palette.setColor(QPalette.Shadow, QColor(20, 20, 20))
-dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
-dark_palette.setColor(QPalette.ButtonText, Qt.white)
-dark_palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor(127, 127, 127))
-dark_palette.setColor(QPalette.BrightText, Qt.red)
-dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
-dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
-dark_palette.setColor(QPalette.Disabled, QPalette.Highlight, QColor(80, 80, 80))
-dark_palette.setColor(QPalette.HighlightedText, Qt.white)
-dark_palette.setColor(QPalette.Disabled, QPalette.HighlightedText, QColor(127, 127, 127))
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
@@ -507,7 +484,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             if self.actionDark_Theme.isChecked():
                 self.app.setPalette(dark_palette)
             else:
-                self.app.setPalette(white_palette)
+                self.app.setPalette(light_palette)
 
         # 'File' menu
         self.actionOpenFile.triggered.connect(self.open_file_dialog)
@@ -655,6 +632,18 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             if self.allow_signals:
                 self.table.blockSignals(False)
+
+        def cell_clicked(row, col):
+            """
+            Open the plot editor when a row is alt + clicked
+            :param row: int, click cell's row
+            :param col: int, click cell's column
+            """
+            update_selection_text()
+
+            if self.actionAlt_Click_Plotting.isChecked():
+                if keyboard.is_pressed('alt'):
+                    self.open_pem_plot_editor()
 
         def table_value_double_clicked(row, col):
             """
@@ -830,17 +819,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.selection_zts_label.setText(zts)
             self.selection_survey_label.setText(survey_type)
             self.selection_derotation_label.setText(derotated)
-
-        def cell_clicked(row, col):
-            """
-            Open the plot editor when a row is alt + clicked
-            :param row: int, click cell's row
-            :param col: int, click cell's column
-            """
-            update_selection_text()
-
-            if keyboard.is_pressed('alt'):
-                self.open_pem_plot_editor()
 
         # Widgets
         self.pem_list_filter.accept_sig.connect(self.fill_pem_list)
@@ -1262,7 +1240,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         if (event.type() == QEvent.MouseButtonPress and
                 source is self.table.viewport() and
                 self.table.itemAt(event.pos()) is None):
-            pass
+            self.reset_selection_labels()
         #     self.table.clearSelection()
 
         if source == self.table:
@@ -1285,6 +1263,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         return True
                     elif event.key() == Qt.Key_Escape:
                         self.table.clearSelection()
+                        self.reset_selection_labels()
                         return True
 
         return super(QWidget, self).eventFilter(source, event)
@@ -1691,14 +1670,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.gps_datum_cbox.setCurrentText('')
             self.epsg_edit.setText("")
 
-        def reset_selection_labels():
-            for label in [self.selection_files_label,
-                          self.selection_timebase_label,
-                          self.selection_zts_label,
-                          self.selection_survey_label,
-                          self.selection_derotation_label]:
-                label.setText("")
-
         if not rows:
             pem_files, rows = self.get_pem_files(selected=True)
 
@@ -1724,7 +1695,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             # Only color the number columns if there are PEM files left
             self.color_table_by_values()
 
-        reset_selection_labels()
+        self.reset_selection_labels()
         self.setUpdatesEnabled(True)
 
     def open_in_text_editor(self):
@@ -3440,6 +3411,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         if self.allow_signals:
             self.table.blockSignals(False)
+
+    def reset_selection_labels(self):
+        for label in [self.selection_files_label,
+                      self.selection_timebase_label,
+                      self.selection_zts_label,
+                      self.selection_survey_label,
+                      self.selection_derotation_label]:
+            label.setText("")
 
     def color_table_by_values(self):
         """

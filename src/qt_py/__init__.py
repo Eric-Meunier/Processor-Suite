@@ -7,7 +7,7 @@ import pandas as pd
 import pyqtgraph as pg
 from PySide2 import QtWidgets
 from PySide2.QtCore import Qt, QSizeF, QPointF
-from PySide2.QtGui import QPixmap, QIcon
+from PySide2.QtGui import QPixmap, QIcon, QPalette, QColor
 from PySide2.QtWidgets import QTableWidgetItem
 from src.logger import logger
 
@@ -19,6 +19,28 @@ else:
 
 icons_path = application_path.joinpath("ui\\icons")
 
+light_palette = QPalette()
+dark_palette = QPalette()
+dark_palette.setColor(QPalette.Window, QColor(53, 53, 53))
+dark_palette.setColor(QPalette.WindowText, Qt.white)
+dark_palette.setColor(QPalette.Disabled, QPalette.WindowText, QColor(127, 127, 127))
+dark_palette.setColor(QPalette.Base, QColor(42, 42, 42))
+dark_palette.setColor(QPalette.AlternateBase, QColor(66, 66, 66))
+dark_palette.setColor(QPalette.ToolTipBase, Qt.white)
+dark_palette.setColor(QPalette.ToolTipText, Qt.white)
+dark_palette.setColor(QPalette.Text, Qt.white)
+dark_palette.setColor(QPalette.Disabled, QPalette.Text, QColor(127, 127, 127))
+dark_palette.setColor(QPalette.Dark, QColor(35, 35, 35))
+dark_palette.setColor(QPalette.Shadow, QColor(20, 20, 20))
+dark_palette.setColor(QPalette.Button, QColor(53, 53, 53))
+dark_palette.setColor(QPalette.ButtonText, Qt.white)
+dark_palette.setColor(QPalette.Disabled, QPalette.ButtonText, QColor(127, 127, 127))
+dark_palette.setColor(QPalette.BrightText, Qt.red)
+dark_palette.setColor(QPalette.Link, QColor(42, 130, 218))
+dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
+dark_palette.setColor(QPalette.Disabled, QPalette.Highlight, QColor(80, 80, 80))
+dark_palette.setColor(QPalette.HighlightedText, Qt.white)
+dark_palette.setColor(QPalette.Disabled, QPalette.HighlightedText, QColor(127, 127, 127))
 
 def get_icon(filepath):
     ext = filepath.suffix.lower()

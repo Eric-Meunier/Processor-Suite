@@ -1537,6 +1537,7 @@ Warnings</string>
      <string>Settings</string>
     </property>
     <addaction name="actionDark_Theme"/>
+    <addaction name="actionAlt_Click_Plotting"/>
     <addaction name="auto_sort_files_cbox"/>
     <addaction name="auto_create_backup_files_cbox"/>
     <addaction name="delete_merged_files_cbox"/>
@@ -2139,6 +2140,17 @@ Warnings</string>
    </property>
    <property name="text">
     <string>Rename Merged Files</string>
+   </property>
+  </action>
+  <action name="actionAlt_Click_Plotting">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Alt-Click Plotting</string>
    </property>
   </action>
  </widget>
