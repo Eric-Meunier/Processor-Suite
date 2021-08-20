@@ -63,6 +63,8 @@ logger = logging.getLogger(__name__)
 # TODO add icons to plot editor menu
 # TODO Add option for alt-click plotting, and add it to settings.
 # TODO add NRcan website for magnetic decl as webengine view
+# TODO Move progress dialog or error box when there's an error.
+# TODO dark mode the progress dialog.
 
 
 # Keep a list of widgets so they don't get garbage collected
@@ -1053,7 +1055,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.actionRename_Merged_Files.setChecked(False if settings.value("actionRename_Merged_Files") == "false" else True)
 
         # Project directory
-        self.project_dir_edit.setText(str(settings.value("project_dir")))
+        self.move_dir_tree_to(str(settings.value("project_dir")))
 
         settings.endGroup()
 
@@ -1931,8 +1933,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         for row, pem_file in zip(rows, pem_files):
             ri_files.append(self.pem_info_widgets[row].ri_file)
 
-        pdf_plot_printer = PDFPlotPrinter(parent=self)
-        refs.append(pdf_plot_printer)
+        self.pdf_plot_printer = PDFPlotPrinter(parent=self)
 
         # Disable plan map creation if no CRS is selected or if the CRS is geographic.
         crs = self.get_crs()
@@ -1945,8 +1946,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.status_bar.showMessage("Cancelled.", 1000)
                 return
             else:
-                pdf_plot_printer.make_plan_maps_gbox.setChecked(False)
-                pdf_plot_printer.make_plan_maps_gbox.setEnabled(False)
+                self.pdf_plot_printer.make_plan_maps_gbox.setChecked(False)
+                self.pdf_plot_printer.make_plan_maps_gbox.setEnabled(False)
 
         elif crs.is_geographic:
             response = self.message.question(self, 'Geographic CRS',
@@ -1957,15 +1958,15 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.status_bar.showMessage("Cancelled.", 1000)
                 return
             else:
-                pdf_plot_printer.make_plan_maps_gbox.setChecked(False)
-                pdf_plot_printer.make_plan_maps_gbox.setEnabled(False)
+                self.pdf_plot_printer.make_plan_maps_gbox.setChecked(False)
+                self.pdf_plot_printer.make_plan_maps_gbox.setEnabled(False)
 
         # Disable the section plots if no file can produce one
         if not any([f.is_borehole() and f.has_all_gps() for f in pem_files]):
-            pdf_plot_printer.make_section_plots_gbox.setChecked(False)
-            pdf_plot_printer.make_section_plots_gbox.setEnabled(False)
+            self.pdf_plot_printer.make_section_plots_gbox.setChecked(False)
+            self.pdf_plot_printer.make_section_plots_gbox.setEnabled(False)
 
-        pdf_plot_printer.open(pem_files, ri_files=ri_files, crs=self.get_crs())
+        self.pdf_plot_printer.open(pem_files, ri_files=ri_files, crs=self.get_crs())
 
     def open_mag_dec(self):
         """
@@ -2481,6 +2482,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                                                                  QAbstractItemView.PositionAtCenter))
         # Update the GPS and PEM trees
         self.project_dir_changed(model)
+
+        # Again for when the program just started and needs more time
+        QTimer.singleShot(300, lambda: self.project_tree.scrollTo(self.project_tree.currentIndex(),
+                                                                 QAbstractItemView.PositionAtCenter))
 
         self.project_tree.resizeColumnToContents(0)
 
@@ -3307,6 +3312,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.fill_pem_list()
             self.status_bar.showMessage(F"{Path(new_file).name} saved successfully.", 1500)
 
+    def reset_selection_labels(self):
+        for label in [self.selection_files_label,
+                      self.selection_timebase_label,
+                      self.selection_zts_label,
+                      self.selection_survey_label,
+                      self.selection_derotation_label]:
+            label.setText("")
+
     def format_row(self, row):
 
         def color_row():
@@ -3314,7 +3327,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             Color cells of the main table based on conditions. Ex: Red text if the PEM file isn't averaged.
             :return: None
             """
-
             def has_all_gps(piw_widget):
                 if piw_widget.pem_file.is_borehole():
                     if any([piw_widget.get_loop().df.dropna().empty,
@@ -3389,15 +3401,18 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             """
             date_column = self.table_columns.index('Date')
             current_year = str(datetime.datetime.now().year)
+            dark_mode = self.actionDark_Theme.isChecked()
+            red_color = QColor("#FFC0C0" if dark_mode else "#FF4040")
+            default_color = Qt.white if dark_mode else Qt.black
 
             for row in range(self.table.rowCount()):
                 if self.table.item(row, date_column):
                     date = self.table.item(row, date_column).text()
                     year = str(date.split(' ')[-1])
                     if year != current_year:
-                        self.table.item(row, date_column).setForeground(QColor('red'))
+                        self.table.item(row, date_column).setForeground(red_color)
                     else:
-                        self.table.item(row, date_column).setForeground(QColor('black'))
+                        self.table.item(row, date_column).setForeground(default_color)
 
         def color_changes():
             """
@@ -3439,23 +3454,17 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         pem_file = self.pem_files[row]
         color_row()
         color_anomalies()
-        # color_changes()
 
         if self.allow_signals:
             self.table.blockSignals(False)
-
-    def reset_selection_labels(self):
-        for label in [self.selection_files_label,
-                      self.selection_timebase_label,
-                      self.selection_zts_label,
-                      self.selection_survey_label,
-                      self.selection_derotation_label]:
-            label.setText("")
 
     def color_table_by_values(self):
         """
         Color the background of the cells based on their values for the current, coil area, and station ranges.
         """
+        if not self.pem_files:
+            return
+
         self.table.blockSignals(True)
         mpl_red, mpl_blue = np.array([34, 79, 214]) / 256, np.array([247, 42, 42]) / 256
         alpha = 250
@@ -3635,6 +3644,11 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         if self.allow_signals:
             self.table.blockSignals(False)
+
+    def refresh_table(self):
+        for row in range(self.table.rowCount()):
+            self.format_row(row)
+        self.color_table_by_values()
 
     def refresh_pem(self, pem_file):
         """
@@ -3838,6 +3852,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.selection_zts_label.setStyleSheet(f'color: {text_color}')
         self.selection_survey_label.setStyleSheet(f'color: {text_color}')
         self.selection_derotation_label.setStyleSheet(f'color: {text_color}')
+
+        self.refresh_table()
 
     def average_pem_data(self, selected=False):
         """

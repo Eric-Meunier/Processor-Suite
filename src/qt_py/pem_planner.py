@@ -1016,22 +1016,23 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         super().__init__()
         self.setupUi(self)
         self.setAcceptDrops(True)
-        self.parent = parent
-
         self.setWindowTitle('Loop Planner')
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'loop_planner.png')))
         self.resize(1500, 800)
         # self.installEventFilter(self)
         self.status_bar.show()
 
+        self.parent = parent
+        self.save_name = None
+
         # Status bar
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
-
         self.plan_view.setMenuEnabled(False)
 
         # Icons
         self.actionOpen_Project.setIcon(QIcon(str(icons_path.joinpath("open.png"))))
         self.actionSave_Project.setIcon(QIcon(str(icons_path.joinpath("save.png"))))
+        self.actionSave_As.setIcon(QIcon(str(icons_path.joinpath("save_as.png"))))
         self.actionSave_as_KMZ.setIcon(QIcon(str(icons_path.joinpath("google_earth.png"))))
         self.actionSave_as_GPX.setIcon(QIcon(str(icons_path.joinpath("garmin_file.png"))))
         self.view_map_action.setIcon(QIcon(str(icons_path.joinpath("folium.png"))))
@@ -1051,16 +1052,17 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.section_view_layout.addWidget(self.section_canvas)
 
         self.add_hole('Hole')
-        # TODO Comment out later
-        self.add_loop('Loop')
+        # # TODO Comment out later
+        # self.add_loop('Loop')
 
         # Signals
         self.hole_cbox.currentIndexChanged.connect(self.select_hole)
         self.loop_cbox.currentIndexChanged.connect(self.select_loop)
 
         # Menu
-        self.actionSave_Project.triggered.connect(self.save_project)
         self.actionOpen_Project.triggered.connect(self.open_project)
+        self.actionSave_Project.triggered.connect(lambda: self.save_project(save_as=False))
+        self.actionSave_As.triggered.connect(lambda: self.save_project(save_as=True))
         self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
         self.actionSave_as_GPX.triggered.connect(self.save_gpx)
         self.view_map_action.triggered.connect(self.view_map)
@@ -1829,6 +1831,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         lpf_file, filetype = QFileDialog.getOpenFileName(self, "Loop Planning File", "", "Loop Planning File (*.LPF)")
 
         if lpf_file:
+            self.save_name = lpf_file
 
             # Remove existing holes and loops
             for ind in reversed(range(len(self.hole_widgets))):
@@ -1837,7 +1840,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                 self.remove_loop(ind, prompt=False)
 
             file = open(lpf_file, "r").read()
-            # holes = file.split(">> Hole")
+            epsg = re.search("EPSG: (\d+)", file).group(1)
             holes = re.findall(
                 r">> Hole\n(name:.*\neasting:.*\nnorthing:.*\nelevation:.*\nazimuth:.*\ndip:.*\nlength:.*\n)<<", file)
             loops = re.findall(r">> Loop\n(name:.*\n(?:c.*\n)+)<<", file)
@@ -1846,6 +1849,9 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             progress.setWindowModality(Qt.WindowModal)
             count = 0
             progress.show()
+
+            self.epsg_edit.setText(epsg)
+            self.epsg_rbtn.click()
 
             for hole in holes:
                 if progress.wasCanceled():
@@ -1875,7 +1881,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             progress.deleteLater()
             self.plan_view.autoRange()
 
-    def save_project(self):
+    def save_project(self, save_as=False):
         """
         Save the project as a .prj file.
         :return: None
@@ -1884,30 +1890,35 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             print(f"No holes or loops to save.")
             return
 
-        save_name, filetype = QFileDialog.getSaveFileName(self, "Project File Name", "", "Loop Planning File (*.LPF)")
+        if save_as or not self.save_name:
+            save_name, filetype = QFileDialog.getSaveFileName(self, "Project File Name", "", "Loop Planning File (*.LPF)")
+            if save_name:
+                self.save_name = save_name
+            else:
+                return
 
-        if save_name:
-            result = ''
-            for hole in self.hole_widgets:
-                string = '>> Hole\n'
-                for key, value in hole.get_properties().items():
+        result = ''
+        result += "EPSG: " + self.get_epsg() + "\n"
+        for hole in self.hole_widgets:
+            string = '>> Hole\n'
+            for key, value in hole.get_properties().items():
+                string += f"{key}:{value}\n"
+            result += string + "<<\n"
+        for loop in self.loop_widgets:
+            string = '>> Loop\n'
+            for key, value in loop.get_properties().items():
+                if key == "coordinates":
+                    for j, coord in enumerate(value):
+                        string += f"c{j}:{coord.x():.2f}, {coord.y():.2f}\n"
+                else:
                     string += f"{key}:{value}\n"
-                result += string + "<<\n"
-            for loop in self.loop_widgets:
-                string = '>> Loop\n'
-                for key, value in loop.get_properties().items():
-                    if key == "coordinates":
-                        for j, coord in enumerate(value):
-                            string += f"c{j}:{coord.x():.2f}, {coord.y():.2f}\n"
-                    else:
-                        string += f"{key}:{value}\n"
-                result += string + "<<\n"
+            result += string + "<<\n"
 
-            with open(str(save_name), "w+") as file:
-                file.write(result)
+        with open(str(self.save_name), "w+") as file:
+            file.write(result)
 
-            # os.startfile(save_name)
-            self.statusBar().showMessage("Project file saved.", 1500)
+        # os.startfile(save_name)
+        self.statusBar().showMessage("Project file saved.", 1500)
 
     def save_kmz(self):
         """
