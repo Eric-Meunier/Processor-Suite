@@ -65,7 +65,7 @@ logger = logging.getLogger(__name__)
 # TODO add NRcan website for magnetic decl as webengine view
 # TODO Move progress dialog or error box when there's an error.
 # TODO dark mode the progress dialog.
-
+# TODO dark mode PEMMerger.
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
@@ -1015,10 +1015,16 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         # Project directory
         settings.setValue("project_dir", self.project_dir)
+
+        # File filters
+        settings.setValue("PEM_filter", self.pem_list_filter.get_settings())
+        settings.setValue("GPS_filter", self.gps_list_filter.get_settings())
+
         settings.endGroup()
 
         settings.beginGroup("Unpacker")
         settings.setValue("open_damp_files_cbox", self.unpacker.open_damp_files_cbox.isChecked())
+
         settings.endGroup()
 
     def load_settings(self):
@@ -1039,6 +1045,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         # Project directory
         self.move_dir_tree_to(str(settings.value("project_dir")))
+
+        # File filters
+        self.pem_list_filter.set_settings(settings.value("PEM_filter"))
+        self.gps_list_filter.set_settings(settings.value("GPS_filter"))
 
         settings.endGroup()
 
@@ -1061,6 +1071,11 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         self.project_dir = None
         self.project_dir_edit.setText("")
+
+        self.unpacker.open_damp_files_cbox.setChecked(True)
+
+        self.pem_list_filter.reset()
+        self.gps_list_filter.reset()
 
         self.save_settings()
 
@@ -2575,7 +2590,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.gps_list.clear()
 
         # Try to find a GPS folder, but time out after 1 second
-        self.available_gps = find_gps_files(timeout=1)
+        self.available_gps = find_gps_files(timeout=0.5)
 
         if self.available_gps is None:
             return
@@ -2680,7 +2695,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.pem_list.clear()
 
         # Try to find .PEM files, but time out after 1 second
-        self.available_pems = find_pem_files(timeout=1)
+        self.available_pems = find_pem_files(timeout=0.5)
 
         if self.available_pems is None:
             return
@@ -4282,6 +4297,10 @@ class PathFilter(QWidget):
         if e.key() == Qt.Key_Escape:
             self.close()
 
+    def close(self):
+        self.accept_sig.emit()
+        self.hide()
+
     def reset(self):
         self.include_files_edit.setText('')
         self.exclude_files_edit.setText('DTL, exp, Correct' if self.filetype == 'GPS' else '')
@@ -4290,10 +4309,22 @@ class PathFilter(QWidget):
         self.include_exts_edit.setText('')
         self.exclude_exts_edit.setText('')
 
-    def close(self):
-        self.accept_sig.emit()
-        self.hide()
+    def get_settings(self):
+        filter_settings = []
+        for filts in [self.include_files_edit, self.exclude_files_edit, self.include_folders_edit,
+                      self.exclude_folders_edit, self.include_exts_edit, self.exclude_exts_edit]:
+            filter_settings.append(filts.text())
+        return filter_settings
 
+    def set_settings(self, settings):
+        if settings is None:
+            return
+
+        edits = [self.include_files_edit, self.exclude_files_edit, self.include_folders_edit,
+                      self.exclude_folders_edit, self.include_exts_edit, self.exclude_exts_edit]
+        for setting, edit in zip(settings, edits):
+            edit.setText(setting)
+        self.accept_sig.emit()
 
 class PEMBrowser(QTextBrowser):
     close_request = Signal(object)
