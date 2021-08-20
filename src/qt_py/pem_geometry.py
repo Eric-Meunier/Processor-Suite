@@ -141,7 +141,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         self.polar_lines = []
 
         # Create the main plots
-        self.figure, (self.mag_ax, self.dip_ax, self.roll_ax) = plt.subplots(1, 3, sharey=True)
+        self.figure, (self.mag_ax, self.dip_ax, self.roll_ax) = plt.subplots(1, 3, sharey=True, clear=False)
         self.figure.subplots_adjust(left=0.07, bottom=0.08, right=0.94, top=0.92)
         self.canvas = FigureCanvas(self.figure)
         self.canvas.setFocusPolicy(Qt.StrongFocus)

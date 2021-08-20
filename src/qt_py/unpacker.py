@@ -59,7 +59,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         self.dir_tree.setModel(self.file_sys_model)
         self.dir_tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.dir_tree.customContextMenuRequested.connect(self.open_context_menu)
-        self.move_dir_tree_to(self.file_sys_model.rootPath())
+        self.move_dir_tree(self.file_sys_model.rootPath())
         self.dir_edit.setText(self.file_sys_model.rootPath())
         self.set_current_date()
 
@@ -116,7 +116,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
                     self.change_dir_label()
                     return
 
-            self.move_dir_tree_to(str(path))
+            self.move_dir_tree(str(path))
             self.output_path = path
 
         self.accept_btn.clicked.connect(self.accept)
@@ -162,10 +162,10 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         if tables_only is False:
             self.dir_edit.setText('')
             self.dir_tree.collapseAll()
-            self.move_dir_tree_to(self.file_sys_model.rootPath())
+            self.move_dir_tree(self.file_sys_model.rootPath())
             self.set_current_date()
 
-    def move_dir_tree_to(self, path):
+    def move_dir_tree(self, path):
         """
         Changes the directory tree to show the given directory.
         :param path: str, file path of the desired directory
@@ -178,7 +178,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         self.dir_tree.expand(model)
 
         # Adds a timer or else it doesn't actually scroll to it properly.
-        QTimer.singleShot(500, lambda: self.dir_tree.scrollTo(self.dir_tree.currentIndex(),
+        QTimer.singleShot(1000, lambda: self.dir_tree.scrollTo(self.dir_tree.currentIndex(),
                                                                  QAbstractItemView.PositionAtCenter))
 
     def get_current_path(self):
@@ -275,11 +275,11 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         self.output_path = path
 
         if project_dir:
-            self.move_dir_tree_to(str(path.parent))
+            self.move_dir_tree(str(path.parent))
             self.dir_edit.setText(str(path.parent))
             self.dir_tree.expand(self.file_sys_model.index(str(project_dir.parent)))
         else:
-            self.move_dir_tree_to(str(path.parent))
+            self.move_dir_tree(str(path.parent))
             self.dir_edit.setText(str(path.parent))
             self.dir_tree.expand(self.file_sys_model.index(str(path.parent)))
 

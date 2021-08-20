@@ -143,14 +143,13 @@ class TileMapViewer(MapboxViewer):
         assert pem_files, "No files to plot."
 
         if any([f.has_any_gps() for f in pem_files]):
+            self.show()
             self.pem_files = pem_files
             self.plot_pems()
-            self.show()
         else:
             raise Exception(f"No GPS to plot.")
 
     def plot_pems(self):
-
         def plot_loop():
             loop = pem_file.loop.to_latlon().get_loop(closed=True).dropna()
             if loop.empty:

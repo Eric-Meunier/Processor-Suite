@@ -2916,9 +2916,9 @@ class PEMPrinter:
         self.portrait_fig = None
         self.landscape_fig = None
 
-        self.portrait_fig = plt.figure(num=1, clear=True)
+        self.portrait_fig = plt.figure(num=1, clear=False)
         self.portrait_fig.set_size_inches((8.5, 11))
-        self.landscape_fig = plt.figure(num=2, clear=True)
+        self.landscape_fig = plt.figure(num=2, clear=False)
         self.landscape_fig.set_size_inches((11, 8.5))
 
         self.print_plan_maps = kwargs.get('make_plan_map')
