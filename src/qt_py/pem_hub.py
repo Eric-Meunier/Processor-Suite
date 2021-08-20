@@ -590,7 +590,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 Signal slot, open the file that was double clicked in the project tree.
                 :param item: QListWidget item
                 """
-                os.startfile(str(self.get_current_path()))
+                os.startfile(str(self.get_current_project_path()))
 
             def open_list_file(item):
                 """
@@ -676,7 +676,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             # Buttons
             self.apply_shared_header_btn.clicked.connect(apply_header)
-            self.project_dir_edit.returnPressed.connect(self.open_project_dir)
             self.filter_pem_list_btn.clicked.connect(self.pem_list_filter.show)
             self.filter_gps_list_btn.clicked.connect(self.gps_list_filter.show)
 
@@ -692,6 +691,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.table.cellDoubleClicked.connect(table_value_double_clicked)
 
             # Project Tree
+            self.project_dir_edit.returnPressed.connect(self.set_project_dir)
             self.project_tree.clicked.connect(self.project_dir_changed)
             self.project_tree.doubleClicked.connect(open_project_file)
 
@@ -865,9 +865,96 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.epsg_edit.editingFinished.connect(check_epsg)
             self.epsg_edit.editingFinished.connect(update_pem_files_crs)
 
+        def init_project_directory():
+            if splash_screen:
+                splash_screen.showMessage("Initializing directory")
+
+            # Project directory frame
+            self.dir_frame = QFrame()
+            self.dir_frame.setLayout(QHBoxLayout())
+            self.dir_frame.layout().setContentsMargins(3, 0, 3, 0)
+            self.dir_frame.layout().setSpacing(2)
+            label = QLabel('Project Directory:')
+            self.project_dir_edit = QLineEdit('')
+            self.project_dir_edit.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
+            self.project_dir_edit.setMinimumWidth(250)
+            self.dir_frame.layout().addWidget(label)
+            self.dir_frame.layout().addWidget(self.project_dir_edit)
+
+            # Project tree
+            self.project_dir = None
+            self.file_sys_model = QFileSystemModel()
+            self.file_sys_model.setRootPath(QDir.rootPath())
+            self.project_tree.setModel(self.file_sys_model)
+            self.project_tree.setColumnHidden(1, True)
+            self.project_tree.setColumnHidden(2, True)
+            self.project_tree.setColumnHidden(3, True)
+            self.project_tree.setHeaderHidden(True)
+            self.project_tree.setContextMenuPolicy(Qt.CustomContextMenu)
+            self.project_tree.customContextMenuRequested.connect(self.open_dir_tree_context_menu)
+            self.project_tree.setAutoScroll(False)
+            # self.move_dir_tree_to(self.file_sys_model.rootPath())
+
+        def init_table():
+            if splash_screen:
+                splash_screen.showMessage("Initializing table")
+            self.table_columns = [
+                'File',
+                'Date',
+                'Client',
+                'Grid',
+                'Line/Hole',
+                'Loop',
+                'Current',
+                'Coil\nArea',
+                'First\nStation',
+                'Last\nStation',
+                'Averaged',
+                'Split',
+                'Suffix\nWarnings',
+                'Repeat\nWarnings',
+                'Polarity\nWarnings'
+            ]
+            header = self.table.horizontalHeader()
+            header.setSectionResizeMode(0, QHeaderView.Stretch)
+            for i, col in enumerate(self.table_columns[1:]):
+                header.setSectionResizeMode(i + 1, QHeaderView.ResizeToContents)
+            self.table.horizontalHeader().hide()
+
+        def init_status_bar():
+            if splash_screen:
+                splash_screen.showMessage("Initializing status bar")
+
+            # Status bar formatting
+            self.selection_files_label = QLabel()
+            self.selection_files_label.setMargin(3)
+            self.selection_files_label.setStyleSheet('color: blue')
+            self.selection_timebase_label = QLabel()
+            self.selection_timebase_label.setMargin(3)
+            self.selection_timebase_label.setStyleSheet('color: blue')
+            self.selection_zts_label = QLabel()
+            self.selection_zts_label.setMargin(3)
+            self.selection_zts_label.setStyleSheet('color: blue')
+            self.selection_survey_label = QLabel()
+            self.selection_survey_label.setMargin(3)
+            self.selection_survey_label.setStyleSheet('color: blue')
+            self.selection_derotation_label = QLabel()
+            self.selection_derotation_label.setMargin(3)
+            self.selection_derotation_label.setStyleSheet('color: blue')
+            self.epsg_label = QLabel()
+            self.epsg_label.setMargin(3)
+
+            self.status_bar.addPermanentWidget(self.selection_files_label, 0)
+            self.status_bar.addPermanentWidget(self.selection_timebase_label, 0)
+            self.status_bar.addPermanentWidget(self.selection_zts_label, 0)
+            self.status_bar.addPermanentWidget(self.selection_survey_label, 0)
+            self.status_bar.addPermanentWidget(self.selection_derotation_label, 0)
+            # self.status_bar.addPermanentWidget(QLabel(), 0)  # Spacer
+            self.status_bar.addPermanentWidget(self.epsg_label, 0)
+            self.status_bar.addPermanentWidget(self.dir_frame, 0)
+
         self.app = app
         self.parent = parent
-        init_ui()
 
         self.pem_files = []
         self.pem_info_widgets = []
@@ -876,51 +963,13 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.allow_signals = True
         self.text_browsers = []
         self.channel_tables = []
-
-       # Status bar formatting
-        self.selection_files_label = QLabel()
-        self.selection_files_label.setMargin(3)
-        self.selection_files_label.setStyleSheet('color: blue')
-        self.selection_timebase_label = QLabel()
-        self.selection_timebase_label.setMargin(3)
-        self.selection_timebase_label.setStyleSheet('color: blue')
-        self.selection_zts_label = QLabel()
-        self.selection_zts_label.setMargin(3)
-        self.selection_zts_label.setStyleSheet('color: blue')
-        self.selection_survey_label = QLabel()
-        self.selection_survey_label.setMargin(3)
-        self.selection_survey_label.setStyleSheet('color: blue')
-        self.selection_derotation_label = QLabel()
-        self.selection_derotation_label.setMargin(3)
-        self.selection_derotation_label.setStyleSheet('color: blue')
-        self.epsg_label = QLabel()
-        self.epsg_label.setMargin(3)
-
-        # Project directory frame
-        dir_frame = QFrame()
-        dir_frame.setLayout(QHBoxLayout())
-        dir_frame.layout().setContentsMargins(3, 0, 3, 0)
-        dir_frame.layout().setSpacing(2)
-        label = QLabel('Project Directory:')
-        self.project_dir_edit = QLineEdit('')
-        self.project_dir_edit.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
-        self.project_dir_edit.setMinimumWidth(250)
-        dir_frame.layout().addWidget(label)
-        dir_frame.layout().addWidget(self.project_dir_edit)
-
-        self.status_bar.addPermanentWidget(self.selection_files_label, 0)
-        self.status_bar.addPermanentWidget(self.selection_timebase_label, 0)
-        self.status_bar.addPermanentWidget(self.selection_zts_label, 0)
-        self.status_bar.addPermanentWidget(self.selection_survey_label, 0)
-        self.status_bar.addPermanentWidget(self.selection_derotation_label, 0)
-        # self.status_bar.addPermanentWidget(QLabel(), 0)  # Spacer
-        self.status_bar.addPermanentWidget(self.epsg_label, 0)
-        self.status_bar.addPermanentWidget(dir_frame, 0)
+        self.pem_dir = None
+        self.gps_dir = None
+        self.available_pems = []
+        self.available_gps = []
 
         if splash_screen:
             splash_screen.showMessage("Initializing widgets")
-
-        # Widgets
         self.file_dialog = QFileDialog()
         self.message = QMessageBox()
         self.error = QErrorMessage()
@@ -935,57 +984,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.pdf_plot_printer = None
         self.unpacker = Unpacker(parent=self)
 
-        if splash_screen:
-            splash_screen.showMessage("Initializing directory")
-
-        # Project tree
-        self.project_dir = None
-        self.file_sys_model = QFileSystemModel()
-        self.file_sys_model.setRootPath(QDir.rootPath())
-        self.project_tree.setModel(self.file_sys_model)
-        self.project_tree.setColumnHidden(1, True)
-        self.project_tree.setColumnHidden(2, True)
-        self.project_tree.setColumnHidden(3, True)
-        self.project_tree.setHeaderHidden(True)
-        self.project_tree.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.project_tree.customContextMenuRequested.connect(self.open_dir_tree_context_menu)
-        # self.project_tree.setAutoScroll(False)
-        # self.move_dir_tree_to(self.file_sys_model.rootPath())
-        self.pem_dir = None
-        self.gps_dir = None
-        self.available_pems = []
-        self.available_gps = []
-
+        init_ui()
         init_actions()
         init_menus()
-        init_signals()
         init_crs()
-
-        if splash_screen:
-            splash_screen.showMessage("Initializing table")
-        # Table
-        self.table_columns = [
-            'File',
-            'Date',
-            'Client',
-            'Grid',
-            'Line/Hole',
-            'Loop',
-            'Current',
-            'Coil\nArea',
-            'First\nStation',
-            'Last\nStation',
-            'Averaged',
-            'Split',
-            'Suffix\nWarnings',
-            'Repeat\nWarnings',
-            'Polarity\nWarnings'
-        ]
-        header = self.table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.Stretch)
-        for i, col in enumerate(self.table_columns[1:]):
-            header.setSectionResizeMode(i + 1, QHeaderView.ResizeToContents)
-        self.table.horizontalHeader().hide()
+        init_project_directory()
+        init_status_bar()
+        init_table()
+        init_signals()
 
         self.load_settings()
         self.set_dark_mode()
@@ -1044,11 +1050,15 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.actionRename_Merged_Files.setChecked(False if settings.value("actionRename_Merged_Files") == "false" else True)
 
         # Project directory
-        self.move_dir_tree_to(str(settings.value("project_dir")))
+        # self.project_dir_edit.setText(str(self.file_sys_model.rootPath()))  # In case no valid project dir is saved
+        project_dir = settings.value("project_dir")
+        if project_dir:
+            if Path(project_dir).is_dir():
+                self.move_dir_tree(str(project_dir), start_up=True)
 
         # File filters
-        self.pem_list_filter.set_settings(settings.value("PEM_filter"))
-        self.gps_list_filter.set_settings(settings.value("GPS_filter"))
+        self.pem_list_filter.set_settings(settings.value("PEM_filter"), refresh=False)
+        self.gps_list_filter.set_settings(settings.value("GPS_filter"), refresh=False)
 
         settings.endGroup()
 
@@ -1587,7 +1597,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         self.enable_menus(True)
                         # self.piw_frame.show()
                     if self.project_dir_edit.text() == '':
-                        self.move_dir_tree_to(pem_file.filepath.parent)
+                        self.move_dir_tree(pem_file.filepath.parent)
 
                     # Update project CRS
                     pem_crs = pem_file.get_crs()
@@ -2308,11 +2318,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
     def open_unpacker(self, folder=None):
         def open_unpacker_dir(folder_dir):
-            self.project_dir_edit.setText(str(folder_dir))
-            self.open_project_dir()
+            self.set_project_dir(folder_dir)
 
-        # unpacker = Unpacker(parent=self)
-        # refs.append(unpacker)
         self.unpacker.open_project_folder_sig.connect(open_unpacker_dir)
         if folder:
             self.unpacker.open_folder(folder, project_dir=self.project_dir)
@@ -2367,18 +2374,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         refs.append(ss)
         ss.show()
 
-    def open_project_dir(self):
-        """
-        Move the directory tree when a path is entered in the status bar LineEdit widget.
-        """
-        path = Path(self.project_dir_edit.text())
-        if path.exists():
-            self.move_dir_tree_to(Path(self.project_dir_edit.text()))
-        else:
-            logger.error(f"{str(path)} does not exist.")
-            self.message.information(self, "Invalid Path", f"{str(path)} does not exist.")
-            self.project_dir_edit.setText(str(self.get_current_path()))
-
     def open_dir_tree_context_menu(self, position):
         """
         Right click context menu for directory tree
@@ -2387,7 +2382,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         def open_step():
             # Open the Step window at the selected location in the project tree
-            path = self.get_current_path()
+            path = self.get_current_project_path()
 
             os.chdir(str(path))
             os.system('cmd /c "step"')
@@ -2399,7 +2394,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             folder_name, ok_pressed = QInputDialog.getText(self, "Select Folder Name", "Folder Name:",
                                                            text=self.project_dir.parent.name)
             if ok_pressed and folder_name:
-                path = self.get_current_path()
+                path = self.get_current_project_path()
                 zip_path = path.joinpath(folder_name.strip())
                 if zip_path.exists():
                     response = self.message.question(self, "Existing Directory",
@@ -2434,7 +2429,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             folder_name, ok_pressed = QInputDialog.getText(self, "Select Folder Name", "Folder Name:",
                                                            text=self.project_dir.name)
             if ok_pressed and folder_name:
-                path = self.get_current_path()
+                path = self.get_current_project_path()
                 path.rename(path.with_name(folder_name))
 
         menu = QMenu()
@@ -2444,7 +2439,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         menu.addAction('Rename Folder', rename)
         menu.exec_(self.project_tree.viewport().mapToGlobal(position))
 
-    def move_dir_tree_to(self, dir_path):
+    def move_dir_tree(self, dir_path, start_up=False):
         """
         Changes the directory tree to show the dir_path. Will find the nearest folder upward if dir_path is a file
         :param dir_path: Path object or str, directory path of the desired directory
@@ -2469,9 +2464,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         # Update the GPS and PEM trees
         self.project_dir_changed(model)
 
-        # Again for when the program just started and needs more time
-        QTimer.singleShot(300, lambda: self.project_tree.scrollTo(self.project_tree.currentIndex(),
-                                                                 QAbstractItemView.PositionAtCenter))
+        if start_up is True:
+            # Again for when the program just started and needs more time
+            QTimer.singleShot(300, lambda: self.project_tree.scrollTo(self.project_tree.currentIndex(),
+                                                                     QAbstractItemView.PositionAtCenter))
 
         self.project_tree.resizeColumnToContents(0)
 
@@ -2491,11 +2487,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             self.fill_gps_list()
             self.fill_pem_list()
-
-        # self.app.sendPostedEvents()
-        # QTimer.singleShot(1500, lambda: self.project_tree.scrollTo(model, QAbstractItemView.EnsureVisible))
-
-        # QTimer.singleShot(1500, lambda: self.project_tree.scrollToBottom())
 
     def fill_gps_list(self):
         """
@@ -3663,7 +3654,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             pem_file.save(backup=True)
         self.status_bar.showMessage(f'Backup complete. Backed up {len(self.pem_files)} PEM files.', 2000)
 
-    def get_current_path(self):
+    def get_current_project_path(self):
         """
         Return the path of the selected directory tree item.
         :return: Path object, filepath
@@ -3840,6 +3831,22 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.selection_derotation_label.setStyleSheet(f'color: {text_color}')
 
         self.refresh_table()
+
+    def set_project_dir(self, path):
+        """
+        Move the directory tree and fill the project directory filepath
+        """
+        if path is None:
+            path = Path(self.project_dir_edit.text())
+
+        if path.exists():
+            self.move_dir_tree(Path(path))
+            if self.project_dir_edit.text != str(path):
+                self.project_dir_edit.setText(str(path))
+        else:
+            logger.error(f"{str(path)} does not exist.")
+            self.message.information(self, "Invalid Path", f"{str(path)} does not exist.")
+            self.project_dir_edit.setText(str(self.get_current_project_path()))
 
     def average_pem_data(self, selected=False):
         """
@@ -4316,7 +4323,7 @@ class PathFilter(QWidget):
             filter_settings.append(filts.text())
         return filter_settings
 
-    def set_settings(self, settings):
+    def set_settings(self, settings, refresh=True):
         if settings is None:
             return
 
@@ -4324,7 +4331,8 @@ class PathFilter(QWidget):
                       self.exclude_folders_edit, self.include_exts_edit, self.exclude_exts_edit]
         for setting, edit in zip(settings, edits):
             edit.setText(setting)
-        self.accept_sig.emit()
+        if refresh is True:
+            self.accept_sig.emit()
 
 class PEMBrowser(QTextBrowser):
     close_request = Signal(object)

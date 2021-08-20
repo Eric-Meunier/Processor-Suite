@@ -57,7 +57,7 @@ class SplashScreen(QWidget, Ui_SplashScreen):
         self.frame.setGraphicsEffect(self.shadow)
 
         self.counter = 0
-        self.progressBar.setMaximum(10)
+        self.progressBar.setMaximum(11)
         self.show()
 
     def showMessage(self, msg):
