@@ -1054,6 +1054,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.add_hole('Hole')
         # # TODO Comment out later
         # self.add_loop('Loop')
+        self.loop_tab_widget.hide()
 
         # Signals
         self.hole_cbox.currentIndexChanged.connect(self.select_hole)
@@ -1402,6 +1403,8 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                 return
 
         if name != '':
+            self.hole_tab_widget.show()
+
             # Copy the information from the currently selected hole widget to be used in the new widget
             if self.hole_widgets:
                 properties = self.hole_widgets[self.hole_tab_widget.currentIndex()].get_properties()
@@ -1471,6 +1474,8 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                 return
 
         if name != '':
+            self.loop_tab_widget.show()
+
             # Copy the information from the currently selected hole widget to be used in the new widget
             if self.loop_widgets:
                 angle = self.loop_widgets[self.loop_tab_widget.currentIndex()].get_angle()
@@ -1522,6 +1527,9 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             self.hole_tab_widget.removeWidget(widget)
             self.hole_cbox.removeItem(ind)
 
+        if len(self.hole_widgets) == 0:
+            self.hole_tab_widget.hide()
+
     def remove_loop(self, ind, prompt=True):
         if prompt is True:
             response = QMessageBox.question(self, "Remove Loop", "Are you sure you want to remove this loop?",
@@ -1535,6 +1543,9 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             del self.loop_widgets[ind]
             self.loop_tab_widget.removeWidget(widget)
             self.loop_cbox.removeItem(ind)
+
+        if len(self.loop_widgets) == 0:
+            self.loop_tab_widget.hide()
 
     def plot_hole(self):
         """
@@ -3112,8 +3123,8 @@ class RectLoop(pg.RectROI):
 def main():
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
     app = QApplication(sys.argv)
-    # planner = LoopPlanner()
-    planner = GridPlanner()
+    planner = LoopPlanner()
+    # planner = GridPlanner()
 
     # hole_data = read_excel(r"C:\_Data\2021\Canadian Palladium\_Planning\Crone_BHEM_Collars.xlsx").dropna()
     # for ind, hole in hole_data.iterrows():

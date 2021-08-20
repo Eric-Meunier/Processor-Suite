@@ -73,13 +73,13 @@ class Ui_Unpacker(object):
 
         self.gridLayout_3.addWidget(self.label_7, 5, 1, 1, 1, Qt.AlignHCenter)
 
-        self.dump_frame = QFrame(self.frame_2)
-        self.dump_frame.setObjectName(u"dump_frame")
-        self.dump_frame.setMinimumSize(QSize(20, 20))
-        self.dump_frame.setFrameShape(QFrame.StyledPanel)
-        self.dump_frame.setFrameShadow(QFrame.Raised)
+        self.receiver_frame = QFrame(self.frame_2)
+        self.receiver_frame.setObjectName(u"receiver_frame")
+        self.receiver_frame.setMinimumSize(QSize(20, 20))
+        self.receiver_frame.setFrameShape(QFrame.StyledPanel)
+        self.receiver_frame.setFrameShadow(QFrame.Raised)
 
-        self.gridLayout_3.addWidget(self.dump_frame, 1, 0, 2, 1)
+        self.gridLayout_3.addWidget(self.receiver_frame, 1, 0, 2, 1)
 
         self.label_5 = QLabel(self.frame_2)
         self.label_5.setObjectName(u"label_5")
@@ -205,7 +205,7 @@ class Ui_Unpacker(object):
         self.label_7.setText(QCoreApplication.translate("Unpacker", u"Other", None))
         self.label_5.setText(QCoreApplication.translate("Unpacker", u"Geometry", None))
         self.label_3.setText(QCoreApplication.translate("Unpacker", u"GPS", None))
-        self.label.setText(QCoreApplication.translate("Unpacker", u"Dump", None))
+        self.label.setText(QCoreApplication.translate("Unpacker", u"Receiver", None))
         self.menuFile.setTitle(QCoreApplication.translate("Unpacker", u"File", None))
         self.menuSettings.setTitle(QCoreApplication.translate("Unpacker", u"Settings", None))
     # retranslateUi

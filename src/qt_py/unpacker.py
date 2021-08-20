@@ -6,7 +6,7 @@ from shutil import copyfile, rmtree
 
 import py7zr
 from PySide2.QtCore import Qt, QDir, Signal, QTimer, QDate
-from PySide2.QtGui import (QIcon, QDropEvent)
+from PySide2.QtGui import QIcon, QDropEvent
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QMenu, QErrorMessage,
                                QFileDialog, QVBoxLayout, QLabel, QApplication, QFrame, QHBoxLayout, QLineEdit,
                                QFileSystemModel, QTableWidgetItem, QTableWidget, QPushButton, QAbstractItemView)
@@ -35,7 +35,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         self.dialog = QFileDialog()
         self.message = QMessageBox()
         self.error = QErrorMessage()
-        self.model = QFileSystemModel()
+        self.file_sys_model = QFileSystemModel()
         self.db_plot = DBPlotter(parent=self)
 
         # Status bar
@@ -55,49 +55,22 @@ class Unpacker(QMainWindow, Ui_Unpacker):
 
         self.input_path = Path()
         self.output_path = Path()
-        self.model.setRootPath(QDir.rootPath())
-        self.dir_tree.setModel(self.model)
+        self.file_sys_model.setRootPath(QDir.rootPath())
+        self.dir_tree.setModel(self.file_sys_model)
         self.dir_tree.setContextMenuPolicy(Qt.CustomContextMenu)
         self.dir_tree.customContextMenuRequested.connect(self.open_context_menu)
-        self.move_dir_tree_to(self.model.rootPath())
-        self.dir_edit.setText(self.model.rootPath())
+        self.move_dir_tree_to(self.file_sys_model.rootPath())
+        self.dir_edit.setText(self.file_sys_model.rootPath())
         self.set_current_date()
 
-        # Signals
-
-        def dir_edit_changed():
-            print(f"dir_edit editing finished.")
-            path = Path(self.dir_edit.text())
-            if path.is_dir():
-                self.move_dir_tree_to(str(path))
-                self.output_path = path
-            else:
-                response = self.message.question(self, 'Create Folder?', f'"{str(path)}" does not exist. '
-                                                 f'Would you like to create it?', self.message.Yes, self.message.No)
-
-                if response == self.message.Yes:
-
-                    path.mkdir(parents=True, exist_ok=True)
-                    self.move_dir_tree_to(str(path))
-                    self.output_path = path
-                else:
-
-                    self.change_dir_label()
-
-        self.accept_btn.clicked.connect(self.accept)
-        self.dir_tree.clicked.connect(self.change_dir_label)
-        self.dir_edit.returnPressed.connect(dir_edit_changed)
-        self.open_folder_action.triggered.connect(self.open_file_dialog)
-        self.reset_action.triggered.connect(self.reset)
-
         # Format the tables
-        self.dump_frame.setLayout(QVBoxLayout())
+        self.receiver_frame.setLayout(QVBoxLayout())
         self.damp_frame.setLayout(QVBoxLayout())
         self.dmp_frame.setLayout(QVBoxLayout())
         self.gps_frame.setLayout(QVBoxLayout())
         self.geometry_frame.setLayout(QVBoxLayout())
         self.other_frame.setLayout(QVBoxLayout())
-        self.dump_frame.layout().setContentsMargins(0, 0, 0, 0)
+        self.receiver_frame.layout().setContentsMargins(0, 0, 0, 0)
         self.damp_frame.layout().setContentsMargins(0, 0, 0, 0)
         self.dmp_frame.layout().setContentsMargins(0, 0, 0, 0)
         self.gps_frame.layout().setContentsMargins(0, 0, 0, 0)
@@ -111,7 +84,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         self.geometry_table = UnpackerTable()
         self.other_table = UnpackerTable()
 
-        self.dump_frame.layout().addWidget(self.receiver_table)
+        self.receiver_frame.layout().addWidget(self.receiver_table)
         self.damp_frame.layout().addWidget(self.damp_table)
         self.dmp_frame.layout().addWidget(self.dmp_table)
         self.gps_frame.layout().addWidget(self.gps_table)
@@ -130,6 +103,28 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         self.dir_tree.setColumnHidden(2, True)
         self.dir_tree.setColumnHidden(3, True)
 
+        # Signals
+        def dir_edit_changed():
+            path = Path(self.dir_edit.text())
+            if not path.is_dir():
+                response = self.message.question(self, 'Create Folder?', f'"{str(path)}" does not exist. '
+                                                 f'Would you like to create it?', self.message.Yes, self.message.No)
+
+                if response == self.message.Yes:
+                    path.mkdir(parents=True, exist_ok=True)
+                else:
+                    self.change_dir_label()
+                    return
+
+            self.move_dir_tree_to(str(path))
+            self.output_path = path
+
+        self.accept_btn.clicked.connect(self.accept)
+        self.dir_tree.clicked.connect(self.change_dir_label)
+        self.dir_edit.returnPressed.connect(dir_edit_changed)
+        self.open_folder_action.triggered.connect(self.open_file_dialog)
+        self.reset_action.triggered.connect(self.reset)
+
     def dragEnterEvent(self, e):
         m = e.mimeData()
         if m.hasUrls():
@@ -147,13 +142,13 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         url = [Path(url.toLocalFile()) for url in e.mimeData().urls()][0]
         self.open_folder(url)
 
-    def set_current_date(self):
-        self.calendar_widget.setSelectedDate(QDate.currentDate())
-
     def closeEvent(self, e):
         self.db_plot.close()
-        self.deleteLater()
+        # self.hide()
         e.accept()
+
+    def set_current_date(self):
+        self.calendar_widget.setSelectedDate(QDate.currentDate())
 
     def reset(self, tables_only=False):
         """
@@ -167,7 +162,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         if tables_only is False:
             self.dir_edit.setText('')
             self.dir_tree.collapseAll()
-            self.move_dir_tree_to(self.model.rootPath())
+            self.move_dir_tree_to(self.file_sys_model.rootPath())
             self.set_current_date()
 
     def move_dir_tree_to(self, path):
@@ -176,10 +171,15 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         :param path: str, file path of the desired directory
         :return: None
         """
-        self.dir_tree.setCurrentIndex(self.model.index(path))
+        model = self.file_sys_model.index(str(path))
+
+        # Set the model to be selected in the tree
+        self.dir_tree.setCurrentIndex(model)
+        self.dir_tree.expand(model)
+
         # Adds a timer or else it doesn't actually scroll to it properly.
-        QTimer.singleShot(100, lambda: self.dir_tree.scrollTo(self.dir_tree.currentIndex(),
-                                                                    QAbstractItemView.PositionAtCenter))
+        QTimer.singleShot(500, lambda: self.dir_tree.scrollTo(self.dir_tree.currentIndex(),
+                                                                 QAbstractItemView.PositionAtCenter))
 
     def get_current_path(self):
         """
@@ -187,8 +187,8 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         :return: Path object, filepath
         """
         index = self.dir_tree.currentIndex()
-        index_item = self.model.index(index.row(), 0, index.parent())
-        path = self.model.filePath(index_item)
+        index_item = self.file_sys_model.index(index.row(), 0, index.parent())
+        path = self.file_sys_model.filePath(index_item)
         return Path(path)
 
     def change_dir_label(self):
@@ -277,11 +277,11 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         if project_dir:
             self.move_dir_tree_to(str(path.parent))
             self.dir_edit.setText(str(path.parent))
-            self.dir_tree.expand(self.model.index(str(project_dir.parent)))
+            self.dir_tree.expand(self.file_sys_model.index(str(project_dir.parent)))
         else:
             self.move_dir_tree_to(str(path.parent))
             self.dir_edit.setText(str(path.parent))
-            self.dir_tree.expand(self.model.index(str(path.parent)))
+            self.dir_tree.expand(self.file_sys_model.index(str(path.parent)))
 
         self.change_dir_label()
         self.setWindowTitle(f"Unpacker - {str(path)}")
