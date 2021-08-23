@@ -342,7 +342,7 @@ class HoleWidget(QWidget):
         self.plan_view.addItem(self.hole_name, ignoreBounds=True)
         self.plan_view.addItem(self.section_extent_line)
 
-        self.calc_hole_projection()
+        self.get_hole_projection()
         self.draw_hole()
 
         """Signals"""
@@ -355,7 +355,7 @@ class HoleWidget(QWidget):
             self.dad_file_edit.setEnabled(self.dad_geometry_rbtn.isChecked())
 
             # Update the plots
-            self.calc_hole_projection()
+            self.get_hole_projection()
             self.draw_hole()
             self.plot_hole_sig.emit()
 
@@ -387,17 +387,17 @@ class HoleWidget(QWidget):
         self.hole_name_edit.textChanged.connect(lambda: self.hole_name.setText(self.hole_name_edit.text()))
         self.remove_btn.clicked.connect(self.remove_sig.emit)
 
-        self.hole_easting_edit.editingFinished.connect(self.calc_hole_projection)
+        self.hole_easting_edit.editingFinished.connect(self.get_hole_projection)
         self.hole_easting_edit.editingFinished.connect(self.draw_hole)
-        self.hole_northing_edit.editingFinished.connect(self.calc_hole_projection)
+        self.hole_northing_edit.editingFinished.connect(self.get_hole_projection)
         self.hole_northing_edit.editingFinished.connect(self.draw_hole)
-        self.hole_elevation_edit.editingFinished.connect(self.calc_hole_projection)
+        self.hole_elevation_edit.editingFinished.connect(self.get_hole_projection)
         self.hole_elevation_edit.editingFinished.connect(self.draw_hole)
-        self.hole_azimuth_edit.editingFinished.connect(self.calc_hole_projection)
+        self.hole_azimuth_edit.editingFinished.connect(self.get_hole_projection)
         self.hole_azimuth_edit.editingFinished.connect(self.draw_hole)
-        self.hole_dip_edit.editingFinished.connect(self.calc_hole_projection)
+        self.hole_dip_edit.editingFinished.connect(self.get_hole_projection)
         self.hole_dip_edit.editingFinished.connect(self.draw_hole)
-        self.hole_length_edit.editingFinished.connect(self.calc_hole_projection)
+        self.hole_length_edit.editingFinished.connect(self.get_hole_projection)
         self.hole_length_edit.editingFinished.connect(self.draw_hole)
 
     def select(self):
@@ -450,7 +450,7 @@ class HoleWidget(QWidget):
             'length': self.hole_length_edit.value(),
         }
 
-    def calc_hole_projection(self):
+    def get_hole_projection(self):
         """
         Calculate and update the 3D projection of the hole.
         """
@@ -564,7 +564,6 @@ class HoleWidget(QWidget):
         """
         Open a DAD file through the file dialog
         """
-
         def open_dad_file(filepath):
             """
             Parse a depth-azimuth-dip file. Can be extentions xlsx, xls, csv, txt, dad.
@@ -599,7 +598,7 @@ class HoleWidget(QWidget):
                     # Create a BoreholeSegment object from the DAD file, to more easily calculate the projection
                     self.segments = dad_to_seg(df.dropna())
                     # Update the hole projection
-                    self.calc_hole_projection()
+                    self.get_hole_projection()
                     # Draw the hole and update the section plot
                     self.draw_hole()
                     self.plot_hole_sig.emit()
@@ -1747,7 +1746,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         lats, lons = [], []  # For centering the map when it's opened.
 
         def plot_loops():
-
             for widget in self.loop_widgets:
                 loop_name = widget.loop_name_edit.text()
 
@@ -1768,7 +1766,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                 lats.extend(loop_coords.Northing.to_numpy())
 
         def plot_holes():
-
             for widget in self.hole_widgets:
                 hole_coords = widget.get_proj_latlon(crs)
 
@@ -1834,15 +1831,17 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         self.add_loop(name=file.name, coords=coords)
 
-    def open_project(self):
+    def open_project(self, filepath=None):
         """
         Parse a .LFP file and add the holes and loops in the file to the project
+        :filepath: str or Path, filepath of project
         :return: None
         """
-        lpf_file, filetype = QFileDialog.getOpenFileName(self, "Loop Planning File", "", "Loop Planning File (*.LPF)")
+        if filepath is None:
+            filepath, filetype = QFileDialog.getOpenFileName(self, "Loop Planning File", "", "Loop Planning File (*.LPF)")
 
-        if lpf_file:
-            self.save_name = lpf_file
+        if filepath:
+            self.save_name = filepath
 
             # Remove existing holes and loops
             for ind in reversed(range(len(self.hole_widgets))):
@@ -1850,7 +1849,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             for ind in reversed(range(len(self.loop_widgets))):
                 self.remove_loop(ind, prompt=False)
 
-            file = open(lpf_file, "r").read()
+            file = open(filepath, "r").read()
             epsg = re.search("EPSG: (\d+)", file).group(1)
             holes = re.findall(
                 r">> Hole\n(name:.*\neasting:.*\nnorthing:.*\nelevation:.*\nazimuth:.*\ndip:.*\nlength:.*\n)<<", file)
@@ -3135,12 +3134,15 @@ def main():
     #                      azimuth=hole.AZIMUTH,
     #                      dip=hole.DIP
     #                      )
-    # planner.gps_system_cbox.setCurrentIndex(2)
-    # planner.gps_datum_cbox.setCurrentIndex(1)
-    # planner.gps_zone_cbox.setCurrentIndex(16)
     planner.show()
     # planner.save_project()
-    # planner.open_project()
+    planner.open_project(filepath=r"C:\_Data\2021\TMC\Galloway Project\_Planning\LP-GA-01.LPF")
+    planner.gps_system_cbox.setCurrentIndex(2)
+    planner.gps_datum_cbox.setCurrentIndex(3)
+    planner.gps_zone_cbox.setCurrentIndex(18)
+    planner.crs_rbtn.click()
+    # planner.view_map()
+
     # tx_file = samples_folder.joinpath(r"Tx Files/Loop.tx")
     # planner.open_tx_file(tx_file)
     # planner.hole_widgets[0].get_dad_file()

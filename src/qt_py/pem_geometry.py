@@ -31,13 +31,6 @@ def dad_to_seg(df, units='m'):
     :param units: str, units of the segments, either 'm' or 'ft'
     :return: pandas pd.DataFrame with Azimuth, Dip, segment length, unit, and depth columns
     """
-    if units == 'm' or units is None:
-        units = 2
-    elif units == 'ft':
-        units = 0
-    else:
-        raise NotImplementedError(f"{units} is not implemented as a unit for segments.")
-
     # Interpolate the DAD to 1m segments
     depth = df.Depth.to_numpy()
     azimuth = df.Azimuth.to_numpy()
@@ -74,11 +67,10 @@ def dad_to_seg(df, units='m'):
     seg_length = seg.Depth.diff()
     seg_length.iloc[0] = seg.Depth.iloc[0]
     seg['Segment_length'] = seg_length
-    seg['Unit'] = units
 
     # Re-arrange the columns
     depths = seg.pop('Depth')
-    seg.insert(4, 'Depth', depths)
+    seg.insert(3, 'Depth', depths)
     seg.reset_index(inplace=True, drop=True)
     seg = seg.round(2)
 
@@ -96,7 +88,6 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         self.setWindowTitle('PEM Geometry')
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'pem_geometry.png')))
         self.resize(1100, 800)
-        # self.status_bar.setStyleSheet("border-top :0.5px solid gray;")
 
         self.message = QMessageBox()
         self.error = QErrorMessage()
@@ -104,7 +95,6 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 
         self.parent = parent
         self.pem_file = None
-        self.dialog = QFileDialog()
 
         # Initialize the plot lines
         self.tool_az_line = None
@@ -267,7 +257,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         Open files through the file dialog
         """
         default_path = self.pem_file.filepath.parent
-        files, ext = self.dialog.getOpenFileNames(self, 'Open File', str(default_path),
+        files, ext = QFileDialog().getOpenFileNames(self, 'Open File', str(default_path),
                                                   filter='DAD files (*.dad; *.csv; *.xlsx; *.xls; *.txt);; '
                                                          'SEG files (*.seg; *.txt)')
         if files != '':
@@ -348,7 +338,6 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         """
         Plot the pem file tool values and segment information. One of the two must be present.
         """
-
         def add_az_spline(az, depth):
             """
             Add the azimuth spline line

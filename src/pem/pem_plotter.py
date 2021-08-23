@@ -2908,17 +2908,14 @@ class PEMPrinter:
     :param save_path: Desired save location for the PDFs
     :param kwargs: Plotting kwargs such as hide_gaps, gaps, and x limits used in PEMPlotter.
     """
-
     def __init__(self, parent=None, **kwargs):
         super().__init__()
         self.parent = parent
 
-        self.portrait_fig = None
-        self.landscape_fig = None
-
-        self.portrait_fig = plt.figure(num=1, clear=False)
+        plt.close()  # Close any opened figures. Solves 'Internal C++ object (FigureCanvasQTAgg) already deleted.'
+        self.portrait_fig = plt.figure(num=1, clear=True)
         self.portrait_fig.set_size_inches((8.5, 11))
-        self.landscape_fig = plt.figure(num=2, clear=False)
+        self.landscape_fig = plt.figure(num=2, clear=True)
         self.landscape_fig.set_size_inches((11, 8.5))
 
         self.print_plan_maps = kwargs.get('make_plan_map')

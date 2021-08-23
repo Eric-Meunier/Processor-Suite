@@ -200,6 +200,7 @@ class PEMFile:
         # Add the deletion flag column
         if 'Deleted' not in self.data.columns:
             self.data.insert(13, 'Deleted', False)
+            self.legacy = True
 
         # Add the overload column
         if 'Overload' not in self.data.columns:
