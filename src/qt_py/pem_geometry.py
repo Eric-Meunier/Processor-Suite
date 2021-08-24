@@ -232,6 +232,10 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             else:
                 e.ignore()
 
+    def closeEvent(self, e):
+        plt.close()
+        e.accept()
+
     def dropEvent(self, e):
         file = [url.toLocalFile() for url in e.mimeData().urls()][0]
 

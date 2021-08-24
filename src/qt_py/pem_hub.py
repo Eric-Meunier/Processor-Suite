@@ -1781,7 +1781,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         Open the PEMPlotEditor for each PEMFile selected
         """
-
         def save_editor_pem(pem_file):
             """
             Re-open the PEM file. File is actually saved in PEMPlotEditor.
@@ -1813,7 +1812,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         # Open individual editors for each PEMFile
         for pem_file in pem_files:
-            editor = PEMPlotEditor(parent=self)
+            editor = PEMPlotEditor(parent=self, darkmode=self.actionDark_Theme.isChecked())
             self.pem_editor_widgets.append(editor)
             # Connect the 'save' and 'close' signals
             editor.save_sig.connect(save_editor_pem)

@@ -31,15 +31,11 @@ will not intersect the area of the QRectF.
 # from pyod.models.knn import KNN
 # from pyod.utils.data import get_outliers_inliers
 logger = logging.getLogger(__name__)
-
-pg.setConfigOptions(antialias=True)
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
 pg.setConfigOption('crashWarning', True)
+pg.setConfigOptions(antialias=True)
 options.mode.chained_assignment = None  # default='warn'
 
 # TODO Change auto clean to have a start and end channel
-# TODO update median when cleaning
 # TODO maybe increase starting window size
 # TODO Changing readings to another component produces an error
 # TODO Auto-scale after auto-clean
@@ -50,51 +46,36 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
     close_sig = Signal(object)
     reset_file_sig = Signal(object)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, darkmode=False):
         super().__init__()
         self.parent = parent
+        self.darkmode = darkmode
+        pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
+        pg.setConfigOption('foreground', 'w' if darkmode else (53, 53, 53))
+
+        self.linecolor = [255, 255, 255] if self.darkmode else [53, 53, 53]
+        # self.selection_color = [234,128,252] if self.darkmode else [64, 64, 255]  # Purple and blue
+        # self.selection_color = [102, 255, 178] if self.darkmode else [64, 64, 255]
+        self.selection_color = [102, 255, 255] if self.darkmode else [64, 64, 255]  # Blues
+        self.autoclean_color = [0, 153, 153] if self.darkmode else [0, 0, 153]
+
         self.setupUi(self)
         self.setFocusPolicy(Qt.StrongFocus)
         self.installEventFilter(self)
         self.activateWindow()
         self.setWindowTitle('PEM Plot Editor')
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'plot_editor.png')))
-
+        self.setWindowIcon(QIcon(str(icons_path.joinpath('plot_editor.png'))))
+        self.actionOpen.setIcon(QIcon(str(icons_path.joinpath('open.png'))))
+        self.actionSave.setIcon(QIcon(str(icons_path.joinpath('save.png'))))
+        self.actionSave_As.setIcon(QIcon(str(icons_path.joinpath('save_as.png'))))
+        self.actionCopy_Screenshot.setIcon(QIcon(str(icons_path.joinpath('copy.png'))))
+        self.actionSave_Screenshot.setIcon(QIcon(str(icons_path.joinpath('_save_complete.png'))))
+        self.actionUn_Delete_All.setIcon(QIcon(str(icons_path.joinpath('undo.png'))))
+        self.actionReset_File.setIcon(QIcon(str(icons_path.joinpath('reset_file.png'))))
         self.resize(1300, 900)
-
         self.setAcceptDrops(True)
+
         self.message = QMessageBox()
-
-        # Status bar formatting
-        self.station_text = QLabel()
-        self.decay_selection_text = QLabel()
-        self.decay_selection_text.setIndent(20)
-        self.decay_selection_text.setStyleSheet('color: blue')
-        self.decay_selection_text.hide()
-        self.profile_selection_text = QLabel()
-        self.profile_selection_text.setIndent(20)
-        self.profile_selection_text.setStyleSheet('color: #ce4a7e')
-        # self.profile_selection_text.setStyleSheet('color: purple')
-        self.profile_selection_text.hide()
-        self.file_info_label = QLabel()
-        self.file_info_label.setIndent(20)
-        self.file_info_label.setStyleSheet('color: gray')
-        self.number_of_readings = QLabel()
-        self.number_of_readings.setIndent(20)
-        self.number_of_repeats = QPushButton('')
-        self.number_of_repeats.setFlat(True)
-
-        # self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray;}")
-        # self.status_bar.setStyleSheet("border-top: 1px solid gray;")
-
-        self.status_bar.addWidget(self.station_text, 0)
-        self.status_bar.addWidget(self.decay_selection_text, 0)
-        self.status_bar.addWidget(QLabel(), 1)  # Spacer
-        self.status_bar.addWidget(self.profile_selection_text, 0)
-        self.status_bar.addPermanentWidget(self.file_info_label, 0)
-        self.status_bar.addPermanentWidget(self.number_of_readings, 0)
-        self.status_bar.addPermanentWidget(self.number_of_repeats, 0)
-
         self.pem_file = None
         self.fallback_file = None
         self.units = None
@@ -116,160 +97,194 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.plotted_decay_lines = []
         self.plotted_decay_data = DataFrame()
 
-        self.x_decay_plot = self.decay_layout.addPlot(0, 0, title='X Component', viewBox=DecayViewBox())
-        self.y_decay_plot = self.decay_layout.addPlot(1, 0, title='Y Component', viewBox=DecayViewBox())
-        self.z_decay_plot = self.decay_layout.addPlot(2, 0, title='Z Component', viewBox=DecayViewBox())
-        self.decay_layout.ci.layout.setSpacing(2)  # Spacing between plots
-        # self.decay_layout.ci.layout.setRowStretchFactor(1, 1)
-        self.decay_axes = np.array([self.x_decay_plot, self.y_decay_plot, self.z_decay_plot])
-        self.active_decay_axes = []
+        def init_statusbar():
+            # Status bar formatting
+            self.station_text = QLabel()
+            self.decay_selection_text = QLabel()
+            self.decay_selection_text.setIndent(20)
+            self.decay_selection_text.setStyleSheet(f'color: rgb{tuple(self.selection_color)}')
+            self.decay_selection_text.hide()
+            self.profile_selection_text = QLabel()
+            self.profile_selection_text.setIndent(20)
+            self.profile_selection_text.setStyleSheet(f'color: #ce4a7e')
+            # self.profile_selection_text.setStyleSheet('color: purple')
+            self.profile_selection_text.hide()
+            self.file_info_label = QLabel()
+            self.file_info_label.setIndent(20)
+            # self.file_info_label.setStyleSheet('color: gray')
+            self.number_of_readings = QLabel()
+            self.number_of_readings.setIndent(20)
+            self.number_of_repeats = QPushButton('')
+            self.number_of_repeats.setFlat(True)
 
-        for ax in self.decay_axes:
-            ax.vb.installEventFilter(self)
-            ax.vb.box_select_signal.connect(self.box_select_decay_lines)
-            ax.hideButtons()
-            ax.setMenuEnabled(False)
-            ax.getAxis('left').enableAutoSIPrefix(enable=False)
+            self.status_bar.addWidget(self.station_text, 0)
+            self.status_bar.addWidget(self.decay_selection_text, 0)
+            self.status_bar.addWidget(QLabel(), 1)  # Spacer
+            self.status_bar.addWidget(self.profile_selection_text, 0)
+            self.status_bar.addPermanentWidget(self.file_info_label, 0)
+            self.status_bar.addPermanentWidget(self.number_of_readings, 0)
+            self.status_bar.addPermanentWidget(self.number_of_repeats, 0)
 
-            ax.scene().sigMouseMoved.connect(self.decay_mouse_moved)
-            ax.scene().sigMouseClicked.connect(self.decay_plot_clicked)
+        def init_plots():
+            self.x_decay_plot = self.decay_layout.addPlot(0, 0, title='X Component', viewBox=DecayViewBox())
+            self.y_decay_plot = self.decay_layout.addPlot(1, 0, title='Y Component', viewBox=DecayViewBox())
+            self.z_decay_plot = self.decay_layout.addPlot(2, 0, title='Z Component', viewBox=DecayViewBox())
+            self.decay_layout.ci.layout.setSpacing(2)  # Spacing between plots
+            # self.decay_layout.ci.layout.setRowStretchFactor(1, 1)
+            self.decay_axes = np.array([self.x_decay_plot, self.y_decay_plot, self.z_decay_plot])
+            self.active_decay_axes = []
 
-        self.x_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
-        self.y_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
-        self.z_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
+            for ax in self.decay_axes:
+                ax.vb.installEventFilter(self)
+                ax.vb.box_select_signal.connect(self.box_select_decay_lines)
+                ax.hideButtons()
+                ax.setMenuEnabled(False)
+                ax.getAxis('left').enableAutoSIPrefix(enable=False)
 
-        # Configure the plots
-        # X axis lin plots
-        self.x_ax0 = self.x_profile_layout.addPlot(0, 0, viewBox=ProfileViewBox())
-        self.x_ax1 = self.x_profile_layout.addPlot(1, 0, viewBox=ProfileViewBox())
-        self.x_ax2 = self.x_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
-        self.x_ax3 = self.x_profile_layout.addPlot(3, 0, viewBox=ProfileViewBox())
-        self.x_ax4 = self.x_profile_layout.addPlot(4, 0, viewBox=ProfileViewBox())
-        self.mag_x_ax = self.x_profile_layout.addPlot(6, 0, viewBox=ProfileViewBox())
+                ax.scene().sigMouseMoved.connect(self.decay_mouse_moved)
+                ax.scene().sigMouseClicked.connect(self.decay_plot_clicked)
 
-        # Y axis lin plots
-        self.y_ax0 = self.y_profile_layout.addPlot(0, 0, viewBox=ProfileViewBox())
-        self.y_ax1 = self.y_profile_layout.addPlot(1, 0, viewBox=ProfileViewBox())
-        self.y_ax2 = self.y_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
-        self.y_ax3 = self.y_profile_layout.addPlot(3, 0, viewBox=ProfileViewBox())
-        self.y_ax4 = self.y_profile_layout.addPlot(4, 0, viewBox=ProfileViewBox())
-        self.mag_y_ax = self.y_profile_layout.addPlot(6, 0, viewBox=ProfileViewBox())
+            self.x_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
+            self.y_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
+            self.z_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
 
-        # Z axis lin plots
-        self.z_ax0 = self.z_profile_layout.addPlot(0, 0, viewBox=ProfileViewBox())
-        self.z_ax1 = self.z_profile_layout.addPlot(1, 0, viewBox=ProfileViewBox())
-        self.z_ax2 = self.z_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
-        self.z_ax3 = self.z_profile_layout.addPlot(3, 0, viewBox=ProfileViewBox())
-        self.z_ax4 = self.z_profile_layout.addPlot(4, 0, viewBox=ProfileViewBox())
-        self.mag_z_ax = self.z_profile_layout.addPlot(6, 0, viewBox=ProfileViewBox())
+            # Configure the plots
+            # X axis lin plots
+            self.x_ax0 = self.x_profile_layout.addPlot(0, 0, viewBox=ProfileViewBox())
+            self.x_ax1 = self.x_profile_layout.addPlot(1, 0, viewBox=ProfileViewBox())
+            self.x_ax2 = self.x_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
+            self.x_ax3 = self.x_profile_layout.addPlot(3, 0, viewBox=ProfileViewBox())
+            self.x_ax4 = self.x_profile_layout.addPlot(4, 0, viewBox=ProfileViewBox())
+            self.mag_x_ax = self.x_profile_layout.addPlot(6, 0, viewBox=ProfileViewBox())
 
-        self.x_layout_axes = [self.x_ax0, self.x_ax1, self.x_ax2, self.x_ax3, self.x_ax4, self.mag_x_ax]
-        self.y_layout_axes = [self.y_ax0, self.y_ax1, self.y_ax2, self.y_ax3, self.y_ax4, self.mag_y_ax]
-        self.z_layout_axes = [self.z_ax0, self.z_ax1, self.z_ax2, self.z_ax3, self.z_ax4, self.mag_z_ax]
+            # Y axis lin plots
+            self.y_ax0 = self.y_profile_layout.addPlot(0, 0, viewBox=ProfileViewBox())
+            self.y_ax1 = self.y_profile_layout.addPlot(1, 0, viewBox=ProfileViewBox())
+            self.y_ax2 = self.y_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
+            self.y_ax3 = self.y_profile_layout.addPlot(3, 0, viewBox=ProfileViewBox())
+            self.y_ax4 = self.y_profile_layout.addPlot(4, 0, viewBox=ProfileViewBox())
+            self.mag_y_ax = self.y_profile_layout.addPlot(6, 0, viewBox=ProfileViewBox())
 
-        self.profile_axes = np.concatenate([self.x_layout_axes, self.y_layout_axes, self.z_layout_axes])
-        self.mag_profile_axes = [self.mag_x_ax, self.mag_y_ax, self.mag_z_ax]
+            # Z axis lin plots
+            self.z_ax0 = self.z_profile_layout.addPlot(0, 0, viewBox=ProfileViewBox())
+            self.z_ax1 = self.z_profile_layout.addPlot(1, 0, viewBox=ProfileViewBox())
+            self.z_ax2 = self.z_profile_layout.addPlot(2, 0, viewBox=ProfileViewBox())
+            self.z_ax3 = self.z_profile_layout.addPlot(3, 0, viewBox=ProfileViewBox())
+            self.z_ax4 = self.z_profile_layout.addPlot(4, 0, viewBox=ProfileViewBox())
+            self.mag_z_ax = self.z_profile_layout.addPlot(6, 0, viewBox=ProfileViewBox())
 
-        self.active_profile_axes = []
+            self.x_layout_axes = [self.x_ax0, self.x_ax1, self.x_ax2, self.x_ax3, self.x_ax4, self.mag_x_ax]
+            self.y_layout_axes = [self.y_ax0, self.y_ax1, self.y_ax2, self.y_ax3, self.y_ax4, self.mag_y_ax]
+            self.z_layout_axes = [self.z_ax0, self.z_ax1, self.z_ax2, self.z_ax3, self.z_ax4, self.mag_z_ax]
 
-        # Configure each axes, including the mag plots
-        for ax in self.profile_axes:
-            ax.vb.installEventFilter(self)
-            ax.vb.box_select_signal.connect(self.box_select_profile_plot)
-            ax.hideButtons()
-            ax.setMenuEnabled(False)
-            ax.getAxis('left').setWidth(60)
-            ax.getAxis('left').enableAutoSIPrefix(enable=False)
+            self.profile_axes = np.concatenate([self.x_layout_axes, self.y_layout_axes, self.z_layout_axes])
+            self.mag_profile_axes = [self.mag_x_ax, self.mag_y_ax, self.mag_z_ax]
 
-            # Add the vertical selection line
-            color = (23, 23, 23, 100)
-            font = QFont("Helvetica", 10)
-            # hover_color = (102, 178, 255, 100)
-            # select_color = (51, 51, 255, 100)
-            hover_v_line = pg.InfiniteLine(angle=90, movable=False)
-            hover_v_line.setPen(color, width=2.)
-            selected_v_line = pg.InfiniteLine(angle=90, movable=False)
-            selected_v_line.setPen(color, width=2.)
+            self.active_profile_axes = []
 
-            # Add the text annotations for the vertical lines
-            hover_v_line_text = pg.TextItem("")
-            hover_v_line_text.setParentItem(ax.vb)
-            hover_v_line_text.setAnchor((0, 0))
-            hover_v_line_text.setPos(0, 0)
-            hover_v_line_text.setColor(color)
-            hover_v_line_text.setFont(font)
-            # hover_v_line_text.setColor((102, 178, 255, 100))
+            # Configure each axes, including the mag plots
+            for ax in self.profile_axes:
+                ax.vb.installEventFilter(self)
+                ax.vb.box_select_signal.connect(self.box_select_profile_plot)
+                ax.hideButtons()
+                ax.setMenuEnabled(False)
+                ax.getAxis('left').setWidth(60)
+                ax.getAxis('left').enableAutoSIPrefix(enable=False)
 
-            ax.addItem(hover_v_line, ignoreBounds=True)
-            ax.addItem(hover_v_line_text, ignoreBounds=True)
-            ax.addItem(selected_v_line, ignoreBounds=True)
+                # Add the vertical selection line
+                # color = (23, 23, 23, 100)
+                color = copy.copy(self.linecolor)
+                color.append(200 if self.darkmode else 100)
+                font = QFont("Helvetica", 10)
+                # hover_color = (102, 178, 255, 100)
+                # select_color = (51, 51, 255, 100)
+                hover_v_line = pg.InfiniteLine(angle=90, movable=False)
+                hover_v_line.setPen(color, width=2.)
+                selected_v_line = pg.InfiniteLine(angle=90, movable=False)
+                selected_v_line.setPen(color, width=2.)
 
-            # Connect the mouse moved signal
-            ax.scene().sigMouseMoved.connect(self.profile_mouse_moved)
-            ax.scene().sigMouseClicked.connect(self.profile_plot_clicked)
+                # Add the text annotations for the vertical lines
+                hover_v_line_text = pg.TextItem("")
+                hover_v_line_text.setParentItem(ax.vb)
+                hover_v_line_text.setAnchor((0, 0))
+                hover_v_line_text.setPos(0, 0)
+                hover_v_line_text.setColor(color)
+                hover_v_line_text.setFont(font)
+                # hover_v_line_text.setColor((102, 178, 255, 100))
 
-        """Signals"""
+                ax.addItem(hover_v_line, ignoreBounds=True)
+                ax.addItem(hover_v_line_text, ignoreBounds=True)
+                ax.addItem(selected_v_line, ignoreBounds=True)
 
-        def toggle_mag_plots():
-            if self.plot_mag_cbox.isChecked():
-                for ax in self.mag_profile_axes:
-                    ax.show()
-            else:
-                for ax in self.mag_profile_axes:
-                    ax.hide()
+                # Connect the mouse moved signal
+                ax.scene().sigMouseMoved.connect(self.profile_mouse_moved)
+                ax.scene().sigMouseClicked.connect(self.profile_plot_clicked)
 
-        def select_all_stations():
-            stations = self.pem_file.get_stations(converted=True)
-            self.box_select_profile_plot((stations.min(), stations.max()), start=False)
+        def init_signals():
+            def toggle_mag_plots():
+                if self.plot_mag_cbox.isChecked():
+                    for ax in self.mag_profile_axes:
+                        ax.show()
+                else:
+                    for ax in self.mag_profile_axes:
+                        ax.hide()
 
-        # Actions
-        self.select_all_action = QShortcut(QKeySequence("Ctrl+A"), self)
-        self.select_all_action.activated.connect(select_all_stations)
+            def select_all_stations():
+                stations = self.pem_file.get_stations(converted=True)
+                self.box_select_profile_plot((stations.min(), stations.max()), start=False)
 
-        # Menu
-        self.actionOpen.triggered.connect(self.open_file_dialog)
-        self.actionSave.triggered.connect(self.save)
-        self.actionSave_As.triggered.connect(self.save_as)
-        self.actionUn_Delete_All.triggered.connect(self.undelete_all)
+            # Actions
+            self.select_all_action = QShortcut(QKeySequence("Ctrl+A"), self)
+            self.select_all_action.activated.connect(select_all_stations)
 
-        # Shortcuts
-        self.actionSave_Screenshot.triggered.connect(self.save_img)
-        self.actionCopy_Screenshot.triggered.connect(self.copy_img)
+            # Menu
+            self.actionOpen.triggered.connect(self.open_file_dialog)
+            self.actionSave.triggered.connect(self.save)
+            self.actionSave_As.triggered.connect(self.save_as)
+            self.actionUn_Delete_All.triggered.connect(self.undelete_all)
 
-        # Checkboxes
-        self.show_scatter_cbox.toggled.connect(lambda: self.plot_profiles(components='all'))
-        self.plot_mag_cbox.toggled.connect(toggle_mag_plots)
-        self.auto_range_cbox.toggled.connect(self.reset_range)
+            # Shortcuts
+            self.actionSave_Screenshot.triggered.connect(self.save_img)
+            self.actionCopy_Screenshot.triggered.connect(self.copy_img)
 
-        self.plot_auto_clean_lines_cbox.toggled.connect(lambda: self.plot_station(self.selected_station,
-                                                                                  preserve_selection=True))
-        self.plot_ontime_decays_cbox.toggled.connect(lambda: self.plot_station(self.selected_station,
-                                                                               preserve_selection=True))
-        self.plot_ontime_decays_cbox.toggled.connect(lambda: self.active_decay_axes[0].autoRange())
+            # Checkboxes
+            self.show_scatter_cbox.toggled.connect(lambda: self.plot_profiles(components='all'))
+            self.plot_mag_cbox.toggled.connect(toggle_mag_plots)
+            self.auto_range_cbox.toggled.connect(self.reset_range)
 
-        self.link_y_cbox.toggled.connect(self.link_decay_y)
-        self.link_x_cbox.toggled.connect(self.link_decay_x)
+            self.plot_auto_clean_lines_cbox.toggled.connect(lambda: self.plot_station(self.selected_station,
+                                                                                      preserve_selection=True))
+            self.plot_ontime_decays_cbox.toggled.connect(lambda: self.plot_station(self.selected_station,
+                                                                                   preserve_selection=True))
+            self.plot_ontime_decays_cbox.toggled.connect(lambda: self.active_decay_axes[0].autoRange())
 
-        # Spinboxes
-        self.auto_clean_std_sbox.valueChanged.connect(lambda: self.refresh(components='all', preserve_selection=True))
-        self.auto_clean_window_sbox.valueChanged.connect(lambda: self.refresh(components='all', preserve_selection=True))
+            self.link_y_cbox.toggled.connect(self.link_decay_y)
+            self.link_x_cbox.toggled.connect(self.link_decay_x)
 
-        # Buttons
-        self.change_comp_decay_btn.clicked.connect(lambda: self.change_decay_component_dialog(source='decay'))
-        self.change_decay_suffix_btn.clicked.connect(lambda: self.change_suffix_dialog(source='decay'))
-        self.change_station_decay_btn.clicked.connect(self.change_station)
-        self.flip_decay_btn.clicked.connect(lambda: self.flip_decays(source='decay'))
-        self.zoom_to_offtime_btn.clicked.connect(self.zoom_to_offtime)
+            # Spinboxes
+            self.auto_clean_std_sbox.valueChanged.connect(lambda: self.refresh(components='all', preserve_selection=True))
+            self.auto_clean_window_sbox.valueChanged.connect(lambda: self.refresh(components='all', preserve_selection=True))
 
-        self.change_comp_profile_btn.clicked.connect(lambda: self.change_decay_component_dialog(source='profile'))
-        self.change_profile_suffix_btn.clicked.connect(lambda: self.change_suffix_dialog(source='profile'))
-        self.flip_profile_btn.clicked.connect(lambda: self.flip_decays(source='profile'))
-        self.shift_station_profile_btn.clicked.connect(self.shift_stations)
-        self.remove_profile_btn.clicked.connect(self.remove_stations)
+            # Buttons
+            self.change_comp_decay_btn.clicked.connect(lambda: self.change_decay_component_dialog(source='decay'))
+            self.change_decay_suffix_btn.clicked.connect(lambda: self.change_suffix_dialog(source='decay'))
+            self.change_station_decay_btn.clicked.connect(self.change_station)
+            self.flip_decay_btn.clicked.connect(lambda: self.flip_decays(source='decay'))
+            self.zoom_to_offtime_btn.clicked.connect(self.zoom_to_offtime)
 
-        self.auto_clean_btn.clicked.connect(self.auto_clean)
-        self.actionReset_File.triggered.connect(self.reset_file)
-        self.number_of_repeats.clicked.connect(self.rename_repeats)
+            self.change_comp_profile_btn.clicked.connect(lambda: self.change_decay_component_dialog(source='profile'))
+            self.change_profile_suffix_btn.clicked.connect(lambda: self.change_suffix_dialog(source='profile'))
+            self.flip_profile_btn.clicked.connect(lambda: self.flip_decays(source='profile'))
+            self.shift_station_profile_btn.clicked.connect(self.shift_stations)
+            self.remove_profile_btn.clicked.connect(self.remove_stations)
+
+            self.auto_clean_btn.clicked.connect(self.auto_clean)
+            self.actionReset_File.triggered.connect(self.reset_file)
+            self.number_of_repeats.clicked.connect(self.rename_repeats)
+
+        init_statusbar()
+        init_plots()
+        init_signals()
 
     def keyPressEvent(self, event):
         # Delete a decay when the delete key is pressed
@@ -539,7 +554,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             """
             Update which profile axes are active based on what components are present and update the axis links.
             """
-
             def link_profile_axes():
                 if len(self.active_profile_axes) > 1:
                     for ax in self.active_profile_axes[1:]:
@@ -605,7 +619,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         if len(repeats) > 0:
             self.number_of_repeats.setStyleSheet('color: red')
         else:
-            self.number_of_repeats.setStyleSheet('color: black')
+            self.number_of_repeats.setStyleSheet('')  # Reset the color automatically
 
         components = self.pem_file.get_components()
         toggle_profile_plots()
@@ -710,7 +724,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 x, y = df_avg.index.to_numpy(), df_avg.to_numpy()
 
                 ax.plot(x=x, y=y,
-                        pen=pg.mkPen('k', width=1.))
+                        pen=pg.mkPen(self.linecolor, width=1.))
 
             def plot_scatters(df, ax):
                 """
@@ -722,7 +736,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 x, y = df.index.to_numpy(), df.to_numpy()
 
                 scatter = pg.ScatterPlotItem(x=x, y=y,
-                                             pen=pg.mkPen('k', width=1.),
+                                             pen=pg.mkPen(self.linecolor, width=1.),
                                              symbol='o',
                                              size=2,
                                              brush='w',
@@ -732,7 +746,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             def plot_mag():
                 """Plot the mag profile if available. Disable the plot mag button if it's not applicable."""
-
                 if all([self.pem_file.is_borehole(), self.pem_file.has_xy(), self.pem_file.has_d7()]):
                     mag_df = self.pem_file.get_mag(average=True)
                     if mag_df.Mag.any():
@@ -753,7 +766,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 """
                 if not df.empty:
                     pp_plot_item = pg.PlotCurveItem(x=df.Station.to_numpy(), y=df[component].to_numpy(),
-                                                    pen=pg.mkPen('b', width=1.5, style=Qt.DotLine),
+                                                    pen=pg.mkPen(self.selection_color, width=1.5, style=Qt.DotLine),
                                                     name="PP Theory")
                     ax.addItem(pp_plot_item)
 
@@ -866,7 +879,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Change the pen if the data is flagged for deletion or overload
             if row.Deleted is False:
-                color = (96, 96, 96, 150)
+                # color = (96, 96, 96, 150)
+                color = copy.copy(self.linecolor)
+                color.append(200 if self.darkmode else 150)
                 z_value = 2
             else:
                 color = (255, 0, 0, 50)
@@ -887,15 +902,13 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 y = row.Reading[~self.pem_file.channel_times.Remove]
 
             # Create and configure the line item
-            decay_line = pg.PlotCurveItem(y=y,
-                                          pen=pen,
-                                          )
+            decay_line = pg.PlotCurveItem(y=y, pen=pen)
             decay_line.setClickable(True, width=5)
             decay_line.setZValue(z_value)
             decay_line.sigClicked.connect(self.decay_line_clicked)
 
             # Add the line at y=0
-            ax.addLine(y=0, pen=pg.mkPen('k', width=0.15))
+            ax.addLine(y=0, pen=pg.mkPen('w' if self.darkmode else 'k', width=0.15))
             # Plot the decay
             ax.addItem(decay_line)
             # Add the plot item to the list of plotted items
@@ -942,25 +955,26 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                         off_time_median = signal.medfilt(off_time_median, 3)
                     limits_data = off_time_median_data.loc[:, len(off_time_median_data.columns) - window_size:]
 
+                    # color = (102, 255, 178) if self.darkmode else "m"
                     thresh_line_1 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
                                                      y=off_time_median[-window_size:] + std,
-                                                     pen=pg.mkPen("m", width=1., style=Qt.DashLine),
+                                                     pen=pg.mkPen(self.autoclean_color, width=1.5, style=Qt.DashLine),
                                                      setClickable=False,
                                                      name='median limit')
                     thresh_line_2 = pg.PlotCurveItem(x=list(limits_data.columns[-window_size:]),
                                                      y=off_time_median[-window_size:] - std,
-                                                     pen=pg.mkPen("m", width=1., style=Qt.DashLine),
+                                                     pen=pg.mkPen(self.autoclean_color, width=1.5, style=Qt.DashLine),
                                                      setClickable=False,
                                                      name='median limit')
                     ax.addItem(thresh_line_1)
                     ax.addItem(thresh_line_2)
 
-                    if __name__ == "__main__":
-                        median_line = pg.PlotCurveItem(y=median,
-                                                       pen=pg.mkPen("m", width=2.),
-                                                       setClickable=False,
-                                                       name='median line')
-                        ax.addItem(median_line)
+                    # if __name__ == "__main__":
+                    #     median_line = pg.PlotCurveItem(y=median,
+                    #                                    pen=pg.mkPen("m", width=2.),
+                    #                                    setClickable=False,
+                    #                                    name='median line')
+                    #     ax.addItem(median_line)
 
         self.selected_station = station
 
@@ -1092,7 +1106,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         Highlight the line selected and un-highlight any previously highlighted line.
         :param lines: list, PlotItem lines
         """
-
         def set_decay_selection_text(selected_data):
             """
             Update the status bar with information about the selected lines
@@ -1180,7 +1193,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Change the pen if the data is flagged for deletion
             if Deleted is False:
-                color = (96, 96, 96, 150)
+                # color = (96, 96, 96, 150)
+                color = copy.copy(self.linecolor)
+                color.append(150)
                 z_value = 2
             else:
                 color = (255, 0, 0, 100)
@@ -1195,7 +1210,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             # Colors for the lines if they selected
             if line in self.selected_lines:
                 if Deleted is False:
-                    color = (85, 85, 255, 200)  # Blue
+                    color = copy.copy(self.selection_color)
+                    color.append(200)
+                    # color = (85, 85, 255, 200)  # Blue
                     # color = (153, 85, 204, 200)  # Purple
                     z_value = 4
                 else:
@@ -1327,7 +1344,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         Signal slot, find the decay_axes plot under the mouse when the mouse is moved to determine which plot is active.
         :param evt: MouseMovement event
         """
-
         def normalize(point):
             """
             Normalize a point so it works as a percentage of the view box data coordinates.
@@ -1447,9 +1463,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         :param range: tuple, range of the linearRegionItem
         :param start: bool, if box select has just been started
         """
-        """
-        Using the range given by the signal doesn't always work properly when the click begins off-plot. 
-        """
+        # Using the range given by the signal doesn't always work properly when the click begins off-plot.
         if start:
             # If it's the start of the select, use the hover station since it seems to work better
             hover_station = self.profile_axes[0].items[1].x()  # The station hover line
@@ -1760,7 +1774,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         """
         Signal slot, cycle the profile plots to the next component
         """
-
         def get_comp_indexes():
             """
             Return the index of the stacked widget of each component present in the PEM file
@@ -1866,7 +1879,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         """
         Automatically detect and delete readings with outlier values.
         """
-
         def eval_decay(reading, std, median, max_removable):
             """
             Evaluate the reading and calculate if it should be flagged for deletion. Will stop deleting when
@@ -1942,7 +1954,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         """
         Automatically renames the repeat stations in the data.
         """
-
         def auto_rename_repeats(station):
             """
             Automatically rename a repeat station
@@ -2093,7 +2104,7 @@ class ProfileViewBox(pg.ViewBox):
 
     def __init__(self, *args, **kwds):
         pg.ViewBox.__init__(self, *args, **kwds)
-        color = r'#ce4a7e'
+        color = '#ce4a7e'
         brush = QBrush(QColor(color))
         pen = QPen(brush, 1)
 
@@ -2157,6 +2168,7 @@ class ProfileViewBox(pg.ViewBox):
 
 
 if __name__ == '__main__':
+    from src.qt_py import dark_palette
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser, DMPParser
     from pathlib import Path
@@ -2164,22 +2176,26 @@ if __name__ == '__main__':
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    darkmode = False
     pem_g = PEMGetter()
     parser = PEMParser()
     dmp_parser = DMPParser()
 
-    file = r"C:\_Data\2021\Nantou BF\Surface\Loop 5\RAW\_0816_pp.DMP2"
-    pem_file, errors = dmp_parser.parse(file)
+    # file = r"C:\_Data\2021\Nantou BF\Surface\Loop 5\RAW\_0816_pp.DMP2"
+    # pem_file, errors = dmp_parser.parse(file)
     # pem_file = parser.parse(r"C:\_Data\2021\Nantou BF\Surface\Loop 5\RAW\_0816_pp.PEM")
     # pem_file = pem_g.get_pems(folder="Raw Boreholes", file=r"SR-15-04 Z.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Boreholes", file="em21-155 z_0415.PEM")[0]
-    # pem_file = pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM")[0]
+    pem_file = pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\800E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\1200E.PEM")[0]  # TODO Test this for ordering worse to best readings
     # pem_file = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]
 
-    editor = PEMPlotEditor()
+    if darkmode:
+        app.setPalette(dark_palette)
+    editor = PEMPlotEditor(darkmode=darkmode)
     # editor.move(0, 0)
     editor.open(pem_file)
     # editor.auto_clean()

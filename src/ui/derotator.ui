@@ -7,14 +7,14 @@
     <x>0</x>
     <y>0</y>
     <width>1080</width>
-    <height>701</height>
+    <height>699</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QtWidgets.QHBoxLayout" name="horizontalLayout_2">
+   <layout class="QGridLayout" name="horizontalLayout_2">
     <property name="leftMargin">
      <number>0</number>
     </property>
@@ -27,7 +27,7 @@
     <property name="bottomMargin">
      <number>0</number>
     </property>
-    <item>
+    <item row="0" column="0">
      <widget class="QSplitter" name="splitter">
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
@@ -49,10 +49,10 @@
         </size>
        </property>
        <property name="frameShape">
-        <enum>QFrame::Box</enum>
+        <enum>QFrame::StyledPanel</enum>
        </property>
        <property name="frameShadow">
-        <enum>QFrame::Sunken</enum>
+        <enum>QFrame::Plain</enum>
        </property>
        <layout class="QGridLayout" name="gridLayout_3">
         <item row="1" column="0">
@@ -216,10 +216,10 @@ due to missing X and/or Y pair:</string>
         </sizepolicy>
        </property>
        <property name="frameShape">
-        <enum>QFrame::Box</enum>
+        <enum>QFrame::StyledPanel</enum>
        </property>
        <property name="frameShadow">
-        <enum>QFrame::Sunken</enum>
+        <enum>QFrame::Plain</enum>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_5">
         <property name="spacing">
@@ -324,10 +324,10 @@ due to missing X and/or Y pair:</string>
         </sizepolicy>
        </property>
        <property name="frameShape">
-        <enum>QFrame::Box</enum>
+        <enum>QFrame::StyledPanel</enum>
        </property>
        <property name="frameShadow">
-        <enum>QFrame::Sunken</enum>
+        <enum>QFrame::Plain</enum>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_7">
         <property name="spacing">
@@ -410,10 +410,7 @@ due to missing X and/or Y pair:</string>
            <attribute name="title">
             <string>Rotation</string>
            </attribute>
-           <layout class="QtWidgets.QHBoxLayout" name="horizontalLayout">
-            <property name="spacing">
-             <number>0</number>
-            </property>
+           <layout class="QGridLayout" name="horizontalLayout">
             <property name="leftMargin">
              <number>0</number>
             </property>
@@ -426,7 +423,10 @@ due to missing X and/or Y pair:</string>
             <property name="bottomMargin">
              <number>0</number>
             </property>
-            <item>
+            <property name="spacing">
+             <number>0</number>
+            </property>
+            <item row="0" column="0">
              <widget class="GraphicsLayoutWidget" name="rotation_view">
               <property name="minimumSize">
                <size>

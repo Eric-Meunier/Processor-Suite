@@ -64,7 +64,7 @@ class SurveyPlanner(QMainWindow):
 
         self.save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
         self.copy_shortcut = QShortcut(QKeySequence("Ctrl+C"), self)
-        self.save_shortcut.activated.connect(self.save_img)
+        self.save_shortcut.activated.connect(self.save_project)
         self.copy_shortcut.activated.connect(self.copy_img)
 
         # Status bar
@@ -1676,12 +1676,10 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.ax.clear()
 
         if not self.selected_loop:
-            logger.warning(f"Cannot plot hole without a loop.")
             self.ax.get_yaxis().set_visible(False)
             self.section_canvas.draw()
             return
         elif not self.selected_hole:
-            logger.warning(f"No hole is opened.")
             self.ax.get_yaxis().set_visible(False)
             self.section_canvas.draw()
             return
@@ -1693,7 +1691,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         proj = self.selected_hole.projection
         p1, p2 = self.selected_hole.get_section_extents()
-        # plot_hole_section(p1, p2, list(zip(xs, ys, zs)))
         plot_hole_section(proj)
 
         # Get the corners of the 2D section to plot the mag on
@@ -3137,9 +3134,9 @@ def main():
     planner.show()
     # planner.save_project()
     planner.open_project(filepath=r"C:\_Data\2021\TMC\Galloway Project\_Planning\LP-GA-01.LPF")
-    planner.gps_system_cbox.setCurrentIndex(2)
-    planner.gps_datum_cbox.setCurrentIndex(3)
-    planner.gps_zone_cbox.setCurrentIndex(18)
+    # planner.gps_system_cbox.setCurrentIndex(2)
+    # planner.gps_datum_cbox.setCurrentIndex(3)
+    # planner.gps_zone_cbox.setCurrentIndex(18)
     planner.crs_rbtn.click()
     # planner.view_map()
 

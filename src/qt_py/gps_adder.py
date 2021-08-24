@@ -956,6 +956,10 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
             self.plan_view.autoRange()
             self.section_view.autoRange()
 
+    def cell_changed(self, row, col):
+        # Don't check for errors for CollarPicker.
+        pass
+
     def open(self, gps, name=''):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
@@ -1374,20 +1378,20 @@ def main():
     samples_folder = Path(__file__).absolute().parents[2].joinpath(r'sample_files')
     line_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Line GPS'))
     loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Loop GPS'))
-    pg = PEMGetter()
+    # pg = PEMGetter()
 
-    # mw = CollarPicker()
-    # file = r"C:\_Data\2021\Canadian Palladium\EB-21-68\GPS\LOOP EB-1_0718.txt"
+    mw = CollarPicker()
+    file = r"C:\_Data\2021\TMC\Laurentia\GEN-21-09\GPS\Loop 09_0823.gpx"
 
     # mw = LoopAdder()
     # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
     # loop = TransmitterLoop(file)
 
-    mw = LineAdder()
+    # mw = LineAdder()
     # mw = ExcelTablePicker()
     # mw = DADSelector()
 
-    file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
+    # file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
     # file = samples_folder.joinpath(r'Raw Boreholes\OBS-88-027\RAW\Obalski.xlsx')
     # file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')
     # line = SurveyLine(str(file))
