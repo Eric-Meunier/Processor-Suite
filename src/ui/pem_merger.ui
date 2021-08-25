@@ -42,10 +42,10 @@
        <string notr="true">color:rgb(28, 28, 27)</string>
       </property>
       <property name="frameShape">
-       <enum>QFrame::Box</enum>
+       <enum>QFrame::StyledPanel</enum>
       </property>
       <property name="frameShadow">
-       <enum>QFrame::Sunken</enum>
+       <enum>QFrame::Plain</enum>
       </property>
       <layout class="QFormLayout" name="formLayout">
        <item row="0" column="0" colspan="2">
@@ -542,10 +542,10 @@
     <item>
      <widget class="QStackedWidget" name="profile_tab_widget">
       <property name="frameShape">
-       <enum>QFrame::Box</enum>
+       <enum>QFrame::StyledPanel</enum>
       </property>
       <property name="frameShadow">
-       <enum>QFrame::Sunken</enum>
+       <enum>QFrame::Plain</enum>
       </property>
       <property name="currentIndex">
        <number>0</number>
@@ -651,10 +651,10 @@
        <string notr="true">;color:rgb(206, 74, 126) </string>
       </property>
       <property name="frameShape">
-       <enum>QFrame::Box</enum>
+       <enum>QFrame::StyledPanel</enum>
       </property>
       <property name="frameShadow">
-       <enum>QFrame::Sunken</enum>
+       <enum>QFrame::Plain</enum>
       </property>
       <layout class="QFormLayout" name="formLayout_2">
        <item row="0" column="0" colspan="2">

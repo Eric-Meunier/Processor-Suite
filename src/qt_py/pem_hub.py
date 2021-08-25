@@ -74,6 +74,9 @@ logger = logging.getLogger(__name__)
 # Keep a list of widgets so they don't get garbage collected
 refs = []
 
+pg.setConfigOptions(antialias=True)
+pg.setConfigOption('crashWarning', True)
+
 
 class PEMHub(QMainWindow, Ui_PEMHub):
 
@@ -5147,7 +5150,7 @@ def main():
     app = QApplication(sys.argv)
     mw = PEMHub(app)
     # mw.actionDark_Theme.trigger()
-    pem_g = PEMGetter()
+    pem_getter = PEMGetter()
     pem_parser = PEMParser()
     dmp_parser = DMPParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
@@ -5157,15 +5160,17 @@ def main():
     # ri_files = list(samples_folder.joinpath(r"RI files\PEMPro RI and Suffix Error Files\KBNorth").glob("*.RI*"))
     # pem_files = [pem_parser.parse(r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW\3000E_0814.PEM")]
     # gps_files = r"C:\_Data\2021\TMC\Murchison\Barraute B\GPS\L3000E_0814.GPX"
-    # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
+    # pem_files.extend(pem_getter.get_pems(folder="Raw Boreholes", file="em21-156 xy_0416.PEM"))
 
-    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"EB-21-52\RAW\xy_0720.PEM")
-    # pem_files = pem_g.get_pems(number=15, random=True)
-    # pem_files = pem_g.get_pems(folder="Raw Surface", subfolder=r"Loop 4\Final", number=3)
-    # pem_files = pem_g.get_pems(folder='Iscaycruz', subfolder='Loop 1', number=4)
-    pem_files = pem_g.get_pems(folder="Raw Boreholes\EB-21-68\RAW", number=1)
-    # pem_files.extend(pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM"))
-    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
+    # pem_files = pem_getter.get_pems(folder="Raw Boreholes", file=r"EB-21-52\RAW\xy_0720.PEM")
+    # pem_files = pem_getter.get_pems(number=15, random=True)
+    # pem_files = pem_getter.get_pems(folder="Raw Surface", subfolder=r"Loop 4\Final", number=3)
+    # pem_files = pem_getter.get_pems(folder='Iscaycruz', subfolder='Loop 1', number=4)
+    # pem_files = pem_getter.get_pems(folder="Raw Boreholes\EB-21-68\RAW", number=1)
+    pem_files = pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0823.PEM")
+    pem_files.extend(pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0824.PEM"))
+    # pem_files.extend(pem_getter.get_pems(folder="Raw Boreholes", file="XY.PEM"))
+    # pem_files = pem_getter.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
     # assert len(pem_files) == len(ri_files)
 
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
@@ -5178,10 +5183,10 @@ def main():
 
     # mw.open_3d_map()
     # mw.add_dmp_files(dmp_files)
-    mw.table.selectRow(0)
-    # mw.table.selectAll()
+    # mw.table.selectRow(0)
+    mw.table.selectAll()
     # mw.open_pem_merger()
-    mw.open_pem_geometry()
+    # mw.open_pem_geometry()
     # mw.open_pem_plot_editor()
     # mw.open_channel_table_viewer()
     # mw.open_pdf_plot_printer()

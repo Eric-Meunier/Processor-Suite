@@ -134,13 +134,15 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         self.setupUi(self)
         self.installEventFilter(self)
         self.darkmode = darkmode
-        pg.setConfigOption('background', (66, 66, 66) if darkmode else (255, 255, 255))
-        pg.setConfigOption('foreground', (255, 255, 255) if darkmode else (53, 53, 53))
         self.setWindowTitle('PEM Merger')
         self.setWindowIcon(get_icon('pem_merger.png'))
 
-        self.pf1_color = (255, 255, 255) if self.darkmode else (28, 28, 27)
+        self.pf1_color = (255, 255, 255) if self.darkmode else (53, 53, 53)
+        # self.pf1_color = (255, 255, 255) if self.darkmode else (28, 28, 27)
+        # self.pf2_color = (102, 255, 255) if self.darkmode else (206, 74, 126)
         self.pf2_color = (255, 153, 204) if self.darkmode else (206, 74, 126)
+        self.brush_color = (66, 66, 66) if self.darkmode else "w"
+
         self.frame.setStyleSheet(f"color: rgb{self.pf1_color}")
         self.frame_2.setStyleSheet(f"color: rgb{self.pf2_color}")
         self.file_label_1.setStyleSheet(f"color: rgb{self.pf1_color}")
@@ -511,9 +513,9 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
 
             if self.actionSymbols.isChecked():
                 symbols = {'symbol': 'o',
-                           'symbolSize': 5,
+                           'symbolSize': 4,
                            'symbolPen': pg.mkPen(color, width=1.1),
-                           # 'symbolBrush': pg.mkBrush('w')
+                           'symbolBrush': pg.mkBrush(self.brush_color)
                            }
             else:
                 symbols = {'symbol': None}
@@ -521,15 +523,12 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
             curve.setData(x, y, pen=pg.mkPen(color), **symbols)
 
         if not isinstance(components, np.ndarray):
-            # Get the components
             if components is None or components == 'all':
                 components = self.components
 
         if pem_file == self.pf1:
-            # color = 'r'
             color = self.pf1_color
         else:
-            # color = 'b'
             color = self.pf2_color
 
         for component in components:
