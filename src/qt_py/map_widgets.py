@@ -31,11 +31,6 @@ from src.ui.contour_map import Ui_ContourMap
 
 logger = logging.getLogger(__name__)
 
-pg.setConfigOptions(antialias=True)
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
-pg.setConfigOption('crashWarning', True)
-
 
 class MapboxViewer(QMainWindow):
 
@@ -1238,6 +1233,10 @@ if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
 
     app = QApplication(sys.argv)
+    pg.setConfigOptions(antialias=True)
+    pg.setConfigOption('crashWarning', True)
+    pg.setConfigOption('background', 'w')
+    pg.setConfigOption('foreground', (53, 53, 53))
 
     getter = PEMGetter()
     files = getter.get_pems(folder='Iscaycruz', subfolder='Loop 1')

@@ -40,11 +40,6 @@ from src.ui.loop_planner import Ui_LoopPlanner
 
 logger = logging.getLogger(__name__)
 
-pg.setConfigOptions(antialias=True)
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
-pg.setConfigOption('crashWarning', True)
-
 default_color = (0, 0, 0, 150)
 selection_color = '#1976D2'
 
@@ -3119,6 +3114,11 @@ class RectLoop(pg.RectROI):
 def main():
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
     app = QApplication(sys.argv)
+    pg.setConfigOptions(antialias=True)
+    pg.setConfigOption('crashWarning', True)
+    pg.setConfigOption('background', 'w')
+    pg.setConfigOption('foreground', (53, 53, 53))
+
     planner = LoopPlanner()
     # planner = GridPlanner()
 

@@ -17,11 +17,6 @@ from src.ui.derotator import Ui_Derotator
 
 logger = logging.getLogger(__name__)
 
-pg.setConfigOptions(antialias=True)
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
-pg.setConfigOption('crashWarning', True)
-
 symbol_size = 6
 cpp_color = (0, 153, 153, 100)
 mpp_color = (255, 0, 255, 100)
@@ -744,6 +739,10 @@ def main():
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser
     app = QApplication(sys.argv)
+    pg.setConfigOptions(antialias=True)
+    pg.setConfigOption('crashWarning', True)
+    pg.setConfigOption('background', 'w')
+    pg.setConfigOption('foreground', (53, 53, 53))
 
     pem_g = PEMGetter()
     parser = PEMParser()

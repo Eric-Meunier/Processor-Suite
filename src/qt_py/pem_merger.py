@@ -16,8 +16,6 @@ from src.ui.pem_merger import Ui_PEMMerger
 
 logger = logging.getLogger(__name__)
 
-pg.setConfigOptions(antialias=True)
-pg.setConfigOption('crashWarning', True)
 pd.options.mode.chained_assignment = None  # default='warn'
 
 
@@ -676,6 +674,10 @@ if __name__ == '__main__':
     darkmode = False
     if darkmode:
         app.setPalette(dark_palette)
+    pg.setConfigOptions(antialias=True)
+    pg.setConfigOption('crashWarning', True)
+    pg.setConfigOption('background', 'w')
+    pg.setConfigOption('foreground', (53, 53, 53))
 
     pem_getter = PEMGetter()
     # pem_files = pem_getter.get_pems(client='Minera', number=2)

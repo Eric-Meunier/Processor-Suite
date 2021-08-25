@@ -231,7 +231,6 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         :param path: str or Path object, directory path of the folder
         :param project_dir: project directory of the parent widget. Will use this as the default path if given.
         """
-
         def add_to_table(file, dir, table, icon):
             """
             Add the file to the table.

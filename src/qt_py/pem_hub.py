@@ -3811,10 +3811,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.status_bar.showMessage(f"CRS information changed to {crs.name}.", 2000)
 
     def set_dark_mode(self):
-        self.app.setPalette(dark_palette if self.actionDark_Theme.isChecked() else light_palette)
+        darkmode = self.actionDark_Theme.isChecked()
+        self.app.setPalette(dark_palette if darkmode else light_palette)
+        pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
+        pg.setConfigOption('foreground', 'w' if darkmode else (53, 53, 53))
+
         # text_color = "rgb(192, 192, 255)" if self.actionDark_Theme.isChecked() else "rgb(64, 64, 255)"
         # text_color = "rgb(42,130,218)" if self.actionDark_Theme.isChecked() else "rgb(0,120,215)"
-        text_color = "rgb(46,151,255)" if self.actionDark_Theme.isChecked() else "rgb(0,107,189)"
+        text_color = "rgb(46,151,255)" if darkmode else "rgb(0,107,189)"
         self.selection_files_label.setStyleSheet(f'color: {text_color}')
         self.selection_timebase_label.setStyleSheet(f'color: {text_color}')
         self.selection_zts_label.setStyleSheet(f'color: {text_color}')

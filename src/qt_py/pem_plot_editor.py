@@ -27,8 +27,6 @@ will not intersect the area of the QRectF.
 """
 
 logger = logging.getLogger(__name__)
-pg.setConfigOption('crashWarning', True)
-pg.setConfigOptions(antialias=True)
 options.mode.chained_assignment = None  # default='warn'
 
 # TODO Change auto clean to have a start and end channel
@@ -2172,6 +2170,11 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
+    pg.setConfigOptions(antialias=True)
+    pg.setConfigOption('crashWarning', True)
+    pg.setConfigOption('background', 'w')
+    pg.setConfigOption('foreground', (53, 53, 53))
+
     darkmode = True
     pem_g = PEMGetter()
     parser = PEMParser()

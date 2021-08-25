@@ -20,11 +20,6 @@ from src.ui.loop_adder import Ui_LoopAdder
 
 logger = logging.getLogger(__name__)
 
-pg.setConfigOptions(antialias=True)
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
-pg.setConfigOption('crashWarning', True)
-
 empty_background = QColor(255, 255, 255, 0)
 
 
@@ -1375,6 +1370,11 @@ def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
+    pg.setConfigOptions(antialias=True)
+    pg.setConfigOption('crashWarning', True)
+    pg.setConfigOption('background', 'w')
+    pg.setConfigOption('foreground', (53, 53, 53))
+
     samples_folder = Path(__file__).absolute().parents[2].joinpath(r'sample_files')
     line_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Line GPS'))
     loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Loop GPS'))

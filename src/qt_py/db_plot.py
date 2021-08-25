@@ -15,16 +15,8 @@ from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, Q
                                QFileDialog, QVBoxLayout, QLabel, QApplication)
 from src.qt_py import icons_path, read_file, get_icon
 
-logging.basicConfig()
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
-
-pg.setConfigOptions(antialias=True)
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
-pg.setConfigOption('crashWarning', True)
-
-__version__ = '0.5'
 
 
 class DBPlotter(QMainWindow):
@@ -41,7 +33,7 @@ class DBPlotter(QMainWindow):
         self.y = 0
 
         # Format the window
-        self.setWindowTitle("DB Plot v" + str(__version__))
+        self.setWindowTitle("DB Plot")
         self.setWindowIcon(get_icon('db_plot.png'))
         self.resize(800, 700)
         self.setAcceptDrops(True)
@@ -515,6 +507,10 @@ class DBPlot(QMainWindow):
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
+    pg.setConfigOptions(antialias=True)
+    pg.setConfigOption('crashWarning', True)
+    pg.setConfigOption('background', 'w')
+    pg.setConfigOption('foreground', (53, 53, 53))
     mw = DBPlotter()
 
     samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files\Damping box files'))

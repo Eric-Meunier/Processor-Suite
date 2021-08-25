@@ -15,11 +15,6 @@ from src.ui.loop_calculator import Ui_LoopCalculator
 
 logger = logging.getLogger(__name__)
 
-pg.setConfigOptions(antialias=True)
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
-pg.setConfigOption('crashWarning', True)
-
 
 class LoopCalculator(QMainWindow, Ui_LoopCalculator):
 
@@ -304,6 +299,10 @@ class LoopCalculator(QMainWindow, Ui_LoopCalculator):
 
 
 if __name__ == '__main__':
+    pg.setConfigOptions(antialias=True)
+    pg.setConfigOption('crashWarning', True)
+    pg.setConfigOption('background', 'w')
+    pg.setConfigOption('foreground', (53, 53, 53))
     app = QApplication(sys.argv)
 
     lc = LoopCalculator()
