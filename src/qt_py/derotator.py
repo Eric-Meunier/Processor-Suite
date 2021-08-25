@@ -8,11 +8,11 @@ import pandas as pd
 import pyqtgraph as pg
 # from src.logger import Log
 from PySide2.QtCore import Signal, QEvent
-from PySide2.QtGui import QIcon, QKeySequence
+from PySide2.QtGui import QKeySequence
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QApplication, QShortcut)
 
 from src.pem.pem_file import PEMFile
-from src.qt_py import icons_path, NonScientific
+from src.qt_py import NonScientific, get_icon
 from src.ui.derotator import Ui_Derotator
 
 logger = logging.getLogger(__name__)
@@ -46,7 +46,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.soa = self.soa_sbox.value()
 
         self.setWindowTitle('XY De-rotation')
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'derotate.png')))
+        self.setWindowIcon(get_icon('derotate.png'))
 
         self.message = QMessageBox()
 

@@ -13,7 +13,7 @@ from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QMenu, QAction,
                                QFileDialog, QVBoxLayout, QLabel, QApplication)
-from src.qt_py import icons_path, read_file
+from src.qt_py import icons_path, read_file, get_icon
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ class DBPlotter(QMainWindow):
 
         # Format the window
         self.setWindowTitle("DB Plot v" + str(__version__))
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'db_plot.png')))
+        self.setWindowIcon(get_icon('db_plot.png'))
         self.resize(800, 700)
         self.setAcceptDrops(True)
 
@@ -83,15 +83,15 @@ class DBPlotter(QMainWindow):
 
         self.openFile_Action = QAction('Open File', self.file_menu)
         self.openFile_Action.triggered.connect(self.open_file_dialog)
-        self.openFile_Action.setIcon(QIcon(str(icons_path.joinpath("open.png"))))
+        self.openFile_Action.setIcon(get_icon("open.png"))
         self.actionSave_Screenshot = QAction("Save Screenshot")
         self.actionSave_Screenshot.setShortcut("Ctrl+S")
         self.actionSave_Screenshot.triggered.connect(self.save_img)
-        self.actionSave_Screenshot.setIcon(QIcon(str(icons_path.joinpath("_save.png"))))
+        self.actionSave_Screenshot.setIcon(get_icon("_save.png"))
         self.actionCopy_Screenshot = QAction("Copy Screenshot")
         self.actionCopy_Screenshot.setShortcut("Ctrl+C")
         self.actionCopy_Screenshot.triggered.connect(self.copy_img)
-        self.actionCopy_Screenshot.setIcon(QIcon(str(icons_path.joinpath("copy.png"))))
+        self.actionCopy_Screenshot.setIcon(get_icon("copy.png"))
 
         self.show_lr_action = QAction('Show Sliding Window', self.view_menu, checkable=True)
         self.show_lr_action.setChecked(True)

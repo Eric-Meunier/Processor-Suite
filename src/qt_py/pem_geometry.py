@@ -9,7 +9,7 @@ import mplcursors
 import numpy as np
 import pandas as pd
 from PySide2.QtCore import Qt, Signal
-from PySide2.QtGui import QIcon, QKeySequence
+from PySide2.QtGui import QKeySequence
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QWidget, QErrorMessage,
                                QFileDialog, QVBoxLayout, QApplication, QShortcut)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -17,7 +17,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from src.gps.gps_editor import BoreholeSegments
 from src.mpl.interactive_spline import InteractiveSpline
 from src.mpl.zoom_pan import ZoomPan
-from src.qt_py import icons_path
+from src.qt_py import get_icon
 from src.qt_py.gps_adder import DADSelector
 from src.ui.pem_geometry import Ui_PEMGeometry
 
@@ -86,7 +86,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         self.setupUi(self)
 
         self.setWindowTitle('PEM Geometry')
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'pem_geometry.png')))
+        self.setWindowIcon(get_icon('pem_geometry.png'))
         self.resize(1100, 800)
 
         self.message = QMessageBox()
@@ -186,15 +186,15 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 
         # Signals
         self.actionOpen_Geometry_File.triggered.connect(self.open_file_dialog)
-        self.actionOpen_Geometry_File.setIcon(QIcon(str(icons_path.joinpath("open.png"))))
+        self.actionOpen_Geometry_File.setIcon(get_icon("open.png"))
         self.actionAllow_Negative_Azimuth.triggered.connect(lambda: self.plot_tool_values(update=True))
 
         self.actionSave_Screenshot.setShortcut("Ctrl+S")
         self.actionSave_Screenshot.triggered.connect(self.save_img)
-        self.actionSave_Screenshot.setIcon(QIcon(str(icons_path.joinpath("save_as.png"))))
+        self.actionSave_Screenshot.setIcon(get_icon("save_as.png"))
         self.actionCopy_Screenshot.setShortcut("Ctrl+C")
         self.actionCopy_Screenshot.triggered.connect(self.copy_img)
-        self.actionCopy_Screenshot.setIcon(QIcon(str(icons_path.joinpath("copy.png"))))
+        self.actionCopy_Screenshot.setIcon(get_icon("copy.png"))
 
         self.reset_range_shortcut = QShortcut(QKeySequence(' '), self)
         self.reset_range_shortcut.activated.connect(self.update_plots)

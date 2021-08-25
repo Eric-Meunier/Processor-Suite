@@ -12,7 +12,7 @@ from PySide2.QtWidgets import (QMainWindow, QMessageBox, QMenu, QErrorMessage,
                                QFileSystemModel, QTableWidgetItem, QTableWidget, QPushButton, QAbstractItemView)
 from pyunpack import Archive
 
-from src.qt_py import icons_path, get_icon, clear_table
+from src.qt_py import get_icon, get_extension_icon, clear_table
 from src.qt_py.db_plot import DBPlotter
 from src.ui.unpacker import Ui_Unpacker
 
@@ -28,9 +28,9 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         self.setupUi(self)
 
         self.setWindowTitle('Unpacker')
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'unpacker.png')))
-        self.open_folder_action.setIcon(QIcon(os.path.join(icons_path, 'open.png')))
-        self.reset_action.setIcon(QIcon(os.path.join(icons_path, 'undo.png')))
+        self.setWindowIcon(get_icon('unpacker.png'))
+        self.open_folder_action.setIcon(get_icon('open.png'))
+        self.reset_action.setIcon(get_icon('undo.png'))
 
         self.setAcceptDrops(True)
 
@@ -300,7 +300,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
             root_as_path = Path(root)
             for file in files:
                 ext = Path(file).suffix.lower()
-                icon = get_icon(Path(file))
+                icon = get_extension_icon(Path(file))
 
                 if any([ext in dmp_extensions]):
                     # print(f"{file} is a DMP file")

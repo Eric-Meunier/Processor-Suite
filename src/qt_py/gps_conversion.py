@@ -1,10 +1,10 @@
 from PySide2.QtCore import Signal
-from PySide2.QtGui import QIcon, QIntValidator
+from PySide2.QtGui import QIntValidator
 from PySide2.QtWidgets import (QMessageBox, QWidget)
 from pyproj import CRS
 
 from src.logger import logger
-from src.qt_py import icons_path
+from src.qt_py import get_icon
 from src.ui.gps_conversion import Ui_GPSConversion
 
 
@@ -14,7 +14,7 @@ class GPSConversionWidget(QWidget, Ui_GPSConversion):
     def __init__(self, parent=None):
         super().__init__()
         self.setupUi(self)
-        self.setWindowIcon(QIcon(str(icons_path.joinpath("gpx_creator.png"))))
+        self.setWindowIcon(get_icon("gpx_creator.png"))
         self.parent = parent
         self.message = QMessageBox()
 

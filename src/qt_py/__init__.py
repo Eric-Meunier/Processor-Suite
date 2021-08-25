@@ -42,7 +42,12 @@ dark_palette.setColor(QPalette.Disabled, QPalette.Highlight, QColor(80, 80, 80))
 dark_palette.setColor(QPalette.HighlightedText, Qt.white)
 dark_palette.setColor(QPalette.Disabled, QPalette.HighlightedText, Qt.gray)  # QColor(127, 127, 127))
 
-def get_icon(filepath):
+
+def get_icon(filename):
+    return QIcon(str(icons_path.joinpath(filename)))
+
+
+def get_extension_icon(filepath):
     ext = filepath.suffix.lower()
     if ext in ['.xls', '.xlsx', '.csv']:
         icon_pix = QPixmap(str(icons_path.joinpath('excel_file.png')))

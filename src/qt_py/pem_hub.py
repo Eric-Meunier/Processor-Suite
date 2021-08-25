@@ -30,7 +30,7 @@ from matplotlib.colors import LinearSegmentedColormap as LCMap
 from pyproj import CRS
 
 from src import __version__, app_data_dir
-from src.qt_py import (icons_path, get_icon, CustomProgressDialog, read_file, light_palette, dark_palette)
+from src.qt_py import (icons_path, get_extension_icon, get_icon, CustomProgressDialog, read_file, light_palette, dark_palette)
 from src.qt_py.db_plot import DBPlotter
 from src.qt_py.pem_geometry import PEMGeometry
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
@@ -88,51 +88,52 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.setAcceptDrops(True)
 
             self.setWindowTitle("PEMPro  v" + str(__version__))
-            self.setWindowIcon(QIcon(str(icons_path.joinpath('conder.png'))))
+            self.setWindowIcon(get_icon('conder.png'))
 
             self.table.horizontalHeader().hide()
 
             # Set icons
-            self.actionOpenFile.setIcon(QIcon(str(icons_path.joinpath("open.png"))))
-            self.actionSaveFiles.setIcon(QIcon(str(icons_path.joinpath("save.png"))))
-            self.menuExport_Files.setIcon(QIcon(str(icons_path.joinpath("export.png"))))
-            self.actionPrint_Plots_to_PDF.setIcon(QIcon(str(icons_path.joinpath("pdf.png"))))
+            self.actionOpenFile.setIcon(get_icon("open.png"))
+            self.actionSaveFiles.setIcon(get_icon("save.png"))
+            self.menuExport_Files.setIcon(get_icon("export.png"))
+            self.actionPrint_Plots_to_PDF.setIcon(get_icon("pdf.png"))
 
-            self.actionAverage_All_PEM_Files.setIcon(QIcon(str(icons_path.joinpath("average.png"))))
-            self.actionSplit_All_PEM_Files.setIcon(QIcon(str(icons_path.joinpath("split.png"))))
-            self.actionScale_All_Currents.setIcon(QIcon(str(icons_path.joinpath("current.png"))))
-            self.actionChange_All_Coil_Areas.setIcon(QIcon(str(icons_path.joinpath("coil.png"))))
-            self.menuReverse_Polarity.setIcon(QIcon(str(icons_path.joinpath("reverse.png"))))
+            self.actionAverage_All_PEM_Files.setIcon(get_icon("average.png"))
+            self.actionSplit_All_PEM_Files.setIcon(get_icon("split.png"))
+            self.actionScale_All_Currents.setIcon(get_icon("current.png"))
+            self.actionChange_All_Coil_Areas.setIcon(get_icon("coil.png"))
+            self.menuReverse_Polarity.setIcon(get_icon("reverse.png"))
 
-            self.actionSave_as_KMZ.setIcon(QIcon(str(icons_path.joinpath("google_earth.png"))))
-            self.actionExport_All_GPS.setIcon(QIcon(str(icons_path.joinpath("csv.png"))))
-            self.actionConvert_GPS.setIcon(QIcon(str(icons_path.joinpath("convert_gps.png"))))
+            self.actionSave_as_KMZ.setIcon(get_icon("google_earth.png"))
+            self.actionExport_All_GPS.setIcon(get_icon("csv.png"))
+            self.actionConvert_GPS.setIcon(get_icon("convert_gps.png"))
 
-            self.actionQuick_Map.setIcon(QIcon(str(icons_path.joinpath("gps_viewer.png"))))
-            self.actionTile_Map.setIcon(QIcon(str(icons_path.joinpath("folium.png"))))
-            self.actionContour_Map.setIcon(QIcon(str(icons_path.joinpath("contour_map.png"))))
-            self.action3D_Map.setIcon(QIcon(str(icons_path.joinpath("3d_map.png"))))
-            self.actionGoogle_Earth.setIcon(QIcon(str(icons_path.joinpath("google_earth.png"))))
-            self.actionMake_DXF.setIcon(QIcon(str(icons_path.joinpath("dxf.png"))))
+            self.actionQuick_Map.setIcon(get_icon("gps_viewer.png"))
+            self.actionTile_Map.setIcon(get_icon("folium.png"))
+            self.actionContour_Map.setIcon(get_icon("contour_map.png"))
+            self.action3D_Map.setIcon(get_icon("3d_map.png"))
+            self.actionGoogle_Earth.setIcon(get_icon("google_earth.png"))
+            self.actionMake_DXF.setIcon(get_icon("dxf.png"))
 
-            self.actionUnpacker.setIcon(QIcon(str(icons_path.joinpath("unpacker.png"))))
-            self.actionDamping_Box_Plotter.setIcon(QIcon(str(icons_path.joinpath("db_plot.png"))))
-            self.actionLoop_Planner.setIcon(QIcon(str(icons_path.joinpath("loop_planner.png"))))
-            self.actionGrid_Planner.setIcon(QIcon(str(icons_path.joinpath("grid_planner.png"))))
-            self.actionLoop_Current_Calculator.setIcon(QIcon(str(icons_path.joinpath("voltmeter.png"))))
-            self.actionConvert_Timebase_Frequency.setIcon(QIcon(str(icons_path.joinpath("freq_timebase_calc.png"))))
-            self.actionGPX_Creator.setIcon(QIcon(str(icons_path.joinpath("garmin_file.png"))))
+            self.actionUnpacker.setIcon(get_icon("unpacker.png"))
+            self.actionDamping_Box_Plotter.setIcon(get_icon("db_plot.png"))
+            self.actionLoop_Planner.setIcon(get_icon("loop_planner.png"))
+            self.actionGrid_Planner.setIcon(get_icon("grid_planner.png"))
+            self.actionLoop_Current_Calculator.setIcon(get_icon("voltmeter.png"))
+            self.actionConvert_Timebase_Frequency.setIcon(get_icon("freq_timebase_calc.png"))
+            self.actionGPX_Creator.setIcon(get_icon("garmin_file.png"))
 
-            self.actionView_Logs.setIcon(QIcon(str(icons_path.joinpath("txt_file.png"))))
+            self.actionReset_Settings.setIcon(get_icon("undo.png"))
+            self.actionView_Logs.setIcon(get_icon("txt_file.png"))
 
-            self.refresh_pem_list_btn.setIcon(QIcon(str(icons_path.joinpath("refresh.png"))))
-            self.filter_pem_list_btn.setIcon(QIcon(str(icons_path.joinpath("filter.png"))))
-            self.add_pem_btn.setIcon(QIcon(str(icons_path.joinpath("add_square.png"))))
-            self.remove_pem_btn.setIcon(QIcon(str(icons_path.joinpath("minus.png"))))
-            self.refresh_gps_list_btn.setIcon(QIcon(str(icons_path.joinpath("refresh.png"))))
-            self.filter_gps_list_btn.setIcon(QIcon(str(icons_path.joinpath("filter.png"))))
-            self.add_gps_btn.setIcon(QIcon(str(icons_path.joinpath("add_square.png"))))
-            self.remove_gps_btn.setIcon(QIcon(str(icons_path.joinpath("minus.png"))))
+            self.refresh_pem_list_btn.setIcon(get_icon("refresh.png"))
+            self.filter_pem_list_btn.setIcon(get_icon("filter.png"))
+            self.add_pem_btn.setIcon(get_icon("add_square.png"))
+            self.remove_pem_btn.setIcon(get_icon("remove.png"))
+            self.refresh_gps_list_btn.setIcon(get_icon("refresh.png"))
+            self.filter_gps_list_btn.setIcon(get_icon("filter.png"))
+            self.add_gps_btn.setIcon(get_icon("add_square.png"))
+            self.remove_gps_btn.setIcon(get_icon("remove.png"))
 
         def init_actions():
             def share_gps(obj_str):
@@ -166,23 +167,23 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             # Remove, open, and save PEM files
             self.remove_file_action = QAction("Remove", self)
             self.remove_file_action.triggered.connect(self.remove_pem_file)
-            self.remove_file_action.setIcon(QIcon(str(icons_path.joinpath('remove.png'))))
+            self.remove_file_action.setIcon(get_icon('remove.png'))
             self.open_file_action = QAction("Open", self)
             self.open_file_action.triggered.connect(self.open_in_text_editor)
-            self.open_file_action.setIcon(QIcon(str(icons_path.joinpath('txt_file.png'))))
+            self.open_file_action.setIcon(get_icon('txt_file.png'))
             self.save_file_action = QAction("Save", self)
-            self.save_file_action.setIcon(QIcon(str(icons_path.joinpath('save.png'))))
+            self.save_file_action.setIcon(get_icon('save.png'))
             self.save_file_action.triggered.connect(lambda: self.save_pem_files(selected=True))
             self.save_file_as_action = QAction("Save As...", self)
-            self.save_file_as_action.setIcon(QIcon(str(icons_path.joinpath('save_as.png'))))
+            self.save_file_as_action.setIcon(get_icon('save_as.png'))
             self.save_file_as_action.triggered.connect(self.save_pem_file_as)
             self.copy_to_cliboard_action = QAction("Copy to Clipboard", self)
-            self.copy_to_cliboard_action.setIcon(QIcon(str(icons_path.joinpath('copy.png'))))
+            self.copy_to_cliboard_action.setIcon(get_icon('copy.png'))
             self.copy_to_cliboard_action.triggered.connect(self.copy_pems_to_clipboard)
 
             # Exports
             self.export_pem_action = QAction("PEM", self)
-            self.export_pem_action.setIcon(QIcon(str(icons_path.joinpath('crone_logo.png'))))
+            self.export_pem_action.setIcon(get_icon('crone_logo.png'))
             self.export_pem_action.triggered.connect(lambda: self.export_pem_files(selected=True, processed=False))
 
             self.export_dad_action = QAction("DAD", self)
@@ -193,17 +194,17 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             # View channel table
             self.action_view_channels = QAction("Channel Table", self)
-            self.action_view_channels.setIcon(QIcon(str(icons_path.joinpath("table.png"))))
+            self.action_view_channels.setIcon(get_icon("table.png"))
             self.action_view_channels.triggered.connect(self.open_channel_table_viewer)
 
             # Merge PEM files
             self.merge_action = QAction("Merge", self)
-            self.merge_action.setIcon(QIcon(str(icons_path.joinpath('pem_merger.png'))))
+            self.merge_action.setIcon(get_icon('pem_merger.png'))
             self.merge_action.triggered.connect(self.open_pem_merger)
 
             # Print PDFs
             self.print_plots_action = QAction("Print Plots", self)
-            self.print_plots_action.setIcon(QIcon(str(icons_path.joinpath('pdf.png'))))
+            self.print_plots_action.setIcon(get_icon('pdf.png'))
             self.print_plots_action.triggered.connect(lambda: self.open_pdf_plot_printer(selected=True))
 
             # Extract stations
@@ -219,7 +220,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             # Magnetic declination calculator
             self.calc_mag_dec_action = QAction("Magnetic Declination", self)
-            self.calc_mag_dec_action.setIcon(QIcon(str(icons_path.joinpath('mag_field.png'))))
+            self.calc_mag_dec_action.setIcon(get_icon('mag_field.png'))
             self.calc_mag_dec_action.triggered.connect(self.open_mag_dec)
 
             # View GPS
@@ -243,26 +244,26 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             # Plot editor
             self.open_plot_editor_action = QAction("Plot", self)
             self.open_plot_editor_action.triggered.connect(self.open_pem_plot_editor)
-            self.open_plot_editor_action.setIcon(QIcon(str(icons_path.joinpath('plot_editor.png'))))
+            self.open_plot_editor_action.setIcon(get_icon('plot_editor.png'))
 
             # Quick Map
             self.open_quick_map_action = QAction("Quick Map", self)
             self.open_quick_map_action.triggered.connect(lambda: self.open_quick_map(selected=True))
-            self.open_quick_map_action.setIcon(QIcon(str(icons_path.joinpath('gps_viewer.png'))))
+            self.open_quick_map_action.setIcon(get_icon('gps_viewer.png'))
 
             # Data editing/processing
             self.average_action = QAction("Average", self)
             self.average_action.triggered.connect(lambda: self.average_pem_data(selected=True))
-            self.average_action.setIcon(QIcon(str(icons_path.joinpath('average.png'))))
+            self.average_action.setIcon(get_icon('average.png'))
             self.split_action = QAction("Split Channels", self)
             self.split_action.triggered.connect(lambda: self.split_pem_channels(selected=True))
-            self.split_action.setIcon(QIcon(str(icons_path.joinpath('split.png'))))
+            self.split_action.setIcon(get_icon('split.png'))
             self.scale_current_action = QAction("Scale Current", self)
             self.scale_current_action.triggered.connect(lambda: self.scale_pem_current(selected=True))
-            self.scale_current_action.setIcon(QIcon(str(icons_path.joinpath('current.png'))))
+            self.scale_current_action.setIcon(get_icon('current.png'))
             self.scale_ca_action = QAction("Scale Coil Area", self)
             self.scale_ca_action.triggered.connect(lambda: self.scale_pem_coil_area(selected=True))
-            self.scale_ca_action.setIcon(QIcon(str(icons_path.joinpath('coil.png'))))
+            self.scale_ca_action.setIcon(get_icon('coil.png'))
             # self.mag_offset_action = QAction("Mag Offset", self)
             # self.mag_offset_action.triggered.connect(lambda: self.mag_offset_lastchn(selected=True))
 
@@ -284,12 +285,12 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             # Derotation
             self.derotate_action = QAction("De-rotate XY", self)
             self.derotate_action.triggered.connect(self.open_derotator)
-            self.derotate_action.setIcon(QIcon(str(icons_path.joinpath('derotate.png'))))
+            self.derotate_action.setIcon(get_icon('derotate.png'))
 
             # Borehole geometry
             self.get_geometry_action = QAction("Geometry", self)
             self.get_geometry_action.triggered.connect(self.open_pem_geometry)
-            self.get_geometry_action.setIcon(QIcon(str(icons_path.joinpath('pem_geometry.png'))))
+            self.get_geometry_action.setIcon(get_icon('pem_geometry.png'))
 
             # Rename lines and files
             self.rename_lines_action = QAction("Rename Lines/Holes", self)
@@ -322,23 +323,23 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             # View submenu
             self.view_menu = QMenu('View', self.menu)
-            self.view_menu.setIcon(QIcon(str(icons_path.joinpath('view.png'))))
+            self.view_menu.setIcon(get_icon('view.png'))
 
             # Add the export submenu
             self.export_menu = QMenu('Export...', self.menu)
-            self.export_menu.setIcon(QIcon(str(icons_path.joinpath('export.png'))))
+            self.export_menu.setIcon(get_icon('export.png'))
 
             # Add the extract submenu
             self.extract_menu = QMenu('Extract...', self.menu)
-            self.extract_menu.setIcon(QIcon(str(icons_path.joinpath('station_splitter.png'))))
+            self.extract_menu.setIcon(get_icon('station_splitter.png'))
 
             # Share submenu
             self.share_menu = QMenu('Share', self.menu)
-            self.share_menu.setIcon(QIcon(str(icons_path.joinpath('share_gps.png'))))
+            self.share_menu.setIcon(get_icon('share_gps.png'))
 
             # Reverse data submenu
             self.reverse_menu = QMenu('Reverse', self.menu)
-            self.reverse_menu.setIcon(QIcon(str(icons_path.joinpath('reverse.png'))))
+            self.reverse_menu.setIcon(get_icon('reverse.png'))
 
             # 'File' menu
             self.actionOpenFile.triggered.connect(self.open_file_dialog)
@@ -932,19 +933,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             # Status bar formatting
             self.selection_files_label = QLabel()
             self.selection_files_label.setMargin(3)
-            self.selection_files_label.setStyleSheet('color: blue')
             self.selection_timebase_label = QLabel()
             self.selection_timebase_label.setMargin(3)
-            self.selection_timebase_label.setStyleSheet('color: blue')
             self.selection_zts_label = QLabel()
             self.selection_zts_label.setMargin(3)
-            self.selection_zts_label.setStyleSheet('color: blue')
             self.selection_survey_label = QLabel()
             self.selection_survey_label.setMargin(3)
-            self.selection_survey_label.setStyleSheet('color: blue')
             self.selection_derotation_label = QLabel()
             self.selection_derotation_label.setMargin(3)
-            self.selection_derotation_label.setStyleSheet('color: blue')
             self.epsg_label = QLabel()
             self.epsg_label.setMargin(3)
 
@@ -994,6 +990,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         init_signals()
 
         self.load_settings()
+        self.fill_pem_list()
+        self.fill_gps_list()
         self.set_dark_mode()
 
     def center(self):
@@ -2309,6 +2307,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
     def open_unpacker(self, folder=None):
         def open_unpacker_dir(folder_dir):
             self.set_project_dir(folder_dir)
+            self.move_dir_tree(folder_dir)
 
         self.unpacker.open_project_folder_sig.connect(open_unpacker_dir)
         if folder:
@@ -2583,8 +2582,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             gps_files = get_filtered_gps()
             for file in gps_files:
                 if file.stem != '.txt':
-                    self.gps_list.addItem(QListWidgetItem(get_icon(file),
-                                                                    f"{str(file.relative_to(self.project_dir))}"))
+                    self.gps_list.addItem(QListWidgetItem(get_extension_icon(file),
+                                                          f"{str(file.relative_to(self.project_dir))}"))
 
     def fill_pem_list(self):
         """
@@ -2687,7 +2686,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         else:
             pem_files = get_filtered_pems()
             for file in pem_files:
-                self.pem_list.addItem(QListWidgetItem(get_icon(file),
+                self.pem_list.addItem(QListWidgetItem(get_extension_icon(file),
                                                       f"{str(file.relative_to(self.project_dir))}"))
 
     def parse_crs(self, filepath):
@@ -3813,7 +3812,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
     def set_dark_mode(self):
         self.app.setPalette(dark_palette if self.actionDark_Theme.isChecked() else light_palette)
-        text_color = "rgb(192, 192, 255)" if self.actionDark_Theme.isChecked() else "rgb(64, 64, 255)"
+        # text_color = "rgb(192, 192, 255)" if self.actionDark_Theme.isChecked() else "rgb(64, 64, 255)"
+        # text_color = "rgb(42,130,218)" if self.actionDark_Theme.isChecked() else "rgb(0,120,215)"
+        text_color = "rgb(46,151,255)" if self.actionDark_Theme.isChecked() else "rgb(0,107,189)"
         self.selection_files_label.setStyleSheet(f'color: {text_color}')
         self.selection_timebase_label.setStyleSheet(f'color: {text_color}')
         self.selection_zts_label.setStyleSheet(f'color: {text_color}')
@@ -4220,7 +4221,7 @@ class PathFilter(QWidget):
         self.filetype = filetype
         self.parent = parent
         self.setWindowTitle(f"{filetype} File Filter")
-        self.setWindowIcon(QIcon(str(icons_path.joinpath('filter.png'))))
+        self.setWindowIcon(get_icon('filter.png'))
 
         self.include_files_edit = QLineEdit()
         self.include_files_edit.setToolTip("Separate items with commas [,]")
@@ -4332,7 +4333,7 @@ class PEMBrowser(QTextBrowser):
     def __init__(self, pem_file):
         super().__init__()
         self.resize(600, 800)
-        self.setWindowIcon(QIcon(str(icons_path.joinpath('txt_file.png'))))
+        self.setWindowIcon(get_icon('txt_file.png'))
         self.setWindowTitle(f"{pem_file.filepath.name}")
 
         with open(str(pem_file.filepath), 'r') as file:
@@ -4422,7 +4423,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
         self.parent = parent
         self.setupUi(self)
         self.setWindowTitle("PDF Printing Options")
-        self.setWindowIcon(QIcon(str(icons_path.joinpath('pdf.png'))))
+        self.setWindowIcon(get_icon('pdf.png'))
 
         self.pem_files = []
         self.ri_files = []
@@ -4619,7 +4620,7 @@ class GPSShareWidget(QWidget):
 
         # Format window
         self.setWindowTitle(f"Share GPS")
-        self.setWindowIcon(QIcon(str(icons_path.joinpath('share_gps.png'))))
+        self.setWindowIcon(get_icon('share_gps.png'))
 
         self.layout = QFormLayout()
         self.setLayout(self.layout)
@@ -4710,7 +4711,7 @@ class ChannelTimeViewer(QMainWindow):
         self.sizePolicy().setHorizontalPolicy(QSizePolicy.Maximum)
         self.resize(600, 600)
         self.setWindowTitle(f"Channel Times - {self.pem_file.filepath.name}")
-        self.setWindowIcon(QIcon(str(icons_path.joinpath("table.png"))))
+        self.setWindowIcon(get_icon("table.png"))
 
         # Status bar
         self.survey_type_label = QLabel(f" {self.pem_file.get_survey_type()} Survey ")

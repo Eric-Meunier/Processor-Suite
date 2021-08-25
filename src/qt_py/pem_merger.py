@@ -7,12 +7,11 @@ import numpy as np
 import pyqtgraph as pg
 import pandas as pd
 from PySide2.QtCore import Qt, Signal, QEvent
-from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QAction, QFileDialog, QLabel, QApplication, QFrame,
                                QHBoxLayout, QLineEdit, QPushButton)
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine
-from src.qt_py import icons_path
+from src.qt_py import get_icon
 from src.ui.pem_merger import Ui_PEMMerger
 
 logger = logging.getLogger(__name__)
@@ -140,7 +139,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         pg.setConfigOption('background', (66, 66, 66) if darkmode else (255, 255, 255))
         pg.setConfigOption('foreground', (255, 255, 255) if darkmode else (53, 53, 53))
         self.setWindowTitle('PEM Merger')
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'pem_merger.png')))
+        self.setWindowIcon(get_icon('pem_merger.png'))
 
         self.pf1_color = (255, 255, 255) if self.darkmode else (28, 28, 27)
         self.pf2_color = (255, 153, 204) if self.darkmode else (206, 74, 126)

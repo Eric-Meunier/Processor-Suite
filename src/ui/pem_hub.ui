@@ -1046,14 +1046,17 @@ Warnings</string>
                          </size>
                         </property>
                         <property name="toolTip">
-                         <string>Remove the selected PEM files from the list (can be brought back by refreshing)</string>
+                         <string>Delete select file(s)</string>
+                        </property>
+                        <property name="statusTip">
+                         <string>Delete select file(s)</string>
                         </property>
                         <property name="text">
                          <string/>
                         </property>
                         <property name="icon">
                          <iconset>
-                          <normaloff>icons/minus.png</normaloff>icons/minus.png</iconset>
+                          <normaloff>icons/remove.png</normaloff>icons/remove.png</iconset>
                         </property>
                         <property name="iconSize">
                          <size>
@@ -1301,14 +1304,17 @@ Warnings</string>
                          </size>
                         </property>
                         <property name="toolTip">
-                         <string>Remove the selected GPS files from the list (can be brought back by refreshing)</string>
+                         <string>Delete select file(s)</string>
+                        </property>
+                        <property name="statusTip">
+                         <string>Delete select file(s)</string>
                         </property>
                         <property name="text">
                          <string/>
                         </property>
                         <property name="icon">
                          <iconset>
-                          <normaloff>icons/minus.png</normaloff>icons/minus.png</iconset>
+                          <normaloff>icons/remove.png</normaloff>icons/remove.png</iconset>
                         </property>
                         <property name="iconSize">
                          <size>
@@ -2112,6 +2118,10 @@ Warnings</string>
    </property>
   </action>
   <action name="actionReset_Settings">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/undo.png</normaloff>icons/undo.png</iconset>
+   </property>
    <property name="text">
     <string>Reset Settings</string>
    </property>

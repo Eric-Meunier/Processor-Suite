@@ -13,7 +13,7 @@ import pyqtgraph as pg
 import plotly
 import plotly.graph_objects as go
 from PySide2.QtCore import Qt, QTimer
-from PySide2.QtGui import QIcon, QFont
+from PySide2.QtGui import QFont
 from PySide2.QtWebEngineWidgets import QWebEngineView
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QAction, QErrorMessage,
                                QFileDialog, QApplication, QHBoxLayout, QShortcut)
@@ -24,7 +24,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from scipy import interpolate as interp
 
-from src.qt_py import icons_path, CustomProgressDialog, NonScientific
+from src.qt_py import get_icon, CustomProgressDialog, NonScientific
 from src.gps.gps_editor import BoreholeGeometry
 from src.pem.pem_plotter import MapPlotter
 from src.ui.contour_map import Ui_ContourMap
@@ -56,7 +56,7 @@ class MapboxViewer(QMainWindow):
         self.lats = []  # List of all coordinates for the purpose of centering the map
 
         self.setWindowTitle("Tile Map")
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'folium.png')))
+        self.setWindowIcon(get_icon('folium.png'))
         self.status_bar = self.statusBar()
         self.status_bar.show()
         # self.resize(1000, 800)
@@ -68,11 +68,11 @@ class MapboxViewer(QMainWindow):
         self.save_img_action = QAction('Save Image')
         self.save_img_action.setShortcut("Ctrl+S")
         self.save_img_action.triggered.connect(self.save_img)
-        self.save_img_action.setIcon(QIcon(str(icons_path.joinpath("save_as.png"))))
+        self.save_img_action.setIcon(get_icon("save_as.png"))
         self.copy_image_action = QAction('Copy Image')
         self.copy_image_action.setShortcut("Ctrl+C")
         self.copy_image_action.triggered.connect(self.copy_img)
-        self.copy_image_action.setIcon(QIcon(str(icons_path.joinpath("copy.png"))))
+        self.copy_image_action.setIcon(get_icon("copy.png"))
 
         self.file_menu = self.menuBar().addMenu('&File')
         self.file_menu.addAction(self.save_img_action)
@@ -324,11 +324,11 @@ class Map3DViewer(QMainWindow):
 
         self.save_img_action = QAction('Save Image')
         self.save_img_action.setShortcut("Ctrl+S")
-        self.save_img_action.setIcon(QIcon(str(icons_path.joinpath("save_as.png"))))
+        self.save_img_action.setIcon(get_icon("save_as.png"))
         self.save_img_action.triggered.connect(self.save_img)
         self.copy_image_action = QAction('Copy Image')
         self.copy_image_action.setShortcut("Ctrl+C")
-        self.copy_image_action.setIcon(QIcon(str(icons_path.joinpath("copy.png"))))
+        self.copy_image_action.setIcon(get_icon("copy.png"))
         self.copy_image_action.triggered.connect(self.copy_img)
 
         self.file_menu = self.menuBar().addMenu('&File')
@@ -556,11 +556,11 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
         self.save_img_action = QAction('Save Image')
         self.save_img_action.setShortcut("Ctrl+S")
         self.save_img_action.triggered.connect(self.save_img)
-        self.save_img_action.setIcon(QIcon(str(icons_path.joinpath("save_as.png"))))
+        self.save_img_action.setIcon(get_icon("save_as.png"))
         self.copy_image_action = QAction('Copy Image')
         self.copy_image_action.setShortcut("Ctrl+C")
         self.copy_image_action.triggered.connect(self.copy_img)
-        self.copy_image_action.setIcon(QIcon(str(icons_path.joinpath("copy.png"))))
+        self.copy_image_action.setIcon(get_icon("copy.png"))
 
         self.channel_spinbox.valueChanged.connect(lambda: self.draw_map(self.figure))
         self.z_rbtn.clicked.connect(lambda: self.draw_map(self.figure))
@@ -941,7 +941,6 @@ class GPSViewer(QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__()
-
         # Format the window
         self.setWindowTitle(f"GPS Viewer")
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'gps_viewer.png')))

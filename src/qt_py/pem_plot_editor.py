@@ -10,14 +10,14 @@ import pyqtgraph as pg
 import numpy as np
 import pylineclip as lc
 from PySide2.QtCore import Qt, Signal, QEvent, QTimer, QPointF, QRectF
-from PySide2.QtGui import QIcon, QColor, QFont, QTransform, QBrush, QPen, QKeySequence
+from PySide2.QtGui import QColor, QFont, QTransform, QBrush, QPen, QKeySequence
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QLabel, QApplication, QLineEdit,
                                QInputDialog, QPushButton, QShortcut)
 from pandas import DataFrame, options, isna
 from scipy import spatial, signal
 
 from src.pem import convert_station
-from src.qt_py import icons_path
+from src.qt_py import get_icon
 from src.ui.pem_plot_editor import Ui_PEMPlotEditor
 # from src.logger import Log
 
@@ -61,14 +61,14 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.installEventFilter(self)
         self.activateWindow()
         self.setWindowTitle('PEM Plot Editor')
-        self.setWindowIcon(QIcon(str(icons_path.joinpath('plot_editor.png'))))
-        self.actionOpen.setIcon(QIcon(str(icons_path.joinpath('open.png'))))
-        self.actionSave.setIcon(QIcon(str(icons_path.joinpath('save.png'))))
-        self.actionSave_As.setIcon(QIcon(str(icons_path.joinpath('save_as.png'))))
-        self.actionCopy_Screenshot.setIcon(QIcon(str(icons_path.joinpath('copy.png'))))
-        self.actionSave_Screenshot.setIcon(QIcon(str(icons_path.joinpath('_save_complete.png'))))
-        self.actionUn_Delete_All.setIcon(QIcon(str(icons_path.joinpath('cleaner.png'))))
-        self.actionReset_File.setIcon(QIcon(str(icons_path.joinpath('undo.png'))))
+        self.setWindowIcon(get_icon('plot_editor.png'))
+        self.actionOpen.setIcon(get_icon('open.png'))
+        self.actionSave.setIcon(get_icon('save.png'))
+        self.actionSave_As.setIcon(get_icon('save_as.png'))
+        self.actionCopy_Screenshot.setIcon(get_icon('copy.png'))
+        self.actionSave_Screenshot.setIcon(get_icon('_save_complete.png'))
+        self.actionUn_Delete_All.setIcon(get_icon('cleaner.png'))
+        self.actionReset_File.setIcon(get_icon('undo.png'))
         self.resize(1300, 900)
         self.setAcceptDrops(True)
 

@@ -13,7 +13,7 @@ import numpy as np
 import plotly.graph_objects as go
 import simplekml
 from PySide2.QtCore import Qt, Signal, QEvent, QPointF
-from PySide2.QtGui import QIcon, QIntValidator, QKeySequence, QTransform
+from PySide2.QtGui import QIntValidator, QKeySequence, QTransform
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QFileDialog, QLabel, QApplication,
                                QFrame, QHBoxLayout, QLineEdit,
                                QHeaderView, QInputDialog, QTableWidgetItem, QGroupBox, QFormLayout, QTableWidget,
@@ -32,7 +32,7 @@ from src import app_data_dir
 # from src.logger import Log
 from src.gps.gps_editor import BoreholeCollar, BoreholeGeometry
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
-from src.qt_py import (icons_path, NonScientific, PlanMapAxis)
+from src.qt_py import get_icon, NonScientific, PlanMapAxis
 from src.qt_py.map_widgets import TileMapViewer
 from src.qt_py.pem_geometry import dad_to_seg
 from src.ui.grid_planner import Ui_GridPlanner
@@ -287,7 +287,7 @@ class HoleWidget(QWidget):
         self.hole_name_edit = QLineEdit(name)
         self.hole_name_edit.setPlaceholderText('(Optional)')
 
-        self.remove_btn = QPushButton(QIcon(str(icons_path.joinpath("_remove2.png"))), "")
+        self.remove_btn = QPushButton(get_icon("_remove2.png"), "")
         self.remove_btn.setFlat(True)
         self.remove_btn.setToolTip("Remove")
 
@@ -715,7 +715,7 @@ class LoopWidget(QWidget):
         self.loop_name_edit = QLineEdit(name)
         self.loop_name_edit.setPlaceholderText('(Optional)')
 
-        self.remove_btn = QPushButton(QIcon(str(icons_path.joinpath("_remove2.png"))), "")
+        self.remove_btn = QPushButton(get_icon("_remove2.png"), "")
         self.remove_btn.setFlat(True)
         self.remove_btn.setToolTip("Remove")
 
@@ -1029,14 +1029,14 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.plan_view.setMenuEnabled(False)
 
         # Icons
-        self.actionOpen_Project.setIcon(QIcon(str(icons_path.joinpath("open.png"))))
-        self.actionSave_Project.setIcon(QIcon(str(icons_path.joinpath("save.png"))))
-        self.actionSave_As.setIcon(QIcon(str(icons_path.joinpath("save_as.png"))))
-        self.actionSave_as_KMZ.setIcon(QIcon(str(icons_path.joinpath("google_earth.png"))))
-        self.actionSave_as_GPX.setIcon(QIcon(str(icons_path.joinpath("garmin_file.png"))))
-        self.view_map_action.setIcon(QIcon(str(icons_path.joinpath("folium.png"))))
-        self.add_hole_btn.setIcon(QIcon(str(icons_path.joinpath("add.png"))))
-        self.add_loop_btn.setIcon(QIcon(str(icons_path.joinpath("add.png"))))
+        self.actionOpen_Project.setIcon(get_icon("open.png"))
+        self.actionSave_Project.setIcon(get_icon("save.png"))
+        self.actionSave_As.setIcon(get_icon("save_as.png"))
+        self.actionSave_as_KMZ.setIcon(get_icon("google_earth.png"))
+        self.actionSave_as_GPX.setIcon(get_icon("garmin_file.png"))
+        self.view_map_action.setIcon(get_icon("folium.png"))
+        self.add_hole_btn.setIcon(get_icon("add.png"))
+        self.add_loop_btn.setIcon(get_icon("add.png"))
 
         # Plotting
         self.selected_hole = None
@@ -2078,9 +2078,9 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'grid_planner.png')))
         self.setGeometry(200, 200, 1100, 700)
 
-        self.actionSave_as_KMZ.setIcon(QIcon(str(icons_path.joinpath("google_earth.png"))))
-        self.actionSave_as_GPX.setIcon(QIcon(str(icons_path.joinpath("garmin_file.png"))))
-        self.view_map_action.setIcon(QIcon(str(icons_path.joinpath("folium.png"))))
+        self.actionSave_as_KMZ.setIcon(get_icon("google_earth.png"))
+        self.actionSave_as_GPX.setIcon(get_icon("garmin_file.png"))
+        self.view_map_action.setIcon(get_icon("folium.png"))
         # self.installEventFilter(self)
 
         self.loop_height = self.loop_height_sbox.value()

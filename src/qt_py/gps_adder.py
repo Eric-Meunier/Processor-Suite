@@ -9,12 +9,12 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from PySide2.QtCore import Qt, Signal
-from PySide2.QtGui import QIcon, QColor
+from PySide2.QtGui import QColor
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QWidget, QFileDialog, QVBoxLayout, QLabel, QApplication,
                                QFrame, QHBoxLayout, QHeaderView, QInputDialog, QPushButton, QTabWidget, QTableWidgetItem)
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser
-from src.qt_py import icons_path, NonScientific, read_file, table_to_df, df_to_table
+from src.qt_py import get_icon, NonScientific, read_file, table_to_df, df_to_table
 from src.ui.line_adder import Ui_LineAdder
 from src.ui.loop_adder import Ui_LoopAdder
 
@@ -38,7 +38,7 @@ class GPSAdder(QMainWindow):
     def __init__(self):
         super().__init__()
         self.resize(1000, 800)
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'gps_adder.png')))
+        self.setWindowIcon(get_icon('gps_adder.png'))
 
         self.df = None
         self.error = False  # For pending errors
@@ -324,9 +324,9 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle('Line Adder')
-        self.actionOpen.setIcon(QIcon(str(icons_path.joinpath("open.png"))))
-        self.actionEdit_Names.setIcon(QIcon(str(icons_path.joinpath("edit.png"))))
-        self.actionInterp_Null_Elevation.setIcon(QIcon(str(icons_path.joinpath("grid_planner.png"))))
+        self.actionOpen.setIcon(get_icon("open.png"))
+        self.actionEdit_Names.setIcon(get_icon("edit.png"))
+        self.actionInterp_Null_Elevation.setIcon(get_icon("grid_planner.png"))
         self.status_bar.hide()
 
         self.parent = parent
@@ -656,7 +656,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.loop = None
         self.selected_row_info = None
         self.setWindowTitle('Loop Adder')
-        self.actionOpen.setIcon(QIcon(str(icons_path.joinpath("open.png"))))
+        self.actionOpen.setIcon(get_icon("open.png"))
         self.status_bar.hide()
 
         # Status bar widgets
@@ -875,7 +875,7 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         self.setupUi(self)
         self.parent = parent
         self.setWindowTitle('Collar Picker')
-        self.actionOpen.setIcon(QIcon(str(icons_path.joinpath("open.png"))))
+        self.actionOpen.setIcon(get_icon("open.png"))
         self.status_bar.hide()
         self.menuSettings.deleteLater()
 
@@ -1116,7 +1116,7 @@ class ExcelTablePicker(QWidget):
         super().__init__()
         self.parent = parent
         self.setWindowTitle("Excel Table Picker")
-        self.setWindowIcon(QIcon(str(icons_path.joinpath("excel_file.png"))))
+        self.setWindowIcon(get_icon("excel_file.png"))
         self.setLayout(QVBoxLayout())
 
         self.content = None
@@ -1236,7 +1236,7 @@ class DADSelector(QWidget):
         super().__init__()
         self.parent = parent
         self.setWindowTitle("DAD Selector")
-        self.setWindowIcon(QIcon(str(icons_path.joinpath("excel_file.png"))))
+        self.setWindowIcon(get_icon("excel_file.png"))
         self.setLayout(QVBoxLayout())
         self.message = QMessageBox()
 
