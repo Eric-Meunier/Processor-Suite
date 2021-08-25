@@ -19,7 +19,6 @@ from scipy import spatial, signal
 from src.pem import convert_station
 from src.qt_py import icons_path
 from src.ui.pem_plot_editor import Ui_PEMPlotEditor
-
 # from src.logger import Log
 
 """
@@ -27,9 +26,6 @@ NOTE: pyqtgraph 0.12.0 creates a bug with QRectF, specifically with decay_mouse_
 will not intersect the area of the QRectF.
 """
 
-# from pyod.models.abod import ABOD
-# from pyod.models.knn import KNN
-# from pyod.utils.data import get_outliers_inliers
 logger = logging.getLogger(__name__)
 pg.setConfigOption('crashWarning', True)
 pg.setConfigOptions(antialias=True)
@@ -57,6 +53,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # self.selection_color = [234,128,252] if self.darkmode else [64, 64, 255]  # Purple and blue
         # self.selection_color = [102, 255, 178] if self.darkmode else [64, 64, 255]
         self.selection_color = [102, 255, 255] if self.darkmode else [64, 64, 255]  # Blues
+        self.deletion_color = [255, 51, 51] if self.darkmode else [255, 0, 0]
         self.autoclean_color = [0, 153, 153] if self.darkmode else [0, 0, 153]
 
         self.setupUi(self)
@@ -70,8 +67,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.actionSave_As.setIcon(QIcon(str(icons_path.joinpath('save_as.png'))))
         self.actionCopy_Screenshot.setIcon(QIcon(str(icons_path.joinpath('copy.png'))))
         self.actionSave_Screenshot.setIcon(QIcon(str(icons_path.joinpath('_save_complete.png'))))
-        self.actionUn_Delete_All.setIcon(QIcon(str(icons_path.joinpath('undo.png'))))
-        self.actionReset_File.setIcon(QIcon(str(icons_path.joinpath('reset_file.png'))))
+        self.actionUn_Delete_All.setIcon(QIcon(str(icons_path.joinpath('cleaner.png'))))
+        self.actionReset_File.setIcon(QIcon(str(icons_path.joinpath('undo.png'))))
         self.resize(1300, 900)
         self.setAcceptDrops(True)
 
@@ -193,8 +190,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
                 # Add the vertical selection line
                 # color = (23, 23, 23, 100)
-                color = copy.copy(self.linecolor)
-                color.append(200 if self.darkmode else 100)
+                color = copy.copy(self.selection_color)
+                color.append(200 if self.darkmode else 150)
                 font = QFont("Helvetica", 10)
                 # hover_color = (102, 178, 255, 100)
                 # select_color = (51, 51, 255, 100)
@@ -884,7 +881,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 color.append(200 if self.darkmode else 150)
                 z_value = 2
             else:
-                color = (255, 0, 0, 50)
+                color = copy.copy(self.deletion_color)
+                color.append(100)
                 z_value = 1
 
             # Use a dotted line for readings that are flagged as Overloads
@@ -1193,12 +1191,12 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Change the pen if the data is flagged for deletion
             if Deleted is False:
-                # color = (96, 96, 96, 150)
                 color = copy.copy(self.linecolor)
                 color.append(150)
                 z_value = 2
             else:
-                color = (255, 0, 0, 100)
+                color = copy.copy(self.deletion_color)
+                color.append(100)
                 z_value = 1
 
             # Change the line style if the reading is overloaded
@@ -1212,14 +1210,11 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 if Deleted is False:
                     color = copy.copy(self.selection_color)
                     color.append(200)
-                    # color = (85, 85, 255, 200)  # Blue
-                    # color = (153, 85, 204, 200)  # Purple
                     z_value = 4
                 else:
-                    color = (255, 0, 0, 150)
+                    color = copy.copy(self.deletion_color)
+                    color.append(150)
                     z_value = 3
-                    # pen_color = (204, 0, 204)  # Magenta ish
-                    # pen_color = (153, 51, 255)  # Puple
 
                 line.setPen(color, width=2, style=style)
                 line.setZValue(z_value)
@@ -2177,7 +2172,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    darkmode = False
+    darkmode = True
     pem_g = PEMGetter()
     parser = PEMParser()
     dmp_parser = DMPParser()

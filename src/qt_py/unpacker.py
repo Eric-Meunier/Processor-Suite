@@ -29,6 +29,8 @@ class Unpacker(QMainWindow, Ui_Unpacker):
 
         self.setWindowTitle('Unpacker')
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'unpacker.png')))
+        self.open_folder_action.setIcon(QIcon(os.path.join(icons_path, 'open.png')))
+        self.reset_action.setIcon(QIcon(os.path.join(icons_path, 'undo.png')))
 
         self.setAcceptDrops(True)
 
@@ -144,7 +146,6 @@ class Unpacker(QMainWindow, Ui_Unpacker):
 
     def closeEvent(self, e):
         self.db_plot.close()
-        # self.hide()
         e.accept()
 
     def set_current_date(self):
@@ -340,7 +341,6 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         folders. Also copies the PEM and GPS files to the working folders.
         :return: None
         """
-
         def make_move(folder_name, table, additional_folder=None):
             """
             Copy the files in the table to the folder_name folder.
@@ -461,7 +461,6 @@ class Unpacker(QMainWindow, Ui_Unpacker):
             else:
                 logger.warning(f"Removing directory {self.input_path.resolve()}.")
                 rmtree(self.input_path)
-        # self.status_bar.showMessage('Complete.', 2000)
 
         # Change the project directory of PEMPro
         self.open_project_folder_sig.emit(new_folder.parents[1])

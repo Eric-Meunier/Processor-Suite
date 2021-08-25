@@ -87,7 +87,7 @@ class DBPlotter(QMainWindow):
         self.actionSave_Screenshot = QAction("Save Screenshot")
         self.actionSave_Screenshot.setShortcut("Ctrl+S")
         self.actionSave_Screenshot.triggered.connect(self.save_img)
-        self.actionSave_Screenshot.setIcon(QIcon(str(icons_path.joinpath("save_as.png"))))
+        self.actionSave_Screenshot.setIcon(QIcon(str(icons_path.joinpath("_save.png"))))
         self.actionCopy_Screenshot = QAction("Copy Screenshot")
         self.actionCopy_Screenshot.setShortcut("Ctrl+C")
         self.actionCopy_Screenshot.triggered.connect(self.copy_img)
@@ -112,9 +112,9 @@ class DBPlotter(QMainWindow):
         self.menuBar().addMenu(self.file_menu)
         self.menuBar().addMenu(self.view_menu)
 
-    # def closeEvent(self, e):
-    #     e.accept()
-        # self.deleteLater()
+    def closeEvent(self, e):
+        self.clear()
+        e.accept()
 
     def keyPressEvent(self, event):
         # Remove the widget
@@ -178,7 +178,6 @@ class DBPlotter(QMainWindow):
         """
         Parse the data and create the DBPlot
         """
-
         def to_timestamp(row):
             """
             Return a timestamp from the hours, minutes, seconds of the row.
@@ -326,6 +325,17 @@ class DBPlotter(QMainWindow):
                 self.db_widgets.remove(widget)
                 break
         self.arrange_plots()
+
+    def clear(self):
+        """
+        Clear of all widgets/files.
+        :return: None
+        """
+        for widget in self.db_widgets:
+            self.widget_layout.removeWidget(widget)
+            widget.deleteLater()
+            self.db_widgets.remove(widget)
+        self.x, self.y = 0, 0
 
     def save_img(self):
         """

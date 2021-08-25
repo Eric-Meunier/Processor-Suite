@@ -1852,7 +1852,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
     def open_pem_merger(self):
         def check_pems():
-
             f1, f2 = pem_files[0], pem_files[1]
 
             if not f1.is_borehole() == f2.is_borehole():
@@ -1915,7 +1914,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             return
 
         if check_pems():
-            merger = PEMMerger(parent=self)
+            merger = PEMMerger(parent=self, darkmode=self.actionDark_Theme.isChecked())
             refs.append(merger)
             merger.accept_sig.connect(accept_merge)
             merger.open(pem_files)
