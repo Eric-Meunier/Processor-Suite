@@ -8,10 +8,11 @@ import keyboard
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PySide2.QtCore import Qt, Signal
-from PySide2.QtGui import QColor
+from PySide2.QtCore import Qt, Signal, QEvent, QObject
+from PySide2.QtGui import QColor, QKeySequence, QWidget
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QWidget, QFileDialog, QVBoxLayout, QLabel, QApplication,
-                               QFrame, QHBoxLayout, QHeaderView, QInputDialog, QPushButton, QTabWidget, QTableWidgetItem)
+                               QFrame, QHBoxLayout, QHeaderView, QInputDialog, QPushButton, QTabWidget,
+                               QTableWidgetItem, QShortcut)
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser
 from src.qt_py import get_icon, NonScientific, read_file, table_to_df, df_to_table
@@ -1263,9 +1264,45 @@ class DADSelector(QWidget):
         btn_frame.layout().addWidget(self.close_btn)
         self.layout().addWidget(btn_frame)
 
+        self.reset_shortcut = QShortcut(QKeySequence("Escape"), self, self.reset)
         self.accept_btn.clicked.connect(self.accept)
         self.reset_btn.clicked.connect(self.reset)
         self.close_btn.clicked.connect(self.close)
+
+    def eventFilter(self, source, event):
+        if event.type() == QEvent.MouseButtonRelease:
+            print(f'Mouse released.')
+            table = self.tables[self.tabs.currentIndex()]
+            selected_items = table.selectedItems()
+
+            # Remove the 3rd last selected range
+            if len(self.selected_ranges) == 3:
+                for item in self.selected_ranges[0]:
+                    item.setBackground(empty_background)
+                self.selected_ranges.pop(0)
+
+            values = []
+            for item in selected_items:
+                item.setBackground(self.selection_color)
+                values.append(item.text())
+
+            if self.selection_count == 3:
+                self.selection_count = 0
+
+            if self.selection_count == 0:
+                self.depths = values
+            elif self.selection_count == 1:
+                self.azimuths = values
+            else:
+                self.dips = values
+
+            self.selection_text.setText(f"Depth: {self.depths or ''}\nAzimuth: {self.azimuths or ''}\n"
+                                        f"Dip: {self.dips or ''}")
+            self.selection_count += 1
+            self.selected_ranges.append(selected_items)
+
+        # return QObject.eventFilter(source, event)
+        return QWidget.eventFilter(self, source, event)
 
     def reset(self):
         for range in self.selected_ranges:
@@ -1292,9 +1329,10 @@ class DADSelector(QWidget):
             self.accept_sig.emit(df)
             self.close()
 
-    def cell_clicked(self, row, col):
+    def cell_double_clicked(self, row, col):
         """
         Signal slot, range-select all cells below the clicked cell.
+        Doesn't work with the selection method, so it is not used. Could be a toggle though.
         :return: None
         """
         table = self.tables[self.tabs.currentIndex()]
@@ -1342,9 +1380,7 @@ class DADSelector(QWidget):
 
             for i, (sheet, info) in enumerate(content.items()):
                 table = pg.TableWidget()
-                table.setStyleSheet("selection-background-color: #50C878;")
                 table.setData(info.replace(np.nan, '', regex=True).to_numpy())
-                table.cellClicked.connect(self.cell_clicked)
                 self.tables.append(table)
                 self.tabs.addTab(table, str(sheet))
         else:
@@ -1357,11 +1393,15 @@ class DADSelector(QWidget):
                                    header=None)
 
             table = pg.TableWidget()
-            table.setStyleSheet("selection-background-color: #50C878;")
             table.setData(content.replace(np.nan, '', regex=True).to_numpy())
-            table.cellClicked.connect(self.cell_clicked)
             self.tables.append(table)
             self.tabs.addTab(table, filepath.name)
+
+        for table in self.tables:
+            table.setStyleSheet("selection-background-color: #50C878;")
+            # table.cellDoubleClicked.connect(self.cell_double_clicked)
+            table.setMouseTracking(True)
+            table.viewport().installEventFilter(self)
 
         self.show()
 
@@ -1380,8 +1420,8 @@ def main():
     loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Loop GPS'))
     # pg = PEMGetter()
 
-    mw = CollarPicker()
-    file = r"C:\_Data\2021\TMC\Laurentia\GEN-21-09\GPS\Loop 09_0823.gpx"
+    # mw = CollarPicker()
+    # file = r"C:\_Data\2021\TMC\Laurentia\GEN-21-09\GPS\Loop 09_0823.gpx"
 
     # mw = LoopAdder()
     # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
@@ -1389,8 +1429,9 @@ def main():
 
     # mw = LineAdder()
     # mw = ExcelTablePicker()
-    # mw = DADSelector()
+    mw = DADSelector()
 
+    file = samples_folder.joinpath(r"Segments\BHEM-Belvais-2021-07-22.xlsx")
     # file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
     # file = samples_folder.joinpath(r'Raw Boreholes\OBS-88-027\RAW\Obalski.xlsx')
     # file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')

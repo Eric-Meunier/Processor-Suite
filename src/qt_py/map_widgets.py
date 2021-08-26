@@ -312,7 +312,7 @@ class Map3DViewer(QMainWindow):
         self.annotations = []
 
         self.setWindowTitle("3D Map Viewer")
-        self.setWindowIcon(QIcon(os.path.join(icons_path, '3d_map.png')))
+        self.setWindowIcon(get_icon('3d_map.png'))
         self.resize(1000, 800)
         layout = QGridLayout()
         self.setLayout(layout)
@@ -515,7 +515,7 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle('Contour Map Viewer')
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'contour_map.png')))
+        self.setWindowIcon(get_icon('contour_map.png'))
         self.channel_list_edit.setEnabled(False)
 
         self.error = QErrorMessage()
@@ -938,7 +938,7 @@ class GPSViewer(QMainWindow):
         super().__init__()
         # Format the window
         self.setWindowTitle(f"GPS Viewer")
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'gps_viewer.png')))
+        self.setWindowIcon(get_icon('gps_viewer.png'))
         self.setFocusPolicy(Qt.StrongFocus)
 
         layout = QHBoxLayout()

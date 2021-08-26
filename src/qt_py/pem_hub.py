@@ -70,6 +70,7 @@ logger = logging.getLogger(__name__)
 # TODO fix print issue, caused by PEMGeometry (matplotlib figures).
 # TODO When opening loop lanner, prompt to re-open the last project.
 # TODO create large PDF with summary of file, including 3d map.
+# TODO Add progress bar to Contour map when it opens
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
