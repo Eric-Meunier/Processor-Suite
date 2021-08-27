@@ -18,10 +18,6 @@ from src.ui.derotator import Ui_Derotator
 logger = logging.getLogger(__name__)
 
 symbol_size = 6
-cpp_color = (0, 153, 153, 100)
-mpp_color = (255, 0, 255, 100)
-acc_color = (0, 0, 255, 100)
-mag_color = (0, 204, 0, 100)
 
 
 class Derotator(QMainWindow, Ui_Derotator):
@@ -30,11 +26,20 @@ class Derotator(QMainWindow, Ui_Derotator):
     """
     accept_sig = Signal(object)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, darkmode=False):
         super().__init__(parent)
         self.setupUi(self)
         self.installEventFilter(self)
         self.parent = parent
+        self.darkmode = darkmode
+        
+        self.foreground_color = "w" if self.darkmode else "k"
+        self.background_color = (66, 66, 66) if self.darkmode else "w"
+        self.cpp_color = "w" if self.darkmode else (0, 153, 153, 100)
+        self.mpp_color = "#FF66B2" if self.darkmode else (255, 0, 255, 100)
+        self.acc_color = "#66FFFF" if self.darkmode else (0, 0, 255, 100)
+        self.mag_color = "#66FF66" if self.darkmode else (0, 204, 0, 100)
+
         self.pem_file = None
         self.rotated_file = None
         self.rotation_note = None
@@ -74,33 +79,42 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         # Create the deviation plot
         self.dev_ax = self.deviation_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
-        self.dev_ax.setLabel('top', 'Angle Deviation From PP Rotation Angle (Degrees)')
-        self.dev_ax.setLabel('left', 'Station', units=None)
-        v_line = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen("k", width=0.5))
-        self.dev_ax_legend = self.dev_ax.addLegend(pen='k', brush='w', labelTextSize="8pt", verSpacing=-1)
+        self.dev_ax.setLabel('top', 'Angle Deviation From PP Rotation Angle (Degrees)', pen=pg.mkPen(self.foreground_color))
+        self.dev_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
+        v_line = pg.InfiniteLine(pos=0, 
+                                 angle=90, 
+                                 pen=pg.mkPen(self.foreground_color, width=0.5))
+        self.dev_ax_legend = self.dev_ax.addLegend(pen=pg.mkPen(self.foreground_color),
+                                                   brush=pg.mkBrush(self.background_color),
+                                                   labelTextSize="8pt", 
+                                                   verSpacing=-1)
         self.dev_ax_legend.setParent(self.deviation_view)
-        self.acc_dev_curve = pg.PlotCurveItem(pen=pg.mkPen(acc_color, width=2), name="Accelerometer")
-        self.acc_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen(acc_color, width=2),
+        self.acc_dev_curve = pg.PlotCurveItem(pen=pg.mkPen(self.acc_color, width=2), 
+                                              name="Accelerometer")
+        self.acc_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen(self.acc_color, width=2),
                                                size=symbol_size,
-                                               brush=pg.mkBrush("w"))
-        self.mag_dev_curve = pg.PlotCurveItem(pen=pg.mkPen(mag_color, width=2), name="Magnetometer")
-        self.mag_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen(mag_color, width=2),
+                                               brush=pg.mkBrush(self.background_color))
+        self.mag_dev_curve = pg.PlotCurveItem(pen=pg.mkPen(self.mag_color, width=2), 
+                                              name="Magnetometer")
+        self.mag_dev_scatter = pg.ScatterPlotItem(pen=pg.mkPen(self.mag_color, width=2),
                                                size=symbol_size,
-                                               brush=pg.mkBrush("w"))
+                                               brush=pg.mkBrush(self.background_color))
 
         for item in [self.acc_dev_curve, self.acc_dev_scatter, self.mag_dev_curve, self.mag_dev_scatter, v_line]:
             self.dev_ax.addItem(item)
 
         # Create the dip plot
         self.dip_ax = self.tool_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
-        self.dip_ax.setLabel('top', 'Dip Angle (Degrees)')
-        self.dip_ax.setLabel('left', 'Station', units=None)
-        v_line = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen("k", width=0.5))
+        self.dip_ax.setLabel('top', 'Dip Angle (Degrees)', pen=pg.mkPen(self.foreground_color))
+        self.dip_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
+        v_line = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen(self.foreground_color, width=0.5))
         self.dip_ax.addItem(v_line)
         self.dip_ax.setLimits(xMin=-90, xMax=0)
         self.dip_ax.setXRange(-90, 0)
-        self.dip_curve = pg.PlotCurveItem(pen=pg.mkPen(acc_color, width=2), name="Dip")
-        self.dip_scatter = pg.ScatterPlotItem(pen=pg.mkPen(acc_color, width=2), brush="w", size=symbol_size)
+        self.dip_curve = pg.PlotCurveItem(pen=pg.mkPen(self.acc_color, width=2), 
+                                          name="Dip")
+        self.dip_scatter = pg.ScatterPlotItem(pen=pg.mkPen(self.acc_color, width=2), 
+                                              brush=pg.mkBrush(self.background_color), size=symbol_size)
         self.dip_ax.addItem(self.dip_curve)
         self.dip_ax.addItem(self.dip_scatter)
 
@@ -110,68 +124,81 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.mag_ax.setLabel('left', 'Station', units=None)
         self.mag_ax.getAxis("left").setWidth(30)
         self.mag_ax.getAxis("right").setWidth(10)
-        self.mag_curve = pg.PlotCurveItem(pen=pg.mkPen(mag_color, width=2), name="Magnetic Field Strength")
-        self.mag_scatter = pg.ScatterPlotItem(pen=pg.mkPen(mag_color, width=2), brush="w", size=symbol_size)
+        self.mag_curve = pg.PlotCurveItem(pen=pg.mkPen(self.mag_color, width=2), 
+                                          name="Magnetic Field Strength")
+        self.mag_scatter = pg.ScatterPlotItem(pen=pg.mkPen(self.mag_color, width=2),
+                                              brush=pg.mkBrush(self.background_color), size=symbol_size)
         self.mag_ax.addItem(self.mag_curve)
         self.mag_ax.addItem(self.mag_scatter)
 
         # Create the rotation angle plot
         self.rot_ax = self.rotation_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
-        self.rot_ax_legend = self.rot_ax.addLegend(pen='k', brush='w', labelTextSize="8pt", verSpacing=-1)
+        self.rot_ax_legend = self.rot_ax.addLegend(pen=pg.mkPen(self.foreground_color),
+                                                   brush=pg.mkBrush(self.background_color),
+                                                   labelTextSize="8pt",
+                                                   verSpacing=-1)
         self.rot_ax_legend.setParent(self.rotation_view)
-        self.rot_ax.setLabel('top', 'Rotation Angle', units='Degrees')
-        self.rot_ax.setLabel('left', 'Station', units=None)
-        self.cpp_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(cpp_color, width=2.), name='Cleaned PP')
-        self.cpp_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(cpp_color, width=2.),
-                                               symbol='o',
-                                               brush="w",
-                                               size=symbol_size)
-        self.mpp_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(mpp_color, width=2.), name='Measured PP')
-        self.mpp_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(mpp_color, width=2.),
-                                               symbol='o',
-                                               brush="w",
-                                               size=symbol_size)
-        self.acc_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(acc_color, width=2.), name='Accelerometer')
-        self.acc_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(acc_color, width=2.),
-                                               symbol='o',
-                                               brush="w",
-                                               size=symbol_size)
-        self.mag_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(mag_color, width=2.), name='Magnetometer')
-        self.mag_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(mag_color, width=2.),
-                                               symbol='o',
-                                               brush="w",
-                                               size=symbol_size)
-        self.tool_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((32, 32, 32, 200), width=2.),
-                                            name='Tool (Unknown Sensor)')
-        self.tool_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen((32, 32, 32, 200), width=2.),
-                                                symbol='o',
-                                                brush="w",
-                                                size=symbol_size)
+        self.rot_ax.setLabel('top', 'Rotation Angle', units='Degrees', pen=pg.mkPen(self.foreground_color))
+        self.rot_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
+        self.cpp_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(self.cpp_color, width=2.), name='Cleaned PP')
+        self.cpp_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(self.cpp_color, width=2.),
+                                                  symbol='o',
+                                                  brush=pg.mkBrush(self.background_color),
+                                                  size=symbol_size)
+        self.mpp_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(self.mpp_color, width=2.), name='Measured PP')
+        self.mpp_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(self.mpp_color, width=2.),
+                                                  symbol='o',
+                                                  brush=pg.mkBrush(self.background_color),
+                                                  size=symbol_size)
+        self.acc_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(self.acc_color, width=2.), name='Accelerometer')
+        self.acc_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(self.acc_color, width=2.),
+                                                  symbol='o',
+                                                  brush=pg.mkBrush(self.background_color),
+                                                  size=symbol_size)
+        self.mag_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(self.mag_color, width=2.), name='Magnetometer')
+        self.mag_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(self.mag_color, width=2.),
+                                                  symbol='o',
+                                                  brush=pg.mkBrush(self.background_color),
+                                                  size=symbol_size)
+        # self.tool_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((32, 32, 32, 200), width=2.),
+        self.tool_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(self.foreground_color, width=2.),
+                                               name='Tool (Unknown Sensor)')
+        # self.tool_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen((32, 32, 32, 200), width=2.),
+        self.tool_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(self.foreground_color, width=2.),
+                                                   symbol='o',
+                                                   brush=pg.mkBrush(self.background_color),
+                                                   size=symbol_size)
 
         # Create the pp values plot
         self.pp_ax = self.pp_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
-        self.pp_ax_legend = self.pp_ax.addLegend(pen='k', brush='w', labelTextSize="8pt", verSpacing=-1)
+        self.pp_ax_legend = self.pp_ax.addLegend(pen=pg.mkPen(self.foreground_color),
+                                                 brush=pg.mkBrush(self.background_color),
+                                                 labelTextSize="8pt",
+                                                 verSpacing=-1)
         self.pp_ax_legend.setParent(self.pp_view)
-        self.pp_ax.setLabel('top', 'Primary Pulse Response', units='nT/s')
-        self.pp_ax.setLabel('left', 'Station', units=None)
+        self.pp_ax.setLabel('top', 'Primary Pulse Response', units='nT/s', pen=pg.mkPen(self.foreground_color))
+        self.pp_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
 
-        self.cleaned_pp_curve = pg.PlotDataItem(pen=pg.mkPen(cpp_color, width=2), name='Cleaned')
+        self.cleaned_pp_curve = pg.PlotDataItem(pen=pg.mkPen(self.cpp_color, width=2),
+                                                name='Cleaned')
         self.cleaned_pp_scatter = pg.ScatterPlotItem(symbol='o',
-                                                  pen=pg.mkPen(cpp_color, width=2),
-                                                  brush='w',
-                                                  size=symbol_size)
+                                                     pen=pg.mkPen(self.cpp_color, width=2),
+                                                     brush=pg.mkBrush(self.background_color),
+                                                     size=symbol_size)
 
-        self.measured_pp_curve = pg.PlotDataItem(pen=pg.mkPen(mpp_color, width=2), name='Measured')
+        self.measured_pp_curve = pg.PlotDataItem(pen=pg.mkPen(self.mpp_color, width=2), name='Measured')
         self.measured_pp_scatter = pg.ScatterPlotItem(symbol='o',
-                                                   pen=pg.mkPen(mpp_color, width=2),
-                                                   brush='w',
-                                                   size=symbol_size)
+                                                      pen=pg.mkPen(self.mpp_color, width=2),
+                                                      brush=pg.mkBrush(self.background_color),
+                                                      size=symbol_size)
 
-        self.theory_pp_curve = pg.PlotDataItem(pen=pg.mkPen((32, 32, 32, 100), width=2), name='Theory')
+        self.theory_pp_curve = pg.PlotDataItem(pen=pg.mkPen(self.foreground_color, width=2), name='Theory')
+        # self.theory_pp_curve = pg.PlotDataItem(pen=pg.mkPen((32, 32, 32, 100), width=2), name='Theory')
         self.theory_pp_scatter = pg.ScatterPlotItem(symbol='o',
-                                                 pen=pg.mkPen((32, 32, 32, 100), width=2),
-                                                 brush='w',
-                                                 size=symbol_size)
+                                                    pen=pg.mkPen(self.foreground_color, width=2),
+                                                    # pen=pg.mkPen((32, 32, 32, 100), width=2),
+                                                    brush=pg.mkBrush(self.background_color),
+                                                    size=symbol_size)
 
         # Format all axes
         for ax in np.concatenate([self.x_view_axes, self.y_view_axes]):
@@ -194,7 +221,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         # Use the first axes to set the label and tick labels
         for ax in [self.x_ax0, self.y_ax0]:
             ax.getAxis("left").setStyle(showValues=True)
-            ax.getAxis("left").setLabel("Station", color='1DD219')
+            ax.getAxis("left").setLabel("Station", color='1DD219', pen=pg.mkPen(self.foreground_color))
         #
         # for ax in [self.x_ax4, self.y_ax4]:
         #     ax.showAxis("right")
@@ -215,7 +242,7 @@ class Derotator(QMainWindow, Ui_Derotator):
             ax.getAxis("top").setStyle(showValues=True)
             ax.getAxis("right").setStyle(showValues=False)
             ax.getAxis("left").setStyle(showValues=True)
-            ax.getAxis("left").setLabel("Station", color='1DD219')
+            ax.getAxis("left").setLabel("Station", color='1DD219', pen=pg.mkPen(self.foreground_color))
             ax.getAxis('top').enableAutoSIPrefix(enable=False)
             ax.hideAxis("bottom")
 
@@ -227,6 +254,9 @@ class Derotator(QMainWindow, Ui_Derotator):
                                     [self.rot_ax], [self.pp_ax]])
 
         # Signals
+        self.actionReverse_XY.setIcon(get_icon("reverse.png"))
+        self.menuExport.setIcon(get_icon("export.png"))
+        self.actionPEM_File.setIcon(get_icon("crone_logo.png"))
         self.actionReverse_XY.triggered.connect(self.reverse_xy)
         self.actionPEM_File.triggered.connect(self.export_pem_file)
         self.actionStats.triggered.connect(self.export_stats)
@@ -558,7 +588,8 @@ class Derotator(QMainWindow, Ui_Derotator):
                 x, y = df.to_numpy(), df.index.to_numpy()
 
                 ax.plot(x=x, y=y,
-                        pen=pg.mkPen((0, 0, 0, 200), width=0.8))
+                        pen=pg.mkPen(self.foreground_color, width=0.8))
+                        # pen=pg.mkPen((0, 0, 0, 200), width=0.8))
 
             profile_data = processed_pem.get_profile_data(component, converted=True, incl_deleted=False)
             if profile_data.empty:
@@ -573,9 +604,13 @@ class Derotator(QMainWindow, Ui_Derotator):
 
                 # Set the Y-axis labels
                 if i == 0:
-                    ax.setLabel('top', f"PP channel", units=processed_pem.units)
+                    ax.setLabel('top', f"PP channel",
+                                units=processed_pem.units,
+                                pen=pg.mkPen(self.foreground_color))
                 else:
-                    ax.setLabel('top', f"Ch {bounds[0]} to {bounds[1]}", units=processed_pem.units)
+                    ax.setLabel('top', f"Ch {bounds[0]} to {bounds[1]}",
+                                units=processed_pem.units,
+                                pen=pg.mkPen(self.foreground_color))
 
                 # Plot the data
                 for ch in range(bounds[0], bounds[1] + 1):
@@ -738,11 +773,17 @@ class Derotator(QMainWindow, Ui_Derotator):
 def main():
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser
+    from src.qt_py import dark_palette
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    darkmode = True
+    if darkmode:
+        app.setPalette(dark_palette)
+
     pg.setConfigOptions(antialias=True)
     pg.setConfigOption('crashWarning', True)
-    pg.setConfigOption('background', 'w')
-    pg.setConfigOption('foreground', (53, 53, 53))
+    pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
+    pg.setConfigOption('foreground', "w" if darkmode else (53, 53, 53))
 
     pem_g = PEMGetter()
     parser = PEMParser()
@@ -753,10 +794,12 @@ def main():
     #     d.open(pem_file)
 
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="SAN-225G-18 Tool - Mag (PEMPro).PEM")
-    pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
+    pem_files = pem_g.get_pems(folder="Rotation Testing", file="_SAN-225G-18 XYZ.PEM")
+    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM")
+    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
     # pem_files = pem_g.get_pems(folder="TMC", subfolder=r"131-21-37\DATA", file="131-21-37 XY.PEM")
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_SAN-0246-19 XY (Cross bug).PEM")
-    mw = Derotator()
+    mw = Derotator(darkmode=darkmode)
     mw.open(pem_files)
 
     # mw.export_stats()
