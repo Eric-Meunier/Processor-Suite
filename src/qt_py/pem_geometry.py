@@ -108,7 +108,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
     # plt.style.use('seaborn-white')
     accepted_sig = Signal(object)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, darkmode=False):
         super().__init__(parent)
         self.setupUi(self)
 
@@ -121,7 +121,16 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         self.error.setWindowTitle('Error')
 
         self.parent = parent
+        self.darkmode = darkmode
         self.pem_file = None
+
+        plt.style.use('dark_background' if self.darkmode else 'default')
+        plt.rcParams['axes.facecolor'] = "#424242" if self.darkmode else "white"
+        plt.rcParams['figure.facecolor'] = "#424242" if self.darkmode else "white"
+        self.azimuth_color = "#FF66B2" if self.darkmode else "red"
+        # self.azimuth_color = "#FF99CC" if self.darkmode else "red"
+        self.dip_color = "#66FFFF" if self.darkmode else "blue"
+        self.mag_color = "#66FF66" if self.darkmode else "green"
 
         # Initialize the plot lines
         self.tool_az_line = None
@@ -188,16 +197,16 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         self.az_ax = self.mag_ax.twiny()
         self.axes = [self.az_ax, self.mag_ax, self.dip_ax, self.roll_ax]
 
-        self.az_ax.set_xlabel('Azimuth (°)', color='r')
-        self.dip_ax.set_xlabel('Dip (°)', color='b')
-        self.mag_ax.set_xlabel('Magnetic Field Strength (nT)', color='g')
-        self.roll_ax.set_xlabel('Roll Angle (°)', color='k')
+        self.az_ax.set_xlabel('Azimuth (°)', color=self.azimuth_color)
+        self.dip_ax.set_xlabel('Dip (°)', color=self.dip_color)
+        self.mag_ax.set_xlabel('Magnetic Field Strength (nT)', color=self.mag_color)
+        self.roll_ax.set_xlabel('Roll Angle (°)', color="w" if self.darkmode else "k")
 
         tkw = dict(size=4, width=1.5)
-        self.az_ax.tick_params(axis='x', colors='r', **tkw)
-        self.dip_ax.tick_params(axis='x', colors='b', **tkw)
+        self.az_ax.tick_params(axis='x', colors=self.azimuth_color, **tkw)
+        self.dip_ax.tick_params(axis='x', colors=self.dip_color, **tkw)
         self.dip_ax.tick_params(axis='y', which='major', right=True, direction='out')
-        self.mag_ax.tick_params(axis='x', colors='g', **tkw)
+        self.mag_ax.tick_params(axis='x', colors=self.mag_color, **tkw)
         self.roll_ax.yaxis.set_label_position('right')
         self.roll_ax.yaxis.set_ticks_position('right')
 
@@ -376,7 +385,8 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             spline_stations = np.linspace(0, depth.iloc[-1], 6)
             spline_az = np.interp(spline_stations, depth, smooth_azimuth(az + self.mag_dec_sbox.value()))
             self.az_spline = InteractiveSpline(self.az_ax, zip(spline_stations, spline_az),
-                                               line_color='darkred',
+                                               line_color=self.azimuth_color,
+                                               # line_color='darkred',
                                                method="cubic")
 
             self.toggle_az_spline()
@@ -391,7 +401,8 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             spline_dip = np.interp(spline_stations, depth, dip)
 
             self.dip_spline = InteractiveSpline(self.dip_ax, zip(spline_stations, spline_dip),
-                                                line_color='darkblue',
+                                                line_color=self.dip_color,
+                                                # line_color='darkblue',
                                                 method="cubic")
 
             self.toggle_dip_spline()
@@ -416,7 +427,8 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 
                 # Plot the lines
                 self.collar_az_line, = self.az_ax.plot(collar_az, collar_depths,
-                                                       color='crimson',
+                                                       color=self.azimuth_color,
+                                                       # color='crimson',
                                                        linestyle=(0, (5, 10)),
                                                        label='Fixed Azimuth',
                                                        lw=0.8,
@@ -424,7 +436,8 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 
                 # Plot the line in the polar plot
                 self.collar_az_line_p, = self.polar_ax.plot([math.radians(az) for az in collar_az], collar_depths,
-                                                            color='crimson',
+                                                            color=self.azimuth_color,
+                                                            # color='crimson',
                                                             linestyle=(0, (5, 10)),
                                                             label='Fixed Azimuth',
                                                             lw=0.8,
@@ -456,7 +469,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 
                 # Plot the lines
                 self.collar_dip_line, = self.dip_ax.plot(collar_dip, collar_depths,
-                                                         color='blue',
+                                                         color=self.dip_color,
                                                          linestyle=(0, (5, 10)),
                                                          label='Fixed Dip',
                                                          lw=0.8,
@@ -464,7 +477,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 
                 # Plot in the polar plot
                 self.collar_dip_line_p, = self.polar_ax.plot([-math.radians(dip) for dip in collar_dip], collar_depths,
-                                                             color='blue',
+                                                             color=self.dip_color,
                                                              linestyle=(0, (5, 10)),
                                                              label='Fixed Dip',
                                                              lw=0.8,
@@ -493,14 +506,16 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
                 self.show_existing_geom_cbox.setEnabled(True)
                 # Plot the lines
                 self.existing_az_line, = self.az_ax.plot(seg_az, seg_depth,
-                                                         color='crimson',
+                                                         color=self.azimuth_color,
+                                                         # color='crimson',
                                                          linestyle='-.',
                                                          label='Existing Azimuth',
                                                          lw=0.8,
                                                          zorder=1)
 
                 self.existing_dip_line, = self.dip_ax.plot(seg_dip, seg_depth,
-                                                           color='dodgerblue',
+                                                           color=self.dip_color,
+                                                           # color='dodgerblue',
                                                            linestyle='-.',
                                                            label='Existing Dip',
                                                            lw=0.8,
@@ -508,14 +523,16 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 
                 # Plot the lines in the polar plot
                 self.existing_az_line_p, = self.polar_ax.plot([math.radians(az) for az in seg_az], seg_depth,
-                                                              color='crimson',
+                                                              color=self.azimuth_color,
+                                                              # color='crimson',
                                                               linestyle='-.',
                                                               label='Existing Azimuth',
                                                               lw=0.8,
                                                               zorder=1)
 
                 self.existing_dip_line_p, = self.polar_ax.plot([-math.radians(dip) for dip in seg_dip], seg_depth,
-                                                               color='dodgerblue',
+                                                               color=self.dip_color,
+                                                               # color='dodgerblue',
                                                                linestyle='-.',
                                                                label='Existing Dip',
                                                                lw=0.8,
@@ -539,7 +556,6 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             """
             Create the mplcursor object and set some custom properties
             """
-
             def show_annotation(sel):
                 """
                 Change the properties of the annotation box
@@ -619,39 +635,45 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         stations = self.df.Station.astype(int)
 
         # Plot the tool information
-        self.tool_az_line, = self.az_ax.plot(tool_az, stations, '-r',
+        self.tool_az_line, = self.az_ax.plot(tool_az, stations,
+                                             color=self.azimuth_color,
                                              label='Tool Azimuth',
                                              lw=0.9,
                                              zorder=2)
 
         self.tool_mag_line, = self.mag_ax.plot(mag, stations,
-                                               color='green',
+                                               color=self.mag_color,
                                                label='Total Magnetic Field',
-                                               lw=0.3,
+                                               lw=0.4,
                                                zorder=1)
 
-        self.tool_dip_line, = self.dip_ax.plot(tool_dip, stations, '-b',
+        self.tool_dip_line, = self.dip_ax.plot(tool_dip, stations,
+                                               color=self.dip_color,
                                                label='Tool Dip',
                                                lw=0.9,
                                                zorder=1)
 
-        acc_roll_line, = self.roll_ax.plot(acc_roll, stations, '-b',
+        acc_roll_line, = self.roll_ax.plot(acc_roll, stations,
+                                           color=self.dip_color,
                                            label='Accelerometer',
                                            lw=0.9,
                                            zorder=1)
 
-        mag_roll_line, = self.roll_ax.plot(mag_roll, stations, '-r',
+        mag_roll_line, = self.roll_ax.plot(mag_roll, stations,
+                                           color=self.azimuth_color,
                                            label='Magnetometer',
                                            lw=0.9,
                                            zorder=1)
 
         # Plot the information in the polar plot
-        self.tool_az_line_p, = self.polar_ax.plot([math.radians(az) for az in tool_az], stations, '-r',
+        self.tool_az_line_p, = self.polar_ax.plot([math.radians(az) for az in tool_az], stations,
+                                                  color=self.azimuth_color,
                                                   label='Tool Azimuth',
                                                   lw=0.9,
                                                   zorder=2)
 
-        self.tool_dip_line_p, = self.polar_ax.plot([-math.radians(dip) for dip in tool_dip], stations, '-b',
+        self.tool_dip_line_p, = self.polar_ax.plot([-math.radians(dip) for dip in tool_dip], stations,
+                                                   color=self.dip_color,
                                                    label='Tool Dip',
                                                    lw=0.9,
                                                    zorder=1)
@@ -697,14 +719,16 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             self.show_imported_geom_cbox.setEnabled(True)
             # Plot the lines
             self.imported_az_line, = self.az_ax.plot(az, depths,
-                                                     color='crimson',
+                                                     color=self.azimuth_color,
+                                                     # color='crimson',
                                                      ls='dashed',
                                                      label='Imported Azimuth',
                                                      lw=0.8,
                                                      zorder=1)
 
             self.imported_dip_line, = self.dip_ax.plot(dip, depths,
-                                                       color='dodgerblue',
+                                                       color=self.dip_color,
+                                                       # color='dodgerblue',
                                                        ls='dashed',
                                                        label='Imported Dip',
                                                        lw=0.8,
@@ -712,14 +736,16 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 
             # Add the lines to the polar plot
             self.imported_az_line_p, = self.polar_ax.plot([math.radians(z) for z in az], depths,
-                                                          color='crimson',
+                                                          color=self.azimuth_color,
+                                                          # color='crimson',
                                                           ls='dashed',
                                                           label='Imported Azimuth',
                                                           lw=0.8,
                                                           zorder=1)
 
             self.imported_dip_line_p, = self.polar_ax.plot([-math.radians(z) for z in dip], depths,
-                                                           color='dodgerblue',
+                                                          color=self.dip_color,
+                                                           # color='dodgerblue',
                                                            ls='dashed',
                                                            label='Imported Dip',
                                                            lw=0.8,
@@ -1144,7 +1170,9 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser
+    from src.qt_py import dark_palette
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     pg = PEMGetter()
@@ -1155,10 +1183,13 @@ if __name__ == '__main__':
     files = pg.get_pems(folder='Raw Boreholes', file=r'GEN-21-06\RAW\xy_0825.PEM')
     # files = pg.get_pems(client='Minera', subfolder='CPA-5057', file='XY.PEM')
 
-    win = PEMGeometry()
+    darkmode = True
+    if darkmode:
+        app.setPalette(dark_palette)
+    win = PEMGeometry(darkmode=darkmode)
     win.open(files)
-    dad = samples_folder.joinpath(r"Raw Boreholes\GEN-21-06\RAW\gyro.csv")
-    win.open_dad_file(dad)
+    # dad = samples_folder.joinpath(r"Raw Boreholes\GEN-21-06\RAW\gyro.csv")
+    # win.open_dad_file(dad)
 
     # df = pd.read_csv(dad,
     #                   usecols=[0, 1, 2],

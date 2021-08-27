@@ -1832,7 +1832,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         pem_file, row = pem_files[0], rows[0]
 
-        self.derotator = Derotator(parent=self)
+        self.derotator = Derotator(parent=self, darkmode=self.actionDark_Theme.isChecked())
         # refs.append(derotator)
         self.derotator.accept_sig.connect(accept_file)
         self.derotator.open(pem_file)
@@ -1847,7 +1847,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         pem_files, rows = self.get_pem_files(selected=True)
 
-        pem_geometry = PEMGeometry(parent=self)
+        pem_geometry = PEMGeometry(parent=self, darkmode=self.actionDark_Theme.isChecked())
         refs.append(pem_geometry)
         pem_geometry.accepted_sig.connect(accept_geometry)
         pem_geometry.open(pem_files)
