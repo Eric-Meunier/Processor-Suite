@@ -24,6 +24,33 @@ from src.ui.pem_geometry import Ui_PEMGeometry
 logger = logging.getLogger(__name__)
 
 
+def smooth_azimuth(azimuth):
+    """
+    Smoothen the azimuth for when values pass the 0 to 360 threshold.
+    :param azimuth: numpy array
+    :return: numpy array
+    """
+    if isinstance(azimuth, pd.Series):
+        azimuth = azimuth.to_numpy()
+
+    smooth_az = np.array(azimuth[0])
+    for az in azimuth[1:]:
+        diff = abs(az - azimuth[-1])
+        diff_minus_360 = abs((az - 360) - azimuth[1])
+        diff_plus_360 = abs((az + 360) - azimuth[1])
+        if diff_minus_360 < diff:
+            az = az - 360
+        elif diff_plus_360 < diff:
+            az = az + 360
+        else:
+            az = az
+
+        smooth_az = np.append((az), smooth_az)
+
+    if all(smooth_az < 0):
+        smooth_az = smooth_az + 360
+    return smooth_az
+
 def dad_to_seg(df, units='m'):
     """
     Create a segment data frame from a DAD data frame. DAD data is split into 1m intervals.
@@ -33,7 +60,7 @@ def dad_to_seg(df, units='m'):
     """
     # Interpolate the DAD to 1m segments
     depth = df.Depth.to_numpy()
-    azimuth = df.Azimuth.to_numpy()
+    azimuth = smooth_azimuth(df.Azimuth.to_numpy())
     dip = df.Dip.to_numpy()
 
     i_depth = np.arange(depth[0], depth[-1] + 1)
@@ -347,7 +374,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             Add the azimuth spline line
             """
             spline_stations = np.linspace(0, depth.iloc[-1], 6)
-            spline_az = np.interp(spline_stations, depth, az + self.mag_dec_sbox.value())
+            spline_az = np.interp(spline_stations, depth, smooth_azimuth(az + self.mag_dec_sbox.value()))
             self.az_spline = InteractiveSpline(self.az_ax, zip(spline_stations, spline_az),
                                                line_color='darkred',
                                                method="cubic")
@@ -379,7 +406,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             """
             if self.collar_az_line is None:
                 global collar_az, collar_depths
-                avg_az = int(np.average(az))
+                avg_az = int(np.average(smooth_azimuth(az)))
                 self.collar_az_sbox.blockSignals(True)
                 self.collar_az_sbox.setValue(avg_az)
                 self.collar_az_sbox.blockSignals(False)
@@ -458,7 +485,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             global seg_az, seg_dip, seg_depth
             seg = self.pem_file.get_segments()
             seg_depth = seg.Depth
-            seg_az = seg.Azimuth
+            seg_az = smooth_azimuth(seg.Azimuth)
             seg_dip = seg.Dip * -1
 
             if self.existing_az_line is None:
@@ -579,11 +606,11 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         # tool_az = self.df.RAD_tool.map(lambda x: x.get_azimuth(
         #     allow_negative=self.actionAllow_Negative_Azimuth.isChecked()))
         tool_az = self.pem_file.get_azimuth(average=True).Angle
-        tool_az = tool_az + self.mag_dec_sbox.value()  # Add the magnetic declination
+        tool_az = smooth_azimuth(tool_az + self.mag_dec_sbox.value())  # Add the magnetic declination
 
-        # If all azimuth values are negative, make them positive.
-        if all(tool_az < 0):
-            tool_az = tool_az + 360
+        # # If all azimuth values are negative, make them positive.
+        # if all(tool_az < 0):
+        #     tool_az = tool_az + 360
 
         tool_dip = self.df.RAD_tool.map(lambda x: x.get_dip())
         mag = self.df.RAD_tool.map(lambda x: x.get_mag())
@@ -659,7 +686,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             return
 
         depths = df.Depth
-        az = df.Azimuth
+        az = smooth_azimuth(df.Azimuth)
         dip = df.Dip
         # Flip the dip if it's coming from a .seg file
         if source == 'seg':
@@ -1118,19 +1145,27 @@ if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser
     app = QApplication(sys.argv)
+    samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     pg = PEMGetter()
     parser = PEMParser()
     # files = pg.get_pems(folder='PEM Rotation', file='_PU-340 XY.PEM')
     # files = pg.get_pems(folder='Raw Boreholes', number=1, random=True, incl='xy')
-    files = pg.get_pems(file=r"Raw Boreholes\HOLE STE-21-02\RAW\ste-21-02 xy.pem")
-    # files = pg.get_pems(folder='Raw Boreholes', file='XY_0410.PEM')
+    # files = pg.get_pems(file=r"Raw Boreholes\HOLE STE-21-02\RAW\ste-21-02 xy.pem")
+    files = pg.get_pems(folder='Raw Boreholes', file=r'GEN-21-06\RAW\xy_0825.PEM')
     # files = pg.get_pems(client='Minera', subfolder='CPA-5057', file='XY.PEM')
 
     win = PEMGeometry()
     win.open(files)
-    # dad = r'C:\_Data\2020\Iscaycruz\Borehole\SE-20-02A\RAW\gyro.csv'
-    # win.open_dad_file(dad)
+    dad = samples_folder.joinpath(r"Raw Boreholes\GEN-21-06\RAW\gyro.csv")
+    win.open_dad_file(dad)
+
+    # df = pd.read_csv(dad,
+    #                   usecols=[0, 1, 2],
+    #                   names=['Depth', 'Azimuth', 'Dip'],
+    #                   dtype=float)
+    # seg = dad_to_seg(df)
+    # print(seg.to_string())
 
     # win.az_output_combo.setCurrentIndex(1)
     # win.dip_output_combo.setCurrentIndex(1)

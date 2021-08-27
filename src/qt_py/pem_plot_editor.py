@@ -926,7 +926,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                         comp_filt = self.plotted_decay_data.Component == "Z"
 
                     # Ignore deleted data when calculating median
-                    existing_data = self.plotted_decay_data[comp_filt][~self.plotted_decay_data[comp_filt].Deleted]
+                    existing_data = self.plotted_decay_data[comp_filt][~self.plotted_decay_data[comp_filt].Deleted.astype(bool)]
                     median_data = DataFrame.from_records(existing_data.Reading.reset_index(drop=True))
                     if median_data.empty:
                         continue
@@ -1905,7 +1905,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         def clean_group(group):
             readings = np.array(group[~group.Deleted.astype(bool)].Reading.to_list())
             data_std = np.array([threshold_value] * len(readings[0]))
-            data_median = np.median(group[~group.Deleted].Reading.to_list(), axis=0)
+            data_median = np.median(group[~group.Deleted.astype(bool)].Reading.to_list(), axis=0)
 
             if len(group.loc[~group.Deleted.astype(bool)]) > 2:
                 global local_count
@@ -2180,12 +2180,14 @@ if __name__ == '__main__':
     parser = PEMParser()
     dmp_parser = DMPParser()
 
-    # file = r"C:\_Data\2021\Nantou BF\Surface\Loop 5\RAW\_0816_pp.DMP2"
-    # pem_file, errors = dmp_parser.parse(file)
+    file = r"C:\_Data\2021\Raglan\718-3849\RAW\718-3849_0825.dmp2"
+    pem_file, errors = dmp_parser.parse(file)
+    pem_file.prep_rotation()
+    pem_file.rotate()
     # pem_file = parser.parse(r"C:\_Data\2021\Nantou BF\Surface\Loop 5\RAW\_0816_pp.PEM")
     # pem_file = pem_g.get_pems(folder="Raw Boreholes", file=r"SR-15-04 Z.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Boreholes", file="em21-155 z_0415.PEM")[0]
-    pem_file = pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM")[0]
+    # pem_file = pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\800E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\1200E.PEM")[0]  # TODO Test this for ordering worse to best readings
@@ -2196,7 +2198,7 @@ if __name__ == '__main__':
     editor = PEMPlotEditor(darkmode=darkmode)
     # editor.move(0, 0)
     editor.open(pem_file)
-    # editor.auto_clean()
+    editor.auto_clean()
 
     app.exec_()
 

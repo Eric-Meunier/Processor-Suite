@@ -1271,7 +1271,6 @@ class DADSelector(QWidget):
 
     def eventFilter(self, source, event):
         if event.type() == QEvent.MouseButtonRelease:
-            print(f'Mouse released.')
             table = self.tables[self.tabs.currentIndex()]
             selected_items = table.selectedItems()
 
