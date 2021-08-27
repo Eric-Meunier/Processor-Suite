@@ -2812,6 +2812,11 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(f"No PEM files selected.", 2000)
             return
 
+        # Get output dir from user
+        save_path = self.file_dialog.getExistingDirectory(self, '', str(self.pem_files[-1].filepath.parent))
+        # Escape statement
+        if not save_path: return
+
         choices = ("Loop", "Survey Line/Borehole", "Both")
         choice, ok = QInputDialog.getItem(self, "DXF", "DXF Plot Options", choices, 0, False)
         # Escape statement
@@ -2827,8 +2832,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 # Check if the pem even has a loaded segment or line
                 if not pf.segments.df.empty or not pf.line.df.empty:
                     dwg.add_surveyline(pf)
-            # We'll just save it out to the input DIR
-            outpath = os.path.splitext(pf.filepath)[0] + ".dxf"
+            # Save out to the dir using the PEMFile names
+            fname = os.path.splitext(os.path.split(pf.filepath)[-1])[0] + ".dxf"
+            outpath = os.path.join(save_path, fname)
             dwg.save_dxf(outpath)
 
     def copy_pems_to_clipboard(self):

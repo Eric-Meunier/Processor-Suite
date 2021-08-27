@@ -75,9 +75,6 @@ class MMRFile(PEMFile):
         mag = MagneticFieldCalculator(self.loop.df, closed_loop=False)
         return mag.calc_total_field(x, y, z)
 
-    def calc_harmonics(self):
-        pass
-
     @mutate_attr_catch
     def ontime_channels(self):
         pass
