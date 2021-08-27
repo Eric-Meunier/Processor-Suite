@@ -9,21 +9,18 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from PySide2.QtCore import Qt, Signal
-from PySide2.QtGui import QIcon, QColor
+from PySide2.QtGui import QColor
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QWidget, QFileDialog, QVBoxLayout, QLabel, QApplication,
                                QFrame, QHBoxLayout, QHeaderView, QInputDialog, QPushButton, QTabWidget, QTableWidgetItem)
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser
-from src.qt_py import icons_path, NonScientific, read_file
+from src.qt_py import get_icon, NonScientific, read_file, table_to_df, df_to_table
 from src.ui.line_adder import Ui_LineAdder
 from src.ui.loop_adder import Ui_LoopAdder
 
 logger = logging.getLogger(__name__)
 
-pg.setConfigOptions(antialias=True)
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
-pg.setConfigOption('crashWarning', True)
+empty_background = QColor(255, 255, 255, 0)
 
 
 class GPSAdder(QMainWindow):
@@ -36,10 +33,11 @@ class GPSAdder(QMainWindow):
     def __init__(self):
         super().__init__()
         self.resize(1000, 800)
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'gps_adder.png')))
+        self.setWindowIcon(get_icon('gps_adder.png'))
 
         self.df = None
         self.error = False  # For pending errors
+        self.units = None
 
         # Highlighting
         self.plan_highlight = pg.PlotDataItem(clickable=True)
@@ -109,7 +107,7 @@ class GPSAdder(QMainWindow):
         Signal slot: Adds the data from the table to the write_widget's (pem_info_widget object) table.
         :return: None
         """
-        self.accept_sig.emit(self.table_to_df().dropna())
+        self.accept_sig.emit(table_to_df(self.table).dropna())
         # self.hide()
 
         self.close()
@@ -121,6 +119,16 @@ class GPSAdder(QMainWindow):
         while self.table.rowCount() > 0:
             self.table.removeRow(0)
         self.table.blockSignals(True)
+
+    def clear_selection(self):
+        self.table.clearSelection()
+        if self.plan_lx in self.plan_view.items():
+            self.plan_view.removeItem(self.plan_highlight)
+            self.plan_view.removeItem(self.plan_lx)
+            self.plan_view.removeItem(self.plan_ly)
+            self.section_view.removeItem(self.section_highlight)
+            self.section_view.removeItem(self.section_lx)
+            self.section_view.removeItem(self.section_ly)
 
     def open(self, o, name=''):
         pass
@@ -141,54 +149,52 @@ class GPSAdder(QMainWindow):
         """
         self.table.blockSignals(True)
 
-        def write_row(series):
-            """
-             Add items from a pandas data frame row to a Qpg.TableWidget row
-             :param series: pandas Series object
-             :return: None
-             """
-            def series_to_items(x):
-                if isinstance(x, float):
-                    return QTableWidgetItem(f"{x}")
-                    # return Qpg.TableWidgetItem(f"{x:.2f}")
-                else:
-                    return QTableWidgetItem(str(x))
-
-            row_pos = self.table.rowCount()
-            # Add a new row to the table
-            self.table.insertRow(row_pos)
-
-            items = series.map(series_to_items).to_list()
-            # Format each item of the table to be centered
-            for m, item in enumerate(items):
-                item.setTextAlignment(Qt.AlignCenter)
-                self.table.setItem(row_pos, m, item)
-
         if df.empty:
             logger.error(f"No GPS found.")
             self.message.error(self, 'Error', 'No GPS was found.')
         else:
             self.clear_table()
-            columns = df.columns.to_list()
-            self.table.setColumnCount(len(columns))
-            self.table.setHorizontalHeaderLabels(columns)
-            df.apply(write_row, axis=1)
+            df_to_table(df, self.table)
+
         self.table.blockSignals(False)
 
-    def table_to_df(self):
-        """
-        Return a data frame from the information in the table
-        :return: pandas pd.DataFrame
-        """
-        gps = []
-        for row in range(self.table.rowCount()):
-            gps_row = list()
-            for col in range(self.table.columnCount()):
-                gps_row.append(self.table.item(row, col).text())
-            gps.append(gps_row)
+    # def table_to_df(self):
+    #     """
+    #     Return a data frame from the information in the table
+    #     :return: pandas pd.DataFrame
+    #     """
+    #     # gps = []
+    #     # for row in range(self.table.rowCount()):
+    #     #     gps_row = list()
+    #     #     for col in range(self.table.columnCount()):
+    #     #         gps_row.append(self.table.item(row, col).text())
+    #     #     gps.append(gps_row)
+    #     #
+    #     # df = pd.DataFrame(gps, columns=self.df.columns).astype(dtype=self.df.dtypes)
+    #     return df
 
-        df = pd.DataFrame(gps, columns=self.df.columns).astype(dtype=self.df.dtypes)
-        return df
+    def refresh_table(self):
+        """
+        Re-draw the table, resetting all coloring and keeping the vertical scroll bar position the same.
+        :return: None
+        """
+        self.table.blockSignals(True)
+
+        df = table_to_df(self.table)
+
+        # Store vertical scroll bar position to be restored after
+        slider_position = self.table.verticalScrollBar().sliderPosition()
+
+        self.df_to_table(df)  # Clears previous contents
+
+        # Restore scroll bar position
+        self.table.verticalScrollBar().setSliderPosition(slider_position)
+
+        # Color the table if it's LineAdder running
+        if 'color_table' in dir(self):
+            self.color_table()
+
+        self.table.blockSignals(False)
 
     def plot_table(self, preserve_limits=False):
         pass
@@ -212,7 +218,7 @@ class GPSAdder(QMainWindow):
             """
             indexes = self.selection
             # Create the data frame
-            df = self.table_to_df()
+            df = table_to_df(self.table)
             # Create a copy of the two rows.
             a, b = df.iloc[indexes[0]].copy(), df.iloc[indexes[1]].copy()
             # Allocate the two rows in reverse order
@@ -260,13 +266,11 @@ class GPSAdder(QMainWindow):
         :param row: int
         :param col: int
         """
-
         def get_errors():
             """
             Count any incorrect data types
             :return: int, number of errors found
             """
-
             def has_na(row):
                 """
                 Return True if any cell in the row can't be converted to a float
@@ -294,19 +298,19 @@ class GPSAdder(QMainWindow):
 
         # Reject the change if it causes an error.
         if errors > 0:
-            self.table.blockSignals(True)
-            logger.critical(f"{self.table.item(row, col).text()} is not a number.")
+            logger.info(f"{self.table.item(row, col).text()} is not a number.")
             self.message.critical(self, 'Error', f"{self.table.item(row, col).text()} cannot be converted to a number.")
 
+            self.table.blockSignals(True)
             self.table.setItem(row, col, self.selected_row_info[col])
             self.table.blockSignals(False)
         else:
             self.plot_table()
             self.highlight_point(row=row)
 
-        # Color the table if it's LineAdder running
+        # Refresh the table if it's LineAdder running
         if 'color_table' in dir(self):
-            self.color_table()
+            self.refresh_table()
 
 
 class LineAdder(GPSAdder, Ui_LineAdder):
@@ -315,6 +319,9 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle('Line Adder')
+        self.actionOpen.setIcon(get_icon("open.png"))
+        self.actionEdit_Names.setIcon(get_icon("edit.png"))
+        self.actionInterp_Null_Elevation.setIcon(get_icon("grid_planner.png"))
         self.status_bar.hide()
 
         self.parent = parent
@@ -379,6 +386,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         # Signals
         self.actionOpen.triggered.connect(self.open_file_dialog)
         self.actionEdit_Names.triggered.connect(self.edit_names)
+        self.actionInterp_Null_Elevation.triggered.connect(self.interp_elevation)
 
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.close)
@@ -396,25 +404,33 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             self.section_view.autoRange()
 
         elif e.key() == Qt.Key_Escape:  # Clear the selection
-            self.table.clearSelection()
-            if self.plan_lx in self.plan_view.items():
-                self.plan_view.removeItem(self.plan_highlight)
-                self.plan_view.removeItem(self.plan_lx)
-                self.plan_view.removeItem(self.plan_ly)
-                self.section_view.removeItem(self.section_highlight)
-                self.section_view.removeItem(self.section_lx)
-                self.section_view.removeItem(self.section_ly)
+            self.clear_selection()
 
     def edit_names(self):
         """
         Remove text from station names. Useful for GPX files.
         """
-        trunc_amt, _ = QInputDialog().getInt(self, "Edit Station Names", "Amount to truncate:")
+        trunc_amt, _ = QInputDialog().getInt(self, "Edit Station Names", "Amount to truncate:", 1)
         if trunc_amt:
+            # Remove any selections/highlights
+            self.clear_selection()
             print(f"Truncating {trunc_amt}")
             self.df.Station.loc[:] = self.df.Station.loc[:].map(lambda x: str(x)[trunc_amt:]).astype(int)
             self.df_to_table(self.df)
             self.plot_table(preserve_limits=True)
+
+    def interp_elevation(self):
+        """
+        Interpolate missing ("0.0") elevation values.
+        :return: None
+        """
+        df = table_to_df(self.table)
+        elevation = df.Elevation
+        filt = elevation == 0
+        interp_elevation = np.interp(df.index, df[~filt.astype(bool)].index, df[~filt.astype(bool)].Elevation)
+        df.Elevation = interp_elevation
+        self.df_to_table(df)
+        self.plot_table(preserve_limits=False)
 
     def open(self, gps, name=''):
         """
@@ -442,6 +458,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.setWindowTitle(f'Line Adder - {name}')
 
         self.clear_table()
+        self.units = self.line.get_units()
         self.df = self.line.get_line(sorted=self.auto_sort_cbox.isChecked())
         self.df.loc[:, "Easting":"Elevation"] = self.df.loc[:, "Easting":"Elevation"].astype(float).applymap(
             lambda x: f"{x:.2f}")
@@ -464,10 +481,9 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         Plot the data from the table to the axes.
         :return: None
         """
-        df = self.table_to_df()
+        df = table_to_df(self.table)
         if df.empty:
             return
-
         df['Station'] = df['Station'].astype(int)
 
         # Plot the plan map
@@ -488,25 +504,11 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                                   )
 
         # Set the X and Y labels
-        if df.Unit.all() == '0':
-            self.plan_view.getAxis('left').setLabel('Northing', units='m')
-            self.plan_view.getAxis('bottom').setLabel('Easting', units='m')
+        self.plan_view.getAxis('left').setLabel('Northing', units=self.units)
+        self.plan_view.getAxis('bottom').setLabel('Easting', units=self.units)
 
-            self.section_view.setLabel('left', f"Elevation", units='m')
-            self.section_view.setLabel('bottom', f"Station", units='m')
-
-        elif df.Unit.all() == '1':
-            self.plan_view.getAxis('left').setLabel('Northing', units='ft')
-            self.plan_view.getAxis('bottom').setLabel('Easting', units='ft')
-
-            self.section_view.setLabel('left', f"Elevation", units='ft')
-            self.section_view.setLabel('bottom', f"Station", units='ft')
-        else:
-            self.plan_view.getAxis('left').setLabel('Northing', units=None)
-            self.plan_view.getAxis('bottom').setLabel('Easting', units=None)
-
-            self.section_view.setLabel('left', f"Elevation", units=None)
-            self.section_view.setLabel('bottom', f"Station", units=None)
+        self.section_view.setLabel('left', f"Elevation", units=self.units)
+        self.section_view.setLabel('bottom', f"Station", units=self.units)
 
     def highlight_point(self, row=None):
         """
@@ -514,7 +516,6 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         :param row: Int: table row to highlight
         :return: None
         """
-
         if row is None:
             selected_row = self.table.selectionModel().selectedRows()
             if selected_row:
@@ -528,7 +529,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
 
         color = (255, 0, 0, 150) if keyboard.is_pressed('ctrl') else (0, 0, 255, 150)
 
-        df = self.table_to_df()
+        df = table_to_df(self.table)
         df['Station'] = df['Station'].astype(int)
 
         # Plot on the plan map
@@ -591,8 +592,8 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                         self.table.item(row, stations_column).setForeground(QColor('red'))
                         self.table.item(other_station_index, stations_column).setForeground(QColor('red'))
                         errors += 1
-                    else:
-                        self.table.item(row, stations_column).setForeground(QColor('black'))
+                    # else:
+                    #     self.table.item(row, stations_column).setForeground(QColor('lightGray'))
                     stations.append(station)
 
         def color_order():
@@ -600,7 +601,8 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             Color the background of the station cells if the station number is out of order
             """
             global errors
-            df_stations = self.table_to_df().Station.map(lambda x: re.search(r'-?\d+', str(x)).group())
+            df_stations = table_to_df(self.table).Station.map(
+                lambda x: re.search(r'-?\d+', str(x)).group())
 
             table_stations = df_stations.astype(int).to_list()
 
@@ -626,7 +628,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                         station_item.setBackground(red_color)
                         errors += 1
                     else:
-                        station_item.setBackground(QColor('white'))
+                        station_item.setBackground(empty_background)
 
         self.table.blockSignals(True)
         global errors
@@ -649,6 +651,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.loop = None
         self.selected_row_info = None
         self.setWindowTitle('Loop Adder')
+        self.actionOpen.setIcon(get_icon("open.png"))
         self.status_bar.hide()
 
         # Status bar widgets
@@ -742,6 +745,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.setWindowTitle(f'Loop Adder - {name}')
 
         self.clear_table()
+        self.units = self.loop.get_units()
         self.df = self.loop.get_loop(closed=True, sorted=self.auto_sort_cbox.isChecked())
         self.df.loc[:, "Easting":"Elevation"] = self.df.loc[:, "Easting":"Elevation"].astype(float).applymap(
             lambda x: f"{x:.2f}")
@@ -763,7 +767,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         Plot the data from the table to the axes.
         :return: None
         """
-        df = self.table_to_df()
+        df = table_to_df(self.table)
 
         if df.empty:
             return
@@ -789,22 +793,10 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
                                   )
 
         # Set the X and Y labels
-        if df.Unit.all() == '0':
-            self.plan_view.getAxis('left').setLabel('Northing', units='m')
-            self.plan_view.getAxis('bottom').setLabel('Easting', units='m')
+        self.plan_view.getAxis('left').setLabel('Northing', units=self.units)
+        self.plan_view.getAxis('bottom').setLabel('Easting', units=self.units)
 
-            self.section_view.setLabel('left', f"Elevation", units='m')
-
-        elif df.Unit.all() == '1':
-            self.plan_view.getAxis('left').setLabel('Northing', units='ft')
-            self.plan_view.getAxis('bottom').setLabel('Easting', units='ft')
-
-            self.section_view.setLabel('left', f"Elevation", units='ft')
-        else:
-            self.plan_view.getAxis('left').setLabel('Northing', units=None)
-            self.plan_view.getAxis('bottom').setLabel('Easting', units=None)
-
-            self.section_view.setLabel('left', f"Elevation", units=None)
+        self.section_view.setLabel('left', f"Elevation", units=self.units)
 
     def highlight_point(self, row=None):
         """
@@ -826,7 +818,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
 
         color = (255, 0, 0, 150) if keyboard.is_pressed('ctrl') else (0, 0, 255, 150)
 
-        df = self.table_to_df()
+        df = table_to_df(self.table)
 
         # Plot on the plan map
         plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
@@ -877,14 +869,17 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         super().__init__()
         self.setupUi(self)
         self.parent = parent
+        self.setWindowTitle('Collar Picker')
+        self.actionOpen.setIcon(get_icon("open.png"))
+        self.status_bar.hide()
+        self.menuSettings.deleteLater()
+
         self.gps_content = None
         self.selected_row_info = None
-        self.setWindowTitle('Collar Picker')
-        self.status_bar.hide()
-        self.menuSettings.clear()
 
         self.table.setFixedWidth(400)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.horizontalHeader().hide()
 
         # Create the plan and section plots
         self.plan_plot = pg.ScatterPlotItem(clickable=True)
@@ -956,61 +951,57 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
             self.plan_view.autoRange()
             self.section_view.autoRange()
 
+    def cell_changed(self, row, col):
+        # Don't check for errors for CollarPicker.
+        pass
+
     def open(self, gps, name=''):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
         :param gps: Union (filepath, dataframe), file to open
         :param name: str, name of the loop
         """
-        gpx_errors = []
-        if isinstance(gps, str) or isinstance(gps, Path):
-            if Path(str(gps)).is_file():
-                if Path(gps).suffix.lower() == '.gpx':
-                    # Convert the GPX file to string
-                    gps, zone, hemisphere, crs, gpx_errors = GPXParser().get_utm(gps, as_string=True)
-                    contents = [c.strip().split() for c in gps]
-                else:
-                    contents = read_file(gps, as_list=True)
+        def get_df(gps):
+            df = pd.DataFrame()
+            if isinstance(gps, str) or isinstance(gps, Path):
+                if Path(str(gps)).is_file():
+                    if Path(gps).suffix.lower() == '.gpx':
+                        # Convert the GPX file to string
+                        gps, zone, hemisphere, crs, gpx_errors = GPXParser().get_utm(gps, as_string=True)
+                        contents = [c.strip().split() for c in gps]
+                    else:
+                        contents = read_file(gps, as_list=True)
+                    try:
+                        df = pd.DataFrame.from_records(contents)
+                    except ValueError as e:
+                        self.show()
+                        self.message.critical(self, f"Parsing Error", str(e))
+                        return df
+            elif isinstance(gps, list):
                 try:
-                    self.df = pd.DataFrame.from_records(contents)
-                    self.df.columns = ["Easting", "Northing", "Elevation", "Unit", "Name"][:len(self.df.columns)]
+                    df = pd.DataFrame.from_records(gps)
                 except ValueError as e:
                     self.show()
                     self.message.critical(self, f"Parsing Error", str(e))
-                    return
-                else:
-                    self.df.loc[:, "Easting":"Elevation"] = self.df.loc[:, "Easting":"Elevation"].astype(float).applymap(
-                        lambda x: f"{x:.2f}")
-                    # Convert the column dtypes for when the data is created from the table values
-                    self.df["Easting"] = pd.to_numeric(self.df["Easting"])
-                    self.df["Northing"] = pd.to_numeric(self.df["Northing"])
-                    self.df["Elevation"] = pd.to_numeric(self.df["Elevation"])
-        elif isinstance(gps, list):
-            try:
-                self.df = pd.DataFrame.from_records(gps)
-                self.df.columns = ["Easting", "Northing", "Elevation", "Unit", "Name"][:len(self.df.columns)]
-            except ValueError as e:
-                self.show()
-                self.message.critical(self, f"Parsing Error", str(e))
-                return
+                    return df
             else:
-                self.df.loc[:, "Easting":"Elevation"] = self.df.loc[:, "Easting":"Elevation"].astype(float).applymap(
-                    lambda x: f"{x:.2f}")
-                # Convert the column dtypes for when the data is created from the table values
-                self.df["Easting"] = pd.to_numeric(self.df["Easting"])
-                self.df["Northing"] = pd.to_numeric(self.df["Northing"])
-                self.df["Elevation"] = pd.to_numeric(self.df["Elevation"])
-        else:
-            self.df = gps
+                df = gps
+
+            return df
+
+        self.setWindowTitle(f'Collar Picker - {name}')
+        gpx_errors = []
+        remove_cols = []
+        self.df = get_df(gps)
 
         if self.df.empty:
             logger.critical(f"No GPS found to Collar Picker.")
             self.message.critical(self, 'Error', f"No GPS found.")
             return
+        else:
+            self.df = self.df.apply(pd.to_numeric, errors='ignore')
 
-        self.setWindowTitle(f'Collar Picker - {name}')
-
-        self.clear_table()
+        # self.clear_table()
         self.df_to_table(self.df)
         self.table.selectRow(0)
         self.plot_table()
@@ -1025,49 +1016,30 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         Plot the data from the table to the axes.
         :return: None
         """
-        df = self.table_to_df()
+        df = table_to_df(self.table)
 
         if df.empty:
             return
 
         # Plot the plan map
-        self.plan_plot.setData(df.Easting.to_numpy(), df.Northing.to_numpy(),
+        self.plan_plot.setData(df.iloc[:, 0].to_numpy(), df.iloc[:, 1].to_numpy(),
                                symbol='o',
                                size=8,
                                pen=pg.mkPen('k', width=1.),
                                brush=pg.mkBrush('w'),
                                )
         # Plot the sections
-        self.section_plot.setData(df.index, df.Elevation.to_numpy(),
+        self.section_plot.setData(df.index, df.iloc[:, 2].to_numpy(),
                                   symbol='o',
                                   size=8,
                                   pen=pg.mkPen('k', width=1.),
                                   brush=pg.mkBrush('w'),
                                   )
 
-        if "Unit" in df.columns:
-            # Set the X and Y labels
-            if df.Unit.all() == '0':
-                self.plan_view.getAxis('left').setLabel('Northing', units='m')
-                self.plan_view.getAxis('bottom').setLabel('Easting', units='m')
+        self.plan_view.getAxis('left').setLabel('Northing', units=None)
+        self.plan_view.getAxis('bottom').setLabel('Easting', units=None)
 
-                self.section_view.setLabel('left', f"Elevation", units='m')
-
-            elif df.Unit.all() == '1':
-                self.plan_view.getAxis('left').setLabel('Northing', units='ft')
-                self.plan_view.getAxis('bottom').setLabel('Easting', units='ft')
-
-                self.section_view.setLabel('left', f"Elevation", units='ft')
-            else:
-                self.plan_view.getAxis('left').setLabel('Northing', units=None)
-                self.plan_view.getAxis('bottom').setLabel('Easting', units=None)
-
-                self.section_view.setLabel('left', f"Elevation", units=None)
-        else:
-            self.plan_view.getAxis('left').setLabel('Northing', units=None)
-            self.plan_view.getAxis('bottom').setLabel('Easting', units=None)
-
-            self.section_view.setLabel('left', f"Elevation", units=None)
+        self.section_view.setLabel('left', f"Elevation", units=None)
 
     def highlight_point(self, row=None):
         """
@@ -1075,7 +1047,6 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         :param row: Int: table row to highlight
         :return: None
         """
-
         if row is None:
             selected_row = self.table.selectionModel().selectedRows()
             if selected_row:
@@ -1089,10 +1060,10 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
 
         color = (255, 0, 0, 150) if keyboard.is_pressed('ctrl') else (0, 0, 255, 150)
 
-        df = self.table_to_df()
+        df = table_to_df(self.table)
 
         # Plot on the plan map
-        plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
+        plan_x, plan_y = df.iloc[row, 0], df.iloc[row, 1]
 
         # Add the over-lying scatter point
         self.plan_highlight.setData([plan_x], [plan_y],
@@ -1108,7 +1079,7 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         self.plan_ly.setPen(pg.mkPen(color, width=2.))
 
         # Plot on the section map
-        section_x, section_y = row, df.loc[row, 'Elevation']
+        section_x, section_y = row, df.iloc[row, 2]
 
         # Add the over-lying scatter point
         self.section_highlight.setData([section_x], [section_y],
@@ -1140,7 +1111,7 @@ class ExcelTablePicker(QWidget):
         super().__init__()
         self.parent = parent
         self.setWindowTitle("Excel Table Picker")
-        self.setWindowIcon(QIcon(str(icons_path.joinpath("excel_file.png"))))
+        self.setWindowIcon(get_icon("excel_file.png"))
         self.setLayout(QVBoxLayout())
 
         self.content = None
@@ -1176,7 +1147,7 @@ class ExcelTablePicker(QWidget):
 
     def reset(self):
         for item in self.selected_cells:
-            item.setBackground(QColor("white"))
+            item.setBackground(empty_background)
 
         for table in self.tables:
             table.clearSelection()
@@ -1220,14 +1191,25 @@ class ExcelTablePicker(QWidget):
 
         self.selected_cells.append(item)
         if len(self.selected_cells) > 3:
-            self.selected_cells[0].setBackground(QColor('white'))
+            self.selected_cells[0].setBackground(empty_background)
             self.selected_cells.pop(0)
 
     def open(self, content):
         """
-        :param content: dict, content of the Excel file (all sheets).
+        :param content: dict or filepath, content of the Excel file (all sheets).
         :return: None
         """
+        if not isinstance(content, dict):
+            if isinstance(content, Path) or isinstance(content, str):
+                content = Path(content)
+                if not content.suffix.lower() in [".xls", ".xlsx"]:
+                    raise ValueError(f"{content.name} must be an excel file.")
+                if not content.is_file():
+                    raise ValueError(f"{content} does not exist.")
+
+                content = pd.read_excel(content,
+                                        header=None,
+                                        sheet_name=None)
         self.content = content
 
         for i, (sheet, info) in enumerate(self.content.items()):
@@ -1249,7 +1231,7 @@ class DADSelector(QWidget):
         super().__init__()
         self.parent = parent
         self.setWindowTitle("DAD Selector")
-        self.setWindowIcon(QIcon(str(icons_path.joinpath("excel_file.png"))))
+        self.setWindowIcon(get_icon("excel_file.png"))
         self.setLayout(QVBoxLayout())
         self.message = QMessageBox()
 
@@ -1288,7 +1270,7 @@ class DADSelector(QWidget):
     def reset(self):
         for range in self.selected_ranges:
             for item in range:
-                item.setBackground(QColor("white"))
+                item.setBackground(empty_background)
 
         for table in self.tables:
             table.clearSelection()
@@ -1310,7 +1292,7 @@ class DADSelector(QWidget):
             self.accept_sig.emit(df)
             self.close()
 
-    def cell_double_clicked(self, row, col):
+    def cell_clicked(self, row, col):
         """
         Signal slot, range-select all cells below the clicked cell.
         :return: None
@@ -1320,7 +1302,7 @@ class DADSelector(QWidget):
         # Remove the 3rd last selected range
         if len(self.selected_ranges) == 3:
             for item in self.selected_ranges[0]:
-                item.setBackground(QColor('white'))
+                item.setBackground(empty_background)
             self.selected_ranges.pop(0)
 
         values = []
@@ -1362,7 +1344,7 @@ class DADSelector(QWidget):
                 table = pg.TableWidget()
                 table.setStyleSheet("selection-background-color: #50C878;")
                 table.setData(info.replace(np.nan, '', regex=True).to_numpy())
-                table.cellDoubleClicked.connect(self.cell_double_clicked)
+                table.cellClicked.connect(self.cell_clicked)
                 self.tables.append(table)
                 self.tabs.addTab(table, str(sheet))
         else:
@@ -1377,7 +1359,7 @@ class DADSelector(QWidget):
             table = pg.TableWidget()
             table.setStyleSheet("selection-background-color: #50C878;")
             table.setData(content.replace(np.nan, '', regex=True).to_numpy())
-            table.cellDoubleClicked.connect(self.cell_double_clicked)
+            table.cellClicked.connect(self.cell_clicked)
             self.tables.append(table)
             self.tabs.addTab(table, filepath.name)
 
@@ -1387,13 +1369,19 @@ class DADSelector(QWidget):
 def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    pg.setConfigOptions(antialias=True)
+    pg.setConfigOption('crashWarning', True)
+    pg.setConfigOption('background', 'w')
+    pg.setConfigOption('foreground', (53, 53, 53))
+
     samples_folder = Path(__file__).absolute().parents[2].joinpath(r'sample_files')
     line_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Line GPS'))
     loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Loop GPS'))
-    pg = PEMGetter()
+    # pg = PEMGetter()
 
     mw = CollarPicker()
-    file = r"C:\_Data\2021\Canadian Palladium\EB-21-68\GPS\LOOP EB-1_0718.txt"
+    file = r"C:\_Data\2021\TMC\Laurentia\GEN-21-09\GPS\Loop 09_0823.gpx"
 
     # mw = LoopAdder()
     # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
@@ -1403,11 +1391,9 @@ def main():
     # mw = ExcelTablePicker()
     # mw = DADSelector()
 
-    # file = samples_folder.joinpath(r'GPX files\Loop01 L200_0624.gpx')
-    # file = samples_folder.joinpath(r'Raw Boreholes\HOLE STE-21-02\RAW\3-Forage_2021_Coordonnées.xlsx')
-    # file = samples_folder.joinpath(r'Raw Boreholes\HOLE STE-21-02\RAW\3-Forage_2021_Déviation.xlsx')
+    # file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
+    # file = samples_folder.joinpath(r'Raw Boreholes\OBS-88-027\RAW\Obalski.xlsx')
     # file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')
-    # mw.open(file)
     # line = SurveyLine(str(file))
 
     mw.open(file)

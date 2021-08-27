@@ -22,10 +22,10 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib import patheffects, patches, ticker, text, transforms, lines
 from scipy import stats
 
+from src.qt_py import CustomProgressDialog
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 from src.pem import convert_station
 from src.pem.pem_file import PEMParser
-from src.qt_py import CustomProgressBar
 from src.qt_py.ri_importer import RIFile
 
 logger = logging.getLogger(__name__)
@@ -2908,14 +2908,11 @@ class PEMPrinter:
     :param save_path: Desired save location for the PDFs
     :param kwargs: Plotting kwargs such as hide_gaps, gaps, and x limits used in PEMPlotter.
     """
-
     def __init__(self, parent=None, **kwargs):
         super().__init__()
         self.parent = parent
 
-        self.portrait_fig = None
-        self.landscape_fig = None
-
+        plt.close()  # Close any opened figures. Solves 'Internal C++ object (FigureCanvasQTAgg) already deleted.'
         self.portrait_fig = plt.figure(num=1, clear=True)
         self.portrait_fig.set_size_inches((8.5, 11))
         self.landscape_fig = plt.figure(num=2, clear=True)
@@ -3191,16 +3188,9 @@ class PEMPrinter:
             unique_grids[loop] = list(files)
 
         num_pages = count_pdf_pages(unique_bhs, unique_grids)  # for the progress bar
-        bar = CustomProgressBar()
-        bar.setMaximum(num_pages)
-
         with PdfPages(save_path + '.PDF') as pdf:
-
             global dlg
-            with pg.ProgressDialog("Printing PDFs..", 0, num_pages, busyCursor=True) as dlg:
-                dlg.setWindowTitle('Printing PDFs')
-                dlg.setBar(bar)
-
+            with CustomProgressDialog("Printing PDFs..", 0, num_pages, busyCursor=True) as dlg:
                 # Save the borehole PDFs
                 for survey, files in unique_bhs.items():
 

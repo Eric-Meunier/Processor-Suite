@@ -4,9 +4,9 @@ import sys
 from pathlib import Path
 
 from PySide2.QtCore import Qt
-from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import (QGridLayout, QWidget, QFileDialog, QApplication, QHeaderView, QTableWidgetItem,
                                QTableWidget, QPushButton)
+from src.qt_py import get_icon
 
 logger = logging.getLogger(__name__)
 
@@ -22,13 +22,7 @@ class StationSplitter(QWidget):
 
         self.setWindowTitle('Station Splitter')
         self.resize(300, 500)
-        if getattr(sys, 'frozen', False):
-            icon_path = os.path.join(os.path.dirname(os.path.dirname(sys.executable)),
-                                     "ui\\icons\\station_splitter.png")
-        else:
-            icon_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-                                     "ui\\icons\\station_splitter.png")
-        self.setWindowIcon(QIcon(icon_path))
+        self.setWindowIcon(get_icon("station_splitter.png"))
 
         self.extract_btn = QPushButton('Extract')
         self.cancel_btn = QPushButton('Cancel')

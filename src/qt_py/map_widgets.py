@@ -13,7 +13,7 @@ import pyqtgraph as pg
 import plotly
 import plotly.graph_objects as go
 from PySide2.QtCore import Qt, QTimer
-from PySide2.QtGui import QIcon, QFont
+from PySide2.QtGui import QFont
 from PySide2.QtWebEngineWidgets import QWebEngineView
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QAction, QErrorMessage,
                                QFileDialog, QApplication, QHBoxLayout, QShortcut)
@@ -24,17 +24,12 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from scipy import interpolate as interp
 
+from src.qt_py import get_icon, CustomProgressDialog, NonScientific
 from src.gps.gps_editor import BoreholeGeometry
 from src.pem.pem_plotter import MapPlotter
-from src.qt_py import icons_path, CustomProgressBar, NonScientific
 from src.ui.contour_map import Ui_ContourMap
 
 logger = logging.getLogger(__name__)
-
-pg.setConfigOptions(antialias=True)
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
-pg.setConfigOption('crashWarning', True)
 
 
 class MapboxViewer(QMainWindow):
@@ -56,7 +51,7 @@ class MapboxViewer(QMainWindow):
         self.lats = []  # List of all coordinates for the purpose of centering the map
 
         self.setWindowTitle("Tile Map")
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'folium.png')))
+        self.setWindowIcon(get_icon('folium.png'))
         self.status_bar = self.statusBar()
         self.status_bar.show()
         # self.resize(1000, 800)
@@ -68,17 +63,15 @@ class MapboxViewer(QMainWindow):
         self.save_img_action = QAction('Save Image')
         self.save_img_action.setShortcut("Ctrl+S")
         self.save_img_action.triggered.connect(self.save_img)
-        self.save_img_action.setIcon(QIcon(str(icons_path.joinpath("save_as.png"))))
+        self.save_img_action.setIcon(get_icon("save_as.png"))
         self.copy_image_action = QAction('Copy Image')
         self.copy_image_action.setShortcut("Ctrl+C")
         self.copy_image_action.triggered.connect(self.copy_img)
-        self.copy_image_action.setIcon(QIcon(str(icons_path.joinpath("copy.png"))))
+        self.copy_image_action.setIcon(get_icon("copy.png"))
 
         self.file_menu = self.menuBar().addMenu('&File')
         self.file_menu.addAction(self.save_img_action)
-        self.file_menu.setIcon(QIcon(str(icons_path.joinpath("save.png"))))
         self.file_menu.addAction(self.copy_image_action)
-        self.file_menu.setIcon(QIcon(str(icons_path.joinpath("copy.png"))))
 
         self.map_figure = go.Figure(go.Scattermapbox(mode="markers+lines"))
 
@@ -145,14 +138,13 @@ class TileMapViewer(MapboxViewer):
         assert pem_files, "No files to plot."
 
         if any([f.has_any_gps() for f in pem_files]):
+            self.show()
             self.pem_files = pem_files
             self.plot_pems()
-            self.show()
         else:
             raise Exception(f"No GPS to plot.")
 
     def plot_pems(self):
-
         def plot_loop():
             loop = pem_file.loop.to_latlon().get_loop(closed=True).dropna()
             if loop.empty:
@@ -242,13 +234,7 @@ class TileMapViewer(MapboxViewer):
                 #     text=['Montreal'],
                 # ))
 
-        bar = CustomProgressBar()
-        bar.setMaximum(len(self.pem_files))
-
-        with pg.ProgressDialog("Plotting PEM Files", 0, len(self.pem_files)) as dlg:
-            dlg.setBar(bar)
-            dlg.setWindowTitle("Plotting PEM Files")
-
+        with CustomProgressDialog("Plotting PEM Files", 0, len(self.pem_files)) as dlg:
             # Plot the PEMs
             for pem_file in self.pem_files:
                 pem_file = pem_file.copy()  # Copy the PEM file so GPS conversions don't affect the original file
@@ -274,8 +260,6 @@ class TileMapViewer(MapboxViewer):
             raise Exception(f"No Lat/Lon GPS after plotting all PEM files.")
 
         # Pass the mapbox token, for access to better map tiles. If none is passed, it uses the free open street map.
-        # app_data_dir = Path(os.getenv('APPDATA'))
-        # token = open(app_data_dir.joinpath(r"PEMPro\.mapbox", 'r')).read()
         app_data_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro")
         token = open(str(app_data_dir.joinpath(".mapbox")), 'r').read()
         if not token:
@@ -284,7 +268,6 @@ class TileMapViewer(MapboxViewer):
         else:
             map_style = "outdoors"
 
-        # TODO Decide what to do with tokens
         # Format the figure margins and legend
         self.map_figure.update_layout(
             margin={"r": 0,
@@ -336,11 +319,11 @@ class Map3DViewer(QMainWindow):
 
         self.save_img_action = QAction('Save Image')
         self.save_img_action.setShortcut("Ctrl+S")
-        self.save_img_action.setIcon(QIcon(str(icons_path.joinpath("save_as.png"))))
+        self.save_img_action.setIcon(get_icon("save_as.png"))
         self.save_img_action.triggered.connect(self.save_img)
         self.copy_image_action = QAction('Copy Image')
         self.copy_image_action.setShortcut("Ctrl+C")
-        self.copy_image_action.setIcon(QIcon(str(icons_path.joinpath("copy.png"))))
+        self.copy_image_action.setIcon(get_icon("copy.png"))
         self.copy_image_action.triggered.connect(self.copy_img)
 
         self.file_menu = self.menuBar().addMenu('&File')
@@ -568,11 +551,11 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
         self.save_img_action = QAction('Save Image')
         self.save_img_action.setShortcut("Ctrl+S")
         self.save_img_action.triggered.connect(self.save_img)
-        self.save_img_action.setIcon(QIcon(str(icons_path.joinpath("save_as.png"))))
+        self.save_img_action.setIcon(get_icon("save_as.png"))
         self.copy_image_action = QAction('Copy Image')
         self.copy_image_action.setShortcut("Ctrl+C")
         self.copy_image_action.triggered.connect(self.copy_img)
-        self.copy_image_action.setIcon(QIcon(str(icons_path.joinpath("copy.png"))))
+        self.copy_image_action.setIcon(get_icon("copy.png"))
 
         self.channel_spinbox.valueChanged.connect(lambda: self.draw_map(self.figure))
         self.z_rbtn.clicked.connect(lambda: self.draw_map(self.figure))
@@ -953,7 +936,6 @@ class GPSViewer(QMainWindow):
 
     def __init__(self, parent=None):
         super().__init__()
-
         # Format the window
         self.setWindowTitle(f"GPS Viewer")
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'gps_viewer.png')))
@@ -1219,13 +1201,7 @@ class GPSViewer(QMainWindow):
         loop_color = '#2A2B2DFF'
         hole_color = '#D9514EFF'
 
-        bar = CustomProgressBar()
-        bar.setMaximum(len(self.pem_files))
-
-        with pg.ProgressDialog("Plotting PEM files", 0, len(self.pem_files)) as dlg:
-            dlg.setWindowTitle("Plotting PEM files")
-            dlg.setBar(bar)
-
+        with CustomProgressDialog("Plotting PEM files", 0, len(self.pem_files)) as dlg:
             for pem_file in self.pem_files:
                 if dlg.wasCanceled():
                     break
@@ -1257,6 +1233,10 @@ if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
 
     app = QApplication(sys.argv)
+    pg.setConfigOptions(antialias=True)
+    pg.setConfigOption('crashWarning', True)
+    pg.setConfigOption('background', 'w')
+    pg.setConfigOption('foreground', (53, 53, 53))
 
     getter = PEMGetter()
     files = getter.get_pems(folder='Iscaycruz', subfolder='Loop 1')

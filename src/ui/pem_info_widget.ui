@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>780</width>
-    <height>814</height>
+    <height>824</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -54,7 +54,7 @@
      </property>
      <property name="minimumSize">
       <size>
-       <width>0</width>
+       <width>300</width>
        <height>0</height>
       </size>
      </property>
@@ -92,6 +92,9 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="frameShadow">
+          <enum>QFrame::Plain</enum>
+         </property>
          <property name="editTriggers">
           <set>QAbstractItemView::NoEditTriggers</set>
          </property>
@@ -116,11 +119,11 @@
          <attribute name="verticalHeaderVisible">
           <bool>false</bool>
          </attribute>
-         <attribute name="verticalHeaderMinimumSectionSize">
-          <number>0</number>
-         </attribute>
          <attribute name="verticalHeaderDefaultSectionSize">
           <number>23</number>
+         </attribute>
+         <attribute name="verticalHeaderMinimumSectionSize">
+          <number>0</number>
          </attribute>
          <attribute name="verticalHeaderStretchLastSection">
           <bool>false</bool>
@@ -163,7 +166,7 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>400</width>
+           <width>0</width>
            <height>0</height>
           </size>
          </property>
@@ -174,10 +177,10 @@
           </size>
          </property>
          <property name="frameShape">
-          <enum>QFrame::Box</enum>
+          <enum>QFrame::StyledPanel</enum>
          </property>
          <property name="frameShadow">
-          <enum>QFrame::Sunken</enum>
+          <enum>QFrame::Plain</enum>
          </property>
          <layout class="QGridLayout" name="gridLayout_8">
           <property name="leftMargin">
@@ -256,7 +259,7 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>400</width>
+           <width>0</width>
            <height>0</height>
           </size>
          </property>
@@ -265,6 +268,9 @@
            <width>16777215</width>
            <height>16777215</height>
           </size>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Plain</enum>
          </property>
          <property name="selectionBehavior">
           <enum>QAbstractItemView::SelectRows</enum>
@@ -293,11 +299,6 @@
            <string>Elevation</string>
           </property>
          </column>
-         <column>
-          <property name="text">
-           <string>Unit</string>
-          </property>
-         </column>
         </widget>
        </item>
       </layout>
@@ -317,7 +318,7 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>400</width>
+           <width>0</width>
            <height>0</height>
           </size>
          </property>
@@ -328,12 +329,12 @@
           </size>
          </property>
          <property name="frameShape">
-          <enum>QFrame::Box</enum>
+          <enum>QFrame::StyledPanel</enum>
          </property>
          <property name="frameShadow">
-          <enum>QFrame::Sunken</enum>
+          <enum>QFrame::Plain</enum>
          </property>
-         <layout class="QtWidgets.QHBoxLayout" name="horizontalLayout">
+         <layout class="QHBoxLayout" name="horizontalLayout">
           <property name="spacing">
            <number>0</number>
           </property>
@@ -730,7 +731,7 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>400</width>
+           <width>0</width>
            <height>0</height>
           </size>
          </property>
@@ -739,6 +740,9 @@
            <width>16777215</width>
            <height>16777215</height>
           </size>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Plain</enum>
          </property>
          <property name="selectionBehavior">
           <enum>QAbstractItemView::SelectRows</enum>
@@ -769,11 +773,6 @@
          </column>
          <column>
           <property name="text">
-           <string>Unit</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
            <string>Station</string>
           </property>
          </column>
@@ -790,17 +789,17 @@
         <widget class="QFrame" name="frame_9">
          <property name="minimumSize">
           <size>
-           <width>400</width>
+           <width>0</width>
            <height>0</height>
           </size>
          </property>
          <property name="frameShape">
-          <enum>QFrame::Box</enum>
+          <enum>QFrame::StyledPanel</enum>
          </property>
          <property name="frameShadow">
-          <enum>QFrame::Sunken</enum>
+          <enum>QFrame::Plain</enum>
          </property>
-         <layout class="QtWidgets.QHBoxLayout" name="horizontalLayout_3">
+         <layout class="QHBoxLayout" name="horizontalLayout_3">
           <property name="leftMargin">
            <number>6</number>
           </property>
@@ -862,7 +861,7 @@
          </property>
          <property name="minimumSize">
           <size>
-           <width>400</width>
+           <width>0</width>
            <height>0</height>
           </size>
          </property>
@@ -871,6 +870,9 @@
            <width>16777215</width>
            <height>16777215</height>
           </size>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Plain</enum>
          </property>
          <property name="editTriggers">
           <set>QAbstractItemView::NoEditTriggers</set>
@@ -905,11 +907,6 @@ Length</string>
          </column>
          <column>
           <property name="text">
-           <string>Units</string>
-          </property>
-         </column>
-         <column>
-          <property name="text">
            <string>Depth</string>
           </property>
          </column>
@@ -934,17 +931,17 @@ Length</string>
         <widget class="QFrame" name="frame_10">
          <property name="minimumSize">
           <size>
-           <width>400</width>
+           <width>0</width>
            <height>0</height>
           </size>
          </property>
          <property name="frameShape">
-          <enum>QFrame::Box</enum>
+          <enum>QFrame::StyledPanel</enum>
          </property>
          <property name="frameShadow">
-          <enum>QFrame::Sunken</enum>
+          <enum>QFrame::Plain</enum>
          </property>
-         <layout class="QtWidgets.QHBoxLayout" name="horizontalLayout_4">
+         <layout class="QHBoxLayout" name="horizontalLayout_4">
           <property name="leftMargin">
            <number>6</number>
           </property>
@@ -1004,6 +1001,9 @@ Length</string>
          <property name="frameShape">
           <enum>QFrame::StyledPanel</enum>
          </property>
+         <property name="frameShadow">
+          <enum>QFrame::Plain</enum>
+         </property>
          <property name="verticalScrollBarPolicy">
           <enum>Qt::ScrollBarAlwaysOff</enum>
          </property>
@@ -1050,11 +1050,6 @@ Length</string>
            <string>Elevation</string>
           </property>
          </column>
-         <column>
-          <property name="text">
-           <string>Units</string>
-          </property>
-         </column>
          <item row="0" column="0">
           <property name="text">
            <string/>
@@ -1079,14 +1074,6 @@ Length</string>
            <set>AlignCenter</set>
           </property>
          </item>
-         <item row="0" column="3">
-          <property name="text">
-           <string/>
-          </property>
-          <property name="textAlignment">
-           <set>AlignCenter</set>
-          </property>
-         </item>
         </widget>
        </item>
       </layout>
@@ -1098,6 +1085,9 @@ Length</string>
       <layout class="QGridLayout" name="gridLayout_7">
        <item row="0" column="0">
         <widget class="QTableWidget" name="ri_table">
+         <property name="frameShadow">
+          <enum>QFrame::Plain</enum>
+         </property>
          <property name="autoScroll">
           <bool>false</bool>
          </property>

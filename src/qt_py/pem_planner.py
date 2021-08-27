@@ -13,7 +13,7 @@ import numpy as np
 import plotly.graph_objects as go
 import simplekml
 from PySide2.QtCore import Qt, Signal, QEvent, QPointF
-from PySide2.QtGui import QIcon, QIntValidator, QKeySequence, QTransform
+from PySide2.QtGui import QIntValidator, QKeySequence, QTransform
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QFileDialog, QLabel, QApplication,
                                QFrame, QHBoxLayout, QLineEdit,
                                QHeaderView, QInputDialog, QTableWidgetItem, QGroupBox, QFormLayout, QTableWidget,
@@ -32,18 +32,13 @@ from src import app_data_dir
 # from src.logger import Log
 from src.gps.gps_editor import BoreholeCollar, BoreholeGeometry
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
-from src.qt_py import (icons_path, NonScientific, PlanMapAxis)
+from src.qt_py import get_icon, NonScientific, PlanMapAxis
 from src.qt_py.map_widgets import TileMapViewer
 from src.qt_py.pem_geometry import dad_to_seg
 from src.ui.grid_planner import Ui_GridPlanner
 from src.ui.loop_planner import Ui_LoopPlanner
 
 logger = logging.getLogger(__name__)
-
-pg.setConfigOptions(antialias=True)
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
-pg.setConfigOption('crashWarning', True)
 
 default_color = (0, 0, 0, 150)
 selection_color = '#1976D2'
@@ -64,7 +59,7 @@ class SurveyPlanner(QMainWindow):
 
         self.save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
         self.copy_shortcut = QShortcut(QKeySequence("Ctrl+C"), self)
-        self.save_shortcut.activated.connect(self.save_img)
+        self.save_shortcut.activated.connect(self.save_project)
         self.copy_shortcut.activated.connect(self.copy_img)
 
         # Status bar
@@ -287,7 +282,7 @@ class HoleWidget(QWidget):
         self.hole_name_edit = QLineEdit(name)
         self.hole_name_edit.setPlaceholderText('(Optional)')
 
-        self.remove_btn = QPushButton(QIcon(str(icons_path.joinpath("_remove2.png"))), "")
+        self.remove_btn = QPushButton(get_icon("_remove2.png"), "")
         self.remove_btn.setFlat(True)
         self.remove_btn.setToolTip("Remove")
 
@@ -342,7 +337,7 @@ class HoleWidget(QWidget):
         self.plan_view.addItem(self.hole_name, ignoreBounds=True)
         self.plan_view.addItem(self.section_extent_line)
 
-        self.calc_hole_projection()
+        self.get_hole_projection()
         self.draw_hole()
 
         """Signals"""
@@ -355,7 +350,7 @@ class HoleWidget(QWidget):
             self.dad_file_edit.setEnabled(self.dad_geometry_rbtn.isChecked())
 
             # Update the plots
-            self.calc_hole_projection()
+            self.get_hole_projection()
             self.draw_hole()
             self.plot_hole_sig.emit()
 
@@ -387,17 +382,17 @@ class HoleWidget(QWidget):
         self.hole_name_edit.textChanged.connect(lambda: self.hole_name.setText(self.hole_name_edit.text()))
         self.remove_btn.clicked.connect(self.remove_sig.emit)
 
-        self.hole_easting_edit.editingFinished.connect(self.calc_hole_projection)
+        self.hole_easting_edit.editingFinished.connect(self.get_hole_projection)
         self.hole_easting_edit.editingFinished.connect(self.draw_hole)
-        self.hole_northing_edit.editingFinished.connect(self.calc_hole_projection)
+        self.hole_northing_edit.editingFinished.connect(self.get_hole_projection)
         self.hole_northing_edit.editingFinished.connect(self.draw_hole)
-        self.hole_elevation_edit.editingFinished.connect(self.calc_hole_projection)
+        self.hole_elevation_edit.editingFinished.connect(self.get_hole_projection)
         self.hole_elevation_edit.editingFinished.connect(self.draw_hole)
-        self.hole_azimuth_edit.editingFinished.connect(self.calc_hole_projection)
+        self.hole_azimuth_edit.editingFinished.connect(self.get_hole_projection)
         self.hole_azimuth_edit.editingFinished.connect(self.draw_hole)
-        self.hole_dip_edit.editingFinished.connect(self.calc_hole_projection)
+        self.hole_dip_edit.editingFinished.connect(self.get_hole_projection)
         self.hole_dip_edit.editingFinished.connect(self.draw_hole)
-        self.hole_length_edit.editingFinished.connect(self.calc_hole_projection)
+        self.hole_length_edit.editingFinished.connect(self.get_hole_projection)
         self.hole_length_edit.editingFinished.connect(self.draw_hole)
 
     def select(self):
@@ -450,7 +445,7 @@ class HoleWidget(QWidget):
             'length': self.hole_length_edit.value(),
         }
 
-    def calc_hole_projection(self):
+    def get_hole_projection(self):
         """
         Calculate and update the 3D projection of the hole.
         """
@@ -564,7 +559,6 @@ class HoleWidget(QWidget):
         """
         Open a DAD file through the file dialog
         """
-
         def open_dad_file(filepath):
             """
             Parse a depth-azimuth-dip file. Can be extentions xlsx, xls, csv, txt, dad.
@@ -599,7 +593,7 @@ class HoleWidget(QWidget):
                     # Create a BoreholeSegment object from the DAD file, to more easily calculate the projection
                     self.segments = dad_to_seg(df.dropna())
                     # Update the hole projection
-                    self.calc_hole_projection()
+                    self.get_hole_projection()
                     # Draw the hole and update the section plot
                     self.draw_hole()
                     self.plot_hole_sig.emit()
@@ -716,7 +710,7 @@ class LoopWidget(QWidget):
         self.loop_name_edit = QLineEdit(name)
         self.loop_name_edit.setPlaceholderText('(Optional)')
 
-        self.remove_btn = QPushButton(QIcon(str(icons_path.joinpath("_remove2.png"))), "")
+        self.remove_btn = QPushButton(get_icon("_remove2.png"), "")
         self.remove_btn.setFlat(True)
         self.remove_btn.setToolTip("Remove")
 
@@ -1016,27 +1010,28 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         super().__init__()
         self.setupUi(self)
         self.setAcceptDrops(True)
-        self.parent = parent
-
         self.setWindowTitle('Loop Planner')
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'loop_planner.png')))
         self.resize(1500, 800)
         # self.installEventFilter(self)
         self.status_bar.show()
 
+        self.parent = parent
+        self.save_name = None
+
         # Status bar
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
-
         self.plan_view.setMenuEnabled(False)
 
         # Icons
-        self.actionOpen_Project.setIcon(QIcon(str(icons_path.joinpath("open.png"))))
-        self.actionSave_Project.setIcon(QIcon(str(icons_path.joinpath("save.png"))))
-        self.actionSave_as_KMZ.setIcon(QIcon(str(icons_path.joinpath("google_earth.png"))))
-        self.actionSave_as_GPX.setIcon(QIcon(str(icons_path.joinpath("garmin_file.png"))))
-        self.view_map_action.setIcon(QIcon(str(icons_path.joinpath("folium.png"))))
-        self.add_hole_btn.setIcon(QIcon(str(icons_path.joinpath("add.png"))))
-        self.add_loop_btn.setIcon(QIcon(str(icons_path.joinpath("add.png"))))
+        self.actionOpen_Project.setIcon(get_icon("open.png"))
+        self.actionSave_Project.setIcon(get_icon("save.png"))
+        self.actionSave_As.setIcon(get_icon("save_as.png"))
+        self.actionSave_as_KMZ.setIcon(get_icon("google_earth.png"))
+        self.actionSave_as_GPX.setIcon(get_icon("garmin_file.png"))
+        self.view_map_action.setIcon(get_icon("folium.png"))
+        self.add_hole_btn.setIcon(get_icon("add.png"))
+        self.add_loop_btn.setIcon(get_icon("add.png"))
 
         # Plotting
         self.selected_hole = None
@@ -1051,16 +1046,18 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.section_view_layout.addWidget(self.section_canvas)
 
         self.add_hole('Hole')
-        # TODO Comment out later
-        self.add_loop('Loop')
+        # # TODO Comment out later
+        # self.add_loop('Loop')
+        self.loop_tab_widget.hide()
 
         # Signals
         self.hole_cbox.currentIndexChanged.connect(self.select_hole)
         self.loop_cbox.currentIndexChanged.connect(self.select_loop)
 
         # Menu
-        self.actionSave_Project.triggered.connect(self.save_project)
         self.actionOpen_Project.triggered.connect(self.open_project)
+        self.actionSave_Project.triggered.connect(lambda: self.save_project(save_as=False))
+        self.actionSave_As.triggered.connect(lambda: self.save_project(save_as=True))
         self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
         self.actionSave_as_GPX.triggered.connect(self.save_gpx)
         self.view_map_action.triggered.connect(self.view_map)
@@ -1400,6 +1397,8 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                 return
 
         if name != '':
+            self.hole_tab_widget.show()
+
             # Copy the information from the currently selected hole widget to be used in the new widget
             if self.hole_widgets:
                 properties = self.hole_widgets[self.hole_tab_widget.currentIndex()].get_properties()
@@ -1469,6 +1468,8 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                 return
 
         if name != '':
+            self.loop_tab_widget.show()
+
             # Copy the information from the currently selected hole widget to be used in the new widget
             if self.loop_widgets:
                 angle = self.loop_widgets[self.loop_tab_widget.currentIndex()].get_angle()
@@ -1520,6 +1521,9 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             self.hole_tab_widget.removeWidget(widget)
             self.hole_cbox.removeItem(ind)
 
+        if len(self.hole_widgets) == 0:
+            self.hole_tab_widget.hide()
+
     def remove_loop(self, ind, prompt=True):
         if prompt is True:
             response = QMessageBox.question(self, "Remove Loop", "Are you sure you want to remove this loop?",
@@ -1533,6 +1537,9 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             del self.loop_widgets[ind]
             self.loop_tab_widget.removeWidget(widget)
             self.loop_cbox.removeItem(ind)
+
+        if len(self.loop_widgets) == 0:
+            self.loop_tab_widget.hide()
 
     def plot_hole(self):
         """
@@ -1664,12 +1671,10 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.ax.clear()
 
         if not self.selected_loop:
-            logger.warning(f"Cannot plot hole without a loop.")
             self.ax.get_yaxis().set_visible(False)
             self.section_canvas.draw()
             return
         elif not self.selected_hole:
-            logger.warning(f"No hole is opened.")
             self.ax.get_yaxis().set_visible(False)
             self.section_canvas.draw()
             return
@@ -1681,7 +1686,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         proj = self.selected_hole.projection
         p1, p2 = self.selected_hole.get_section_extents()
-        # plot_hole_section(p1, p2, list(zip(xs, ys, zs)))
         plot_hole_section(proj)
 
         # Get the corners of the 2D section to plot the mag on
@@ -1734,7 +1738,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         lats, lons = [], []  # For centering the map when it's opened.
 
         def plot_loops():
-
             for widget in self.loop_widgets:
                 loop_name = widget.loop_name_edit.text()
 
@@ -1755,7 +1758,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                 lats.extend(loop_coords.Northing.to_numpy())
 
         def plot_holes():
-
             for widget in self.hole_widgets:
                 hole_coords = widget.get_proj_latlon(crs)
 
@@ -1821,14 +1823,17 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         self.add_loop(name=file.name, coords=coords)
 
-    def open_project(self):
+    def open_project(self, filepath=None):
         """
         Parse a .LFP file and add the holes and loops in the file to the project
+        :filepath: str or Path, filepath of project
         :return: None
         """
-        lpf_file, filetype = QFileDialog.getOpenFileName(self, "Loop Planning File", "", "Loop Planning File (*.LPF)")
+        if filepath is None:
+            filepath, filetype = QFileDialog.getOpenFileName(self, "Loop Planning File", "", "Loop Planning File (*.LPF)")
 
-        if lpf_file:
+        if filepath:
+            self.save_name = filepath
 
             # Remove existing holes and loops
             for ind in reversed(range(len(self.hole_widgets))):
@@ -1836,8 +1841,8 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             for ind in reversed(range(len(self.loop_widgets))):
                 self.remove_loop(ind, prompt=False)
 
-            file = open(lpf_file, "r").read()
-            # holes = file.split(">> Hole")
+            file = open(filepath, "r").read()
+            epsg = re.search("EPSG: (\d+)", file).group(1)
             holes = re.findall(
                 r">> Hole\n(name:.*\neasting:.*\nnorthing:.*\nelevation:.*\nazimuth:.*\ndip:.*\nlength:.*\n)<<", file)
             loops = re.findall(r">> Loop\n(name:.*\n(?:c.*\n)+)<<", file)
@@ -1846,6 +1851,9 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             progress.setWindowModality(Qt.WindowModal)
             count = 0
             progress.show()
+
+            self.epsg_edit.setText(epsg)
+            self.epsg_rbtn.click()
 
             for hole in holes:
                 if progress.wasCanceled():
@@ -1875,7 +1883,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             progress.deleteLater()
             self.plan_view.autoRange()
 
-    def save_project(self):
+    def save_project(self, save_as=False):
         """
         Save the project as a .prj file.
         :return: None
@@ -1884,30 +1892,35 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             print(f"No holes or loops to save.")
             return
 
-        save_name, filetype = QFileDialog.getSaveFileName(self, "Project File Name", "", "Loop Planning File (*.LPF)")
+        if save_as or not self.save_name:
+            save_name, filetype = QFileDialog.getSaveFileName(self, "Project File Name", "", "Loop Planning File (*.LPF)")
+            if save_name:
+                self.save_name = save_name
+            else:
+                return
 
-        if save_name:
-            result = ''
-            for hole in self.hole_widgets:
-                string = '>> Hole\n'
-                for key, value in hole.get_properties().items():
+        result = ''
+        result += "EPSG: " + self.get_epsg() + "\n"
+        for hole in self.hole_widgets:
+            string = '>> Hole\n'
+            for key, value in hole.get_properties().items():
+                string += f"{key}:{value}\n"
+            result += string + "<<\n"
+        for loop in self.loop_widgets:
+            string = '>> Loop\n'
+            for key, value in loop.get_properties().items():
+                if key == "coordinates":
+                    for j, coord in enumerate(value):
+                        string += f"c{j}:{coord.x():.2f}, {coord.y():.2f}\n"
+                else:
                     string += f"{key}:{value}\n"
-                result += string + "<<\n"
-            for loop in self.loop_widgets:
-                string = '>> Loop\n'
-                for key, value in loop.get_properties().items():
-                    if key == "coordinates":
-                        for j, coord in enumerate(value):
-                            string += f"c{j}:{coord.x():.2f}, {coord.y():.2f}\n"
-                    else:
-                        string += f"{key}:{value}\n"
-                result += string + "<<\n"
+            result += string + "<<\n"
 
-            with open(str(save_name), "w+") as file:
-                file.write(result)
+        with open(str(self.save_name), "w+") as file:
+            file.write(result)
 
-            # os.startfile(save_name)
-            self.statusBar().showMessage("Project file saved.", 1500)
+        # os.startfile(save_name)
+        self.statusBar().showMessage("Project file saved.", 1500)
 
     def save_kmz(self):
         """
@@ -2060,9 +2073,9 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         self.setWindowIcon(QIcon(os.path.join(icons_path, 'grid_planner.png')))
         self.setGeometry(200, 200, 1100, 700)
 
-        self.actionSave_as_KMZ.setIcon(QIcon(str(icons_path.joinpath("google_earth.png"))))
-        self.actionSave_as_GPX.setIcon(QIcon(str(icons_path.joinpath("garmin_file.png"))))
-        self.view_map_action.setIcon(QIcon(str(icons_path.joinpath("folium.png"))))
+        self.actionSave_as_KMZ.setIcon(get_icon("google_earth.png"))
+        self.actionSave_as_GPX.setIcon(get_icon("garmin_file.png"))
+        self.view_map_action.setIcon(get_icon("folium.png"))
         # self.installEventFilter(self)
 
         self.loop_height = self.loop_height_sbox.value()
@@ -3101,8 +3114,13 @@ class RectLoop(pg.RectROI):
 def main():
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
     app = QApplication(sys.argv)
-    # planner = LoopPlanner()
-    planner = GridPlanner()
+    pg.setConfigOptions(antialias=True)
+    pg.setConfigOption('crashWarning', True)
+    pg.setConfigOption('background', 'w')
+    pg.setConfigOption('foreground', (53, 53, 53))
+
+    planner = LoopPlanner()
+    # planner = GridPlanner()
 
     # hole_data = read_excel(r"C:\_Data\2021\Canadian Palladium\_Planning\Crone_BHEM_Collars.xlsx").dropna()
     # for ind, hole in hole_data.iterrows():
@@ -3113,12 +3131,15 @@ def main():
     #                      azimuth=hole.AZIMUTH,
     #                      dip=hole.DIP
     #                      )
-    # planner.gps_system_cbox.setCurrentIndex(2)
-    # planner.gps_datum_cbox.setCurrentIndex(1)
-    # planner.gps_zone_cbox.setCurrentIndex(16)
     planner.show()
     # planner.save_project()
-    # planner.open_project()
+    planner.open_project(filepath=r"C:\_Data\2021\TMC\Galloway Project\_Planning\LP-GA-01.LPF")
+    # planner.gps_system_cbox.setCurrentIndex(2)
+    # planner.gps_datum_cbox.setCurrentIndex(3)
+    # planner.gps_zone_cbox.setCurrentIndex(18)
+    planner.crs_rbtn.click()
+    # planner.view_map()
+
     # tx_file = samples_folder.joinpath(r"Tx Files/Loop.tx")
     # planner.open_tx_file(tx_file)
     # planner.hole_widgets[0].get_dad_file()

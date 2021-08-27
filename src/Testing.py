@@ -1,26 +1,41 @@
-## build a QApplication before building other widgets
-import pyqtgraph as pg
-pg.mkQApp()
+# from PySide2 import QtCore, QtGui, QtWidgets, QtWebEngineWidgets
+# #
+# # app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+# #
+# # viewer = QtWebEngineWidgets.QWebEngineView()
+# # viewer.load(QtCore.QUrl("http://gmail.com"))
+# # viewer.show()
+# #
+# # app.exec_()
 
-## make a widget for displaying 3D objects
-import pyqtgraph.opengl as gl
-global view
-view = gl.GLViewWidget()
-view.show()
-
-## create three grids, add each to the view
-xgrid = gl.GLGridItem()
-ygrid = gl.GLGridItem()
-zgrid = gl.GLGridItem()
-view.addItem(xgrid)
-view.addItem(ygrid)
-view.addItem(zgrid)
-
-## rotate x and y grids to face the correct direction
-xgrid.rotate(90, 0, 1, 0)
-ygrid.rotate(90, 1, 0, 0)
-
-## scale each grid differently
-xgrid.scale(0.2, 0.1, 0.1)
-ygrid.scale(0.2, 0.1, 0.1)
-zgrid.scale(0.1, 0.2, 0.1)
+from PySide2 import QtGui
+from PySide2.QtWidgets import *
+from PySide2.QtCharts import QtCharts
+from PySide2.QtGui import QPainter
+from random import randint
+app = QApplication([])
+window = QWidget()
+layout = QVBoxLayout()
+# Initialize chart
+chart = QtCharts.QChart()
+lineSeries = QtCharts.QLineSeries()
+# Make some random data points
+dataSeries = [(i+1, randint(0, 99999)) for i in range(200)]
+# load data into chart:
+for point in dataSeries:
+    lineSeries.append(point[0],point[1])
+# Add Some Chart Options
+chart.addSeries(lineSeries)
+chart.setTitle("Random Numbers from 0-9000")
+chart.createDefaultAxes()
+# Create a container (similar to a widget)
+chartView = QtCharts.QChartView(chart)
+chartView.setRenderHint(QPainter.Antialiasing)
+# Some Chart Styling
+lineSeries.setColor(QtGui.QColor("darkgray"))
+# chartView.chart().setBackgroundBrush(QtGui.QColor("ivory"))
+layout.addWidget(chartView)
+window.setLayout(layout)
+window.show()
+window.resize(600, 400)
+app.exec_()

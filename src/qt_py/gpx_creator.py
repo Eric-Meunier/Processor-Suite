@@ -7,12 +7,12 @@ from pathlib import Path
 import pandas as pd
 import geopandas as gpd
 import gpxpy
-from PySide2.QtGui import QIcon, QIntValidator
+from PySide2.QtGui import QIntValidator
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QAction, QFileDialog, QLabel, QApplication, QTableWidgetItem)
 from pyproj import CRS
 from shapely.geometry import asMultiPoint
 
-from src.qt_py import icons_path
+from src.qt_py import get_icon
 from src.ui.gpx_creator import Ui_GPXCreator
 
 logger = logging.getLogger(__name__)
@@ -28,7 +28,7 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         self.parent = parent
         self.setupUi(self)
         self.setWindowTitle("GPX Creator")
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'gpx_creator.png')))
+        self.setWindowIcon(get_icon('gpx_creator.png'))
 
         self.dialog = QFileDialog()
         self.message = QMessageBox()

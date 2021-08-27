@@ -24,6 +24,9 @@
     <normaloff>icons/conder.png</normaloff>icons/conder.png</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
+   <property name="acceptDrops">
+    <bool>true</bool>
+   </property>
    <layout class="QGridLayout" name="gridLayout_15">
     <property name="leftMargin">
      <number>0</number>
@@ -84,7 +87,7 @@
          <widget class="QFrame" name="frame_4">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-            <horstretch>1</horstretch>
+            <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
@@ -110,7 +113,7 @@
            <enum>Qt::StrongFocus</enum>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Box</enum>
+           <enum>QFrame::NoFrame</enum>
           </property>
           <property name="frameShadow">
            <enum>QFrame::Sunken</enum>
@@ -514,7 +517,7 @@
            </size>
           </property>
           <property name="frameShape">
-           <enum>QFrame::StyledPanel</enum>
+           <enum>QFrame::NoFrame</enum>
           </property>
           <property name="frameShadow">
            <enum>QFrame::Raised</enum>
@@ -569,10 +572,10 @@
                <string/>
               </property>
               <property name="frameShape">
-               <enum>QFrame::Box</enum>
+               <enum>QFrame::StyledPanel</enum>
               </property>
               <property name="frameShadow">
-               <enum>QFrame::Sunken</enum>
+               <enum>QFrame::Plain</enum>
               </property>
               <property name="sizeAdjustPolicy">
                <enum>QAbstractScrollArea::AdjustToContents</enum>
@@ -694,10 +697,10 @@ Warnings</string>
                </size>
               </property>
               <property name="frameShape">
-               <enum>QFrame::Box</enum>
+               <enum>QFrame::StyledPanel</enum>
               </property>
               <property name="frameShadow">
-               <enum>QFrame::Sunken</enum>
+               <enum>QFrame::Plain</enum>
               </property>
               <layout class="QHBoxLayout" name="horizontalLayout_2">
                <property name="spacing">
@@ -740,7 +743,7 @@ Warnings</string>
                    </size>
                   </property>
                   <property name="frameShape">
-                   <enum>QFrame::StyledPanel</enum>
+                   <enum>QFrame::NoFrame</enum>
                   </property>
                   <property name="frameShadow">
                    <enum>QFrame::Raised</enum>
@@ -821,7 +824,7 @@ Warnings</string>
                    </size>
                   </property>
                   <property name="frameShape">
-                   <enum>QFrame::StyledPanel</enum>
+                   <enum>QFrame::NoFrame</enum>
                   </property>
                   <property name="frameShadow">
                    <enum>QFrame::Raised</enum>
@@ -892,7 +895,7 @@ Warnings</string>
                    <item row="1" column="1">
                     <widget class="QFrame" name="frame">
                      <property name="frameShape">
-                      <enum>QFrame::StyledPanel</enum>
+                      <enum>QFrame::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
                       <enum>QFrame::Raised</enum>
@@ -1043,14 +1046,17 @@ Warnings</string>
                          </size>
                         </property>
                         <property name="toolTip">
-                         <string>Remove the selected PEM files from the list (can be brought back by refreshing)</string>
+                         <string>Delete select file(s)</string>
+                        </property>
+                        <property name="statusTip">
+                         <string>Delete select file(s)</string>
                         </property>
                         <property name="text">
                          <string/>
                         </property>
                         <property name="icon">
                          <iconset>
-                          <normaloff>icons/minus.png</normaloff>icons/minus.png</iconset>
+                          <normaloff>icons/remove.png</normaloff>icons/remove.png</iconset>
                         </property>
                         <property name="iconSize">
                          <size>
@@ -1082,7 +1088,7 @@ Warnings</string>
                    </size>
                   </property>
                   <property name="frameShape">
-                   <enum>QFrame::StyledPanel</enum>
+                   <enum>QFrame::NoFrame</enum>
                   </property>
                   <property name="frameShadow">
                    <enum>QFrame::Raised</enum>
@@ -1153,7 +1159,7 @@ Warnings</string>
                    <item row="1" column="2">
                     <widget class="QFrame" name="frame_5">
                      <property name="frameShape">
-                      <enum>QFrame::StyledPanel</enum>
+                      <enum>QFrame::NoFrame</enum>
                      </property>
                      <property name="frameShadow">
                       <enum>QFrame::Raised</enum>
@@ -1298,14 +1304,17 @@ Warnings</string>
                          </size>
                         </property>
                         <property name="toolTip">
-                         <string>Remove the selected GPS files from the list (can be brought back by refreshing)</string>
+                         <string>Delete select file(s)</string>
+                        </property>
+                        <property name="statusTip">
+                         <string>Delete select file(s)</string>
                         </property>
                         <property name="text">
                          <string/>
                         </property>
                         <property name="icon">
                          <iconset>
-                          <normaloff>icons/minus.png</normaloff>icons/minus.png</iconset>
+                          <normaloff>icons/remove.png</normaloff>icons/remove.png</iconset>
                         </property>
                         <property name="iconSize">
                          <size>
@@ -1351,7 +1360,7 @@ Warnings</string>
            </size>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Box</enum>
+           <enum>QFrame::NoFrame</enum>
           </property>
           <property name="frameShadow">
            <enum>QFrame::Sunken</enum>
@@ -1441,6 +1450,8 @@ Warnings</string>
     <addaction name="separator"/>
     <addaction name="actionBackup_Files"/>
     <addaction name="actionImport_RI_Files"/>
+    <addaction name="actionAdd_Mapbox_Token"/>
+    <addaction name="separator"/>
     <addaction name="actionPrint_Plots_to_PDF"/>
    </widget>
    <widget class="QMenu" name="menuPEM">
@@ -1531,11 +1542,14 @@ Warnings</string>
     <property name="title">
      <string>Settings</string>
     </property>
+    <addaction name="actionDark_Theme"/>
+    <addaction name="actionAlt_Click_Plotting"/>
     <addaction name="auto_sort_files_cbox"/>
     <addaction name="auto_create_backup_files_cbox"/>
     <addaction name="delete_merged_files_cbox"/>
+    <addaction name="actionRename_Merged_Files"/>
     <addaction name="separator"/>
-    <addaction name="actionAdd_Mapbox_Token"/>
+    <addaction name="actionReset_Settings"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -1968,7 +1982,7 @@ Warnings</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Backups Files Automatically</string>
+    <string>Backup Files Automatically</string>
    </property>
    <property name="toolTip">
     <string>Automatically create backup files</string>
@@ -2085,11 +2099,6 @@ Warnings</string>
     <string>Station Order</string>
    </property>
   </action>
-  <action name="actionAdd_Mapbox_Token">
-   <property name="text">
-    <string>Add Mapbox Token</string>
-   </property>
-  </action>
   <action name="actionMake_DXF">
    <property name="text">
     <string>Make DXF</string>
@@ -2098,6 +2107,53 @@ Warnings</string>
   <action name="actionHeader_CSV">
    <property name="text">
     <string>Header CSV</string>
+   </property>
+  </action>
+  <action name="actionDark_Theme">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Dark Theme</string>
+   </property>
+  </action>
+  <action name="actionReset_Settings">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/undo.png</normaloff>icons/undo.png</iconset>
+   </property>
+   <property name="text">
+    <string>Reset Settings</string>
+   </property>
+  </action>
+  <action name="actionRename_Merged_Files">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Rename Merged Files</string>
+   </property>
+  </action>
+  <action name="actionAlt_Click_Plotting">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Alt-Click Plotting</string>
+   </property>
+  </action>
+  <action name="actionAdd_Mapbox_Token">
+   <property name="text">
+    <string>Add Mapbox Token</string>
+   </property>
+   <property name="toolTip">
+    <string>Mapbox tokens are used in by Tools &gt; Tilemap.</string>
    </property>
   </action>
  </widget>

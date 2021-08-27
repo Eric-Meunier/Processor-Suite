@@ -9,7 +9,7 @@ import mplcursors
 import numpy as np
 import pandas as pd
 from PySide2.QtCore import Qt, Signal
-from PySide2.QtGui import QIcon, QKeySequence
+from PySide2.QtGui import QKeySequence
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QWidget, QErrorMessage,
                                QFileDialog, QVBoxLayout, QApplication, QShortcut)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -17,7 +17,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from src.gps.gps_editor import BoreholeSegments
 from src.mpl.interactive_spline import InteractiveSpline
 from src.mpl.zoom_pan import ZoomPan
-from src.qt_py import icons_path
+from src.qt_py import get_icon
 from src.qt_py.gps_adder import DADSelector
 from src.ui.pem_geometry import Ui_PEMGeometry
 
@@ -31,13 +31,6 @@ def dad_to_seg(df, units='m'):
     :param units: str, units of the segments, either 'm' or 'ft'
     :return: pandas pd.DataFrame with Azimuth, Dip, segment length, unit, and depth columns
     """
-    if units == 'm' or units is None:
-        units = 2
-    elif units == 'ft':
-        units = 0
-    else:
-        raise NotImplementedError(f"{units} is not implemented as a unit for segments.")
-
     # Interpolate the DAD to 1m segments
     depth = df.Depth.to_numpy()
     azimuth = df.Azimuth.to_numpy()
@@ -74,11 +67,10 @@ def dad_to_seg(df, units='m'):
     seg_length = seg.Depth.diff()
     seg_length.iloc[0] = seg.Depth.iloc[0]
     seg['Segment_length'] = seg_length
-    seg['Unit'] = units
 
     # Re-arrange the columns
     depths = seg.pop('Depth')
-    seg.insert(4, 'Depth', depths)
+    seg.insert(3, 'Depth', depths)
     seg.reset_index(inplace=True, drop=True)
     seg = seg.round(2)
 
@@ -94,9 +86,8 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         self.setupUi(self)
 
         self.setWindowTitle('PEM Geometry')
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'pem_geometry.png')))
+        self.setWindowIcon(get_icon('pem_geometry.png'))
         self.resize(1100, 800)
-        # self.status_bar.setStyleSheet("border-top :0.5px solid gray;")
 
         self.message = QMessageBox()
         self.error = QErrorMessage()
@@ -104,7 +95,6 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 
         self.parent = parent
         self.pem_file = None
-        self.dialog = QFileDialog()
 
         # Initialize the plot lines
         self.tool_az_line = None
@@ -141,7 +131,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         self.polar_lines = []
 
         # Create the main plots
-        self.figure, (self.mag_ax, self.dip_ax, self.roll_ax) = plt.subplots(1, 3, sharey=True)
+        self.figure, (self.mag_ax, self.dip_ax, self.roll_ax) = plt.subplots(1, 3, sharey=True, clear=False)
         self.figure.subplots_adjust(left=0.07, bottom=0.08, right=0.94, top=0.92)
         self.canvas = FigureCanvas(self.figure)
         self.canvas.setFocusPolicy(Qt.StrongFocus)
@@ -196,15 +186,15 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 
         # Signals
         self.actionOpen_Geometry_File.triggered.connect(self.open_file_dialog)
-        self.actionOpen_Geometry_File.setIcon(QIcon(str(icons_path.joinpath("open.png"))))
+        self.actionOpen_Geometry_File.setIcon(get_icon("open.png"))
         self.actionAllow_Negative_Azimuth.triggered.connect(lambda: self.plot_tool_values(update=True))
 
         self.actionSave_Screenshot.setShortcut("Ctrl+S")
         self.actionSave_Screenshot.triggered.connect(self.save_img)
-        self.actionSave_Screenshot.setIcon(QIcon(str(icons_path.joinpath("save_as.png"))))
+        self.actionSave_Screenshot.setIcon(get_icon("save_as.png"))
         self.actionCopy_Screenshot.setShortcut("Ctrl+C")
         self.actionCopy_Screenshot.triggered.connect(self.copy_img)
-        self.actionCopy_Screenshot.setIcon(QIcon(str(icons_path.joinpath("copy.png"))))
+        self.actionCopy_Screenshot.setIcon(get_icon("copy.png"))
 
         self.reset_range_shortcut = QShortcut(QKeySequence(' '), self)
         self.reset_range_shortcut.activated.connect(self.update_plots)
@@ -242,6 +232,10 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             else:
                 e.ignore()
 
+    def closeEvent(self, e):
+        plt.close()
+        e.accept()
+
     def dropEvent(self, e):
         file = [url.toLocalFile() for url in e.mimeData().urls()][0]
 
@@ -267,7 +261,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         Open files through the file dialog
         """
         default_path = self.pem_file.filepath.parent
-        files, ext = self.dialog.getOpenFileNames(self, 'Open File', str(default_path),
+        files, ext = QFileDialog().getOpenFileNames(self, 'Open File', str(default_path),
                                                   filter='DAD files (*.dad; *.csv; *.xlsx; *.xls; *.txt);; '
                                                          'SEG files (*.seg; *.txt)')
         if files != '':
@@ -348,7 +342,6 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         """
         Plot the pem file tool values and segment information. One of the two must be present.
         """
-
         def add_az_spline(az, depth):
             """
             Add the azimuth spline line

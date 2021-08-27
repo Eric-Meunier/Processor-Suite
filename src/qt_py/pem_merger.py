@@ -7,37 +7,146 @@ import numpy as np
 import pyqtgraph as pg
 import pandas as pd
 from PySide2.QtCore import Qt, Signal, QEvent
-from PySide2.QtGui import QIcon
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QAction, QFileDialog, QLabel, QApplication, QFrame,
                                QHBoxLayout, QLineEdit, QPushButton)
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine
-from src.qt_py import icons_path
+from src.qt_py import get_icon
 from src.ui.pem_merger import Ui_PEMMerger
 
 logger = logging.getLogger(__name__)
 
-pg.setConfigOptions(antialias=True)
-pg.setConfigOption('background', 'w')
-pg.setConfigOption('foreground', 'k')
-pg.setConfigOption('crashWarning', True)
 pd.options.mode.chained_assignment = None  # default='warn'
 
 
 class PEMMerger(QMainWindow, Ui_PEMMerger):
     accept_sig = Signal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, darkmode=False):
+        def init_signals():
+
+            def toggle_symbols():
+                self.plot_profiles(self.pf1, components='all')
+                self.plot_profiles(self.pf2, components='all')
+
+            def coil_area_1_changed(coil_area):
+                self.pf1 = self.pf1.scale_coil_area(coil_area)
+                self.plot_profiles(self.pf1, components='all')
+
+            def coil_area_2_changed(coil_area):
+                self.pf2 = self.pf2.scale_coil_area(coil_area)
+                self.plot_profiles(self.pf2, components='all')
+
+            def current_1_changed(current):
+                self.pf1 = self.pf1.scale_current(current)
+                self.plot_profiles(self.pf1, components='all')
+
+            def current_2_changed(current):
+                self.pf2 = self.pf2.scale_current(current)
+                self.plot_profiles(self.pf2, components='all')
+
+            def factor_1_changed(factor):
+                scale_factor = factor - self.last_scale_factor_1
+
+                self.pf1 = self.pf1.scale_by_factor(scale_factor)
+                self.plot_profiles(self.pf1, components='all')
+
+                self.last_scale_factor_1 = factor
+
+            def factor_2_changed(factor):
+                scale_factor = factor - self.last_scale_factor_2
+
+                self.pf2 = self.pf2.scale_by_factor(scale_factor)
+                self.plot_profiles(self.pf2, components='all')
+
+                self.last_scale_factor_2 = factor
+
+            def soa_1_changed(soa):
+                soa_delta = soa - self.last_soa_1
+
+                self.pf1 = self.pf1.rotate(method=None, soa=soa_delta)
+                self.plot_profiles(self.pf1, components='all')
+
+                self.last_soa_1 = soa
+
+            def soa_2_changed(soa):
+                soa_delta = soa - self.last_soa_2
+
+                self.pf2 = self.pf2.rotate(method=None, soa=soa_delta)
+                self.plot_profiles(self.pf2, components='all')
+
+                self.last_soa_2 = soa
+
+            def flip_component(pem_file):
+                ind = self.profile_tab_widget.currentIndex()
+                if ind == 0:
+                    component = 'X'
+                elif ind == 1:
+                    component = 'Y'
+                else:
+                    component = 'Z'
+
+                pem_file.reverse_component(component)
+                self.plot_profiles(pem_file, component)
+
+            def accept_merge():
+                merged_pem = self.get_merged_pem()
+                save_path = Path(self.save_path_edit.text())
+
+                merged_pem.filepath = save_path
+                merged_pem.save()
+                self.status_bar.showMessage(f"File saved.", 1000)
+                self.accept_sig.emit(str(save_path))
+                self.close()
+
+            # Menu
+            self.actionSave_As.triggered.connect(self.save_pem_file)
+            self.actionSave_Screenshot.triggered.connect(self.save_img)
+            self.actionCopy_Screenshot.triggered.connect(self.copy_img)
+
+            self.actionSymbols.triggered.connect(toggle_symbols)
+
+            self.view_x_action.triggered.connect(lambda: self.profile_tab_widget.setCurrentIndex(0))
+            self.view_y_action.triggered.connect(lambda: self.profile_tab_widget.setCurrentIndex(1))
+            self.view_z_action.triggered.connect(lambda: self.profile_tab_widget.setCurrentIndex(2))
+
+            # Spin boxes
+            self.coil_area_sbox_1.valueChanged.connect(coil_area_1_changed)
+            self.coil_area_sbox_2.valueChanged.connect(coil_area_2_changed)
+
+            self.current_sbox_1.valueChanged.connect(current_1_changed)
+            self.current_sbox_2.valueChanged.connect(current_2_changed)
+
+            self.factor_sbox_1.valueChanged.connect(factor_1_changed)
+            self.factor_sbox_2.valueChanged.connect(factor_2_changed)
+
+            self.soa_sbox_1.valueChanged.connect(soa_1_changed)
+            self.soa_sbox_2.valueChanged.connect(soa_2_changed)
+
+            # Buttons
+            self.flip_data_btn_1.clicked.connect(lambda: flip_component(self.pf1))
+            self.flip_data_btn_2.clicked.connect(lambda: flip_component(self.pf2))
+
+            self.accept_btn.clicked.connect(accept_merge)
+
         super().__init__()
         self.parent = parent
         self.setupUi(self)
         self.installEventFilter(self)
-        self.message = QMessageBox()
-
-        # Format window
+        self.darkmode = darkmode
         self.setWindowTitle('PEM Merger')
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'pem_merger.png')))
+        self.setWindowIcon(get_icon('pem_merger.png'))
 
+        self.pf1_color = (255, 255, 255) if self.darkmode else (53, 53, 53)
+        # self.pf1_color = (255, 255, 255) if self.darkmode else (28, 28, 27)
+        # self.pf2_color = (102, 255, 255) if self.darkmode else (206, 74, 126)
+        self.pf2_color = (255, 153, 204) if self.darkmode else (206, 74, 126)
+        self.brush_color = (66, 66, 66) if self.darkmode else "w"
+
+        self.frame.setStyleSheet(f"color: rgb{self.pf1_color}")
+        self.frame_2.setStyleSheet(f"color: rgb{self.pf2_color}")
+        self.file_label_1.setStyleSheet(f"color: rgb{self.pf1_color}")
+        self.file_label_2.setStyleSheet(f"color: rgb{self.pf2_color}")
         self.pf1 = None
         self.pf2 = None
         self.units = None
@@ -48,6 +157,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         self.last_soa_1 = 0.
         self.last_soa_2 = 0.
 
+        self.message = QMessageBox()
         self.menuView.addSeparator()
         self.view_x_action = QAction('X Component')
         self.view_y_action = QAction('Y Component')
@@ -117,113 +227,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
             ax.getAxis('left').setWidth(60)
             ax.getAxis('left').enableAutoSIPrefix(enable=False)
 
-        self.init_signals()
-
-    def init_signals(self):
-
-        def toggle_symbols():
-            self.plot_profiles(self.pf1, components='all')
-            self.plot_profiles(self.pf2, components='all')
-
-        def coil_area_1_changed(coil_area):
-            self.pf1 = self.pf1.scale_coil_area(coil_area)
-            self.plot_profiles(self.pf1, components='all')
-
-        def coil_area_2_changed(coil_area):
-            self.pf2 = self.pf2.scale_coil_area(coil_area)
-            self.plot_profiles(self.pf2, components='all')
-
-        def current_1_changed(current):
-            self.pf1 = self.pf1.scale_current(current)
-            self.plot_profiles(self.pf1, components='all')
-
-        def current_2_changed(current):
-            self.pf2 = self.pf2.scale_current(current)
-            self.plot_profiles(self.pf2, components='all')
-
-        def factor_1_changed(factor):
-            scale_factor = factor - self.last_scale_factor_1
-
-            self.pf1 = self.pf1.scale_by_factor(scale_factor)
-            self.plot_profiles(self.pf1, components='all')
-
-            self.last_scale_factor_1 = factor
-
-        def factor_2_changed(factor):
-            scale_factor = factor - self.last_scale_factor_2
-
-            self.pf2 = self.pf2.scale_by_factor(scale_factor)
-            self.plot_profiles(self.pf2, components='all')
-
-            self.last_scale_factor_2 = factor
-
-        def soa_1_changed(soa):
-            soa_delta = soa - self.last_soa_1
-
-            self.pf1 = self.pf1.rotate(method=None, soa=soa_delta)
-            self.plot_profiles(self.pf1, components='all')
-
-            self.last_soa_1 = soa
-
-        def soa_2_changed(soa):
-            soa_delta = soa - self.last_soa_2
-
-            self.pf2 = self.pf2.rotate(method=None, soa=soa_delta)
-            self.plot_profiles(self.pf2, components='all')
-
-            self.last_soa_2 = soa
-
-        def flip_component(pem_file):
-            ind = self.profile_tab_widget.currentIndex()
-            if ind == 0:
-                component = 'X'
-            elif ind == 1:
-                component = 'Y'
-            else:
-                component = 'Z'
-
-            pem_file.reverse_component(component)
-            self.plot_profiles(pem_file, component)
-
-        def accept_merge():
-            merged_pem = self.get_merged_pem()
-            save_path = Path(self.save_path_edit.text())
-
-            merged_pem.filepath = save_path
-            merged_pem.save()
-            self.status_bar.showMessage(f"File saved.", 1000)
-            self.accept_sig.emit(str(save_path))
-            self.close()
-
-        # Menu
-        self.actionSave_As.triggered.connect(self.save_pem_file)
-        self.actionSave_Screenshot.triggered.connect(self.save_img)
-        self.actionCopy_Screenshot.triggered.connect(self.copy_img)
-
-        self.actionSymbols.triggered.connect(toggle_symbols)
-
-        self.view_x_action.triggered.connect(lambda: self.profile_tab_widget.setCurrentIndex(0))
-        self.view_y_action.triggered.connect(lambda: self.profile_tab_widget.setCurrentIndex(1))
-        self.view_z_action.triggered.connect(lambda: self.profile_tab_widget.setCurrentIndex(2))
-
-        # Spin boxes
-        self.coil_area_sbox_1.valueChanged.connect(coil_area_1_changed)
-        self.coil_area_sbox_2.valueChanged.connect(coil_area_2_changed)
-
-        self.current_sbox_1.valueChanged.connect(current_1_changed)
-        self.current_sbox_2.valueChanged.connect(current_2_changed)
-
-        self.factor_sbox_1.valueChanged.connect(factor_1_changed)
-        self.factor_sbox_2.valueChanged.connect(factor_2_changed)
-
-        self.soa_sbox_1.valueChanged.connect(soa_1_changed)
-        self.soa_sbox_2.valueChanged.connect(soa_2_changed)
-
-        # Buttons
-        self.flip_data_btn_1.clicked.connect(lambda: flip_component(self.pf1))
-        self.flip_data_btn_2.clicked.connect(lambda: flip_component(self.pf2))
-
-        self.accept_btn.clicked.connect(accept_merge)
+        init_signals()
 
     def keyPressEvent(self, event):
         # Delete a decay when the delete key is pressed
@@ -233,10 +237,9 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         elif event.key() == Qt.Key_Space:
             self.reset_range()
 
-    def eventFilter(self, watched, event):
-        if event.type() == QEvent.Close:
-            self.deleteLater()
-        return super().eventFilter(watched, event)
+    def closeEvent(self, e):
+        self.deleteLater()
+        e.accept()
 
     def reset_range(self):
         for ax in self.profile_axes:
@@ -247,19 +250,16 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         Open a PEMFile object and plot the data.
         :param pem_files: list, 2 PEMFile objects.
         """
-
         def format_plots():
             """
             Creates plot curves for each channel of each component. Adds plot labels for the Y axis and title of
             the profile plots, and sets the X axis limits of each plot.
             """
-
             def set_plot_labels(axes):
                 """
                 Plot the Y axis label for the plot.
                 :param axes: list of PlotItem plots for a component.
                 """
-
                 # Set the plot labels
                 for i, bounds in enumerate(self.channel_bounds):
                     ax = axes[i]
@@ -342,8 +342,11 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
             """
             Set the information labels for both PEMFiles.
             """
-
             def check_label_differences():
+                """
+                Bolden the information that is different between the two files.
+                :return: None
+                """
                 for l1, l2 in zip([self.client_label_1,
                                    self.grid_label_1,
                                    self.line_label_1,
@@ -497,7 +500,6 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         :param pem_file: PEMFile object to plot.
         :param components: list of str, components to plot. If None it will plot every component in the file.
         """
-
         def plot_lines(channel):
             """
             Average and plot the data of the channel.
@@ -511,25 +513,23 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
 
             if self.actionSymbols.isChecked():
                 symbols = {'symbol': 'o',
-                           'symbolSize': 5,
+                           'symbolSize': 4,
                            'symbolPen': pg.mkPen(color, width=1.1),
-                           'symbolBrush': pg.mkBrush('w')}
+                           'symbolBrush': pg.mkBrush(self.brush_color)
+                           }
             else:
                 symbols = {'symbol': None}
 
             curve.setData(x, y, pen=pg.mkPen(color), **symbols)
 
         if not isinstance(components, np.ndarray):
-            # Get the components
             if components is None or components == 'all':
                 components = self.components
 
         if pem_file == self.pf1:
-            # color = 'r'
-            color = (28, 28, 27)
+            color = self.pf1_color
         else:
-            # color = 'b'
-            color = (206, 74, 126)
+            color = self.pf2_color
 
         for component in components:
             profile_data = pem_file.get_profile_data(component,
@@ -613,7 +613,6 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         """
         Signal slot, cycle through the profile plots
         """
-
         def get_comp_indexes():
             """
             Return the index of the stacked widget of each component present in the PEM file
@@ -668,19 +667,28 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser
+    from src.qt_py import dark_palette
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    darkmode = False
+    if darkmode:
+        app.setPalette(dark_palette)
+    pg.setConfigOptions(antialias=True)
+    pg.setConfigOption('crashWarning', True)
+    pg.setConfigOption('background', 'w')
+    pg.setConfigOption('foreground', (53, 53, 53))
 
     pem_getter = PEMGetter()
     # pem_files = pem_getter.get_pems(client='Minera', number=2)
     # pf1 = pem_getter.get_pems(folder='Raw Boreholes', file='em10-10xy_0403.PEM')[0]
     # pf2 = pem_getter.get_pems(folder='Raw Boreholes', file='em10-10-2xy_0403.PEM')[0]
-    pf1 = PEMParser().parse(r"C:\_Data\2021\TMC\Loop L\RAW\800_0602.PEM")
-    pf2 = PEMParser().parse(r"C:\_Data\2021\TMC\Loop L\RAW\800_J 50-400.PEM")
+    pf1 = pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0823.PEM")[0]
+    pf2 = pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0824.PEM")[0]
     # pf1 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 XYT.PEM')[0]
     # pf2 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 ZAv.PEM')[0]
     # pf1 = pem_getter.get_pems(client='Iscaycruz', subfolder='PZ-19-05', file='CXY_02.PEM')[0]
     # pf2 = pem_getter.get_pems(client='Iscaycruz', subfolder='PZ-19-05', file='CXY_03.PEM')[0]
-    w = PEMMerger()
+    w = PEMMerger(darkmode=darkmode)
     w.open([pf1, pf2])
     # w.get_merged_pem()
 

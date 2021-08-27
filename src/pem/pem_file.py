@@ -147,7 +147,7 @@ class PEMFile:
 
         self.total_scale_factor = 0.
         self.soa = 0  # For XY SOA rotation
-        self.pp_table = None
+        self.pp_table = None  # PP de-rotation information
         self.prepped_for_rotation = False
         self.legacy = False
 
@@ -200,6 +200,7 @@ class PEMFile:
         # Add the deletion flag column
         if 'Deleted' not in self.data.columns:
             self.data.insert(13, 'Deleted', False)
+            self.legacy = True
 
         # Add the overload column
         if 'Overload' not in self.data.columns:
@@ -438,21 +439,15 @@ class PEMFile:
         Return the type of units being used for GPS ('m' or 'ft')
         :return: str
         """
+        unit = None
         if self.has_loop_gps():
-            unit = self.loop.df.get('Unit').all()
+            unit = self.loop.get_units()
         elif self.has_collar_gps():
-            unit = self.collar.df.get('Unit').all()
+            unit = self.collar.get_units()
         elif self.has_station_gps():
-            unit = self.line.df.get('Unit').all()
-        else:
-            return None
+            unit = self.line.get_units()
 
-        if unit == '0':
-            return 'm'
-        elif unit == '1':
-            return 'ft'
-        else:
-            raise ValueError(f"{unit} is not 0 or 1")
+        return unit
 
     def get_crs(self):
         """
@@ -785,6 +780,17 @@ class PEMFile:
         tf = data.groupby("Station").apply(get_tf)
         data = data.append(tf).dropna().reset_index(drop=True)
         return data
+
+    def get_name(self, suffix=True):
+        """
+        Return the name of the PEMFile's file.
+        :param suffix: Bool, include the extension or not.
+        :return: str
+        """
+        if suffix is True:
+            return self.filepath.name
+        else:
+            return self.filepath.stem
 
     def get_components(self):
         components = list(self.data['Component'].unique())
@@ -1296,6 +1302,13 @@ class PEMFile:
         else:
             self.line.crs = crs
 
+        # Add the note, removing any existing ones.
+        for note in reversed(self.notes):
+            if '<GEN> CRS' in note or '<CRS>' in note:
+                del self.notes[self.notes.index(note)]
+        if self.crs is not None:
+            self.notes.append(f"<GEN>/<CRS> {crs.name} (EPSG:{crs.to_epsg()})")
+
     def to_string(self, legacy=False):
         """
         Return the text format of the PEM file
@@ -1335,7 +1348,6 @@ class PEMFile:
         Create a str in XYZ format of the pem file's data
         :return: str
         """
-
         def get_station_gps(row):
             """
             Add the GPS information for each station
@@ -1408,7 +1420,7 @@ class PEMFile:
                     f"Rename: {rename}, Tag: {tag})")
 
         # Once legacy is saved once, it will always save as legacy.
-        if legacy is True:
+        if legacy is True or processed is True:
             self.legacy = True
 
         if processed is True:
@@ -3139,10 +3151,9 @@ class DMPParser:
         :param filepath: str or Path object of the DMP file
         :return: PEMFile object
         """
-
         if isinstance(filepath, str):
             filepath = Path(filepath)
-        assert filepath.is_file(), f"{filepath.name} does not exist."
+        assert filepath.is_file(), f"{filepath} does not exist."
 
         if filepath.suffix.lower() == '.dmp':
             pem_file, inf_errors = self.parse_dmp(filepath)
@@ -3180,13 +3191,15 @@ class PEMSerializer:
     def serialize_loop_coords(self):
         result = '~ Transmitter Loop Co-ordinates:'
         loop = self.pem_file.get_loop()
+        units_code = self.pem_file.loop.get_units_code()
+        assert units_code, f"No units code for the loop of {self.pem_file.get_name()}."
         if loop.empty:
             result += '\n<L00>\n''<L01>\n''<L02>\n''<L03>'
         else:
             loop.reset_index(inplace=True)
             for row in loop.itertuples():
                 tag = f"<L{row.Index:02d}>"
-                row = f"{tag} {row.Easting:.2f} {row.Northing:.2f} {row.Elevation:.2f} {row.Unit}"
+                row = f"{tag} {row.Easting:.2f} {row.Northing:.2f} {row.Elevation:.2f} {units_code}"
                 result += '\n' + row
         return result
 
@@ -3195,13 +3208,15 @@ class PEMSerializer:
         def serialize_station_coords():
             result = '~ Hole/Profile Co-ordinates:'
             line = self.pem_file.get_line()
+            units_code = self.pem_file.line.get_units_code()
+            assert units_code, f"No units code for the line of {self.pem_file.get_name()}."
             if line.empty:
                 result += '\n<P00>\n''<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>'
             else:
                 line.reset_index(inplace=True)
                 for row in line.itertuples():
                     tag = f"<P{row.Index:02d}>"
-                    row = f"{tag} {row.Easting:.2f} {row.Northing:.2f} {row.Elevation:.2f} {row.Unit} {row.Station}"
+                    row = f"{tag} {row.Easting:.2f} {row.Northing:.2f} {row.Elevation:.2f} {units_code} {row.Station}"
                     result += '\n' + row
             return result
 
@@ -3209,12 +3224,14 @@ class PEMSerializer:
             result = '~ Hole/Profile Co-ordinates:'
             collar = self.pem_file.get_collar()
             collar.reset_index(drop=True, inplace=True)
+            units_code = self.pem_file.collar.get_units_code()
+            assert units_code, f"No units code for the collar of {self.pem_file.get_name()}."
             if collar.empty:
                 result += '\n<P00>'
             else:
                 for row in collar.itertuples():
                     tag = f"<P{row.Index:02d}>"
-                    row = f"{tag} {row.Easting:.2f} {row.Northing:.2f} {row.Elevation:.2f} {row.Unit}"
+                    row = f"{tag} {row.Easting:.2f} {row.Northing:.2f} {row.Elevation:.2f} {units_code}"
                     result += '\n' + row
             return result
 
@@ -3222,12 +3239,14 @@ class PEMSerializer:
             result = ''
             segs = self.pem_file.get_segments()
             segs.reset_index(drop=True, inplace=True)
+            units_code = self.pem_file.segments.get_units_code()
+            assert units_code, f"No units code for the segments of {self.pem_file.get_name()}."
             if segs.empty:
                 result += '\n<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>'
             else:
                 for row in segs.itertuples():
                     tag = f"<P{row.Index + 1:02d}>"
-                    row = f"{tag} {row.Azimuth:.2f} {row.Dip:.2f} {row[3]:.2f} {row.Unit} {row.Depth:.2f}"
+                    row = f"{tag} {row.Azimuth:.2f} {row.Dip:.2f} {row[3]:.2f} {units_code} {row.Depth:.2f}"
                     result += '\n' + row
             return result
 
@@ -3313,12 +3332,11 @@ class PEMSerializer:
         return result
 
     def serialize_data(self, legacy=False):
-        df = self.pem_file.get_data(sorted=True)
-
-        # Remove deleted readings
-        filt = ~df.Deleted.astype(bool)
-        df = df[filt]
-
+        """
+        Print the data to text for a PEM file format.
+        :param legacy: bool, will remove the timestamp and deleted status if True.
+        :return: string
+        """
         def serialize_reading(reading):
             reading_header = [reading['Station'],
                               reading['Component'] + 'R' + f"{reading['Reading_index']:g}",
@@ -3355,7 +3373,16 @@ class PEMSerializer:
 
             return result + '\n'
 
-        return ''.join(df.apply(serialize_reading, axis=1))
+        df = self.pem_file.get_data(sorted=True)
+
+        # Remove deleted readings
+        filt = ~df.Deleted.astype(bool)
+        df = df[filt]
+        if df.empty:
+            logger.warning(f"No valid data found to print in {self.pem_file.filepath.name}.")
+            return ""
+        else:
+            return ''.join(df.apply(serialize_reading, axis=1))
 
     def serialize(self, pem_file, legacy=False):
         """
@@ -3789,25 +3816,29 @@ if __name__ == '__main__':
     import timeit
     sample_folder = Path(__file__).parents[2].joinpath("sample_files")
 
-    dparser = DMPParser()
+    dmpparser = DMPParser()
     pemparser = PEMParser()
     pem_g = PEMGetter()
 
     # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
-    # file = r"C:\_Data\2021\TMC\Murchison\Landrienne B\Final\MURCHISON_LANDRIENNE B\L200E.PEM"
+    file = r"C:\_Data\2021\TMC\Laurentia\STE-21-50-W3\RAW\ste-21-50w3xy_0819.dmp2"
+    # file = r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW\l35eb2_0817.dmp2"
+    # pem_file = pemparser.parse(file)
+    pem_file, errors = dmpparser.parse(file)
+    print(pem_file.to_string())
     # file = r"C:\_Data\2021\TMC\Soquem\1338-19-036\DUMP\January 16, 2021\DMP\1338-19-036 XY.PEM"
     # file = r"C:\_Data\2021\Iscaycruz\Borehole\LS-27-21-07\RAW\xy_0704.PEM"
     # pemparser.parse(file)
 
     # pem_files = pem_g.get_pems(random=True, number=1)
-    pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"EB-21-52\Final\z.PEM")
+    # pem_files = pem_g.get_pems(folder="Raw Boreholes", file=r"EB-21-52\Final\z.PEM")
     # pem_files = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")
     # pem_files = pem_g.get_pems(folder="Raw Surface", subfolder=r"Loop 1\Final\Perkoa South", file="11200E.PEM")
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="em21-155 z_0415.PEM")
 
-    pem_file = pem_files[0]
+    # pem_file = pem_files[0]
     # pem_file.get_theory_pp()
-    pem_file.get_theory_data()
+    # pem_file.get_theory_data()
     # pem_file.get_reversed_components()
     # pem_file.rotate(method="unrotate")
     # pem_file.filepath = pem_file.filepath.with_name(pem_file.filepath.stem + "(unrotated)" + ".PEM")

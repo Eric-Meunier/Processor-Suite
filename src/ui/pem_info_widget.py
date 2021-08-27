@@ -17,7 +17,7 @@ class Ui_PEMInfoWidget(object):
     def setupUi(self, PEMInfoWidget):
         if not PEMInfoWidget.objectName():
             PEMInfoWidget.setObjectName(u"PEMInfoWidget")
-        PEMInfoWidget.resize(780, 814)
+        PEMInfoWidget.resize(780, 824)
         sizePolicy = QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -36,7 +36,7 @@ class Ui_PEMInfoWidget(object):
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.tabs.sizePolicy().hasHeightForWidth())
         self.tabs.setSizePolicy(sizePolicy1)
-        self.tabs.setMinimumSize(QSize(0, 0))
+        self.tabs.setMinimumSize(QSize(300, 0))
         self.tabs.setMaximumSize(QSize(16777215, 16777215))
         font = QFont()
         font.setFamily(u"Century Gothic")
@@ -66,6 +66,7 @@ class Ui_PEMInfoWidget(object):
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.info_table.sizePolicy().hasHeightForWidth())
         self.info_table.setSizePolicy(sizePolicy2)
+        self.info_table.setFrameShadow(QFrame.Plain)
         self.info_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.info_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.info_table.setShowGrid(True)
@@ -92,10 +93,10 @@ class Ui_PEMInfoWidget(object):
         sizePolicy3.setVerticalStretch(0)
         sizePolicy3.setHeightForWidth(self.frame_3.sizePolicy().hasHeightForWidth())
         self.frame_3.setSizePolicy(sizePolicy3)
-        self.frame_3.setMinimumSize(QSize(400, 0))
+        self.frame_3.setMinimumSize(QSize(0, 0))
         self.frame_3.setMaximumSize(QSize(16777215, 16777215))
-        self.frame_3.setFrameShape(QFrame.Box)
-        self.frame_3.setFrameShadow(QFrame.Sunken)
+        self.frame_3.setFrameShape(QFrame.StyledPanel)
+        self.frame_3.setFrameShadow(QFrame.Plain)
         self.gridLayout_8 = QGridLayout(self.frame_3)
         self.gridLayout_8.setObjectName(u"gridLayout_8")
         self.gridLayout_8.setContentsMargins(6, 6, 6, 6)
@@ -140,21 +141,20 @@ class Ui_PEMInfoWidget(object):
         self.gridLayout_4.addWidget(self.frame_3, 2, 0, 1, 3)
 
         self.loop_table = QTableWidget(self.loop_gps_tab)
-        if (self.loop_table.columnCount() < 4):
-            self.loop_table.setColumnCount(4)
+        if (self.loop_table.columnCount() < 3):
+            self.loop_table.setColumnCount(3)
         __qtablewidgetitem2 = QTableWidgetItem()
         self.loop_table.setHorizontalHeaderItem(0, __qtablewidgetitem2)
         __qtablewidgetitem3 = QTableWidgetItem()
         self.loop_table.setHorizontalHeaderItem(1, __qtablewidgetitem3)
         __qtablewidgetitem4 = QTableWidgetItem()
         self.loop_table.setHorizontalHeaderItem(2, __qtablewidgetitem4)
-        __qtablewidgetitem5 = QTableWidgetItem()
-        self.loop_table.setHorizontalHeaderItem(3, __qtablewidgetitem5)
         self.loop_table.setObjectName(u"loop_table")
         sizePolicy2.setHeightForWidth(self.loop_table.sizePolicy().hasHeightForWidth())
         self.loop_table.setSizePolicy(sizePolicy2)
-        self.loop_table.setMinimumSize(QSize(400, 0))
+        self.loop_table.setMinimumSize(QSize(0, 0))
         self.loop_table.setMaximumSize(QSize(16777215, 16777215))
+        self.loop_table.setFrameShadow(QFrame.Plain)
         self.loop_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.loop_table.setShowGrid(False)
         self.loop_table.horizontalHeader().setHighlightSections(False)
@@ -171,10 +171,10 @@ class Ui_PEMInfoWidget(object):
         self.frame_6.setObjectName(u"frame_6")
         sizePolicy3.setHeightForWidth(self.frame_6.sizePolicy().hasHeightForWidth())
         self.frame_6.setSizePolicy(sizePolicy3)
-        self.frame_6.setMinimumSize(QSize(400, 0))
+        self.frame_6.setMinimumSize(QSize(0, 0))
         self.frame_6.setMaximumSize(QSize(16777215, 250))
-        self.frame_6.setFrameShape(QFrame.Box)
-        self.frame_6.setFrameShadow(QFrame.Sunken)
+        self.frame_6.setFrameShape(QFrame.StyledPanel)
+        self.frame_6.setFrameShadow(QFrame.Plain)
         self.horizontalLayout = QHBoxLayout(self.frame_6)
         self.horizontalLayout.setSpacing(0)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
@@ -381,23 +381,22 @@ class Ui_PEMInfoWidget(object):
         self.gridLayout_3.addWidget(self.frame_6, 19, 1, 1, 2)
 
         self.line_table = QTableWidget(self.station_gps_tab)
-        if (self.line_table.columnCount() < 5):
-            self.line_table.setColumnCount(5)
+        if (self.line_table.columnCount() < 4):
+            self.line_table.setColumnCount(4)
+        __qtablewidgetitem5 = QTableWidgetItem()
+        self.line_table.setHorizontalHeaderItem(0, __qtablewidgetitem5)
         __qtablewidgetitem6 = QTableWidgetItem()
-        self.line_table.setHorizontalHeaderItem(0, __qtablewidgetitem6)
+        self.line_table.setHorizontalHeaderItem(1, __qtablewidgetitem6)
         __qtablewidgetitem7 = QTableWidgetItem()
-        self.line_table.setHorizontalHeaderItem(1, __qtablewidgetitem7)
+        self.line_table.setHorizontalHeaderItem(2, __qtablewidgetitem7)
         __qtablewidgetitem8 = QTableWidgetItem()
-        self.line_table.setHorizontalHeaderItem(2, __qtablewidgetitem8)
-        __qtablewidgetitem9 = QTableWidgetItem()
-        self.line_table.setHorizontalHeaderItem(3, __qtablewidgetitem9)
-        __qtablewidgetitem10 = QTableWidgetItem()
-        self.line_table.setHorizontalHeaderItem(4, __qtablewidgetitem10)
+        self.line_table.setHorizontalHeaderItem(3, __qtablewidgetitem8)
         self.line_table.setObjectName(u"line_table")
         sizePolicy2.setHeightForWidth(self.line_table.sizePolicy().hasHeightForWidth())
         self.line_table.setSizePolicy(sizePolicy2)
-        self.line_table.setMinimumSize(QSize(400, 0))
+        self.line_table.setMinimumSize(QSize(0, 0))
         self.line_table.setMaximumSize(QSize(16777215, 16777215))
+        self.line_table.setFrameShadow(QFrame.Plain)
         self.line_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.line_table.setShowGrid(False)
         self.line_table.horizontalHeader().setHighlightSections(False)
@@ -412,9 +411,9 @@ class Ui_PEMInfoWidget(object):
         self.gridLayout_5.setObjectName(u"gridLayout_5")
         self.frame_9 = QFrame(self.geometry_tab)
         self.frame_9.setObjectName(u"frame_9")
-        self.frame_9.setMinimumSize(QSize(400, 0))
-        self.frame_9.setFrameShape(QFrame.Box)
-        self.frame_9.setFrameShadow(QFrame.Sunken)
+        self.frame_9.setMinimumSize(QSize(0, 0))
+        self.frame_9.setFrameShape(QFrame.StyledPanel)
+        self.frame_9.setFrameShadow(QFrame.Plain)
         self.horizontalLayout_3 = QHBoxLayout(self.frame_9)
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
         self.horizontalLayout_3.setContentsMargins(6, 6, 6, 6)
@@ -448,23 +447,22 @@ class Ui_PEMInfoWidget(object):
         self.gridLayout_5.addWidget(self.label_5, 0, 0, 1, 1, Qt.AlignHCenter)
 
         self.segments_table = QTableWidget(self.geometry_tab)
-        if (self.segments_table.columnCount() < 5):
-            self.segments_table.setColumnCount(5)
+        if (self.segments_table.columnCount() < 4):
+            self.segments_table.setColumnCount(4)
+        __qtablewidgetitem9 = QTableWidgetItem()
+        self.segments_table.setHorizontalHeaderItem(0, __qtablewidgetitem9)
+        __qtablewidgetitem10 = QTableWidgetItem()
+        self.segments_table.setHorizontalHeaderItem(1, __qtablewidgetitem10)
         __qtablewidgetitem11 = QTableWidgetItem()
-        self.segments_table.setHorizontalHeaderItem(0, __qtablewidgetitem11)
+        self.segments_table.setHorizontalHeaderItem(2, __qtablewidgetitem11)
         __qtablewidgetitem12 = QTableWidgetItem()
-        self.segments_table.setHorizontalHeaderItem(1, __qtablewidgetitem12)
-        __qtablewidgetitem13 = QTableWidgetItem()
-        self.segments_table.setHorizontalHeaderItem(2, __qtablewidgetitem13)
-        __qtablewidgetitem14 = QTableWidgetItem()
-        self.segments_table.setHorizontalHeaderItem(3, __qtablewidgetitem14)
-        __qtablewidgetitem15 = QTableWidgetItem()
-        self.segments_table.setHorizontalHeaderItem(4, __qtablewidgetitem15)
+        self.segments_table.setHorizontalHeaderItem(3, __qtablewidgetitem12)
         self.segments_table.setObjectName(u"segments_table")
         sizePolicy2.setHeightForWidth(self.segments_table.sizePolicy().hasHeightForWidth())
         self.segments_table.setSizePolicy(sizePolicy2)
-        self.segments_table.setMinimumSize(QSize(400, 0))
+        self.segments_table.setMinimumSize(QSize(0, 0))
         self.segments_table.setMaximumSize(QSize(16777215, 16777215))
+        self.segments_table.setFrameShadow(QFrame.Plain)
         self.segments_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.segments_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self.segments_table.setShowGrid(False)
@@ -481,9 +479,9 @@ class Ui_PEMInfoWidget(object):
 
         self.frame_10 = QFrame(self.geometry_tab)
         self.frame_10.setObjectName(u"frame_10")
-        self.frame_10.setMinimumSize(QSize(400, 0))
-        self.frame_10.setFrameShape(QFrame.Box)
-        self.frame_10.setFrameShadow(QFrame.Sunken)
+        self.frame_10.setMinimumSize(QSize(0, 0))
+        self.frame_10.setFrameShape(QFrame.StyledPanel)
+        self.frame_10.setFrameShadow(QFrame.Plain)
         self.horizontalLayout_4 = QHBoxLayout(self.frame_10)
         self.horizontalLayout_4.setObjectName(u"horizontalLayout_4")
         self.horizontalLayout_4.setContentsMargins(6, 6, 6, 6)
@@ -506,36 +504,32 @@ class Ui_PEMInfoWidget(object):
         self.gridLayout_5.addWidget(self.frame_10, 2, 0, 1, 1)
 
         self.collar_table = QTableWidget(self.geometry_tab)
-        if (self.collar_table.columnCount() < 4):
-            self.collar_table.setColumnCount(4)
-        __qtablewidgetitem16 = QTableWidgetItem()
-        self.collar_table.setHorizontalHeaderItem(0, __qtablewidgetitem16)
-        __qtablewidgetitem17 = QTableWidgetItem()
-        self.collar_table.setHorizontalHeaderItem(1, __qtablewidgetitem17)
-        __qtablewidgetitem18 = QTableWidgetItem()
-        self.collar_table.setHorizontalHeaderItem(2, __qtablewidgetitem18)
-        __qtablewidgetitem19 = QTableWidgetItem()
-        self.collar_table.setHorizontalHeaderItem(3, __qtablewidgetitem19)
+        if (self.collar_table.columnCount() < 3):
+            self.collar_table.setColumnCount(3)
+        __qtablewidgetitem13 = QTableWidgetItem()
+        self.collar_table.setHorizontalHeaderItem(0, __qtablewidgetitem13)
+        __qtablewidgetitem14 = QTableWidgetItem()
+        self.collar_table.setHorizontalHeaderItem(1, __qtablewidgetitem14)
+        __qtablewidgetitem15 = QTableWidgetItem()
+        self.collar_table.setHorizontalHeaderItem(2, __qtablewidgetitem15)
         if (self.collar_table.rowCount() < 1):
             self.collar_table.setRowCount(1)
-        __qtablewidgetitem20 = QTableWidgetItem()
-        __qtablewidgetitem20.setTextAlignment(Qt.AlignCenter);
-        self.collar_table.setItem(0, 0, __qtablewidgetitem20)
-        __qtablewidgetitem21 = QTableWidgetItem()
-        __qtablewidgetitem21.setTextAlignment(Qt.AlignCenter);
-        self.collar_table.setItem(0, 1, __qtablewidgetitem21)
-        __qtablewidgetitem22 = QTableWidgetItem()
-        __qtablewidgetitem22.setTextAlignment(Qt.AlignCenter);
-        self.collar_table.setItem(0, 2, __qtablewidgetitem22)
-        __qtablewidgetitem23 = QTableWidgetItem()
-        __qtablewidgetitem23.setTextAlignment(Qt.AlignCenter);
-        self.collar_table.setItem(0, 3, __qtablewidgetitem23)
+        __qtablewidgetitem16 = QTableWidgetItem()
+        __qtablewidgetitem16.setTextAlignment(Qt.AlignCenter);
+        self.collar_table.setItem(0, 0, __qtablewidgetitem16)
+        __qtablewidgetitem17 = QTableWidgetItem()
+        __qtablewidgetitem17.setTextAlignment(Qt.AlignCenter);
+        self.collar_table.setItem(0, 1, __qtablewidgetitem17)
+        __qtablewidgetitem18 = QTableWidgetItem()
+        __qtablewidgetitem18.setTextAlignment(Qt.AlignCenter);
+        self.collar_table.setItem(0, 2, __qtablewidgetitem18)
         self.collar_table.setObjectName(u"collar_table")
         sizePolicy2.setHeightForWidth(self.collar_table.sizePolicy().hasHeightForWidth())
         self.collar_table.setSizePolicy(sizePolicy2)
         self.collar_table.setMinimumSize(QSize(0, 0))
         self.collar_table.setMaximumSize(QSize(16777215, 60))
         self.collar_table.setFrameShape(QFrame.StyledPanel)
+        self.collar_table.setFrameShadow(QFrame.Plain)
         self.collar_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.collar_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.collar_table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -556,6 +550,7 @@ class Ui_PEMInfoWidget(object):
         self.gridLayout_7.setObjectName(u"gridLayout_7")
         self.ri_table = QTableWidget(self.ri_tab)
         self.ri_table.setObjectName(u"ri_table")
+        self.ri_table.setFrameShadow(QFrame.Plain)
         self.ri_table.setAutoScroll(False)
         self.ri_table.setSelectionBehavior(QAbstractItemView.SelectRows)
 
@@ -592,8 +587,6 @@ class Ui_PEMInfoWidget(object):
         ___qtablewidgetitem3.setText(QCoreApplication.translate("PEMInfoWidget", u"Northing", None));
         ___qtablewidgetitem4 = self.loop_table.horizontalHeaderItem(2)
         ___qtablewidgetitem4.setText(QCoreApplication.translate("PEMInfoWidget", u"Elevation", None));
-        ___qtablewidgetitem5 = self.loop_table.horizontalHeaderItem(3)
-        ___qtablewidgetitem5.setText(QCoreApplication.translate("PEMInfoWidget", u"Unit", None));
         self.tabs.setTabText(self.tabs.indexOf(self.loop_gps_tab), QCoreApplication.translate("PEMInfoWidget", u"Loop GPS", None))
         self.shiftStationLabel.setText(QCoreApplication.translate("PEMInfoWidget", u"Shift Stations:", None))
         self.open_station_gps_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"Open File", None))
@@ -618,44 +611,38 @@ class Ui_PEMInfoWidget(object):
 #endif // QT_CONFIG(tooltip)
         self.cullStationGPSButton.setText(QCoreApplication.translate("PEMInfoWidget", u"Cull Stations", None))
         self.label_4.setText(QCoreApplication.translate("PEMInfoWidget", u"Missing Stations:", None))
-        ___qtablewidgetitem6 = self.line_table.horizontalHeaderItem(0)
-        ___qtablewidgetitem6.setText(QCoreApplication.translate("PEMInfoWidget", u"Easting", None));
-        ___qtablewidgetitem7 = self.line_table.horizontalHeaderItem(1)
-        ___qtablewidgetitem7.setText(QCoreApplication.translate("PEMInfoWidget", u"Northing", None));
-        ___qtablewidgetitem8 = self.line_table.horizontalHeaderItem(2)
-        ___qtablewidgetitem8.setText(QCoreApplication.translate("PEMInfoWidget", u"Elevation", None));
-        ___qtablewidgetitem9 = self.line_table.horizontalHeaderItem(3)
-        ___qtablewidgetitem9.setText(QCoreApplication.translate("PEMInfoWidget", u"Unit", None));
-        ___qtablewidgetitem10 = self.line_table.horizontalHeaderItem(4)
-        ___qtablewidgetitem10.setText(QCoreApplication.translate("PEMInfoWidget", u"Station", None));
+        ___qtablewidgetitem5 = self.line_table.horizontalHeaderItem(0)
+        ___qtablewidgetitem5.setText(QCoreApplication.translate("PEMInfoWidget", u"Easting", None));
+        ___qtablewidgetitem6 = self.line_table.horizontalHeaderItem(1)
+        ___qtablewidgetitem6.setText(QCoreApplication.translate("PEMInfoWidget", u"Northing", None));
+        ___qtablewidgetitem7 = self.line_table.horizontalHeaderItem(2)
+        ___qtablewidgetitem7.setText(QCoreApplication.translate("PEMInfoWidget", u"Elevation", None));
+        ___qtablewidgetitem8 = self.line_table.horizontalHeaderItem(3)
+        ___qtablewidgetitem8.setText(QCoreApplication.translate("PEMInfoWidget", u"Station", None));
         self.tabs.setTabText(self.tabs.indexOf(self.station_gps_tab), QCoreApplication.translate("PEMInfoWidget", u"Station GPS", None))
         self.add_segments_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"Add Segments", None))
         self.export_segments_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"Export Segments", None))
         self.share_segments_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"Share Segments", None))
         self.label_5.setText(QCoreApplication.translate("PEMInfoWidget", u"Collar", None))
-        ___qtablewidgetitem11 = self.segments_table.horizontalHeaderItem(0)
-        ___qtablewidgetitem11.setText(QCoreApplication.translate("PEMInfoWidget", u"Azimuth", None));
-        ___qtablewidgetitem12 = self.segments_table.horizontalHeaderItem(1)
-        ___qtablewidgetitem12.setText(QCoreApplication.translate("PEMInfoWidget", u"Dip", None));
-        ___qtablewidgetitem13 = self.segments_table.horizontalHeaderItem(2)
-        ___qtablewidgetitem13.setText(QCoreApplication.translate("PEMInfoWidget", u"Segment\n"
+        ___qtablewidgetitem9 = self.segments_table.horizontalHeaderItem(0)
+        ___qtablewidgetitem9.setText(QCoreApplication.translate("PEMInfoWidget", u"Azimuth", None));
+        ___qtablewidgetitem10 = self.segments_table.horizontalHeaderItem(1)
+        ___qtablewidgetitem10.setText(QCoreApplication.translate("PEMInfoWidget", u"Dip", None));
+        ___qtablewidgetitem11 = self.segments_table.horizontalHeaderItem(2)
+        ___qtablewidgetitem11.setText(QCoreApplication.translate("PEMInfoWidget", u"Segment\n"
 "Length", None));
-        ___qtablewidgetitem14 = self.segments_table.horizontalHeaderItem(3)
-        ___qtablewidgetitem14.setText(QCoreApplication.translate("PEMInfoWidget", u"Units", None));
-        ___qtablewidgetitem15 = self.segments_table.horizontalHeaderItem(4)
-        ___qtablewidgetitem15.setText(QCoreApplication.translate("PEMInfoWidget", u"Depth", None));
+        ___qtablewidgetitem12 = self.segments_table.horizontalHeaderItem(3)
+        ___qtablewidgetitem12.setText(QCoreApplication.translate("PEMInfoWidget", u"Depth", None));
         self.label_6.setText(QCoreApplication.translate("PEMInfoWidget", u"Segments", None))
         self.open_collar_gps_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"Open File", None))
         self.export_collar_gps_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"Export Collar", None))
         self.share_collar_gps_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"Share Collar", None))
-        ___qtablewidgetitem16 = self.collar_table.horizontalHeaderItem(0)
-        ___qtablewidgetitem16.setText(QCoreApplication.translate("PEMInfoWidget", u"Easting", None));
-        ___qtablewidgetitem17 = self.collar_table.horizontalHeaderItem(1)
-        ___qtablewidgetitem17.setText(QCoreApplication.translate("PEMInfoWidget", u"Northing", None));
-        ___qtablewidgetitem18 = self.collar_table.horizontalHeaderItem(2)
-        ___qtablewidgetitem18.setText(QCoreApplication.translate("PEMInfoWidget", u"Elevation", None));
-        ___qtablewidgetitem19 = self.collar_table.horizontalHeaderItem(3)
-        ___qtablewidgetitem19.setText(QCoreApplication.translate("PEMInfoWidget", u"Units", None));
+        ___qtablewidgetitem13 = self.collar_table.horizontalHeaderItem(0)
+        ___qtablewidgetitem13.setText(QCoreApplication.translate("PEMInfoWidget", u"Easting", None));
+        ___qtablewidgetitem14 = self.collar_table.horizontalHeaderItem(1)
+        ___qtablewidgetitem14.setText(QCoreApplication.translate("PEMInfoWidget", u"Northing", None));
+        ___qtablewidgetitem15 = self.collar_table.horizontalHeaderItem(2)
+        ___qtablewidgetitem15.setText(QCoreApplication.translate("PEMInfoWidget", u"Elevation", None));
 
         __sortingEnabled = self.collar_table.isSortingEnabled()
         self.collar_table.setSortingEnabled(False)

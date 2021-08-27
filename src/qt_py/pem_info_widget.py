@@ -16,7 +16,7 @@ from PySide2.QtWidgets import (QMessageBox, QWidget, QAction, QErrorMessage,
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
     GPXParser
 from src.pem import convert_station
-from src.qt_py import clear_table, read_file
+from src.qt_py import clear_table, read_file, table_to_df, df_to_table
 from src.qt_py.gps_adder import LoopAdder, LineAdder, CollarPicker, ExcelTablePicker
 from src.qt_py.pem_geometry import PEMGeometry
 from src.qt_py.ri_importer import RIFile
@@ -70,8 +70,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.segments_table.setFocusPolicy(Qt.StrongFocus)
         self.ri_table.setFocusPolicy(Qt.StrongFocus)
 
-        self.line_table_columns = ['Easting', 'Northing', 'Elevation', 'Units', 'Station']
-        self.loop_table_columns = ['Easting', 'Northing', 'Elevation', 'Units']
+        self.line_table_columns = ['Easting', 'Northing', 'Elevation', 'Station']
+        self.loop_table_columns = ['Easting', 'Northing', 'Elevation']
 
         float_delegate = QItemDelegate()  # Must keep this reference or else it is garbage collected
         self.line_table.setItemDelegateForColumn(0, float_delegate)
@@ -130,6 +130,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.ri_table.remove_ri_file_action.setEnabled(False)
 
     def init_signals(self):
+        def refresh_line_table():
+            df = table_to_df(self.line_table)
+            self.fill_gps_table(df, self.line_table)
+
         # Buttons
         self.cullStationGPSButton.clicked.connect(self.cull_station_gps)
 
@@ -158,9 +162,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.share_segments_btn.clicked.connect(lambda: self.share_segments_signal.emit(self.get_segments()))
 
         # Table changes
-        self.line_table.cellChanged.connect(self.check_station_duplicates)
-        self.line_table.cellChanged.connect(self.color_line_table)
-        self.line_table.cellChanged.connect(self.check_missing_gps)
+        self.line_table.cellChanged.connect(refresh_line_table)
         self.line_table.cellChanged.connect(lambda: self.gps_object_changed(self.line_table, refresh=True))
         self.line_table.itemSelectionChanged.connect(self.calc_distance)
         self.line_table.itemSelectionChanged.connect(lambda: self.reset_spinbox(self.shiftStationGPSSpinbox))
@@ -259,12 +261,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.last_loop_elev_shift_amt = 0
         self.last_stn_shift_amt = 0
         spinbox.blockSignals(False)
-
-    # def refresh(self):
-    #     """
-    #     Updates all information in the widget. Used to prevent a crash when changing loop elevation values that arises
-    #     in init_tables().
-    #     """
 
     def open_file(self, pem_file):
         """
@@ -426,7 +422,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param line_content: str or Path, SurveyLine object, or pd DataFrame. If None is passed, will take the line
         in the line_table.
         """
-
         def line_accept_sig_wrapper(data):
             self.fill_gps_table(data, self.line_table)
 
@@ -478,10 +473,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     def add_collar(self, collar_content=None):
         """
         Open the CollarPicker (if needed) and add the collarGPS.
-        :param collar_content: list of GPS points. If more than 1, uses the CollarPicker widget.
-        :param excel: Bool, whether to open the excel table picker or not for excel files.
+        :param collar_content: list or dict of GPS points. If more than 1, uses the CollarPicker widget.
         """
-
         def accept_collar(data):
             try:
                 collar = BoreholeCollar(data)
@@ -592,7 +585,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param table: QTableWidget to fill
         :return: None
         """
-
         def write_row(df_row, table):
             """
             Add items from a pandas data frame row to a QTableWidget row
@@ -618,9 +610,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 table.setItem(row_pos, m, item)
 
-        data = deepcopy(data)
+        # data = deepcopy(data)
         if data.empty:
             return
+
+        # Store vertical scroll bar position to be restored after
+        slider_position = table.verticalScrollBar().sliderPosition()
 
         # data.reset_index(inplace=True)
         clear_table(table)
@@ -641,6 +636,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.check_station_duplicates()
             self.color_line_table()
             self.check_missing_gps()
+
+        # Restore scroll bar position
+        table.verticalScrollBar().setSliderPosition(slider_position)
+
         table.blockSignals(False)
 
     def color_line_table(self):
@@ -655,10 +654,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         sorted_stations = sorted(stations, reverse=bool(stations[0] > stations[-1]))
         em_stations = self.pem_file.data.Station.map(convert_station).unique().astype(int)
 
-        blue_color, red_color, gray_color, white_color = QColor('blue'), \
-                                                         QColor('red'), \
-                                                         QColor('grey'), \
-                                                         QColor('white')
+        blue_color, red_color, gray_color = QColor("blue"), QColor("red"), QColor("darkGray")
         blue_color.setAlpha(50)
         red_color.setAlpha(50)
         gray_color.setAlpha(50)
@@ -669,17 +665,16 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             sorted_value = sorted_stations[row]
 
             for col in range(self.line_table.columnCount()):
-                # if col != station_col:
-                self.line_table.item(row, col).setBackground(
-                    white_color if table_value in em_stations else gray_color)
+                # self.line_table.item(row, col).setBackground(
+                #     white_color if table_value in em_stations else gray_color)
+                if table_value not in em_stations:
+                    self.line_table.item(row, col).setBackground(gray_color)
 
             # Color errors
             if self.line_table.item(row, station_col) and table_value > sorted_value:
                 self.line_table.item(row, station_col).setBackground(blue_color)
             elif self.line_table.item(row, station_col) and table_value < sorted_value:
                 self.line_table.item(row, station_col).setBackground(red_color)
-            # else:
-            #     self.line_table.item(row, station_col).setBackground(QColor('white'))
 
         self.line_table.blockSignals(False)
 
@@ -698,8 +693,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     other_station_index = stations.index(station)
                     self.line_table.item(row, stations_column).setForeground(QColor('red'))
                     self.line_table.item(other_station_index, stations_column).setForeground(QColor('red'))
-                else:
-                    self.line_table.item(row, stations_column).setForeground(QColor('black'))
+                # else:
+                #     self.line_table.item(row, stations_column).setForeground(QColor('black'))
                 stations.append(station)
         self.line_table.blockSignals(False)
 
