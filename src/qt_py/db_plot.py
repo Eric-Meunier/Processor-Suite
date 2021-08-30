@@ -21,9 +21,10 @@ logger.setLevel("DEBUG")
 
 class DBPlotter(QMainWindow):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, darkmode=False):
         super().__init__()
         self.parent = parent
+        self.darkmode = darkmode
         self.db_files = []
         self.db_widgets = []
         self.message = QMessageBox()
@@ -79,7 +80,7 @@ class DBPlotter(QMainWindow):
         self.actionSave_Screenshot = QAction("Save Screenshot")
         self.actionSave_Screenshot.setShortcut("Ctrl+S")
         self.actionSave_Screenshot.triggered.connect(self.save_img)
-        self.actionSave_Screenshot.setIcon(get_icon("_save.png"))
+        self.actionSave_Screenshot.setIcon(get_icon("save2.png"))
         self.actionCopy_Screenshot = QAction("Copy Screenshot")
         self.actionCopy_Screenshot.setShortcut("Ctrl+C")
         self.actionCopy_Screenshot.triggered.connect(self.copy_img)
@@ -242,7 +243,7 @@ class DBPlotter(QMainWindow):
                 if df.empty:
                     raise ValueError(f"No data found in {name}.\nEnsure that the file's encoding is UTF-8.")
 
-                db_widget = DBPlot(df, command, name, date_str, parent=self)
+                db_widget = DBPlot(df, command, name, date_str, parent=self, darkmode=self.darkmode)
                 self.db_widgets.append(db_widget)
                 self.add_widget(db_widget)
 
@@ -269,7 +270,7 @@ class DBPlotter(QMainWindow):
                         continue
                     else:
                         data_found = True
-                        db_widget = DBPlot(df, command, name, date_str, parent=self)
+                        db_widget = DBPlot(df, command, name, date_str, parent=self, darkmode=self.darkmode)
                         self.db_widgets.append(db_widget)
                         self.add_widget(db_widget)
 
@@ -364,8 +365,7 @@ class DBPlot(QMainWindow):
     A widget that plots damping box data, with a linear region item that, when moved, updates
     the status bar with information within the region.
     """
-
-    def __init__(self, db_data, command, filepath, date, parent=None):
+    def __init__(self, db_data, command, filepath, date, parent=None, darkmode=False):
         """
         :param db_data: DataFrame of damping box data.
         :param command: str, the command that was used in the damping box. Uses it for the legend name.
@@ -375,6 +375,8 @@ class DBPlot(QMainWindow):
         """
         super().__init__()
         self.parent = parent
+        self.darkmode = darkmode
+        self.color = (102, 255, 255) if self.darkmode else (153, 51, 255)
         self.data = db_data
         self.date = date
         self.curve = None
@@ -438,6 +440,7 @@ class DBPlot(QMainWindow):
             pen=pg.mkPen(color=(0, 25, 51, 100)),
             hoverPen=pg.mkPen(color=(0, 25, 51, 200)),
         )
+
         self.lr.sigRegionChanged.connect(self.lr_moved)
         self.lr.setZValue(-10)
 
@@ -448,22 +451,20 @@ class DBPlot(QMainWindow):
         Plot the damping box data
         :param command: str, the command that was used in the damping box. Uses it for the legend name.
         """
-        # color = (51, 153, 255)
-        color = (153, 51, 255)
         self.curve = pg.PlotCurveItem(self.data.Time.to_numpy(), self.data.Current.to_numpy(),
-                                   pen=pg.mkPen(color=color, width=2.5),
+                                   pen=pg.mkPen(color=self.color, width=2.5),
                                    )
         self.symbols = pg.ScatterPlotItem(self.data.Time, self.data.Current,
                                        symbol='+',
                                        size=6,
-                                       pen=pg.mkPen(color='w', width=0.1),
-                                       brush=pg.mkBrush(color=color),
+                                       pen=pg.mkPen(color=self.color, width=0.1),
                                        )
         self.plot_widget.addItem(self.curve)
         self.plot_widget.addItem(self.symbols)
         self.plot_widget.addItem(self.lr)
 
-        self.lr.setRegion([self.curve.xData.min(), self.curve.xData.max()])
+        range = self.curve.xData.max() - self.curve.xData.min()
+        self.lr.setRegion([self.curve.xData.min() + (range * .1), self.curve.xData.max() - (range * .1)])
         self.lr.setBounds([self.curve.xData.min(), self.curve.xData.max()])
         self.lr_moved()  # Manually trigger to update status bar information
 
@@ -506,18 +507,23 @@ class DBPlot(QMainWindow):
 
 
 if __name__ == '__main__':
+    from src.qt_py import dark_palette
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    darkmode = True
+    if darkmode:
+        app.setPalette(dark_palette)
     pg.setConfigOptions(antialias=True)
     pg.setConfigOption('crashWarning', True)
-    pg.setConfigOption('background', 'w')
-    pg.setConfigOption('foreground', (53, 53, 53))
-    mw = DBPlotter()
+    pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
+    pg.setConfigOption('foreground', "w" if darkmode else (53, 53, 53))
+    mw = DBPlotter(darkmode=darkmode)
 
     samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files\Damping box files'))
 
-    # files = str(Path(samples_folder).joinpath('YAT-Log-20201106-165508_box231.txt'))
+    files = str(Path(samples_folder).joinpath('YAT-Log-20201106-165508_box231.txt'))
     # files = str(Path(samples_folder).joinpath('Date error/0511_May11Dampingbox232Voltage.txt'))
-    files = str(Path(samples_folder).joinpath('0724_238-20210724 (no data error).log'))
+    # files = str(Path(samples_folder).joinpath('0724_238-20210724 (no data error).log'))
     # files = str(Path(samples_folder).joinpath('Date error/16_Damp Box 222 Current 01.16.2021.txt'))
     mw.open(files)
     mw.show()

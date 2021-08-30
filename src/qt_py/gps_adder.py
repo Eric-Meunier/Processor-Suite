@@ -1409,10 +1409,11 @@ def main():
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
+    darkmode = False
     pg.setConfigOptions(antialias=True)
     pg.setConfigOption('crashWarning', True)
-    pg.setConfigOption('background', 'w')
-    pg.setConfigOption('foreground', (53, 53, 53))
+    pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
+    pg.setConfigOption('foreground', "w" if darkmode else (53, 53, 53))
 
     samples_folder = Path(__file__).absolute().parents[2].joinpath(r'sample_files')
     line_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Line GPS'))

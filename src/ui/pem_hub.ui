@@ -1544,8 +1544,11 @@ Warnings</string>
     </property>
     <addaction name="actionDark_Theme"/>
     <addaction name="actionAlt_Click_Plotting"/>
+    <addaction name="actionRe_Open_Last_Files"/>
+    <addaction name="separator"/>
     <addaction name="auto_sort_files_cbox"/>
     <addaction name="auto_create_backup_files_cbox"/>
+    <addaction name="separator"/>
     <addaction name="delete_merged_files_cbox"/>
     <addaction name="actionRename_Merged_Files"/>
     <addaction name="separator"/>
@@ -2154,6 +2157,17 @@ Warnings</string>
    </property>
    <property name="toolTip">
     <string>Mapbox tokens are used in by Tools &gt; Tilemap.</string>
+   </property>
+  </action>
+  <action name="actionRe_Open_Last_Files">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Re-Open Last Files</string>
    </property>
   </action>
  </widget>

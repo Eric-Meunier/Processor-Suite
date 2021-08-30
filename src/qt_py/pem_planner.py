@@ -282,7 +282,7 @@ class HoleWidget(QWidget):
         self.hole_name_edit = QLineEdit(name)
         self.hole_name_edit.setPlaceholderText('(Optional)')
 
-        self.remove_btn = QPushButton(get_icon("_remove2.png"), "")
+        self.remove_btn = QPushButton(get_icon("remove2.png"), "")
         self.remove_btn.setFlat(True)
         self.remove_btn.setToolTip("Remove")
 
@@ -701,7 +701,7 @@ class LoopWidget(QWidget):
         h_line.setFrameShadow(QFrame().Sunken)
         self.layout().addRow(h_line)
 
-        self.copy_loop_btn = QPushButton(QIcon(str(Path(icons_path, 'copy.png'))), "Copy Corners")
+        self.copy_loop_btn = QPushButton(get_icon('copy.png'), "Copy Corners")
         self.layout().addRow(self.copy_loop_btn)
 
         name_frame = QFrame()
@@ -710,7 +710,7 @@ class LoopWidget(QWidget):
         self.loop_name_edit = QLineEdit(name)
         self.loop_name_edit.setPlaceholderText('(Optional)')
 
-        self.remove_btn = QPushButton(get_icon("_remove2.png"), "")
+        self.remove_btn = QPushButton(get_icon("remove2.png"), "")
         self.remove_btn.setFlat(True)
         self.remove_btn.setToolTip("Remove")
 
@@ -1011,7 +1011,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.setupUi(self)
         self.setAcceptDrops(True)
         self.setWindowTitle('Loop Planner')
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'loop_planner.png')))
+        self.setWindowIcon(get_icon('loop_planner.png'))
         self.resize(1500, 800)
         # self.installEventFilter(self)
         self.status_bar.show()
@@ -2070,7 +2070,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         self.parent = parent
 
         self.setWindowTitle('Grid Planner')
-        self.setWindowIcon(QIcon(os.path.join(icons_path, 'grid_planner.png')))
+        self.setWindowIcon(get_icon('grid_planner.png'))
         self.setGeometry(200, 200, 1100, 700)
 
         self.actionSave_as_KMZ.setIcon(get_icon("google_earth.png"))
@@ -2165,7 +2165,6 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
             Change the position of the grid ROI based on the input from the grid easting and northing spin boxes.
             :return: None
             """
-
             self.grid_roi.blockSignals(True)
 
             self.grid_east_center, self.grid_north_center = self.grid_easting_sbox.value(), self.grid_northing_sbox.value()
@@ -2178,12 +2177,12 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
 
         # Menu
         self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
-        self.actionSave_as_KMZ.setIcon(QIcon(os.path.join(icons_path, 'google_earth.png')))
+        self.actionSave_as_KMZ.setIcon(get_icon('google_earth.png'))
         self.actionSave_as_GPX.triggered.connect(self.save_gpx)
-        self.actionSave_as_GPX.setIcon(QIcon(os.path.join(icons_path, 'garmin_file.png')))
+        self.actionSave_as_GPX.setIcon(get_icon('garmin_file.png'))
         # self.view_map_action.setDisabled(True)
         self.view_map_action.triggered.connect(self.view_map)
-        self.view_map_action.setIcon(QIcon(os.path.join(icons_path, 'folium.png')))
+        self.view_map_action.setIcon(get_icon('folium.png'))
         self.actionCopy_Loop_to_Clipboard.triggered.connect(self.copy_loop_to_clipboard)
         self.actionCopy_Grid_to_Clipboard.triggered.connect(self.copy_grid_to_clipboard)
 
@@ -2209,7 +2208,6 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         """
         Populate the CRS drop boxes and connect all their signals
         """
-
         def toggle_gps_system():
             """
             Toggle the datum and zone combo boxes and change their options based on the selected CRS system.
@@ -3112,13 +3110,18 @@ class RectLoop(pg.RectROI):
 
 
 def main():
-    samples_folder = Path(__file__).parents[2].joinpath('sample_files')
+    from src.qt_py import dark_palette
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    darkmode = False
+    if darkmode:
+        app.setPalette(dark_palette)
     pg.setConfigOptions(antialias=True)
     pg.setConfigOption('crashWarning', True)
-    pg.setConfigOption('background', 'w')
-    pg.setConfigOption('foreground', (53, 53, 53))
+    pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
+    pg.setConfigOption('foreground', "w" if darkmode else (53, 53, 53))
 
+    samples_folder = Path(__file__).parents[2].joinpath('sample_files')
     planner = LoopPlanner()
     # planner = GridPlanner()
 
@@ -3133,7 +3136,7 @@ def main():
     #                      )
     planner.show()
     # planner.save_project()
-    planner.open_project(filepath=r"C:\_Data\2021\TMC\Galloway Project\_Planning\LP-GA-01.LPF")
+    planner.open_project(filepath=r"C:\_Data\2021\TMC\Galloway Project\_Planning\GA mk2.LPF")
     # planner.gps_system_cbox.setCurrentIndex(2)
     # planner.gps_datum_cbox.setCurrentIndex(3)
     # planner.gps_zone_cbox.setCurrentIndex(18)

@@ -299,11 +299,16 @@ class LoopCalculator(QMainWindow, Ui_LoopCalculator):
 
 
 if __name__ == '__main__':
+    from src.qt_py import dark_palette
+    app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    darkmode = False
+    if darkmode:
+        app.setPalette(dark_palette)
     pg.setConfigOptions(antialias=True)
     pg.setConfigOption('crashWarning', True)
-    pg.setConfigOption('background', 'w')
-    pg.setConfigOption('foreground', (53, 53, 53))
-    app = QApplication(sys.argv)
+    pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
+    pg.setConfigOption('foreground', "w" if darkmode else (53, 53, 53))
 
     lc = LoopCalculator()
     lc.show()

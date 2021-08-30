@@ -883,11 +883,13 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.dir_frame.setLayout(QHBoxLayout())
             self.dir_frame.layout().setContentsMargins(3, 0, 3, 0)
             self.dir_frame.layout().setSpacing(2)
-            label = QLabel('Project Directory:')
             self.project_dir_edit = QLineEdit('')
             self.project_dir_edit.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
             self.project_dir_edit.setMinimumWidth(250)
-            self.dir_frame.layout().addWidget(label)
+            self.project_dir_btn = QPushButton('Project Directory:')
+            self.project_dir_btn.setFlat(True)
+            self.project_dir_btn.clicked.connect(lambda: self.move_dir_tree(self.project_dir_edit.text()))
+            self.dir_frame.layout().addWidget(self.project_dir_btn)
             self.dir_frame.layout().addWidget(self.project_dir_edit)
 
             # Project tree
@@ -1600,10 +1602,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     if not self.pem_files:
                         share_header(pem_file)
                         self.enable_menus(True)
-                        self.move_dir_tree(pem_file.filepath.parent)
+                        # self.move_dir_tree(pem_file.filepath.parent)
                         # self.piw_frame.show()
-                    # if self.project_dir_edit.text() == '':
-                    #     self.move_dir_tree(pem_file.filepath.parent)
+                    if self.project_dir_edit.text() == '':
+                        self.move_dir_tree(pem_file.filepath.parent)
 
                     # Update project CRS
                     pem_crs = pem_file.get_crs()
@@ -1991,7 +1993,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
     def open_db_plot(self):
         """Open the damping box plotter."""
-        db_plot = DBPlotter(parent=self)
+        db_plot = DBPlotter(parent=self, darkmode=self.actionDark_Theme.isChecked())
         refs.append(db_plot)
         db_plot.show()
 
@@ -2001,7 +2003,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         :param kind: str, either 'Line' to change the line names or 'File' to change file names
         :param selected: bool, whether to only open selected PEMFiles or all of them.
         """
-
         def rename_pem_files(new_names):
             """
             Retrieve and open the PEM files from the batch_name_editor object
@@ -2438,6 +2439,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         :param dir_path: Path object or str, directory path of the desired directory
         :return: None
         """
+        if not dir_path:
+            return
+
         if not isinstance(dir_path, Path):
             dir_path = Path(dir_path)
 
@@ -2452,8 +2456,13 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.project_tree.expand(model)
 
         # Adds a timer or else it doesn't actually scroll to it properly.
-        QTimer.singleShot(100, lambda: self.project_tree.scrollTo(self.project_tree.currentIndex(),
+        # Two timers are used, first one so it can be quick, another follow-up one when the first one doesn't work /
+        # because it was too quick
+        QTimer.singleShot(50, lambda: self.project_tree.scrollTo(self.project_tree.currentIndex(),
                                                                  QAbstractItemView.PositionAtCenter))
+        QTimer.singleShot(300, lambda: self.project_tree.scrollTo(self.project_tree.currentIndex(),
+                                                                 QAbstractItemView.PositionAtCenter))
+
         # Update the GPS and PEM trees
         self.project_dir_changed(model)
 

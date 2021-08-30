@@ -37,6 +37,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.background_color = (66, 66, 66) if self.darkmode else "w"
         self.cpp_color = "w" if self.darkmode else (0, 153, 153, 100)
         self.mpp_color = "#FF66B2" if self.darkmode else (255, 0, 255, 100)
+        self.theory_color = "#99FFCC" if self.darkmode else (255, 0, 255, 100)
         self.acc_color = "#66FFFF" if self.darkmode else (0, 0, 255, 100)
         self.mag_color = "#66FF66" if self.darkmode else (0, 204, 0, 100)
 
@@ -192,10 +193,10 @@ class Derotator(QMainWindow, Ui_Derotator):
                                                       brush=pg.mkBrush(self.background_color),
                                                       size=symbol_size)
 
-        self.theory_pp_curve = pg.PlotDataItem(pen=pg.mkPen(self.foreground_color, width=2), name='Theory')
+        self.theory_pp_curve = pg.PlotDataItem(pen=pg.mkPen(self.theory_color, width=2), name='Theory')
         # self.theory_pp_curve = pg.PlotDataItem(pen=pg.mkPen((32, 32, 32, 100), width=2), name='Theory')
         self.theory_pp_scatter = pg.ScatterPlotItem(symbol='o',
-                                                    pen=pg.mkPen(self.foreground_color, width=2),
+                                                    pen=pg.mkPen(self.theory_color, width=2),
                                                     # pen=pg.mkPen((32, 32, 32, 100), width=2),
                                                     brush=pg.mkBrush(self.background_color),
                                                     size=symbol_size)

@@ -934,12 +934,15 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
 
 class GPSViewer(QMainWindow):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, darkmode=False):
         super().__init__()
         # Format the window
         self.setWindowTitle(f"GPS Viewer")
         self.setWindowIcon(get_icon('gps_viewer.png'))
         self.setFocusPolicy(Qt.StrongFocus)
+
+        pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
+        pg.setConfigOption('foreground', 'w' if darkmode else (53, 53, 53))
 
         layout = QHBoxLayout()
         self.plan_view = pg.PlotWidget()
@@ -948,6 +951,7 @@ class GPSViewer(QMainWindow):
         self.layout().setContentsMargins(0, 0, 0, 0)
 
         self.parent = parent
+        self.darkmode = darkmode
         self.pem_files = None
         self.contour_data = pd.DataFrame()
         self.status_bar = self.statusBar()
@@ -957,6 +961,11 @@ class GPSViewer(QMainWindow):
         self.lines = []
         self.collars = []
         self.traces = []
+        self.foreground_color = "w" if self.darkmode else "k"
+        self.background_color = (66, 66, 66) if self.darkmode else "w"
+        self.line_color = [102, 255, 255] if self.darkmode else [64, 64, 255]
+        self.loop_color = self.foreground_color
+        self.hole_color = [255, 153, 255] if self.darkmode else [204, 0, 204]
 
         # Format the plots
         self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
@@ -1016,7 +1025,7 @@ class GPSViewer(QMainWindow):
 
             def add_loop_annotation(row):
                 """Add the loop number annotation"""
-                text_item = pg.TextItem(str(row.name), color=loop_color, border=None, fill=None, anchor=(0.5, 0.5))
+                text_item = pg.TextItem(str(row.name), color=self.loop_color, border=None, fill=None, anchor=(0.5, 0.5))
                 self.plan_view.addItem(text_item, ignoreBounds=True)
                 text_item.setPos(row.Easting, row.Northing)
                 text_item.setParentItem(loop_item)
@@ -1035,7 +1044,7 @@ class GPSViewer(QMainWindow):
                 # Plot the loop line
                 loop_item = pg.PlotDataItem(clickable=True,
                                             name=pem_file.loop_name,
-                                            pen=pg.mkPen(loop_color, width=1.)
+                                            pen=pg.mkPen(self.loop_color, width=1.)
                                             )
                 loop_item.setZValue(-1)
                 loop_item.setData(loop.Easting, loop.Northing)
@@ -1048,7 +1057,7 @@ class GPSViewer(QMainWindow):
                 # Plot the loop name annotation
                 center = pem_file.loop.get_center()
                 text_item = pg.TextItem(str(pem_file.loop_name),
-                                        color=loop_color,
+                                        color=self.loop_color,
                                         anchor=(0.5, 0.5),
                                         )
                 self.plan_view.addItem(text_item, ignoreBounds=True)
@@ -1063,7 +1072,7 @@ class GPSViewer(QMainWindow):
             def add_station_annotation(row):
                 """Add the station name annotation"""
                 text_item = pg.TextItem(str(row.Station),
-                                        color=line_color,
+                                        color=self.line_color,
                                         anchor=(0, 0.5),
                                         rotateAxis=(row.Easting, row.Northing),
                                         # angle=90
@@ -1088,9 +1097,9 @@ class GPSViewer(QMainWindow):
                                             name=pem_file.line_name,
                                             symbol='o',
                                             symbolSize=5,
-                                            symbolPen=pg.mkPen(line_color, width=1.),
-                                            symbolBrush=pg.mkBrush('w'),
-                                            pen=pg.mkPen(line_color, width=1.)
+                                            symbolPen=pg.mkPen(self.line_color, width=1.),
+                                            symbolBrush=pg.mkBrush(self.background_color),
+                                            pen=pg.mkPen(self.line_color, width=1.)
                                             )
                 line_item.setData(line.Easting, line.Northing)
                 line_item.setZValue(1)
@@ -1102,7 +1111,7 @@ class GPSViewer(QMainWindow):
 
                 # Add the line name annotation
                 text_item = pg.TextItem(str(pem_file.line_name),
-                                        color=line_color,
+                                        color=self.line_color,
                                         anchor=(1, 0.5),
                                         )
                 self.plan_view.addItem(text_item, ignoreBounds=True)
@@ -1122,9 +1131,9 @@ class GPSViewer(QMainWindow):
                                                   name=pem_file.line_name,
                                                   symbol='o',
                                                   symbolSize=10,
-                                                  symbolPen=pg.mkPen(hole_color, width=1.),
-                                                  symbolBrush=pg.mkBrush('w'),
-                                                  pen=pg.mkPen(hole_color, width=1.5)
+                                                  symbolPen=pg.mkPen(self.hole_color, width=1.),
+                                                  symbolBrush=pg.mkBrush(self.background_color),
+                                                  pen=pg.mkPen(self.hole_color, width=1.5)
                                                   )
                     collar_item.setZValue(2)
                     # Don't plot the collar here
@@ -1133,7 +1142,7 @@ class GPSViewer(QMainWindow):
 
                     # Add the hole name annotation
                     text_item = pg.TextItem(f"{pem_file.line_name}",
-                                            color=hole_color,
+                                            color=self.hole_color,
                                             anchor=name_anchor,
                                             # anchor=anchor,
                                             )
@@ -1152,9 +1161,9 @@ class GPSViewer(QMainWindow):
                                                  name=pem_file.line_name,
                                                  symbol='o',
                                                  symbolSize=2.5,
-                                                 symbolPen=pg.mkPen(hole_color, width=1.),
-                                                 symbolBrush=pg.mkBrush(hole_color),
-                                                 pen=pg.mkPen(hole_color, width=1.1)
+                                                 symbolPen=pg.mkPen(self.hole_color, width=1.),
+                                                 symbolBrush=pg.mkBrush(self.background_color),
+                                                 pen=pg.mkPen(self.hole_color, width=1.1)
                                                  )
 
                     trace_item.setData(proj.Easting, proj.Northing)
@@ -1164,7 +1173,7 @@ class GPSViewer(QMainWindow):
                     # Add the depth annotation
                     # Add the line name annotation
                     text_item = pg.TextItem(f"{proj.iloc[-1].Relative_depth:g} m",
-                                            color=hole_color,
+                                            color=self.hole_color,
                                             anchor=depth_anchor,
                                             # angle=angle
                                             )
@@ -1197,9 +1206,9 @@ class GPSViewer(QMainWindow):
 
             plot_collar()
 
-        line_color = '#2DA8D8FF'
-        loop_color = '#2A2B2DFF'
-        hole_color = '#D9514EFF'
+        # self.line_color = '#2DA8D8FF'
+        # self.loop_color = '#2A2B2DFF'
+        # self.hole_color = '#D9514EFF'
 
         with CustomProgressDialog("Plotting PEM files", 0, len(self.pem_files)) as dlg:
             for pem_file in self.pem_files:
@@ -1230,21 +1239,25 @@ class GPSViewer(QMainWindow):
 
 
 if __name__ == '__main__':
+    from src.qt_py import dark_palette
     from src.pem.pem_getter import PEMGetter
-
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    darkmode = False
+    if darkmode:
+        app.setPalette(dark_palette)
     pg.setConfigOptions(antialias=True)
     pg.setConfigOption('crashWarning', True)
-    pg.setConfigOption('background', 'w')
-    pg.setConfigOption('foreground', (53, 53, 53))
+    pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
+    pg.setConfigOption('foreground', "w" if darkmode else (53, 53, 53))
 
     getter = PEMGetter()
     files = getter.get_pems(folder='Iscaycruz', subfolder='Loop 1')
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
     # m = TileMapViewer()
-    # m = GPSViewer()
-    m = Map3DViewer()
+    m = GPSViewer(darkmode=darkmode)
+    # m = Map3DViewer()
     m.open(files)
     m.show()
 

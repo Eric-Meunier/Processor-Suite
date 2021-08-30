@@ -105,7 +105,6 @@ def dad_to_seg(df, units='m'):
 
 
 class PEMGeometry(QMainWindow, Ui_PEMGeometry):
-    # plt.style.use('seaborn-white')
     accepted_sig = Signal(object)
 
     def __init__(self, parent=None, darkmode=False):
@@ -1173,6 +1172,9 @@ if __name__ == '__main__':
     from src.qt_py import dark_palette
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
+    darkmode = False
+    if darkmode:
+        app.setPalette(dark_palette)
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     pg = PEMGetter()
@@ -1183,9 +1185,6 @@ if __name__ == '__main__':
     files = pg.get_pems(folder='Raw Boreholes', file=r'GEN-21-06\RAW\xy_0825.PEM')
     # files = pg.get_pems(client='Minera', subfolder='CPA-5057', file='XY.PEM')
 
-    darkmode = True
-    if darkmode:
-        app.setPalette(dark_palette)
     win = PEMGeometry(darkmode=darkmode)
     win.open(files)
     # dad = samples_folder.joinpath(r"Raw Boreholes\GEN-21-06\RAW\gyro.csv")

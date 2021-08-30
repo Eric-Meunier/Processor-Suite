@@ -32,7 +32,6 @@ options.mode.chained_assignment = None  # default='warn'
 # TODO Change auto clean to have a start and end channel
 # TODO maybe increase starting window size
 # TODO Changing readings to another component produces an error
-# TODO Auto-scale after auto-clean
 
 
 class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
@@ -64,7 +63,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.actionSave.setIcon(get_icon('save.png'))
         self.actionSave_As.setIcon(get_icon('save_as.png'))
         self.actionCopy_Screenshot.setIcon(get_icon('copy.png'))
-        self.actionSave_Screenshot.setIcon(get_icon('_save_complete.png'))
+        self.actionSave_Screenshot.setIcon(get_icon('save2.png'))
         self.actionUn_Delete_All.setIcon(get_icon('cleaner.png'))
         self.actionReset_File.setIcon(get_icon('undo.png'))
         self.resize(1300, 900)
@@ -434,7 +433,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             else:
                 self.auto_clean_std_sbox.setValue(1.5)
 
-        num_offtime_channels = len(self.pem_file.channel_times[~self.pem_file.channel_times.Remove])
+        num_offtime_channels = len(self.pem_file.channel_times[~self.pem_file.channel_times.Remove.astype(bool)])
         self.auto_clean_window_sbox.setMaximum(num_offtime_channels)
         self.auto_clean_window_sbox.setValue(int(num_offtime_channels / 2))
 
@@ -670,7 +669,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         Change the Y limits of the decay plots to be zoomed on the late off-time channels.
         """
         filt = self.pem_file.data.cStation == self.selected_station
-        channel_mask = ~self.pem_file.channel_times.Remove
+        channel_mask = ~self.pem_file.channel_times.Remove.astype(bool)
         min_y = self.pem_file.data.loc[filt].Reading.map(lambda x: x[channel_mask][-3:].min()).min() - 1
         max_y = self.pem_file.data.loc[filt].Reading.map(lambda x: x[channel_mask][-3:].max()).max() + 1
 
@@ -895,7 +894,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             if self.plot_ontime_decays_cbox.isChecked():
                 y = row.Reading
             else:
-                y = row.Reading[~self.pem_file.channel_times.Remove]
+                y = row.Reading[~self.pem_file.channel_times.Remove.astype(bool)]
 
             # Create and configure the line item
             decay_line = pg.PlotCurveItem(y=y, pen=pen)
@@ -935,11 +934,11 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                     if self.pem_file.number_of_channels > 10:
                         median = signal.savgol_filter(median, 5, 3)
                     if not self.plot_ontime_decays_cbox.isChecked():
-                        median = median[~self.pem_file.channel_times.Remove]
+                        median = median[~self.pem_file.channel_times.Remove.astype(bool)]
 
                     std = np.array([self.auto_clean_std_sbox.value()] * window_size)
 
-                    off_time_median_data = median_data.loc[:, ~self.pem_file.channel_times.Remove]
+                    off_time_median_data = median_data.loc[:, ~self.pem_file.channel_times.Remove.astype(bool)]
                     if not self.plot_ontime_decays_cbox.isChecked():
                         off_time_median_data.rename(dict(zip(off_time_median_data.columns,
                                                              range(len(off_time_median_data.columns)))),
@@ -1077,7 +1076,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             if self.plot_ontime_decays_cbox.isChecked():
                 y = len(self.pem_file.channel_times)
             else:
-                y = len(self.pem_file.channel_times[~self.pem_file.channel_times.Remove])
+                y = len(self.pem_file.channel_times[~self.pem_file.channel_times.Remove.astype(bool)])
 
             ax.setLimits(minXRange=0, maxXRange=y - 1,
                          xMin=0, xMax=y - 1)
@@ -1931,7 +1930,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Filter the data to only see readings that aren't already flagged for deletion
         data = self.pem_file.data[~self.pem_file.data.Deleted.astype(bool)]
         # Filter the readings to only consider off-time channels
-        mask = np.asarray(~self.pem_file.channel_times.Remove)
+        mask = np.asarray(~self.pem_file.channel_times.Remove.astype(bool))
         # Clean the data
         cleaned_data = data.groupby(['Station', 'Component'], as_index=False, group_keys=False).apply(clean_group)
         # Update the data
@@ -1940,7 +1939,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Plot the new data
         self.plot_profiles(components='all')
         self.plot_station(self.selected_station)
-
+        self.reset_range()
         self.message.information(self, 'Auto-clean results', f"{count} reading(s) automatically deleted.")
 
     def rename_repeats(self):
@@ -2161,21 +2160,22 @@ class ProfileViewBox(pg.ViewBox):
 
 
 if __name__ == '__main__':
-    from src.qt_py import dark_palette
     from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser, DMPParser
     from pathlib import Path
-
-    samples_folder = Path(__file__).parents[2].joinpath('sample_files')
+    from src.qt_py import dark_palette
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
+    darkmode = False
+    if darkmode:
+        app.setPalette(dark_palette)
     pg.setConfigOptions(antialias=True)
     pg.setConfigOption('crashWarning', True)
-    pg.setConfigOption('background', 'w')
-    pg.setConfigOption('foreground', (53, 53, 53))
+    pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
+    pg.setConfigOption('foreground', "w" if darkmode else (53, 53, 53))
 
-    darkmode = True
+    samples_folder = Path(__file__).parents[2].joinpath('sample_files')
     pem_g = PEMGetter()
     parser = PEMParser()
     dmp_parser = DMPParser()
