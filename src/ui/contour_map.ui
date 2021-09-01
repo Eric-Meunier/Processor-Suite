@@ -13,7 +13,7 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
-  <layout class="QtWidgets.QHBoxLayout" name="horizontalLayout">
+  <layout class="QHBoxLayout" name="horizontalLayout">
    <property name="spacing">
     <number>1</number>
    </property>
@@ -51,10 +51,10 @@
        </size>
       </property>
       <property name="frameShape">
-       <enum>QFrame::Box</enum>
+       <enum>QFrame::StyledPanel</enum>
       </property>
       <property name="frameShadow">
-       <enum>QFrame::Sunken</enum>
+       <enum>QFrame::Plain</enum>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
@@ -383,10 +383,10 @@
        </sizepolicy>
       </property>
       <property name="frameShape">
-       <enum>QFrame::Box</enum>
+       <enum>QFrame::StyledPanel</enum>
       </property>
       <property name="frameShadow">
-       <enum>QFrame::Sunken</enum>
+       <enum>QFrame::Plain</enum>
       </property>
       <layout class="QGridLayout" name="gridLayout">
        <property name="leftMargin">
@@ -404,24 +404,7 @@
        <property name="spacing">
         <number>0</number>
        </property>
-       <item row="2" column="1">
-        <layout class="QVBoxLayout" name="toolbar_layout">
-         <property name="spacing">
-          <number>0</number>
-         </property>
-         <property name="sizeConstraint">
-          <enum>QLayout::SetDefaultConstraint</enum>
-         </property>
-        </layout>
-       </item>
-       <item row="0" column="0" colspan="2">
-        <layout class="QGridLayout" name="map_layout">
-         <property name="sizeConstraint">
-          <enum>QLayout::SetDefaultConstraint</enum>
-         </property>
-        </layout>
-       </item>
-       <item row="2" column="0">
+       <item row="1" column="0">
         <spacer name="horizontalSpacer">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
@@ -437,12 +420,22 @@
          </property>
         </spacer>
        </item>
-       <item row="1" column="0" colspan="2">
-        <widget class="Line" name="line">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
+       <item row="0" column="0" colspan="2">
+        <layout class="QGridLayout" name="map_layout">
+         <property name="sizeConstraint">
+          <enum>QLayout::SetDefaultConstraint</enum>
          </property>
-        </widget>
+        </layout>
+       </item>
+       <item row="1" column="1">
+        <layout class="QVBoxLayout" name="toolbar_layout">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <property name="sizeConstraint">
+          <enum>QLayout::SetDefaultConstraint</enum>
+         </property>
+        </layout>
        </item>
       </layout>
      </widget>

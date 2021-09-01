@@ -34,8 +34,8 @@ class Ui_ContourMap(object):
         sizePolicy.setHeightForWidth(self.frame.sizePolicy().hasHeightForWidth())
         self.frame.setSizePolicy(sizePolicy)
         self.frame.setMaximumSize(QSize(16777215, 16777215))
-        self.frame.setFrameShape(QFrame.Box)
-        self.frame.setFrameShadow(QFrame.Sunken)
+        self.frame.setFrameShape(QFrame.StyledPanel)
+        self.frame.setFrameShadow(QFrame.Plain)
         self.verticalLayout_4 = QVBoxLayout(self.frame)
         self.verticalLayout_4.setObjectName(u"verticalLayout_4")
         self.groupBox_2 = QGroupBox(self.frame)
@@ -221,18 +221,15 @@ class Ui_ContourMap(object):
         sizePolicy3.setVerticalStretch(0)
         sizePolicy3.setHeightForWidth(self.frame_2.sizePolicy().hasHeightForWidth())
         self.frame_2.setSizePolicy(sizePolicy3)
-        self.frame_2.setFrameShape(QFrame.Box)
-        self.frame_2.setFrameShadow(QFrame.Sunken)
+        self.frame_2.setFrameShape(QFrame.StyledPanel)
+        self.frame_2.setFrameShadow(QFrame.Plain)
         self.gridLayout = QGridLayout(self.frame_2)
         self.gridLayout.setSpacing(0)
         self.gridLayout.setObjectName(u"gridLayout")
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
-        self.toolbar_layout = QVBoxLayout()
-        self.toolbar_layout.setSpacing(0)
-        self.toolbar_layout.setObjectName(u"toolbar_layout")
-        self.toolbar_layout.setSizeConstraint(QLayout.SetDefaultConstraint)
+        self.horizontalSpacer = QSpacerItem(10, 20, QSizePolicy.Fixed, QSizePolicy.Minimum)
 
-        self.gridLayout.addLayout(self.toolbar_layout, 2, 1, 1, 1)
+        self.gridLayout.addItem(self.horizontalSpacer, 1, 0, 1, 1)
 
         self.map_layout = QGridLayout()
         self.map_layout.setObjectName(u"map_layout")
@@ -240,16 +237,12 @@ class Ui_ContourMap(object):
 
         self.gridLayout.addLayout(self.map_layout, 0, 0, 1, 2)
 
-        self.horizontalSpacer = QSpacerItem(10, 20, QSizePolicy.Fixed, QSizePolicy.Minimum)
+        self.toolbar_layout = QVBoxLayout()
+        self.toolbar_layout.setSpacing(0)
+        self.toolbar_layout.setObjectName(u"toolbar_layout")
+        self.toolbar_layout.setSizeConstraint(QLayout.SetDefaultConstraint)
 
-        self.gridLayout.addItem(self.horizontalSpacer, 2, 0, 1, 1)
-
-        self.line = QFrame(self.frame_2)
-        self.line.setObjectName(u"line")
-        self.line.setFrameShape(QFrame.HLine)
-        self.line.setFrameShadow(QFrame.Sunken)
-
-        self.gridLayout.addWidget(self.line, 1, 0, 1, 2)
+        self.gridLayout.addLayout(self.toolbar_layout, 1, 1, 1, 1)
 
         self.splitter.addWidget(self.frame_2)
 

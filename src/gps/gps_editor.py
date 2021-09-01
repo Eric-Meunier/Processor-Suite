@@ -113,7 +113,7 @@ def parse_gps(file, gps_object):
         error_gps = gps.loc[nan_rows].copy()
         gps = gps[~nan_rows]  # Remove NaN before converting to str
         if gps.empty:
-            logger.warning("No GPS found after removing NaNs.")
+            logger.debug("No GPS found after removing NaNs.")
             error_msg = f"No GPS found after removing NaNs."
             return gps, error_gps
 
@@ -160,7 +160,7 @@ def parse_gps(file, gps_object):
                 error_gps = gps.copy()
                 gps = empty_gps.copy()
             elif len(gps.columns) > 3:
-                logger.warning(F"Removing extra column.")
+                logger.debug(F"Removing extra column.")
                 gps = gps.drop(gps.columns[3:], axis=1)  # Remove extra columns
 
         return gps, error_gps
@@ -170,7 +170,7 @@ def parse_gps(file, gps_object):
     empty_gps, units, cols, error_msg = get_init_gps()
 
     if file is None:
-        logger.warning(f"No GPS passed.")
+        logger.debug(f"No GPS passed.")
         return empty_gps, units, pd.DataFrame(), 'No GPS passed.'
     else:
         gps = read_file(file)
@@ -618,7 +618,7 @@ class BoreholeCollar(BaseGPS):
 
         # If more than 1 collar GPS is found, only keep the first row and all other rows are errors
         if len(gps) > 1:
-            logger.warning(f"{len(gps)} row(s) found instead of 1. Removing the extra rows.")
+            logger.debug(f"{len(gps)} row(s) found instead of 1. Removing the extra rows.")
             gps = gps.drop(gps.iloc[1:].index)
 
         return gps, units, error_gps, error_msg
@@ -670,10 +670,10 @@ class BoreholeSegments(BaseGPS):
             contents = [c.strip().split() for c in str_contents.splitlines()]
             gps = pd.DataFrame(contents)
         elif file is None:
-            logger.warning(f"No GPS passed.")
+            logger.debug(f"No GPS passed.")
             return empty_gps, units, pd.DataFrame(), 'No GPS passed.'
         else:
-            logger.warning(f"Invalid input: {file}.")
+            logger.debug(f"Invalid input: {file}.")
             raise TypeError(f'{file} is not a valid input for segments parsing')
 
         # Capture rows with NaN in the first three columns

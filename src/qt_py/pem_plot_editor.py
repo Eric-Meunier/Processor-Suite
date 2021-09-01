@@ -17,7 +17,7 @@ from pandas import DataFrame, options, isna
 from scipy import spatial, signal
 
 from src.pem import convert_station
-from src.qt_py import get_icon
+from src.qt_py import get_icon, get_line_color
 from src.ui.pem_plot_editor import Ui_PEMPlotEditor
 # from src.logger import Log
 
@@ -46,12 +46,11 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
         pg.setConfigOption('foreground', 'w' if darkmode else (53, 53, 53))
 
-        self.linecolor = [255, 255, 255] if self.darkmode else [53, 53, 53]
-        # self.selection_color = [234,128,252] if self.darkmode else [64, 64, 255]  # Purple and blue
-        # self.selection_color = [102, 255, 178] if self.darkmode else [64, 64, 255]
-        self.selection_color = [102, 255, 255] if self.darkmode else [64, 64, 255]  # Blues
-        self.deletion_color = [255, 51, 51] if self.darkmode else [255, 0, 0]
-        self.autoclean_color = [0, 153, 153] if self.darkmode else [0, 0, 153]
+        self.linecolor = get_line_color("foreground", "pyqt", self.darkmode)
+        self.selection_color = get_line_color("teal", "pyqt", self.darkmode)
+        self.deletion_color = get_line_color("red", "pyqt", self.darkmode)
+        self.autoclean_color = get_line_color("gray", "pyqt", self.darkmode)
+        # self.autoclean_color = [0, 153, 153] if self.darkmode else [0, 0, 153]
 
         self.setupUi(self)
         self.setFocusPolicy(Qt.StrongFocus)
@@ -875,11 +874,11 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             if row.Deleted is False:
                 # color = (96, 96, 96, 150)
                 color = copy.copy(self.linecolor)
-                color.append(200 if self.darkmode else 150)
+                color.append(255)
                 z_value = 2
             else:
                 color = copy.copy(self.deletion_color)
-                color.append(100)
+                color.append(200)
                 z_value = 1
 
             # Use a dotted line for readings that are flagged as Overloads
@@ -1189,11 +1188,11 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             # Change the pen if the data is flagged for deletion
             if Deleted is False:
                 color = copy.copy(self.linecolor)
-                color.append(150)
+                color.append(200)
                 z_value = 2
             else:
                 color = copy.copy(self.deletion_color)
-                color.append(100)
+                color.append(150)
                 z_value = 1
 
             # Change the line style if the reading is overloaded
@@ -1206,11 +1205,11 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             if line in self.selected_lines:
                 if Deleted is False:
                     color = copy.copy(self.selection_color)
-                    color.append(200)
+                    color.append(250)
                     z_value = 4
                 else:
                     color = copy.copy(self.deletion_color)
-                    color.append(150)
+                    color.append(200)
                     z_value = 3
 
                 line.setPen(color, width=2, style=style)
@@ -2167,7 +2166,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    darkmode = False
+    darkmode = True
     if darkmode:
         app.setPalette(dark_palette)
     pg.setConfigOptions(antialias=True)

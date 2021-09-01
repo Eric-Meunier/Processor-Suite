@@ -24,7 +24,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from scipy import interpolate as interp
 
-from src.qt_py import get_icon, CustomProgressDialog, NonScientific
+from src.qt_py import get_icon, CustomProgressDialog, NonScientific, get_line_color
 from src.gps.gps_editor import BoreholeGeometry
 from src.pem.pem_plotter import MapPlotter
 from src.ui.contour_map import Ui_ContourMap
@@ -300,10 +300,11 @@ class TileMapViewer(MapboxViewer):
 
 class Map3DViewer(QMainWindow):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, darkmode=False):
         super().__init__()
         self.pem_files = None
         self.parent = parent
+        self.darkmode = darkmode
 
         self.loops = []
         self.lines = []
@@ -314,8 +315,11 @@ class Map3DViewer(QMainWindow):
         self.setWindowTitle("3D Map Viewer")
         self.setWindowIcon(get_icon('3d_map.png'))
         self.resize(1000, 800)
-        layout = QGridLayout()
-        self.setLayout(layout)
+        self.setLayout(QGridLayout())
+
+        # create an instance of QWebEngineView and set the html code
+        self.map_widget = QWebEngineView()
+        self.setCentralWidget(self.map_widget)
 
         self.save_img_action = QAction('Save Image')
         self.save_img_action.setShortcut("Ctrl+S")
@@ -340,27 +344,9 @@ class Map3DViewer(QMainWindow):
                     "t": 0,
                     "l": 0,
                     "b": 0},
+            body={"margin": 0},
+            template="plotly_dark" if self.darkmode else "plotly"
         )
-
-        # create an instance of QWebEngineView and set the html code
-        self.map_widget = QWebEngineView()
-        self.setCentralWidget(self.map_widget)
-
-    def load_page(self):
-        """
-        Plots the data by creating the HTML from the plot and setting it in the WebEngine.
-        """
-        # Create the HTML
-        html = '<html><body>'
-        html += plotly.offline.plot(self.map_figure,
-                                    output_type='div',
-                                    include_plotlyjs='cdn',
-                                    config={'displayModeBar': False}
-                                    )
-        html += '</body></html>'
-
-        # Add the plot HTML to be shown in the plot widget
-        self.map_widget.setHtml(html)
 
     def open(self, pem_files):
         if not isinstance(pem_files, list):
@@ -376,7 +362,6 @@ class Map3DViewer(QMainWindow):
             raise Exception(f"No GPS to plot.")
 
     def plot_pems(self):
-
         def plot_loop(pem_file):
             loop = pem_file.get_loop(closed=True)
 
@@ -447,7 +432,21 @@ class Map3DViewer(QMainWindow):
                                                        text=pem_file.line_name
                                                        ))
 
-        # reset_figure()
+        def load_page():
+            """
+            Plots the data by creating the HTML from the plot and setting it in the WebEngine.
+            """
+            # Create the HTML
+            html = '<html><body>'
+            html += plotly.offline.plot(self.map_figure,
+                                        output_type='div',
+                                        include_plotlyjs='cdn',
+                                        config={'displayModeBar': False}
+                                        )
+            html += '</body></html>'
+
+            # Add the plot HTML to be shown in the plot widget
+            self.map_widget.setHtml(html)
 
         # Plot the PEMs
         for pem_file in self.pem_files:
@@ -476,7 +475,7 @@ class Map3DViewer(QMainWindow):
                                       )
 
         # Add the plot HTML to be shown in the plot widget
-        self.load_page()
+        load_page()
 
     def save_img(self):
         save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image',
@@ -496,22 +495,12 @@ class Map3DViewer(QMainWindow):
         QTimer.singleShot(1000, lambda: self.statusBar().hide())
 
 
-class ContourMapToolbar(NavigationToolbar):
-    """
-    Custom Matplotlib toolbar for ContourMap.
-    """
-    # only display the buttons we need
-    toolitems = [t for t in NavigationToolbar.toolitems if
-                 t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom')]
-
-
 class ContourMapViewer(QWidget, Ui_ContourMap):
     """
     Widget to display contour maps. Filters the given PEMFiles to only include surface surveys. Either all files
     can be un-split, or if there are any split files, it will split the rest. Averages all files.
     """
-
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, darkmode=False):
         super().__init__()
         self.setupUi(self)
         self.setWindowTitle('Contour Map Viewer')
@@ -522,6 +511,15 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
         self.message = QMessageBox()
         self.map_plotter = MapPlotter()
         self.parent = parent
+        self.darkmode = darkmode
+
+        plt.style.use('dark_background' if self.darkmode else 'default')
+        plt.rcParams['axes.facecolor'] = get_line_color("background", "mpl", self.darkmode)
+        plt.rcParams['figure.facecolor'] = get_line_color("background", "mpl", self.darkmode)
+        self.acc_color = get_line_color("blue", "mpl", self.darkmode)
+        self.mag_color = get_line_color("green", "mpl", self.darkmode)
+        self.foreground_color = get_line_color("foreground", "mpl", self.darkmode)
+        self.background_color = get_line_color("background", "mpl", self.darkmode)
 
         self.pem_files = None
         self.data = pd.DataFrame()
@@ -530,14 +528,22 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
         self.channel_pairs = None
 
         """Figure and canvas"""
+        class ContourMapToolbar(NavigationToolbar):
+            """
+            Custom Matplotlib toolbar for ContourMap.
+            """
+            # only display the buttons we need
+            toolitems = [t for t in NavigationToolbar.toolitems if
+                         t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom')]
+
         self.figure, self.ax, self.cbar_ax = self.get_figure()
         self.canvas = FigureCanvas(self.figure)
         self.toolbar = ContourMapToolbar(self.canvas, self)
         self.toolbar_layout.addWidget(self.toolbar)
         self.toolbar.setFixedHeight(30)
         self.map_layout.addWidget(self.canvas)
-        self.label_buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
-        self.color = 'k'
+        self.ax.spines['right'].set_visible(False)
+        self.ax.spines['bottom'].set_visible(False)
 
         # Creating a custom colormap that imitates the Geosoft colors
         # Blue > Teal > Green > Yellow > Red > Orange > Magenta > Light pink
@@ -575,10 +581,6 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
             lambda: self.channel_list_edit.setEnabled(self.channel_list_rbtn.isChecked()))
         self.save_figure_btn.clicked.connect(self.save_figure)
 
-        # Move the Y tick labels to the right
-        # self.ax.set_yticklabels(self.ax.get_yticklabels(), rotation=0, va='center')
-        # self.ax.set_xticklabels(self.ax.get_xticklabels(), rotation=90, ha='center')
-
     def closeEvent(self, e):
         e.accept()
         self.deleteLater()
@@ -606,14 +608,6 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
         Create the figure and axes for plotting. Required for saving the plots.
         """
         figure = Figure(figsize=(11, 8.5))
-        # rect = patches.Rectangle(xy=(0.02, 0.02),
-        #                          width=0.96,
-        #                          height=0.96,
-        #                          linewidth=0.7,
-        #                          edgecolor='black',
-        #                          facecolor='none',
-        #                          transform=figure.transFigure)
-        # figure.patches.append(rect)
 
         # Create a large grid in order to specify the placement of the colorbar
         ax = plt.subplot2grid((90, 110), (0, 0),
@@ -633,7 +627,7 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
 
         return figure, ax, cbar_ax
 
-    def open(self, pem_files, dlg=None):
+    def open(self, pem_files):
         """
         Open the PEMFiles and plot the map
         :param pem_files: list, PEMFile objects to plot
@@ -650,7 +644,7 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
             return
 
         self.show()
-        self.get_contour_data(dlg)
+        self.get_contour_data()
         if self.data.empty:
             self.message.information(self, "No Data Found", f"No valid contour data was found.")
             return
@@ -687,16 +681,19 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
 
         self.draw_map(self.figure)
 
-    def get_contour_data(self, dlg=None):
+    def get_contour_data(self):
         """
         Create contour data (GPS + channel reading) for all PEMFiles.
         :return: pandas DataFrame
         """
         self.data = pd.DataFrame()
-        for pem_file in self.pem_files:
-            pem_data = pem_file.get_contour_data()
-            self.data = self.data.append(pem_data)
-            if dlg is not None:
+        with CustomProgressDialog("Gathering PEM Data", 0, len(self.pem_files)) as dlg:
+            app.processEvents()
+            for pem_file in self.pem_files:
+                if dlg.wasCanceled():
+                    break
+                pem_data = pem_file.get_contour_data()
+                self.data = self.data.append(pem_data)
                 dlg += 1
 
     def toggle_grid(self):
@@ -711,7 +708,6 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
         """
         Plot the map on the canvas
         """
-
         def plot_pem_gps():
             """
             Plots the GPS information (lines, stations, loops) from the PEM files
@@ -736,7 +732,8 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
                                                plot_ticks=bool(
                                                    self.plot_stations_cbox.isChecked() and
                                                    self.plot_stations_cbox.isEnabled()),
-                                               color=self.color)
+                                               color=self.foreground_color,
+                                               buffer_color=self.background_color)
 
                 # Plot the loop
                 loop = pem_file.loop
@@ -749,7 +746,8 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
                                                label=bool(
                                                    self.label_loops_cbox.isChecked() and
                                                    self.label_loops_cbox.isEnabled()),
-                                               color=self.color)
+                                               color=self.foreground_color,
+                                               buffer_color=self.background_color)
 
         def add_title():
             """
@@ -834,7 +832,7 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
             zi = interp.griddata((comp_data.Easting, comp_data.Northing), comp_data.Elevation, (xx, yy),
                                  method='cubic')
             contour = ax.contour(xi, yi, zi,
-                                 colors='black',
+                                 colors=self.foreground_color,
                                  alpha=0.8)
             # contourf = ax.contourf(xi, yi, zi, cmap=colormap)
             ax.clabel(contour,
@@ -857,7 +855,7 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
         component_text = f"{component.upper()} Component" if component != 'TF' else 'Total Field'
         info_text = figure.text(0, 1.02, f"{component_text}\nChannel {channel}\n{channel_time * 1000:.3f}ms",
                                 transform=cbar_ax.transAxes,
-                                color='k',
+                                color=self.foreground_color,
                                 fontname='Century Gothic',
                                 fontsize=9,
                                 va='bottom',
@@ -948,7 +946,7 @@ class GPSViewer(QMainWindow):
         self.plan_view = pg.PlotWidget()
         self.setCentralWidget(self.plan_view)
         self.setLayout(layout)
-        self.layout().setContentsMargins(0, 0, 0, 0)
+        self.setContentsMargins(0, 0, 0, 0)
 
         self.parent = parent
         self.darkmode = darkmode
@@ -961,11 +959,11 @@ class GPSViewer(QMainWindow):
         self.lines = []
         self.collars = []
         self.traces = []
-        self.foreground_color = "w" if self.darkmode else "k"
-        self.background_color = (66, 66, 66) if self.darkmode else "w"
-        self.line_color = [102, 255, 255] if self.darkmode else [64, 64, 255]
-        self.loop_color = self.foreground_color
-        self.hole_color = [255, 153, 255] if self.darkmode else [204, 0, 204]
+        self.foreground_color = get_line_color("foreground", "mpl", self.darkmode)
+        self.background_color = get_line_color("background", "mpl", self.darkmode)
+        self.line_color = get_line_color("teal", "mpl", self.darkmode)
+        self.loop_color = get_line_color("foreground", "mpl", self.darkmode)
+        self.hole_color = get_line_color("purple", "mpl", self.darkmode)
 
         # Format the plots
         self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
@@ -984,7 +982,7 @@ class GPSViewer(QMainWindow):
         self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
         self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
 
-        self.plan_view.getAxis('right').setWidth(10)  # Move the right edge of the plot away from the window edge
+        # self.plan_view.getAxis('right').setWidth(10)  # Move the right edge of the plot away from the window edge
         self.plan_view.showAxis('right', show=True)  # Show the axis edge line
         self.plan_view.showAxis('top', show=True)  # Show the axis edge line
         self.plan_view.showLabel('right', show=False)
@@ -1014,15 +1012,12 @@ class GPSViewer(QMainWindow):
             pem_files = [pem_files]
 
         assert pem_files, f"No PEM files to plot."
-
         self.pem_files = pem_files
         self.plot_pems()
         self.show()
 
     def plot_pems(self):
-
         def plot_loop():
-
             def add_loop_annotation(row):
                 """Add the loop number annotation"""
                 text_item = pg.TextItem(str(row.name), color=self.loop_color, border=None, fill=None, anchor=(0.5, 0.5))
@@ -1067,7 +1062,6 @@ class GPSViewer(QMainWindow):
                 text_item.setZValue(0)
 
         def plot_line():
-
             # Removed, creates too much lag
             def add_station_annotation(row):
                 """Add the station name annotation"""
@@ -1122,7 +1116,6 @@ class GPSViewer(QMainWindow):
                 text_item.setZValue(2)
 
         def plot_hole():
-
             def plot_collar():
                 if collar.to_string() not in self.collars:
                     self.collars.append(collar.to_string())
@@ -1223,19 +1216,7 @@ class GPSViewer(QMainWindow):
                     plot_hole()
                 else:
                     plot_line()
-
                 dlg += 1
-
-
-# class NonScientific(pg.AxisItem):
-#     def __init__(self, *args, **kwargs):
-#         super(NonScientific, self).__init__(*args, **kwargs)
-#
-#     def tickStrings(self, values, scale, spacing):
-#         return [int(value*1) for value in values]  # This line return the NonScientific notation value
-#
-#     def logTickStrings(self, values, scale, spacing):
-#         return [int(value*1) for value in values]  # This line return the NonScientific notation value
 
 
 if __name__ == '__main__':
@@ -1243,7 +1224,7 @@ if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    darkmode = False
+    darkmode = True
     if darkmode:
         app.setPalette(dark_palette)
     pg.setConfigOptions(antialias=True)
@@ -1253,21 +1234,23 @@ if __name__ == '__main__':
 
     getter = PEMGetter()
     files = getter.get_pems(folder='Iscaycruz', subfolder='Loop 1')
+    # files = getter.get_pems(folder=r'Final folders\PX20002-W01\Final', file='XY.PEM')
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
     # m = TileMapViewer()
-    m = GPSViewer(darkmode=darkmode)
-    # m = Map3DViewer()
-    m.open(files)
-    m.show()
+    # m = GPSViewer(darkmode=darkmode)
+    # m = Map3DViewer(darkmode=darkmode)
+    # m.open(files)
+    # m.show()
 
     # map = Map3DViewer()
     # map.show()
     # map.open(files)
 
-    # cmap = ContourMapViewer()
-    # cmap.open(files)
-    # cmap.show()
+    cmap = ContourMapViewer(darkmode=darkmode)
+    cmap.show()
+    app.processEvents()
+    cmap.open(files)
     # cmap.channel_list_edit.setText("1, 3, 100, 4")
     # cmap.channel_list_rbtn.setChecked(True)
     # cmap.save_figure()

@@ -52,7 +52,6 @@ class ProfilePlotter:
     :param hide_gaps: bool, to hide plotted lines where there are gaps in the data
     :return: Matplotlib Figure object
     """
-
     def __init__(self, pem_file, figure, x_min=None, x_max=None, hide_gaps=True):
         if isinstance(pem_file, str) and os.path.isfile(pem_file):
             pem_file = PEMParser().parse(pem_file)
@@ -73,7 +72,6 @@ class ProfilePlotter:
         """
         Formats a figure, mainly the spines, adjusting the padding, and adding the rectangle.
         """
-
         def add_rectangle():
             """
             Add the surrounding rectangle
@@ -649,11 +647,11 @@ class MapPlotter:
     """
     Base class for plotting PEM file GPS on maps
     """
-
     def __init__(self):
-        self.label_buffer = [patheffects.Stroke(linewidth=1.5, foreground='white'), patheffects.Normal()]
+        pass
 
-    def plot_loop(self, pem_file, figure, annotate=True, label=True, color='black', zorder=6, is_mmr=False):
+    def plot_loop(self, pem_file, figure, annotate=True, label=True, color='black', buffer_color="white", zorder=6,
+                  is_mmr=False):
         """
         Plot the loop GPS of a pem_file.
         :param pem_file: PEMFile object
@@ -665,7 +663,6 @@ class MapPlotter:
         :param is_mmr: bool, whether or not to join the first and last points of the loop coordinates
         :return: loop_handle for legend
         """
-
         def get_label_pos(collar, loop):
             """
             Find the best quadrant to place the loop label to avoid the hole labels.
@@ -673,7 +670,6 @@ class MapPlotter:
             :param loop: TransmitterLoop object
             :return: tuple, x-y coordinates of where the label should be plotted
             """
-
             def find_quadrant(x, y):
                 """
                 Return which quadrant coordinates to place the loop label in.
@@ -703,6 +699,7 @@ class MapPlotter:
             loop_label_quandrant = find_quadrant(collar.df.iloc[0]['Easting'], collar.df.iloc[0]['Northing'])
             return loop_label_quandrant
 
+        label_buffer = [patheffects.Stroke(linewidth=1.5, foreground=buffer_color), patheffects.Normal()]
         ax = figure.axes[0]
         loop = pem_file.loop
         if not loop.df.empty:
@@ -712,7 +709,9 @@ class MapPlotter:
             # Plot the loop
             loop_handle, = ax.plot(eastings, northings,
                                    color=color,
+                                   lw=1,
                                    label='Transmitter Loop',
+                                   antialiased=True,
                                    zorder=2)
 
             # Label the loop
@@ -734,7 +733,7 @@ class MapPlotter:
                                      ha='center',
                                      color=color,
                                      zorder=zorder,
-                                     path_effects=self.label_buffer
+                                     path_effects=label_buffer
                                      )
 
             # Add the loop L-tag annotations
@@ -744,14 +743,15 @@ class MapPlotter:
                                  va='center',
                                  ha='center',
                                  fontsize=7,
-                                 path_effects=self.label_buffer,
+                                 path_effects=label_buffer,
                                  zorder=3,
                                  color=color,
                                  transform=ax.transData)
 
             return loop_handle
 
-    def plot_line(self, pem_file, figure, annotate=True, label=True, plot_ticks=True, color='black', zorder=2):
+    def plot_line(self, pem_file, figure, annotate=True, label=True, plot_ticks=True, color='black',
+                  buffer_color="white", zorder=2):
         """
         Plot the line GPS of a pem_file.
         :param pem_file: PEMFile object
@@ -763,11 +763,11 @@ class MapPlotter:
         :param zorder: int, order in which to draw the object (higher number draws it on top of lower numbers)
         :return: loop_handle for legend
         """
-
         lines = []
         line_labels = []
         station_labels = []
 
+        label_buffer = [patheffects.Stroke(linewidth=1.5, foreground=buffer_color), patheffects.Normal()]
         ax = figure.axes[0]
         line = pem_file.line
         # Plotting the line and adding the line label
@@ -779,9 +779,11 @@ class MapPlotter:
             marker = '-o' if plot_ticks is True else '-'
             station_handle, = ax.plot(eastings, northings,
                                       marker,
+                                      lw=1,
+                                      antialiased=True,
                                       markersize=3,
                                       color=color,
-                                      markerfacecolor='w',
+                                      markerfacecolor=buffer_color,
                                       markeredgewidth=0.3,
                                       label='Surface Line',
                                       zorder=zorder)
@@ -804,7 +806,7 @@ class MapPlotter:
                                      va='center',
                                      zorder=zorder + 1,
                                      color=color,
-                                     path_effects=self.label_buffer,
+                                     path_effects=label_buffer,
                                      clip_on=True)
                 line_labels.append(line_label)
 
@@ -812,7 +814,7 @@ class MapPlotter:
                 for row in line.df.itertuples():
                     station_label = ax.text(row.Easting, row.Northing, row.Station,
                                             fontsize=7,
-                                            path_effects=self.label_buffer,
+                                            path_effects=label_buffer,
                                             ha='center',
                                             va='bottom',
                                             color=color,
@@ -822,7 +824,7 @@ class MapPlotter:
             return station_handle
 
     def plot_hole(self, pem_file, figure, label=True, label_depth=True, plot_ticks=True, plot_trace=True, color='black',
-                  zorder=6):
+                  buffer_color="white", zorder=6):
         """
         Plot a borehole collar and hole trace.
         :param pem_file: PEMFile object
@@ -834,6 +836,7 @@ class MapPlotter:
         :param color: str, color of the collar and trace.
         :param zorder: int
         """
+        label_buffer = [patheffects.Stroke(linewidth=1.5, foreground=buffer_color), patheffects.Normal()]
         ax = figure.axes[0]
         geometry = pem_file.get_geometry()
         projection = geometry.get_projection(num_segments=1000)
@@ -841,7 +844,7 @@ class MapPlotter:
         if not geometry.collar.df.empty:
             collar_x, collar_y = geometry.collar.df.loc[0, ['Easting', 'Northing']].to_numpy()
             marker_style = dict(marker='o',
-                                color='white',
+                                color=buffer_color,
                                 markeredgecolor=color,
                                 markersize=8)
 
@@ -889,7 +892,7 @@ class MapPlotter:
                                            va=va,
                                            color=color,
                                            zorder=5,
-                                           path_effects=self.label_buffer)
+                                           path_effects=label_buffer)
 
             if not projection.empty and plot_trace:
                 seg_x, seg_y = projection['Easting'].to_numpy(), projection['Northing'].to_numpy()
@@ -936,7 +939,7 @@ class MapPlotter:
                                        rotation=angle + 90,
                                        fontsize=8,
                                        color=color,
-                                       path_effects=self.label_buffer,
+                                       path_effects=label_buffer,
                                        zorder=3,
                                        rotation_mode='anchor')
                     # labels.append(bh_depth)
@@ -944,14 +947,13 @@ class MapPlotter:
             return collar_handle
 
     @staticmethod
-    def add_scale_bar(ax, x_pos=0.5, y_pos=0.05, scale_factor=1., units='m'):
+    def add_scale_bar(ax, x_pos=0.5, y_pos=0.05, scale_factor=1., units='m', buffer_color="white"):
         """
         Adds scale bar to the axes.
         Gets the width of the map in meters, find the best bar length number, and converts the bar length to
         equivalent axes percentage, then plots using axes transform so it is static on the axes.
         :return: None
         """
-
         def add_rectangles(left_bar_pos, bar_center, right_bar_pos, y):
             rect_height = 0.005
             line_width = 0.4
@@ -996,7 +998,7 @@ class MapPlotter:
             ax.add_patch(patch1)
             ax.add_patch(patch2)
 
-        buffer = [patheffects.Stroke(linewidth=1, foreground='white'), patheffects.Normal()]
+        label_buffer = [patheffects.Stroke(linewidth=1, foreground=buffer_color), patheffects.Normal()]
 
         map_width = ax.get_xlim()[1] - ax.get_xlim()[0]
         # map_width = ax.get_extent()[1] - ax.get_extent()[0]
@@ -1023,25 +1025,25 @@ class MapPlotter:
         ax.text(left_pos, y_pos + .009, f"{bar_map_length / 2:.0f}",
                 ha='center',
                 transform=ax.transAxes,
-                path_effects=buffer,
+                path_effects=label_buffer,
                 fontsize=7,
                 zorder=9)
         ax.text(x_pos, y_pos + .009, f"0",
                 ha='center',
                 transform=ax.transAxes,
-                path_effects=buffer,
+                path_effects=label_buffer,
                 fontsize=7,
                 zorder=9)
         ax.text(right_pos, y_pos + .009, f"{bar_map_length / 2:.0f}",
                 ha='center',
                 transform=ax.transAxes,
-                path_effects=buffer,
+                path_effects=label_buffer,
                 fontsize=7,
                 zorder=9)
         ax.text(x_pos, y_pos - .018, f"({units})",
                 ha='center',
                 transform=ax.transAxes,
-                path_effects=buffer,
+                path_effects=label_buffer,
                 fontsize=7,
                 zorder=9)
 
@@ -1087,7 +1089,6 @@ class MapPlotter:
         :param ax: Matplotlib Axes object
         :param figure: Matplotlib Figure object
         """
-
         def get_scale_factor():
             """Return an appropriate scale for the map."""
             # num_digit = len(str(int(current_scale)))  # number of digits in number
@@ -1136,7 +1137,6 @@ class MapPlotter:
         :param line_width: float, width of the lines
         :return: None
         """
-
         def ax_len(pixel_length):
             """
             Calculate the equivalent axes size for a given pixel length
@@ -1179,7 +1179,6 @@ class PlanMap(MapPlotter):
     :param: pem_files: list of pem_files
     :param: figure: Matplotlib landscape-oriented figure object
     """
-
     def __init__(self, pem_files, figure, crs, annotate_loop=False, is_moving_loop=False, draw_title_box=True,
                  draw_grid=True, draw_scale_bar=True, draw_north_arrow=True, draw_legend=True, draw_loops=True,
                  draw_lines=True, draw_collars=True, draw_hole_traces=True, label_loops=True, label_lines=True,
@@ -1289,7 +1288,6 @@ class PlanMap(MapPlotter):
             Adds the title box to the plot.
             :return: None
             """
-
             def get_survey_dates():
                 survey_dates = [pem_file.date for pem_file in self.pem_files]
                 min_date = min([datetime.strptime(date, '%B %d, %Y') for date in survey_dates])

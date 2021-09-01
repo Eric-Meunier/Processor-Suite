@@ -2335,10 +2335,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.message.information(self, 'Error', 'No file has any GPS to plot.')
             return
 
-        with CustomProgressDialog("Plotting PEM Files...", 0, 1) as dlg:
-            contour_map = ContourMapViewer(parent=self)
-            refs.append(contour_map)
-            contour_map.open(self.pem_files, dlg)
+        contour_map = ContourMapViewer(parent=self)
+        refs.append(contour_map)
+        contour_map.open(self.pem_files)
 
     def open_freq_converter(self):
         freq_converter = FrequencyConverter(parent=self)

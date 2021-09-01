@@ -12,7 +12,7 @@ from PySide2.QtGui import QKeySequence
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QApplication, QShortcut)
 
 from src.pem.pem_file import PEMFile
-from src.qt_py import NonScientific, get_icon
+from src.qt_py import NonScientific, get_icon, get_line_color
 from src.ui.derotator import Ui_Derotator
 
 logger = logging.getLogger(__name__)
@@ -33,13 +33,13 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.parent = parent
         self.darkmode = darkmode
         
-        self.foreground_color = "w" if self.darkmode else "k"
-        self.background_color = (66, 66, 66) if self.darkmode else "w"
-        self.cpp_color = "w" if self.darkmode else (0, 153, 153, 100)
-        self.mpp_color = "#FF66B2" if self.darkmode else (255, 0, 255, 100)
-        self.theory_color = "#99FFCC" if self.darkmode else (255, 0, 255, 100)
-        self.acc_color = "#66FFFF" if self.darkmode else (0, 0, 255, 100)
-        self.mag_color = "#66FF66" if self.darkmode else (0, 204, 0, 100)
+        self.foreground_color = get_line_color("foreground", "mpl", self.darkmode)
+        self.background_color = get_line_color("background", "mpl", self.darkmode)
+        self.cpp_color = get_line_color("teal", "mpl", self.darkmode)
+        self.mpp_color = get_line_color("pink", "mpl", self.darkmode)
+        self.theory_color = get_line_color("gray", "mpl", self.darkmode)
+        self.acc_color = get_line_color("blue", "mpl", self.darkmode)
+        self.mag_color = get_line_color("green", "mpl", self.darkmode)
 
         self.pem_file = None
         self.rotated_file = None
@@ -777,7 +777,7 @@ def main():
     from src.qt_py import dark_palette
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    darkmode = True
+    darkmode = False
     if darkmode:
         app.setPalette(dark_palette)
 

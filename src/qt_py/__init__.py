@@ -42,10 +42,93 @@ dark_palette.setColor(QPalette.Disabled, QPalette.Highlight, QColor(80, 80, 80))
 dark_palette.setColor(QPalette.HighlightedText, Qt.white)
 dark_palette.setColor(QPalette.Disabled, QPalette.HighlightedText, Qt.gray)  # QColor(127, 127, 127))
 
+def get_line_color(color, style, darkmode, alpha=255):
+    """
+    Return line colors for an object and for a given style.
+    :param color: str, any of ['pink', 'blue', 'red', 'purple', 'aquamarine', 'green', 'teal', 'foreground',
+    'background', 'gray']
+    :param style: str, "mpl" or "pyqt"
+    :param darkmode: bool
+    :param alpha: int, between 0 and 255
+    :return: str or list, depending on style.
+    """
+    teal_color = [102, 255, 255, alpha] if darkmode else [0, 204, 204, alpha]
+    blue_color = [153, 204, 255, alpha] if darkmode else [0, 128, 255, alpha]
+    pink_color = [255, 102, 178, alpha] if darkmode else [204, 0, 204, alpha]
+    red_color = [255, 153, 153, alpha] if darkmode else [255, 0, 0, alpha]
+    purple_color = [204, 153, 255, alpha] if darkmode else [127, 0, 255, alpha]
+    aquamarine_color = [153, 255, 204, alpha] if darkmode else [0, 255, 128, alpha]
+    green_color = [102, 255, 102, alpha] if darkmode else [0, 204, 0, alpha]
+    foreground_color = [255, 255, 255, alpha] if darkmode else [0, 0, 0, alpha]
+    background_color = [66, 66, 66, alpha] if darkmode else [255, 255, 255, alpha]
+    gray_color = [178, 178, 178, alpha] if darkmode else [128, 128, 128, alpha]
+
+    if color == "pink":
+        if style == "mpl":
+            return rgb2hex(*pink_color[:-1])
+        else:
+            return pink_color
+    elif color == "blue":
+        if style == "mpl":
+            return rgb2hex(*blue_color[:-1])
+        else:
+            return blue_color
+    elif color == "blue":
+        if style == "mpl":
+            return rgb2hex(*blue_color[:-1])
+        else:
+            return blue_color
+    elif color == "teal":
+        if style == "mpl":
+            return rgb2hex(*teal_color[:-1])
+        else:
+            return teal_color
+    elif color == "red":
+        if style == "mpl":
+            return rgb2hex(*red_color[:-1])
+        else:
+            return red_color
+    elif color == "purple":
+        if style == "mpl":
+            return rgb2hex(*purple_color[:-1])
+        else:
+            return purple_color
+    elif color == "aquamarine":
+        if style == "mpl":
+            return rgb2hex(*aquamarine_color[:-1])
+        else:
+            return aquamarine_color
+    elif color == "green":
+        if style == "mpl":
+            return rgb2hex(*green_color[:-1])
+        else:
+            return green_color
+    elif color == "foreground":
+        if style == "mpl":
+            return rgb2hex(*foreground_color[:-1])
+        else:
+            return foreground_color
+    elif color == "background":
+        if style == "mpl":
+            return rgb2hex(*background_color[:-1])
+        else:
+            return background_color
+    elif color == "gray":
+        if style == "mpl":
+            return rgb2hex(*gray_color[:-1])
+        else:
+            return gray_color
+    else:
+        raise NotImplementedError(f"{color} is not implemented.")
+
+def rgb2hex(r,g,b):
+    return "#{:02x}{:02x}{:02x}".format(r,g,b)
+
+def hex2rgb(hexcode):
+    return tuple(map(ord,hexcode[1:].decode('hex')))
 
 def get_icon(filename):
     return QIcon(str(icons_path.joinpath(filename)))
-
 
 def get_extension_icon(filepath):
     ext = filepath.suffix.lower()
@@ -96,7 +179,6 @@ def get_extension_icon(filepath):
         icon = QIcon(icon_pix)
     return icon
 
-
 def clear_table(table):
     """
     Clear a given table
@@ -105,7 +187,6 @@ def clear_table(table):
     while table.rowCount() > 0:
         table.removeRow(0)
     table.blockSignals(False)
-
 
 def read_file(file, as_list=False):
     """
@@ -122,7 +203,6 @@ def read_file(file, as_list=False):
     if as_list is True:
         contents = [c.strip().split() for c in contents.splitlines()]
     return contents
-
 
 def df_to_table(df, table):
     """
@@ -163,7 +243,6 @@ def df_to_table(df, table):
         # Cast as type "object" to prevent ints being upcasted as floats
         df.astype("O").apply(write_row, axis=1)
 
-
 def table_to_df(table, dtypes=None):
     """
     Return a data frame from the information in the table.
@@ -190,31 +269,32 @@ class CustomProgressDialog(pg.ProgressDialog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setWindowFlags(Qt.CustomizeWindowHint | Qt.WindowStaysOnTopHint)
-        self.setStyleSheet("background-color: rgb(255, 255, 255);")
+        # self.setStyleSheet("background-color: rgb(255, 255, 255);")
 
 
-class CustomProgressBar(QtWidgets.QProgressBar):
-
-    def __init__(self):
-        super().__init__()
-        # self.setFixedHeight(40)
-        # self.setFixedWidth(120)
-
-        COMPLETED_STYLE = """
-        QProgressBar {
-            border: 2px solid grey;
-            border-radius: 5px;
-            text-align: center;
-        }
-
-        QProgressBar::chunk {
-            background-color: #88B0EB;
-            width: 20px;
-        }
-        """
-
-        # '#37DA7E' for green
-        self.setStyleSheet(COMPLETED_STYLE)  # Old style
+# class CustomProgressBar(QtWidgets.QProgressBar):
+#     """No longer used"""
+#
+#     def __init__(self):
+#         super().__init__()
+#         # self.setFixedHeight(40)
+#         # self.setFixedWidth(120)
+#
+#         COMPLETED_STYLE = """
+#         QProgressBar {
+#             border: 2px solid grey;
+#             border-radius: 5px;
+#             text-align: center;
+#         }
+#
+#         QProgressBar::chunk {
+#             background-color: #88B0EB;
+#             width: 20px;
+#         }
+#         """
+#
+#         # '#37DA7E' for green
+#         self.setStyleSheet(COMPLETED_STYLE)  # Old style
 
 
 class NonScientific(pg.AxisItem):

@@ -13,7 +13,7 @@ from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QMenu, QAction,
                                QFileDialog, QVBoxLayout, QLabel, QApplication)
-from src.qt_py import icons_path, read_file, get_icon
+from src.qt_py import icons_path, read_file, get_icon, get_line_color
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -376,7 +376,8 @@ class DBPlot(QMainWindow):
         super().__init__()
         self.parent = parent
         self.darkmode = darkmode
-        self.color = (102, 255, 255) if self.darkmode else (153, 51, 255)
+        self.color = get_line_color("teal", "pyqt", self.darkmode)
+        self.foreground_color = get_line_color("foreground", "pyqt", self.darkmode)
         self.data = db_data
         self.date = date
         self.curve = None
@@ -433,12 +434,14 @@ class DBPlot(QMainWindow):
         self.statusBar().addWidget(self.rate_of_change_label)
         self.statusBar().addPermanentWidget(self.file_label)
 
+        edge_pen_color = get_line_color("foreground", "pyqt", darkmode, alpha=100)
+        edge_pen_color_hover = get_line_color("foreground", "pyqt", darkmode, alpha=200)
         # Create the linear region item
         self.lr = pg.LinearRegionItem(
             brush=pg.mkBrush(color=(51, 153, 255, 20)),
             hoverBrush=pg.mkBrush(color=(51, 153, 255, 30)),
-            pen=pg.mkPen(color=(0, 25, 51, 100)),
-            hoverPen=pg.mkPen(color=(0, 25, 51, 200)),
+            pen=pg.mkPen(color=edge_pen_color),
+            hoverPen=pg.mkPen(color=edge_pen_color_hover),
         )
 
         self.lr.sigRegionChanged.connect(self.lr_moved)
@@ -464,7 +467,7 @@ class DBPlot(QMainWindow):
         self.plot_widget.addItem(self.lr)
 
         range = self.curve.xData.max() - self.curve.xData.min()
-        self.lr.setRegion([self.curve.xData.min() + (range * .1), self.curve.xData.max() - (range * .1)])
+        self.lr.setRegion([self.curve.xData.min() + (range * .05), self.curve.xData.max() - (range * .05)])
         self.lr.setBounds([self.curve.xData.min(), self.curve.xData.max()])
         self.lr_moved()  # Manually trigger to update status bar information
 
@@ -494,9 +497,9 @@ class DBPlot(QMainWindow):
         self.median_current_label.setText(f"Median: {data.Current.median():.1f} ")
 
         if current_delta > 0.5:
-            self.delta_current_label.setStyleSheet('color: red')
+            self.delta_current_label.setStyleSheet(f'color: {get_line_color("red", "mpl", self.darkmode)}')
         else:
-            self.delta_current_label.setStyleSheet('color: black')
+            self.delta_current_label.setStyleSheet(f'color: {get_line_color("foreground", "mpl", self.darkmode)}')
 
         time_d = data.Time.max() - data.Time.min()
         hours = int(time_d / 3600)
@@ -510,7 +513,7 @@ if __name__ == '__main__':
     from src.qt_py import dark_palette
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    darkmode = True
+    darkmode = False
     if darkmode:
         app.setPalette(dark_palette)
     pg.setConfigOptions(antialias=True)
