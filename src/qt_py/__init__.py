@@ -52,9 +52,10 @@ def get_line_color(color, style, darkmode, alpha=255):
     :param alpha: int, between 0 and 255
     :return: str or list, depending on style.
     """
-    teal_color = [102, 255, 255, alpha] if darkmode else [0, 204, 204, alpha]
-    blue_color = [153, 204, 255, alpha] if darkmode else [0, 128, 255, alpha]
     pink_color = [255, 102, 178, alpha] if darkmode else [204, 0, 204, alpha]
+    teal_color = [102, 255, 255, alpha] if darkmode else [0, 204, 204, alpha]
+    # blue_color = [153, 204, 255, alpha] if darkmode else [46, 151, 255, alpha]
+    blue_color = [42, 130, 218, alpha]
     red_color = [255, 153, 153, alpha] if darkmode else [255, 0, 0, alpha]
     purple_color = [204, 153, 255, alpha] if darkmode else [127, 0, 255, alpha]
     aquamarine_color = [153, 255, 204, alpha] if darkmode else [0, 255, 128, alpha]
@@ -68,21 +69,16 @@ def get_line_color(color, style, darkmode, alpha=255):
             return rgb2hex(*pink_color[:-1])
         else:
             return pink_color
-    elif color == "blue":
-        if style == "mpl":
-            return rgb2hex(*blue_color[:-1])
-        else:
-            return blue_color
-    elif color == "blue":
-        if style == "mpl":
-            return rgb2hex(*blue_color[:-1])
-        else:
-            return blue_color
     elif color == "teal":
         if style == "mpl":
             return rgb2hex(*teal_color[:-1])
         else:
             return teal_color
+    elif color == "blue":
+        if style == "mpl":
+            return rgb2hex(*blue_color[:-1])
+        else:
+            return blue_color
     elif color == "red":
         if style == "mpl":
             return rgb2hex(*red_color[:-1])

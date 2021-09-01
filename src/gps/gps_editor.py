@@ -68,7 +68,7 @@ def parse_gps(file, gps_object):
             }
         return empty_gps, units, cols, error_msg
 
-    def read_file(file):
+    def read_gps(file):
         """
         Create a dataframe from the contents of the input. Accepts many different input formats.
         :param file: input, can be list, dict, str, dataframe, or GPSObject.
@@ -94,7 +94,7 @@ def parse_gps(file, gps_object):
                 contents = [c.strip().split() for c in gps]
             else:
                 contents = read_file(file, as_list=True)
-            gps = pd.DataFrame(contents)
+            gps = pd.DataFrame.from_records(contents)
         else:
             logger.error(f"Invalid input: {file}.")
             raise TypeError(f'Invalid input for collar GPS parsing: {file}')
@@ -173,7 +173,7 @@ def parse_gps(file, gps_object):
         logger.debug(f"No GPS passed.")
         return empty_gps, units, pd.DataFrame(), 'No GPS passed.'
     else:
-        gps = read_file(file)
+        gps = read_gps(file)
 
     gps, error_gps = cull_gps(gps)  # Remove tags, units, extra columns and empty/NaN rows
     if gps.empty:

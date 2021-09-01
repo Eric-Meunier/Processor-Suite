@@ -957,7 +957,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.addPermanentWidget(self.selection_derotation_label, 0)
             # self.status_bar.addPermanentWidget(QLabel(), 0)  # Spacer
             self.status_bar.addPermanentWidget(self.epsg_label, 0)
-            self.status_bar.addPermanentWidget(self.dir_frame, 0)
+            # self.status_bar.addPermanentWidget(self.dir_frame, 0)
 
         self.app = app
         self.parent = parent

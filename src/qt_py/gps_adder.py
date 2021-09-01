@@ -15,7 +15,7 @@ from PySide2.QtWidgets import (QMainWindow, QMessageBox, QWidget, QFileDialog, Q
                                QTableWidgetItem, QShortcut)
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser
-from src.qt_py import get_icon, NonScientific, read_file, table_to_df, df_to_table
+from src.qt_py import get_icon, NonScientific, read_file, table_to_df, df_to_table, get_line_color
 from src.ui.line_adder import Ui_LineAdder
 from src.ui.loop_adder import Ui_LoopAdder
 
@@ -31,34 +31,65 @@ class GPSAdder(QMainWindow):
     """
     accept_sig = Signal(object)
 
-    def __init__(self):
+    def __init__(self, darkmode=False):
         super().__init__()
         self.resize(1000, 800)
         self.setWindowIcon(get_icon('gps_adder.png'))
 
+        self.darkmode = darkmode
         self.df = None
         self.error = False  # For pending errors
         self.units = None
-
-        # Highlighting
-        self.plan_highlight = pg.PlotDataItem(clickable=True)
-        self.plan_highlight.sigPointsClicked.connect(self.point_clicked)
-        self.plan_highlight.setZValue(2)
-        self.plan_lx = pg.InfiniteLine(movable=False, angle=0, pen=pg.mkPen('b', width=2.))
-        self.plan_lx.setZValue(0)
-        self.plan_ly = pg.InfiniteLine(movable=False, angle=90, pen=pg.mkPen('b', width=2.))
-        self.plan_ly.setZValue(0)
-        self.section_highlight = pg.PlotDataItem(clickable=True)
-        self.section_highlight.sigPointsClicked.connect(self.point_clicked)
-        self.section_highlight.setZValue(2)
-        self.section_lx = pg.InfiniteLine(movable=False, angle=0, pen=pg.mkPen('b', width=2.))
-        self.section_lx.setZValue(0)
-        self.section_ly = pg.InfiniteLine(movable=False, angle=90, pen=pg.mkPen('b', width=2.))
-        self.section_ly.setZValue(0)
         self.selection = []
         self.selected_row_info = None
-
         self.message = QMessageBox()
+
+        self.foreground_color = get_line_color("foreground", "pyqt", self.darkmode)
+        self.background_color = get_line_color("background", "pyqt", self.darkmode)
+
+        # Create the plan and section plots
+        self.plan_plot = pg.PlotDataItem(clickable=True,
+                                         pen=pg.mkPen(self.foreground_color, width=1.),
+                                         symbolPen=pg.mkPen(self.foreground_color, width=1.),
+                                         symbol='o',
+                                         symbolSize=8,
+                                         symbolBrush=pg.mkBrush(self.background_color))
+        self.plan_plot.sigPointsClicked.connect(self.point_clicked)
+
+        self.section_plot = pg.PlotDataItem(clickable=True,
+                                            pen=pg.mkPen(self.foreground_color, width=1.),
+                                            symbolPen=pg.mkPen(self.foreground_color, width=1.),
+                                            symbol='o',
+                                            symbolSize=8,
+                                            symbolBrush=pg.mkBrush(self.background_color))
+        self.section_plot.sigPointsClicked.connect(self.point_clicked)
+
+        # Highlighting
+        highlight_color = get_line_color("blue", "pyqt", self.darkmode)
+        self.plan_highlight = pg.PlotDataItem(clickable=True,
+                                              pen=pg.mkPen(highlight_color, width=2.),
+                                              symbolPen=pg.mkPen(highlight_color, width=2.),
+                                              symbol='o',
+                                              symbolSize=10,
+                                              symbolBrush=pg.mkBrush(self.background_color))
+        self.plan_highlight.sigPointsClicked.connect(self.point_clicked)
+        self.plan_highlight.setZValue(2)
+        self.plan_lx = pg.InfiniteLine(movable=False, angle=0, pen=pg.mkPen(highlight_color, width=2.))
+        self.plan_lx.setZValue(0)
+        self.plan_ly = pg.InfiniteLine(movable=False, angle=90, pen=pg.mkPen(highlight_color, width=2.))
+        self.plan_ly.setZValue(0)
+        self.section_highlight = pg.PlotDataItem(clickable=True,
+                                                 pen=pg.mkPen(highlight_color, width=2.),
+                                                 symbolPen=pg.mkPen(highlight_color, width=2.),
+                                                 symbol='o',
+                                                 symbolSize=10,
+                                                 symbolBrush=pg.mkBrush(self.background_color))
+        self.section_highlight.sigPointsClicked.connect(self.point_clicked)
+        self.section_highlight.setZValue(2)
+        self.section_lx = pg.InfiniteLine(movable=False, angle=0, pen=pg.mkPen(highlight_color, width=2.))
+        self.section_lx.setZValue(0)
+        self.section_ly = pg.InfiniteLine(movable=False, angle=90, pen=pg.mkPen(highlight_color, width=2.))
+        self.section_ly.setZValue(0)
 
     def closeEvent(self, e):
         e.accept()
@@ -206,7 +237,8 @@ class GPSAdder(QMainWindow):
     def point_clicked(self, obj, points):
         """
         Signal slot: When a point in the plots is clicked
-        :param event: Mouse click event
+        :param obj: PlotDataItem, the source object
+        :param points: list.
         :return: None
         """
         self.table.blockSignals(True)
@@ -316,8 +348,53 @@ class GPSAdder(QMainWindow):
 
 class LineAdder(GPSAdder, Ui_LineAdder):
 
-    def __init__(self, parent=None):
-        super().__init__()
+    def __init__(self, parent=None, darkmode=False):
+        def format_plots():
+            self.plan_view.setTitle('Plan View')
+            self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
+                                         'bottom': NonScientific(orientation='bottom')})
+            self.section_view.setTitle('Elevation View')
+            self.section_view.setAxisItems({'left': NonScientific(orientation='left'),
+                                            'bottom': NonScientific(orientation='bottom')})
+            self.plan_view.setAspectLocked()
+            self.section_view.setAspectLocked()
+
+            self.plan_view.hideButtons()  # Hide the little 'A' button at the bottom left
+            self.section_view.hideButtons()  # Hide the little 'A' button at the bottom left
+
+            self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+            self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+            self.section_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+            self.section_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+            self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+            self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+            self.section_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+            self.section_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+
+            self.plan_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
+            self.plan_view.showAxis('right', show=True)  # Show the axis edge line
+            self.plan_view.showAxis('top', show=True)  # Show the axis edge line
+            self.plan_view.showLabel('right', show=False)
+            self.plan_view.showLabel('top', show=False)
+            self.section_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
+            self.section_view.showAxis('right', show=True)  # Show the axis edge line
+            self.section_view.showAxis('top', show=True)  # Show the axis edge line
+            self.section_view.showLabel('right', show=False)
+            self.section_view.showLabel('top', show=False)
+
+        def init_signals():
+            self.actionOpen.triggered.connect(self.open_file_dialog)
+            self.actionEdit_Names.triggered.connect(self.edit_names)
+            self.actionInterp_Null_Elevation.triggered.connect(self.interp_elevation)
+
+            self.button_box.accepted.connect(self.accept)
+            self.button_box.rejected.connect(self.close)
+
+            self.table.cellChanged.connect(self.cell_changed)
+            self.table.itemSelectionChanged.connect(self.highlight_point)
+            self.auto_sort_cbox.toggled.connect(lambda: self.open(self.line))
+
+        super().__init__(darkmode)
         self.setupUi(self)
         self.setWindowTitle('Line Adder')
         self.actionOpen.setIcon(get_icon("open.png"))
@@ -334,67 +411,14 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.table.setFixedWidth(400)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
-        # Create the plan and section plots
-        self.plan_plot = pg.PlotDataItem(clickable=True)
-        self.plan_plot.sigPointsClicked.connect(self.point_clicked)
         self.plan_view.addItem(self.plan_plot)
-
-        self.section_plot = pg.PlotDataItem(clickable=True)
-        self.section_plot.sigPointsClicked.connect(self.point_clicked)
         self.section_view.addItem(self.section_plot)
 
         self.plan_view.setFocusPolicy(Qt.StrongFocus)
         self.section_view.setFocusPolicy(Qt.StrongFocus)
 
-        # Format the plots
-        self.plan_view.setTitle('Plan View')
-        self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
-                                     'bottom': NonScientific(orientation='bottom')})
-        self.section_view.setTitle('Elevation View')
-        self.section_view.setAxisItems({'left': NonScientific(orientation='left'),
-                                        'bottom': NonScientific(orientation='bottom')})
-        self.plan_view.setAspectLocked()
-        self.section_view.setAspectLocked()
-
-        self.plan_view.hideButtons()  # Hide the little 'A' button at the bottom left
-        self.section_view.hideButtons()  # Hide the little 'A' button at the bottom left
-
-        self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-        self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-        self.section_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-        self.section_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-        self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
-        self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
-        self.section_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
-        self.section_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
-
-        self.plan_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
-        self.plan_view.showAxis('right', show=True)  # Show the axis edge line
-        self.plan_view.showAxis('top', show=True)  # Show the axis edge line
-        self.plan_view.showLabel('right', show=False)
-        self.plan_view.showLabel('top', show=False)
-        self.section_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
-        self.section_view.showAxis('right', show=True)  # Show the axis edge line
-        self.section_view.showAxis('top', show=True)  # Show the axis edge line
-        self.section_view.showLabel('right', show=False)
-        self.section_view.showLabel('top', show=False)
-
-        # self.plan_view.setLabel('left', f"Northing", units='m')
-        # self.plan_view.setLabel('bottom', f"Easting", units='m')
-        # self.section_view.setLabel('left', f"Elevation", units='m')
-        # self.section_view.setLabel('bottom', f"Station", units=None)
-
-        # Signals
-        self.actionOpen.triggered.connect(self.open_file_dialog)
-        self.actionEdit_Names.triggered.connect(self.edit_names)
-        self.actionInterp_Null_Elevation.triggered.connect(self.interp_elevation)
-
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.close)
-
-        self.table.cellChanged.connect(self.cell_changed)
-        self.table.itemSelectionChanged.connect(self.highlight_point)
-        self.auto_sort_cbox.toggled.connect(lambda: self.open(self.line))
+        format_plots()
+        init_signals()
 
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_Delete:
@@ -487,29 +511,8 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             return
         df['Station'] = df['Station'].astype(int)
 
-        # Plot the plan map
-        self.plan_plot.setData(df.Easting.to_numpy(), df.Northing.to_numpy(),
-                               symbol='o',
-                               symbolSize=8,
-                               symbolPen=pg.mkPen('k', width=1.),
-                               symbolBrush=pg.mkBrush('w'),
-                               pen=pg.mkPen('k', width=1.5)
-                               )
-        # Plot the sections
-        self.section_plot.setData(df.Station.to_numpy(), df.Elevation.to_numpy(),
-                                  symbol='o',
-                                  symbolSize=8,
-                                  symbolPen=pg.mkPen('k', width=1.),
-                                  symbolBrush=pg.mkBrush('w'),
-                                  pen=pg.mkPen('k', width=1.5)
-                                  )
-
-        # Set the X and Y labels
-        self.plan_view.getAxis('left').setLabel('Northing', units=self.units)
-        self.plan_view.getAxis('bottom').setLabel('Easting', units=self.units)
-
-        self.section_view.setLabel('left', f"Elevation", units=self.units)
-        self.section_view.setLabel('bottom', f"Station", units=self.units)
+        self.plan_plot.setData(df.Easting.to_numpy(), df.Northing.to_numpy())
+        self.section_plot.setData(df.Station.to_numpy(), df.Elevation.to_numpy())
 
     def highlight_point(self, row=None):
         """
@@ -528,7 +531,8 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         # Save the information of the row for backup purposes
         self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
 
-        color = (255, 0, 0, 150) if keyboard.is_pressed('ctrl') else (0, 0, 255, 150)
+        color = get_line_color("red", "pyqt", self.darkmode) if keyboard.is_pressed(
+            'ctrl') else get_line_color("blue", "pyqt", self.darkmode)
 
         df = table_to_df(self.table)
         df['Station'] = df['Station'].astype(int)
@@ -537,12 +541,8 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
 
         # Add the over-lying scatter point
-        self.plan_highlight.setData([plan_x], [plan_y],
-                                    symbol='o',
-                                    symbolSize=10,
-                                    symbolPen=pg.mkPen(color, width=1.5),
-                                    symbolBrush=pg.mkBrush('w'),
-                                    )
+        self.plan_highlight.setData([plan_x], [plan_y], symbolPen=pg.mkPen(color, width=1.5))
+
         # Move the cross hairs and set their color
         self.plan_lx.setPos(plan_y)
         self.plan_lx.setPen(pg.mkPen(color, width=2.))
@@ -553,12 +553,8 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         section_x, section_y = df.loc[row, 'Station'], df.loc[row, 'Elevation']
 
         # Add the over-lying scatter point
-        self.section_highlight.setData([section_x], [section_y],
-                                       symbol='o',
-                                       symbolSize=10,
-                                       symbolPen=pg.mkPen(color, width=1.5),
-                                       symbolBrush=pg.mkBrush('w'),
-                                       )
+        self.section_highlight.setData([section_x], [section_y], symbolPen=pg.mkPen(color, width=1.5))
+
         # Move the cross hairs and set their color
         self.section_lx.setPos(section_y)
         self.section_lx.setPen(pg.mkPen(color, width=1.5))
@@ -578,7 +574,6 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         """
         Color the foreground of station numbers if they are duplicated, and the background if they are out of order.
         """
-
         def color_duplicates():
             """
             Color the table rows to indicate duplicate station numbers in the GPS.
@@ -645,80 +640,72 @@ class LineAdder(GPSAdder, Ui_LineAdder):
 
 class LoopAdder(GPSAdder, Ui_LoopAdder):
 
-    def __init__(self, parent=None):
-        super().__init__()
+    def __init__(self, parent=None, darkmode=False):
+
+        def format_plots():
+            # Format the plots
+            self.plan_view.setTitle('Plan View')
+            self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
+                                         'bottom': NonScientific(orientation='bottom')})
+            self.section_view.setTitle('Elevation View')
+
+            self.plan_view.hideButtons()
+            self.section_view.hideButtons()
+
+            self.plan_view.setAspectLocked()
+            self.section_view.getAxis('bottom').setLabel('Index')  # Set the label only for the section X axis
+
+            self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+            self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+            self.section_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+            self.section_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+            self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+            self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+            self.section_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+            self.section_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+
+            self.plan_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
+            self.plan_view.showAxis('right', show=True)  # Show the axis edge line
+            self.plan_view.showAxis('top', show=True)  # Show the axis edge line
+            self.plan_view.showLabel('right', show=False)
+            self.plan_view.showLabel('top', show=False)
+            self.section_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
+            self.section_view.showAxis('right', show=True)  # Show the axis edge line
+            self.section_view.showAxis('top', show=True)  # Show the axis edge line
+            self.section_view.showLabel('right', show=False)
+            self.section_view.showLabel('top', show=False)
+
+        def init_signals():
+            self.actionOpen.triggered.connect(self.open_file_dialog)
+
+            self.button_box.accepted.connect(self.accept)
+            self.button_box.rejected.connect(self.close)
+
+            self.table.cellChanged.connect(self.cell_changed)
+            self.table.itemSelectionChanged.connect(self.highlight_point)
+            self.auto_sort_cbox.toggled.connect(lambda: self.open(self.loop))
+
+        super().__init__(darkmode)
         self.setupUi(self)
         self.parent = parent
+        self.darkmode = darkmode
+
         self.loop = None
         self.selected_row_info = None
         self.setWindowTitle('Loop Adder')
         self.actionOpen.setIcon(get_icon("open.png"))
         self.status_bar.hide()
 
-        # Status bar widgets
-        # self.auto_sort_cbox = QCheckBox("Automatically Sort Loop", self)
-        # self.auto_sort_cbox.setChecked(True)
-
-        # self.status_bar.addPermanentWidget(self.auto_sort_cbox, 0)
-        # self.status_bar.addPermanentWidget(QLabel(), 1)
-
         self.table.setFixedWidth(400)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
-        # Create the plan and section plots
-        self.plan_plot = pg.PlotDataItem(clickable=True)
-        self.plan_plot.sigPointsClicked.connect(self.point_clicked)
         self.plan_view.addItem(self.plan_plot)
-
-        self.section_plot = pg.PlotDataItem(clickable=True)
-        self.section_plot.sigPointsClicked.connect(self.point_clicked)
         self.section_view.addItem(self.section_plot)
-
         self.plan_view.setFocusPolicy(Qt.StrongFocus)
         self.section_view.setFocusPolicy(Qt.StrongFocus)
 
-        # Format the plots
-        self.plan_view.setTitle('Plan View')
-        self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
-                                     'bottom': NonScientific(orientation='bottom')})
-        self.section_view.setTitle('Elevation View')
-
-        self.plan_view.setAspectLocked()
-
-        self.plan_view.hideButtons()
-        self.section_view.hideButtons()
-
-        self.section_view.getAxis('bottom').setLabel('Index')  # Set the label only for the section X axis
-
-        self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-        self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-        self.section_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-        self.section_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-        self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
-        self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
-        self.section_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
-        self.section_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
-
-        self.plan_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
-        self.plan_view.showAxis('right', show=True)  # Show the axis edge line
-        self.plan_view.showAxis('top', show=True)  # Show the axis edge line
-        self.plan_view.showLabel('right', show=False)
-        self.plan_view.showLabel('top', show=False)
-        self.section_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
-        self.section_view.showAxis('right', show=True)  # Show the axis edge line
-        self.section_view.showAxis('top', show=True)  # Show the axis edge line
-        self.section_view.showLabel('right', show=False)
-        self.section_view.showLabel('top', show=False)
-
-        # Signals
-        self.actionOpen.triggered.connect(self.open_file_dialog)
-
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.close)
-
-        self.table.cellChanged.connect(self.cell_changed)
-        self.table.itemSelectionChanged.connect(self.highlight_point)
-        self.auto_sort_cbox.toggled.connect(lambda: self.open(self.loop))
+        format_plots()
+        init_signals()
 
     def open(self, gps, name=''):
         """
@@ -777,27 +764,10 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         df = df.append(df.iloc[0], ignore_index=True)
 
         # Plot the plan map
-        self.plan_plot.setData(df.Easting.to_numpy(), df.Northing.to_numpy(),
-                               symbol='o',
-                               symbolSize=8,
-                               symbolPen=pg.mkPen('k', width=1.),
-                               symbolBrush=pg.mkBrush('w'),
-                               pen=pg.mkPen('k', width=1.5)
-                               )
+        self.plan_plot.setData(df.Easting.to_numpy(), df.Northing.to_numpy())
+
         # Plot the sections
-        self.section_plot.setData(df.Elevation.to_numpy(),
-                                  symbol='o',
-                                  symbolSize=8,
-                                  symbolPen=pg.mkPen('k', width=1.),
-                                  symbolBrush=pg.mkBrush('w'),
-                                  pen=pg.mkPen('k', width=1.5)
-                                  )
-
-        # Set the X and Y labels
-        self.plan_view.getAxis('left').setLabel('Northing', units=self.units)
-        self.plan_view.getAxis('bottom').setLabel('Easting', units=self.units)
-
-        self.section_view.setLabel('left', f"Elevation", units=self.units)
+        self.section_plot.setData(df.Elevation.to_numpy())
 
     def highlight_point(self, row=None):
         """
@@ -805,7 +775,6 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         :param row: Int: table row to highlight
         :return: None
         """
-
         if row is None:
             selected_row = self.table.selectionModel().selectedRows()
             if selected_row:
@@ -817,7 +786,8 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         # Save the information of the row for backup purposes
         self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
 
-        color = (255, 0, 0, 150) if keyboard.is_pressed('ctrl') else (0, 0, 255, 150)
+        color = get_line_color("red", "pyqt", self.darkmode) if keyboard.is_pressed(
+            'ctrl') else get_line_color("blue", "pyqt", self.darkmode)
 
         df = table_to_df(self.table)
 
@@ -825,12 +795,8 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
 
         # Add the over-lying scatter point
-        self.plan_highlight.setData([plan_x], [plan_y],
-                                    symbol='o',
-                                    symbolSize=10,
-                                    symbolPen=pg.mkPen(color, width=1.5),
-                                    symbolBrush=pg.mkBrush('w'),
-                                    )
+        self.plan_highlight.setData([plan_x], [plan_y], symbolPen=pg.mkPen(color, width=1.5))
+
         # Move the cross hairs and set their color
         self.plan_lx.setPos(plan_y)
         self.plan_lx.setPen(pg.mkPen(color, width=2.))
@@ -841,12 +807,8 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         section_x, section_y = row, df.loc[row, 'Elevation']
 
         # Add the over-lying scatter point
-        self.section_highlight.setData([section_x], [section_y],
-                                       symbol='o',
-                                       symbolSize=10,
-                                       symbolPen=pg.mkPen(color, width=1.5),
-                                       symbolBrush=pg.mkBrush('w'),
-                                       )
+        self.section_highlight.setData([section_x], [section_y], symbolPen=pg.mkPen(color, width=1.5))
+
         # Move the cross hairs and set their color
         self.section_lx.setPos(section_y)
         self.section_lx.setPen(pg.mkPen(color, width=1.5))
@@ -866,10 +828,63 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
 class CollarPicker(GPSAdder, Ui_LoopAdder):
     accept_sig = Signal(object)
 
-    def __init__(self, parent=None):
-        super().__init__()
+    def __init__(self, parent=None, darkmode=False):
+        super().__init__(darkmode)
         self.setupUi(self)
         self.parent = parent
+
+        def format_plots():
+                self.plan_view.setTitle('Plan View')
+                self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
+                                             'bottom': NonScientific(orientation='bottom')})
+                self.section_view.setTitle('Elevation View')
+
+                self.plan_view.setAspectLocked()
+
+                self.plan_view.hideButtons()
+                self.section_view.hideButtons()
+
+                self.section_view.getAxis('bottom').setLabel('Index')  # Set the label only for the section X axis
+
+                self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+                self.plan_view.getAxis('bottom').enableAutoSIPrefix(
+                    enable=False)  # Disables automatic scaling of labels
+                self.section_view.getAxis('left').enableAutoSIPrefix(
+                    enable=False)  # Disables automatic scaling of labels
+                self.section_view.getAxis('bottom').enableAutoSIPrefix(
+                    enable=False)  # Disables automatic scaling of labels
+                self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+                self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+                self.section_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+                self.section_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+
+                self.plan_view.getAxis('right').setWidth(
+                    15)  # Move the right edge of the plot away from the window edge
+                self.plan_view.showAxis('right', show=True)  # Show the axis edge line
+                self.plan_view.showAxis('top', show=True)  # Show the axis edge line
+                self.plan_view.showLabel('right', show=False)
+                self.plan_view.showLabel('top', show=False)
+                self.section_view.getAxis('right').setWidth(
+                    15)  # Move the right edge of the plot away from the window edge
+                self.section_view.showAxis('right', show=True)  # Show the axis edge line
+                self.section_view.showAxis('top', show=True)  # Show the axis edge line
+                self.section_view.showLabel('right', show=False)
+                self.section_view.showLabel('top', show=False)
+
+                self.plan_view.getAxis('left').setLabel('Northing', units=None)
+                self.plan_view.getAxis('bottom').setLabel('Easting', units=None)
+
+                self.section_view.setLabel('left', f"Elevation", units=None)
+
+        def init_signals():
+            self.actionOpen.triggered.connect(self.open_file_dialog)
+
+            self.button_box.accepted.connect(self.accept)
+            self.button_box.rejected.connect(self.close)
+
+            self.table.cellChanged.connect(self.cell_changed)
+            self.table.itemSelectionChanged.connect(self.highlight_point)
+
         self.setWindowTitle('Collar Picker')
         self.actionOpen.setIcon(get_icon("open.png"))
         self.status_bar.hide()
@@ -883,58 +898,29 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         self.table.horizontalHeader().hide()
 
         # Create the plan and section plots
-        self.plan_plot = pg.ScatterPlotItem(clickable=True)
+        self.plan_plot = pg.ScatterPlotItem(clickable=True,
+                                            symbol='o',
+                                            size=8,
+                                            pen=pg.mkPen(self.foreground_color,
+                                                         width=1.),
+                                            brush=pg.mkBrush(self.background_color))
         self.plan_plot.sigClicked.connect(self.point_clicked)
         self.plan_view.addItem(self.plan_plot)
 
-        self.section_plot = pg.ScatterPlotItem(clickable=True)
+        self.section_plot = pg.ScatterPlotItem(clickable=True,
+                                               symbol='o',
+                                               size=8,
+                                               pen=pg.mkPen(self.foreground_color,
+                                                            width=1.),
+                                               brush=pg.mkBrush(self.background_color))
         self.section_plot.sigClicked.connect(self.point_clicked)
         self.section_view.addItem(self.section_plot)
 
         self.plan_view.setFocusPolicy(Qt.StrongFocus)
         self.section_view.setFocusPolicy(Qt.StrongFocus)
 
-        # Format the plots
-        self.plan_view.setTitle('Plan View')
-        self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
-                                     'bottom': NonScientific(orientation='bottom')})
-        self.section_view.setTitle('Elevation View')
-
-        self.plan_view.setAspectLocked()
-
-        self.plan_view.hideButtons()
-        self.section_view.hideButtons()
-
-        self.section_view.getAxis('bottom').setLabel('Index')  # Set the label only for the section X axis
-
-        self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-        self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-        self.section_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-        self.section_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-        self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
-        self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
-        self.section_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
-        self.section_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
-
-        self.plan_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
-        self.plan_view.showAxis('right', show=True)  # Show the axis edge line
-        self.plan_view.showAxis('top', show=True)  # Show the axis edge line
-        self.plan_view.showLabel('right', show=False)
-        self.plan_view.showLabel('top', show=False)
-        self.section_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
-        self.section_view.showAxis('right', show=True)  # Show the axis edge line
-        self.section_view.showAxis('top', show=True)  # Show the axis edge line
-        self.section_view.showLabel('right', show=False)
-        self.section_view.showLabel('top', show=False)
-
-        # Signals
-        self.actionOpen.triggered.connect(self.open_file_dialog)
-
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.close)
-
-        self.table.cellChanged.connect(self.cell_changed)
-        self.table.itemSelectionChanged.connect(self.highlight_point)
+        format_plots()
+        init_signals()
 
     def accept(self):
         selected_row = self.table.currentRow()
@@ -1018,29 +1004,11 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         :return: None
         """
         df = table_to_df(self.table)
-
         if df.empty:
             return
 
-        # Plot the plan map
-        self.plan_plot.setData(df.iloc[:, 0].to_numpy(), df.iloc[:, 1].to_numpy(),
-                               symbol='o',
-                               size=8,
-                               pen=pg.mkPen('k', width=1.),
-                               brush=pg.mkBrush('w'),
-                               )
-        # Plot the sections
-        self.section_plot.setData(df.index, df.iloc[:, 2].to_numpy(),
-                                  symbol='o',
-                                  size=8,
-                                  pen=pg.mkPen('k', width=1.),
-                                  brush=pg.mkBrush('w'),
-                                  )
-
-        self.plan_view.getAxis('left').setLabel('Northing', units=None)
-        self.plan_view.getAxis('bottom').setLabel('Easting', units=None)
-
-        self.section_view.setLabel('left', f"Elevation", units=None)
+        self.plan_plot.setData(df.iloc[:, 0].to_numpy(), df.iloc[:, 1].to_numpy())
+        self.section_plot.setData(df.index, df.iloc[:, 2].to_numpy())
 
     def highlight_point(self, row=None):
         """
@@ -1059,41 +1027,27 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         # Save the information of the row for backup purposes
         self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
 
-        color = (255, 0, 0, 150) if keyboard.is_pressed('ctrl') else (0, 0, 255, 150)
-
         df = table_to_df(self.table)
 
         # Plot on the plan map
         plan_x, plan_y = df.iloc[row, 0], df.iloc[row, 1]
 
         # Add the over-lying scatter point
-        self.plan_highlight.setData([plan_x], [plan_y],
-                                    symbol='o',
-                                    symbolSize=10,
-                                    symbolPen=pg.mkPen(color, width=1.5),
-                                    symbolBrush=pg.mkBrush('w'),
-                                    )
+        self.plan_highlight.setData([plan_x], [plan_y])
+
         # Move the cross hairs and set their color
         self.plan_lx.setPos(plan_y)
-        self.plan_lx.setPen(pg.mkPen(color, width=2.))
         self.plan_ly.setPos(plan_x)
-        self.plan_ly.setPen(pg.mkPen(color, width=2.))
 
         # Plot on the section map
         section_x, section_y = row, df.iloc[row, 2]
 
         # Add the over-lying scatter point
-        self.section_highlight.setData([section_x], [section_y],
-                                       symbol='o',
-                                       symbolSize=10,
-                                       symbolPen=pg.mkPen(color, width=1.5),
-                                       symbolBrush=pg.mkBrush('w'),
-                                       )
+        self.section_highlight.setData([section_x], [section_y])
+
         # Move the cross hairs and set their color
         self.section_lx.setPos(section_y)
-        self.section_lx.setPen(pg.mkPen(color, width=1.5))
         self.section_ly.setPos(section_x)
-        self.section_ly.setPen(pg.mkPen(color, width=1.5))
 
         # Add the infinite lines if they haven't been added yet
         if self.plan_lx not in self.plan_view.items():
@@ -1407,9 +1361,13 @@ class DADSelector(QWidget):
 
 def main():
     from src.pem.pem_getter import PEMGetter
+    from src.qt_py import dark_palette
+
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    darkmode = False
+    darkmode = True
+    if darkmode:
+        app.setPalette(dark_palette)
     pg.setConfigOptions(antialias=True)
     pg.setConfigOption('crashWarning', True)
     pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
@@ -1420,18 +1378,18 @@ def main():
     loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Loop GPS'))
     # pg = PEMGetter()
 
-    # mw = CollarPicker()
+    # mw = CollarPicker(darkmode=darkmode)
     # file = r"C:\_Data\2021\TMC\Laurentia\GEN-21-09\GPS\Loop 09_0823.gpx"
 
-    # mw = LoopAdder()
-    # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
+    mw = LoopAdder(darkmode=darkmode)
+    file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
     # loop = TransmitterLoop(file)
 
-    # mw = LineAdder()
-    # mw = ExcelTablePicker()
-    mw = DADSelector()
+    # mw = LineAdder(darkmode=darkmode)
+    # mw = ExcelTablePicker(darkmode=darkmode)
+    # mw = DADSelector(darkmode=darkmode)
 
-    file = samples_folder.joinpath(r"Segments\BHEM-Belvais-2021-07-22.xlsx")
+    # file = samples_folder.joinpath(r"Segments\BHEM-Belvais-2021-07-22.xlsx")
     # file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
     # file = samples_folder.joinpath(r'Raw Boreholes\OBS-88-027\RAW\Obalski.xlsx')
     # file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')
