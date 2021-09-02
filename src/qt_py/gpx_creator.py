@@ -24,6 +24,129 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
     Columns of the CSV must be 'Name', 'Comment', 'Easting', 'Northing'.
     """
     def __init__(self, parent=None):
+        def init_crs():
+            """
+            Populate the CRS drop boxes and connect all their signals
+            """
+            def toggle_gps_system():
+                """
+                Toggle the datum and zone combo boxes and change their options based on the selected CRS system.
+                """
+                current_zone = self.gps_zone_cbox.currentText()
+                datum = self.gps_datum_cbox.currentText()
+                system = self.gps_system_cbox.currentText()
+
+                if system == '':
+                    self.gps_zone_cbox.setEnabled(False)
+                    self.gps_datum_cbox.setEnabled(False)
+
+                elif system == 'Lat/Lon':
+                    self.gps_datum_cbox.setCurrentText('WGS 1984')
+                    self.gps_zone_cbox.setCurrentText('')
+                    self.gps_datum_cbox.setEnabled(False)
+                    self.gps_zone_cbox.setEnabled(False)
+
+                elif system == 'UTM':
+                    self.gps_datum_cbox.setEnabled(True)
+
+                    if datum == '':
+                        self.gps_zone_cbox.setEnabled(False)
+                        return
+                    else:
+                        self.gps_zone_cbox.clear()
+                        self.gps_zone_cbox.setEnabled(True)
+
+                    # NAD 27 and 83 only have zones from 1N to 22N/23N
+                    if datum == 'NAD 1927':
+                        zones = [''] + [f"{num} North" for num in range(1, 23)] + ['59 North', '60 North']
+                    elif datum == 'NAD 1983':
+                        zones = [''] + [f"{num} North" for num in range(1, 24)] + ['59 North', '60 North']
+                    # WGS 84 has zones from 1N and 1S to 60N and 60S
+                    else:
+                        zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in
+                                                                                   range(1, 61)]
+
+                    for zone in zones:
+                        self.gps_zone_cbox.addItem(zone)
+
+                    # Keep the same zone number if possible
+                    self.gps_zone_cbox.setCurrentText(current_zone)
+
+            def toggle_crs_rbtn():
+                """
+                Toggle the radio buttons for the project CRS box, switching between the CRS drop boxes and the EPSG edit.
+                """
+                if self.crs_rbtn.isChecked():
+                    # Enable the CRS drop boxes and disable the EPSG line edit
+                    self.gps_system_cbox.setEnabled(True)
+                    toggle_gps_system()
+
+                    self.epsg_edit.setEnabled(False)
+                else:
+                    # Disable the CRS drop boxes and enable the EPSG line edit
+                    self.gps_system_cbox.setEnabled(False)
+                    self.gps_datum_cbox.setEnabled(False)
+                    self.gps_zone_cbox.setEnabled(False)
+
+                    self.epsg_edit.setEnabled(True)
+
+            def check_epsg():
+                """
+                Try to convert the EPSG code to a Proj CRS object, reject the input if it doesn't work.
+                """
+                epsg_code = self.epsg_edit.text()
+                self.epsg_edit.blockSignals(True)
+
+                if epsg_code:
+                    try:
+                        crs = CRS.from_epsg(epsg_code)
+                    except Exception as e:
+                        self.message.critical(self, 'Invalid EPSG Code', f"{epsg_code} is not a valid EPSG code.")
+                        self.epsg_edit.setText('')
+                    finally:
+                        set_epsg_label()
+
+                self.epsg_edit.blockSignals(False)
+
+            def set_epsg_label():
+                """
+                Convert the current project CRS combo box values into the EPSG code and set the status bar label.
+                """
+                epsg_code = self.get_epsg()
+                if epsg_code:
+                    crs = CRS.from_epsg(epsg_code)
+                    self.epsg_label.setText(f"{crs.name} ({crs.type_name})")
+                else:
+                    self.epsg_label.setText('')
+
+            # Add the GPS system and datum drop box options
+            gps_systems = ['', 'Lat/Lon', 'UTM']
+            for system in gps_systems:
+                self.gps_system_cbox.addItem(system)
+
+            datums = ['', 'WGS 1984', 'NAD 1927', 'NAD 1983']
+            for datum in datums:
+                self.gps_datum_cbox.addItem(datum)
+
+            int_valid = QIntValidator()
+            self.epsg_edit.setValidator(int_valid)
+
+            # Signals
+            # Combo boxes
+            self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
+            self.gps_system_cbox.currentIndexChanged.connect(set_epsg_label)
+            self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_system)
+            self.gps_datum_cbox.currentIndexChanged.connect(set_epsg_label)
+            self.gps_zone_cbox.currentIndexChanged.connect(set_epsg_label)
+
+            # Radio buttons
+            self.crs_rbtn.clicked.connect(toggle_crs_rbtn)
+            self.crs_rbtn.clicked.connect(set_epsg_label)
+            self.epsg_rbtn.clicked.connect(toggle_crs_rbtn)
+            self.epsg_rbtn.clicked.connect(set_epsg_label)
+
+            self.epsg_edit.editingFinished.connect(check_epsg)
+
         super().__init__()
         self.parent = parent
         self.setupUi(self)
@@ -41,10 +164,6 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         self.epsg_label = QLabel()
         self.epsg_label.setIndent(5)
 
-        # # Format the borders of the items in the status bar
-        # self.setStyleSheet("QStatusBar::item {border-left: 1px solid gray; border-top: 1px solid gray}")
-        # self.status_bar.setStyleSheet("border-top: 1px solid gray; border-top: None")
-
         self.status_bar.addPermanentWidget(self.spacer_label, 1)
         self.status_bar.addPermanentWidget(self.epsg_label, 0)
 
@@ -54,139 +173,17 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         self.del_file.triggered.connect(self.remove_row)
         self.addAction(self.del_file)
 
-        # Signals
         # Buttons
         self.openAction.triggered.connect(self.open_file_dialog)
+        self.openAction.setIcon(get_icon("open.png"))
         self.exportGPX.triggered.connect(self.export_gpx)
+        self.exportGPX.setIcon(get_icon("export.png"))
         self.create_csv_template_action.triggered.connect(self.create_csv_template)
+        self.create_csv_template_action.setIcon(get_icon("excel_file.png"))
         self.export_gpx_btn.clicked.connect(self.export_gpx)
         # self.auto_name_btn.clicked.connect(self.auto_name)
 
-        self.init_crs()
-
-    def init_crs(self):
-        """
-        Populate the CRS drop boxes and connect all their signals
-        """
-
-        def toggle_gps_system():
-            """
-            Toggle the datum and zone combo boxes and change their options based on the selected CRS system.
-            """
-            current_zone = self.gps_zone_cbox.currentText()
-            datum = self.gps_datum_cbox.currentText()
-            system = self.gps_system_cbox.currentText()
-
-            if system == '':
-                self.gps_zone_cbox.setEnabled(False)
-                self.gps_datum_cbox.setEnabled(False)
-
-            elif system == 'Lat/Lon':
-                self.gps_datum_cbox.setCurrentText('WGS 1984')
-                self.gps_zone_cbox.setCurrentText('')
-                self.gps_datum_cbox.setEnabled(False)
-                self.gps_zone_cbox.setEnabled(False)
-
-            elif system == 'UTM':
-                self.gps_datum_cbox.setEnabled(True)
-
-                if datum == '':
-                    self.gps_zone_cbox.setEnabled(False)
-                    return
-                else:
-                    self.gps_zone_cbox.clear()
-                    self.gps_zone_cbox.setEnabled(True)
-
-                # NAD 27 and 83 only have zones from 1N to 22N/23N
-                if datum == 'NAD 1927':
-                    zones = [''] + [f"{num} North" for num in range(1, 23)] + ['59 North', '60 North']
-                elif datum == 'NAD 1983':
-                    zones = [''] + [f"{num} North" for num in range(1, 24)] + ['59 North', '60 North']
-                # WGS 84 has zones from 1N and 1S to 60N and 60S
-                else:
-                    zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in
-                                                                               range(1, 61)]
-
-                for zone in zones:
-                    self.gps_zone_cbox.addItem(zone)
-
-                # Keep the same zone number if possible
-                self.gps_zone_cbox.setCurrentText(current_zone)
-
-        def toggle_crs_rbtn():
-            """
-            Toggle the radio buttons for the project CRS box, switching between the CRS drop boxes and the EPSG edit.
-            """
-            if self.crs_rbtn.isChecked():
-                # Enable the CRS drop boxes and disable the EPSG line edit
-                self.gps_system_cbox.setEnabled(True)
-                toggle_gps_system()
-
-                self.epsg_edit.setEnabled(False)
-            else:
-                # Disable the CRS drop boxes and enable the EPSG line edit
-                self.gps_system_cbox.setEnabled(False)
-                self.gps_datum_cbox.setEnabled(False)
-                self.gps_zone_cbox.setEnabled(False)
-
-                self.epsg_edit.setEnabled(True)
-
-        def check_epsg():
-            """
-            Try to convert the EPSG code to a Proj CRS object, reject the input if it doesn't work.
-            """
-            epsg_code = self.epsg_edit.text()
-            self.epsg_edit.blockSignals(True)
-
-            if epsg_code:
-                try:
-                    crs = CRS.from_epsg(epsg_code)
-                except Exception as e:
-                    self.message.critical(self, 'Invalid EPSG Code', f"{epsg_code} is not a valid EPSG code.")
-                    self.epsg_edit.setText('')
-                finally:
-                    set_epsg_label()
-
-            self.epsg_edit.blockSignals(False)
-
-        def set_epsg_label():
-            """
-            Convert the current project CRS combo box values into the EPSG code and set the status bar label.
-            """
-            epsg_code = self.get_epsg()
-            if epsg_code:
-                crs = CRS.from_epsg(epsg_code)
-                self.epsg_label.setText(f"{crs.name} ({crs.type_name})")
-            else:
-                self.epsg_label.setText('')
-
-        # Add the GPS system and datum drop box options
-        gps_systems = ['', 'Lat/Lon', 'UTM']
-        for system in gps_systems:
-            self.gps_system_cbox.addItem(system)
-
-        datums = ['', 'WGS 1984', 'NAD 1927', 'NAD 1983']
-        for datum in datums:
-            self.gps_datum_cbox.addItem(datum)
-
-        int_valid = QIntValidator()
-        self.epsg_edit.setValidator(int_valid)
-
-        # Signals
-        # Combo boxes
-        self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
-        self.gps_system_cbox.currentIndexChanged.connect(set_epsg_label)
-        self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_system)
-        self.gps_datum_cbox.currentIndexChanged.connect(set_epsg_label)
-        self.gps_zone_cbox.currentIndexChanged.connect(set_epsg_label)
-
-        # Radio buttons
-        self.crs_rbtn.clicked.connect(toggle_crs_rbtn)
-        self.crs_rbtn.clicked.connect(set_epsg_label)
-        self.epsg_rbtn.clicked.connect(toggle_crs_rbtn)
-        self.epsg_rbtn.clicked.connect(set_epsg_label)
-
-        self.epsg_edit.editingFinished.connect(check_epsg)
+        init_crs()
 
     def closeEvent(self, e):
         self.deleteLater()
@@ -244,7 +241,6 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         Return the EPSG code currently selected. Will convert the drop boxes to EPSG code.
         :return: str, EPSG code
         """
-
         def convert_to_epsg():
             """
             Convert and return the EPSG code of the project CRS combo boxes
@@ -309,7 +305,6 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         :param filepath: str, filepath of the CSV or text file to convert to GPX
         :return: None
         """
-
         def df_to_table(df):
             """
             Write the values in the data frame to the table.
@@ -353,7 +348,6 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         Save a GPX file from the information in the table.
         :return: None
         """
-
         def table_to_df():
             """
             Return a data frame from the information in the table
@@ -437,8 +431,14 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
                 pass
 
 
-def main():
+if __name__ == '__main__':
+    from src.qt_py import dark_palette
+
     app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    darkmode = True
+    if darkmode:
+        app.setPalette(dark_palette)
 
     gpx_creator = GPXCreator()
     gpx_creator.show()
@@ -448,10 +448,6 @@ def main():
     gpx_creator.gps_system_cbox.setCurrentText('UTM')
     gpx_creator.gps_datum_cbox.setCurrentText('WGS 1984')
     gpx_creator.gps_zone_cbox.setCurrentText('37 North')
-    gpx_creator.export_gpx()
+    # gpx_creator.export_gpx()
 
-    sys.exit(app.exec())
-
-
-if __name__ == '__main__':
-    main()
+    app.exec_()
