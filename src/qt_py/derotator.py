@@ -27,6 +27,72 @@ class Derotator(QMainWindow, Ui_Derotator):
     accept_sig = Signal(object)
 
     def __init__(self, parent=None, darkmode=False):
+        def format_plots():
+            # Format all axes
+            for ax in np.concatenate([self.x_view_axes, self.y_view_axes]):
+                ax.hideButtons()
+                ax.setMenuEnabled(False)
+                ax.invertY(True)
+                ax.setYLink(self.x_ax0)
+
+                # Add the mag plot into the profile plot
+                ax.showAxis("top")
+                ax.showAxis("right")
+                ax.getAxis("top").setHeight(40)
+                ax.getAxis("top").setStyle(showValues=True)
+                ax.getAxis("right").setStyle(showValues=False)
+                ax.getAxis("left").setStyle(showValues=False)
+                ax.getAxis('top').enableAutoSIPrefix(enable=False)
+                # ax.hideAxis("left")
+                ax.hideAxis("bottom")
+
+            # Use the first axes to set the label and tick labels
+            for ax in [self.x_ax0, self.y_ax0]:
+                ax.getAxis("left").setStyle(showValues=True)
+                ax.getAxis("left").setLabel("Station", color='1DD219', pen=pg.mkPen(self.foreground_color))
+            #
+            # for ax in [self.x_ax4, self.y_ax4]:
+            #     ax.showAxis("right")
+            #     ax.getAxis("right").setStyle(showValues=False)
+
+            # Disable the 'A' button and auto-scaling SI units
+            for ax in [self.dev_ax, self.dip_ax, self.mag_ax, self.rot_ax, self.pp_ax]:
+                # ax.showGrid(x=False, y=True, alpha=0.3)
+                ax.hideButtons()
+                ax.setMenuEnabled(False)
+                ax.invertY(True)
+                ax.setYLink(self.x_ax0)
+
+                # Add the mag plot into the profile plot
+                ax.showAxis("top")
+                ax.showAxis("right")
+                ax.getAxis("top").setHeight(40)
+                ax.getAxis("top").setStyle(showValues=True)
+                ax.getAxis("right").setStyle(showValues=False)
+                ax.getAxis("left").setStyle(showValues=True)
+                ax.getAxis("left").setLabel("Station", color='1DD219', pen=pg.mkPen(self.foreground_color))
+                ax.getAxis('top').enableAutoSIPrefix(enable=False)
+                ax.hideAxis("bottom")
+
+            self.mag_ax.getAxis("left").setStyle(showValues=False)
+            self.mag_ax.getAxis("left").setLabel("")
+
+        def init_signals():
+            self.actionReverse_XY.triggered.connect(self.reverse_xy)
+            self.actionPEM_File.triggered.connect(self.export_pem_file)
+            self.actionStats.triggered.connect(self.export_stats)
+            self.actionShow_Scatter.triggered.connect(self.toggle_scatter)
+
+            self.button_box.accepted.connect(self.accept)
+            self.button_box.rejected.connect(self.close)
+
+            self.acc_btn.clicked.connect(self.rotate)
+            self.mag_btn.clicked.connect(self.rotate)
+            self.pp_btn.clicked.connect(self.rotate)
+            self.none_btn.clicked.connect(self.rotate)
+            self.unrotate_btn.clicked.connect(self.rotate)
+            self.soa_sbox.valueChanged.connect(self.rotate)
+
         super().__init__(parent)
         self.setupUi(self)
         self.installEventFilter(self)
@@ -48,6 +114,15 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         self.setWindowTitle('XY De-rotation')
         self.setWindowIcon(get_icon('derotate.png'))
+        self.actionReverse_XY.setIcon(get_icon("reverse.png"))
+        self.menuExport.setIcon(get_icon("export.png"))
+        self.actionPEM_File.setIcon(get_icon("crone_logo.png"))
+
+        self.reset_range_shortcut = QShortcut(QKeySequence(' '), self)
+        self.reset_range_shortcut.activated.connect(self.reset_range)
+
+        self.change_component_shortcut = QShortcut(QKeySequence('c'), self)
+        self.change_component_shortcut.activated.connect(self.change_tab)
 
         self.message = QMessageBox()
 
@@ -161,10 +236,8 @@ class Derotator(QMainWindow, Ui_Derotator):
                                                   symbol='o',
                                                   brush=pg.mkBrush(self.background_color),
                                                   size=symbol_size)
-        # self.tool_rot_curve = pg.PlotCurveItem(pen=pg.mkPen((32, 32, 32, 200), width=2.),
         self.tool_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(self.foreground_color, width=2.),
                                                name='Tool (Unknown Sensor)')
-        # self.tool_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen((32, 32, 32, 200), width=2.),
         self.tool_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(self.foreground_color, width=2.),
                                                    symbol='o',
                                                    brush=pg.mkBrush(self.background_color),
@@ -194,90 +267,16 @@ class Derotator(QMainWindow, Ui_Derotator):
                                                       size=symbol_size)
 
         self.theory_pp_curve = pg.PlotDataItem(pen=pg.mkPen(self.theory_color, width=2), name='Theory')
-        # self.theory_pp_curve = pg.PlotDataItem(pen=pg.mkPen((32, 32, 32, 100), width=2), name='Theory')
         self.theory_pp_scatter = pg.ScatterPlotItem(symbol='o',
                                                     pen=pg.mkPen(self.theory_color, width=2),
-                                                    # pen=pg.mkPen((32, 32, 32, 100), width=2),
                                                     brush=pg.mkBrush(self.background_color),
                                                     size=symbol_size)
 
-        # Format all axes
-        for ax in np.concatenate([self.x_view_axes, self.y_view_axes]):
-            ax.hideButtons()
-            ax.setMenuEnabled(False)
-            ax.invertY(True)
-            ax.setYLink(self.x_ax0)
-
-            # Add the mag plot into the profile plot
-            ax.showAxis("top")
-            ax.showAxis("right")
-            ax.getAxis("top").setHeight(40)
-            ax.getAxis("top").setStyle(showValues=True)
-            ax.getAxis("right").setStyle(showValues=False)
-            ax.getAxis("left").setStyle(showValues=False)
-            ax.getAxis('top').enableAutoSIPrefix(enable=False)
-            # ax.hideAxis("left")
-            ax.hideAxis("bottom")
-
-        # Use the first axes to set the label and tick labels
-        for ax in [self.x_ax0, self.y_ax0]:
-            ax.getAxis("left").setStyle(showValues=True)
-            ax.getAxis("left").setLabel("Station", color='1DD219', pen=pg.mkPen(self.foreground_color))
-        #
-        # for ax in [self.x_ax4, self.y_ax4]:
-        #     ax.showAxis("right")
-        #     ax.getAxis("right").setStyle(showValues=False)
-
-        # Disable the 'A' button and auto-scaling SI units
-        for ax in [self.dev_ax, self.dip_ax, self.mag_ax, self.rot_ax, self.pp_ax]:
-            # ax.showGrid(x=False, y=True, alpha=0.3)
-            ax.hideButtons()
-            ax.setMenuEnabled(False)
-            ax.invertY(True)
-            ax.setYLink(self.x_ax0)
-
-            # Add the mag plot into the profile plot
-            ax.showAxis("top")
-            ax.showAxis("right")
-            ax.getAxis("top").setHeight(40)
-            ax.getAxis("top").setStyle(showValues=True)
-            ax.getAxis("right").setStyle(showValues=False)
-            ax.getAxis("left").setStyle(showValues=True)
-            ax.getAxis("left").setLabel("Station", color='1DD219', pen=pg.mkPen(self.foreground_color))
-            ax.getAxis('top').enableAutoSIPrefix(enable=False)
-            ax.hideAxis("bottom")
-
-        self.mag_ax.getAxis("left").setStyle(showValues=False)
-        self.mag_ax.getAxis("left").setLabel("")
+        format_plots()
 
         self.profile_axes = np.concatenate([self.x_view_axes, self.y_view_axes])
         self.axes = np.concatenate([self.x_view_axes, self.y_view_axes, [self.dev_ax], [self.dip_ax], [self.mag_ax],
                                     [self.rot_ax], [self.pp_ax]])
-
-        # Signals
-        self.actionReverse_XY.setIcon(get_icon("reverse.png"))
-        self.menuExport.setIcon(get_icon("export.png"))
-        self.actionPEM_File.setIcon(get_icon("crone_logo.png"))
-        self.actionReverse_XY.triggered.connect(self.reverse_xy)
-        self.actionPEM_File.triggered.connect(self.export_pem_file)
-        self.actionStats.triggered.connect(self.export_stats)
-        self.actionShow_Scatter.triggered.connect(self.toggle_scatter)
-
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.close)
-
-        self.acc_btn.clicked.connect(self.rotate)
-        self.mag_btn.clicked.connect(self.rotate)
-        self.pp_btn.clicked.connect(self.rotate)
-        self.none_btn.clicked.connect(self.rotate)
-        self.unrotate_btn.clicked.connect(self.rotate)
-        self.soa_sbox.valueChanged.connect(self.rotate)
-
-        self.reset_range_shortcut = QShortcut(QKeySequence(' '), self)
-        self.reset_range_shortcut.activated.connect(self.reset_range)
-
-        self.change_component_shortcut = QShortcut(QKeySequence('c'), self)
-        self.change_component_shortcut.activated.connect(self.change_tab)
 
     def accept(self):
         self.accept_sig.emit(self.rotated_file)

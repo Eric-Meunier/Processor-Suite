@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>773</width>
-    <height>604</height>
+    <height>606</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -53,7 +53,7 @@
       <property name="frameShadow">
        <enum>QFrame::Raised</enum>
       </property>
-      <layout class="QtWidgets.QHBoxLayout" name="horizontalLayout_2">
+      <layout class="QGridLayout" name="horizontalLayout_2">
        <property name="leftMargin">
         <number>0</number>
        </property>
@@ -66,7 +66,7 @@
        <property name="bottomMargin">
         <number>0</number>
        </property>
-       <item>
+       <item row="0" column="0">
         <widget class="QSplitter" name="splitter">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
@@ -76,10 +76,10 @@
          </property>
          <widget class="QFrame" name="frame_2">
           <property name="frameShape">
-           <enum>QFrame::Box</enum>
+           <enum>QFrame::StyledPanel</enum>
           </property>
           <property name="frameShadow">
-           <enum>QFrame::Sunken</enum>
+           <enum>QFrame::Plain</enum>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_2">
            <property name="leftMargin">
@@ -264,12 +264,12 @@
                     <bool>false</bool>
                    </property>
                    <property name="frameShape">
-                    <enum>QFrame::StyledPanel</enum>
+                    <enum>QFrame::NoFrame</enum>
                    </property>
                    <property name="frameShadow">
-                    <enum>QFrame::Raised</enum>
+                    <enum>QFrame::Plain</enum>
                    </property>
-                   <layout class="QtWidgets.QHBoxLayout" name="horizontalLayout">
+                   <layout class="QHBoxLayout" name="horizontalLayout">
                     <property name="spacing">
                      <number>6</number>
                     </property>
@@ -286,7 +286,7 @@
                      <number>0</number>
                     </property>
                     <item>
-                     <widget class="QSpinBox" name="loop_h_sbox">
+                     <widget class="QSpinBox" name="loop_w_sbox">
                       <property name="minimumSize">
                        <size>
                         <width>0</width>
@@ -324,12 +324,15 @@
                      </widget>
                     </item>
                     <item>
-                     <widget class="QSpinBox" name="loop_w_sbox">
+                     <widget class="QSpinBox" name="loop_h_sbox">
                       <property name="minimumSize">
                        <size>
                         <width>0</width>
                         <height>0</height>
                        </size>
+                      </property>
+                      <property name="frame">
+                       <bool>true</bool>
                       </property>
                       <property name="suffix">
                        <string>m</string>
@@ -581,7 +584,7 @@
               <item row="1" column="0">
                <widget class="QLabel" name="label_17">
                 <property name="text">
-                 <string>Distance From West Edge:</string>
+                 <string>Easting Position:</string>
                 </property>
                 <property name="alignment">
                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
@@ -624,12 +627,44 @@
                </widget>
               </item>
               <item row="2" column="1">
-               <widget class="QLabel" name="response_label">
+               <widget class="QLabel" name="z_response_label">
                 <property name="font">
                  <font>
                   <weight>75</weight>
                   <bold>true</bold>
                  </font>
+                </property>
+                <property name="text">
+                 <string>TextLabel</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="0">
+               <widget class="QLabel" name="label_16">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Response (X-Component):</string>
+                </property>
+               </widget>
+              </item>
+              <item row="3" column="1">
+               <widget class="QLabel" name="x_response_label">
+                <property name="font">
+                 <font>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="layoutDirection">
+                 <enum>Qt::LeftToRight</enum>
                 </property>
                 <property name="text">
                  <string>TextLabel</string>
@@ -695,14 +730,20 @@
               </sizepolicy>
              </property>
              <property name="frameShape">
-              <enum>QFrame::Box</enum>
+              <enum>QFrame::StyledPanel</enum>
+             </property>
+             <property name="frameShadow">
+              <enum>QFrame::Plain</enum>
              </property>
             </widget>
            </item>
            <item>
             <widget class="PlotWidget" name="plan_widget">
              <property name="frameShape">
-              <enum>QFrame::Box</enum>
+              <enum>QFrame::StyledPanel</enum>
+             </property>
+             <property name="frameShadow">
+              <enum>QFrame::Plain</enum>
              </property>
             </widget>
            </item>

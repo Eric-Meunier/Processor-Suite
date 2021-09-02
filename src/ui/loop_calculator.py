@@ -19,7 +19,7 @@ class Ui_LoopCalculator(object):
     def setupUi(self, LoopCalculator):
         if not LoopCalculator.objectName():
             LoopCalculator.setObjectName(u"LoopCalculator")
-        LoopCalculator.resize(773, 604)
+        LoopCalculator.resize(773, 606)
         sizePolicy = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -37,7 +37,7 @@ class Ui_LoopCalculator(object):
         self.frame_3.setMinimumSize(QSize(100, 0))
         self.frame_3.setFrameShape(QFrame.StyledPanel)
         self.frame_3.setFrameShadow(QFrame.Raised)
-        self.horizontalLayout_2 = QHBoxLayout(self.frame_3)
+        self.horizontalLayout_2 = QGridLayout(self.frame_3)
         self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
         self.horizontalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.splitter = QSplitter(self.frame_3)
@@ -46,8 +46,8 @@ class Ui_LoopCalculator(object):
         self.splitter.setHandleWidth(2)
         self.frame_2 = QFrame(self.splitter)
         self.frame_2.setObjectName(u"frame_2")
-        self.frame_2.setFrameShape(QFrame.Box)
-        self.frame_2.setFrameShadow(QFrame.Sunken)
+        self.frame_2.setFrameShape(QFrame.StyledPanel)
+        self.frame_2.setFrameShadow(QFrame.Plain)
         self.verticalLayout_2 = QVBoxLayout(self.frame_2)
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.verticalLayout_2.setContentsMargins(6, 6, 6, 6)
@@ -147,7 +147,7 @@ class Ui_LoopCalculator(object):
         self.frame.setAutoFillBackground(False)
         self.frame.setFrameShape(QFrame.StyledPanel)
         self.frame.setFrameShadow(QFrame.Raised)
-        self.horizontalLayout = QHBoxLayout(self.frame)
+        self.horizontalLayout = QGridLayout(self.frame)
         self.horizontalLayout.setSpacing(6)
         self.horizontalLayout.setObjectName(u"horizontalLayout")
         self.horizontalLayout.setContentsMargins(0, 0, 0, 0)
@@ -159,7 +159,7 @@ class Ui_LoopCalculator(object):
         self.loop_h_sbox.setSingleStep(10)
         self.loop_h_sbox.setValue(400)
 
-        self.horizontalLayout.addWidget(self.loop_h_sbox)
+        self.horizontalLayout.addWidget(self.loop_h_sbox, 0, 0, 1, 1)
 
         self.label_4 = QLabel(self.frame)
         self.label_4.setObjectName(u"label_4")
@@ -169,7 +169,7 @@ class Ui_LoopCalculator(object):
         sizePolicy2.setHeightForWidth(self.label_4.sizePolicy().hasHeightForWidth())
         self.label_4.setSizePolicy(sizePolicy2)
 
-        self.horizontalLayout.addWidget(self.label_4)
+        self.horizontalLayout.addWidget(self.label_4, 0, 0, 1, 1)
 
         self.loop_w_sbox = QSpinBox(self.frame)
         self.loop_w_sbox.setObjectName(u"loop_w_sbox")
@@ -179,7 +179,7 @@ class Ui_LoopCalculator(object):
         self.loop_w_sbox.setSingleStep(10)
         self.loop_w_sbox.setValue(400)
 
-        self.horizontalLayout.addWidget(self.loop_w_sbox)
+        self.horizontalLayout.addWidget(self.loop_w_sbox, 0, 0, 1, 1)
 
 
         self.formLayout_3.setWidget(1, QFormLayout.FieldRole, self.frame)
@@ -338,12 +338,26 @@ class Ui_LoopCalculator(object):
 
         self.formLayout.setWidget(2, QFormLayout.LabelRole, self.label_15)
 
-        self.response_label = QLabel(self.groupBox_4)
-        self.response_label.setObjectName(u"response_label")
-        self.response_label.setFont(font)
-        self.response_label.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
+        self.z_response_label = QLabel(self.groupBox_4)
+        self.z_response_label.setObjectName(u"z_response_label")
+        self.z_response_label.setFont(font)
+        self.z_response_label.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
 
-        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.response_label)
+        self.formLayout.setWidget(2, QFormLayout.FieldRole, self.z_response_label)
+
+        self.label_16 = QLabel(self.groupBox_4)
+        self.label_16.setObjectName(u"label_16")
+        self.label_16.setFont(font)
+
+        self.formLayout.setWidget(3, QFormLayout.LabelRole, self.label_16)
+
+        self.x_response_label = QLabel(self.groupBox_4)
+        self.x_response_label.setObjectName(u"x_response_label")
+        self.x_response_label.setFont(font)
+        self.x_response_label.setLayoutDirection(Qt.LeftToRight)
+        self.x_response_label.setAlignment(Qt.AlignRight|Qt.AlignTrailing|Qt.AlignVCenter)
+
+        self.formLayout.setWidget(3, QFormLayout.FieldRole, self.x_response_label)
 
 
         self.verticalLayout_2.addWidget(self.groupBox_4)
@@ -373,19 +387,21 @@ class Ui_LoopCalculator(object):
         sizePolicy4.setVerticalStretch(0)
         sizePolicy4.setHeightForWidth(self.plot_widget.sizePolicy().hasHeightForWidth())
         self.plot_widget.setSizePolicy(sizePolicy4)
-        self.plot_widget.setFrameShape(QFrame.Box)
+        self.plot_widget.setFrameShape(QFrame.StyledPanel)
+        self.plot_widget.setFrameShadow(QFrame.Plain)
 
         self.verticalLayout_3.addWidget(self.plot_widget)
 
         self.plan_widget = PlotWidget(self.frame_4)
         self.plan_widget.setObjectName(u"plan_widget")
-        self.plan_widget.setFrameShape(QFrame.Box)
+        self.plan_widget.setFrameShape(QFrame.StyledPanel)
+        self.plan_widget.setFrameShadow(QFrame.Plain)
 
         self.verticalLayout_3.addWidget(self.plan_widget)
 
         self.splitter.addWidget(self.frame_4)
 
-        self.horizontalLayout_2.addWidget(self.splitter)
+        self.horizontalLayout_2.addWidget(self.splitter, 0, 0, 1, 1)
 
 
         self.gridLayout.addWidget(self.frame_3, 0, 0, 1, 1)
@@ -439,9 +455,11 @@ class Ui_LoopCalculator(object):
         self.groupBox_4.setTitle(QCoreApplication.translate("LoopCalculator", u"EM Response", None))
         self.label_8.setText(QCoreApplication.translate("LoopCalculator", u"Current:", None))
         self.current_sbox.setSuffix(QCoreApplication.translate("LoopCalculator", u"A", None))
-        self.label_17.setText(QCoreApplication.translate("LoopCalculator", u"Distance From West Edge:", None))
+        self.label_17.setText(QCoreApplication.translate("LoopCalculator", u"Easting Position:", None))
         self.distance_sbox.setSuffix(QCoreApplication.translate("LoopCalculator", u"m", None))
         self.label_15.setText(QCoreApplication.translate("LoopCalculator", u"Response (Z-Component):", None))
-        self.response_label.setText(QCoreApplication.translate("LoopCalculator", u"TextLabel", None))
+        self.z_response_label.setText(QCoreApplication.translate("LoopCalculator", u"TextLabel", None))
+        self.label_16.setText(QCoreApplication.translate("LoopCalculator", u"Response (X-Component):", None))
+        self.x_response_label.setText(QCoreApplication.translate("LoopCalculator", u"TextLabel", None))
     # retranslateUi
 

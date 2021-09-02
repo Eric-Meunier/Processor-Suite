@@ -3830,7 +3830,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         # text_color = "rgb(192, 192, 255)" if self.actionDark_Theme.isChecked() else "rgb(64, 64, 255)"
         # text_color = "rgb(42,130,218)" if self.actionDark_Theme.isChecked() else "rgb(0,120,215)"
-        text_color = "rgb(46,151,255)" if darkmode else "rgb(0,107,189)"
+        text_color = f"rgb{str(tuple(get_line_color('single_blue', 'mpl', self.darkmode)))}"
         self.selection_files_label.setStyleSheet(f'color: {text_color}')
         self.selection_timebase_label.setStyleSheet(f'color: {text_color}')
         self.selection_zts_label.setStyleSheet(f'color: {text_color}')

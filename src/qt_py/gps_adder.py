@@ -65,7 +65,7 @@ class GPSAdder(QMainWindow):
         self.section_plot.sigPointsClicked.connect(self.point_clicked)
 
         # Highlighting
-        highlight_color = get_line_color("blue", "pyqt", self.darkmode)
+        highlight_color = get_line_color("single_blue", "pyqt", self.darkmode)
         self.plan_highlight = pg.PlotDataItem(clickable=True,
                                               pen=pg.mkPen(highlight_color, width=2.),
                                               symbolPen=pg.mkPen(highlight_color, width=2.),
@@ -532,7 +532,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
 
         color = get_line_color("red", "pyqt", self.darkmode) if keyboard.is_pressed(
-            'ctrl') else get_line_color("blue", "pyqt", self.darkmode)
+            'ctrl') else get_line_color("single_blue", "pyqt", self.darkmode)
 
         df = table_to_df(self.table)
         df['Station'] = df['Station'].astype(int)
@@ -618,7 +618,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
                     station_item.setBackground(QColor('dimgray'))
                 else:
                     if int(station_num) > sorted_stations[row]:
-                        station_item.setBackground(blue_color)
+                        station_item.setBackground()
                         errors += 1
                     elif int(station_num) < sorted_stations[row]:
                         station_item.setBackground(red_color)
@@ -787,7 +787,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
 
         color = get_line_color("red", "pyqt", self.darkmode) if keyboard.is_pressed(
-            'ctrl') else get_line_color("blue", "pyqt", self.darkmode)
+            'ctrl') else get_line_color("single_blue", "pyqt", self.darkmode)
 
         df = table_to_df(self.table)
 
@@ -1076,7 +1076,7 @@ class ExcelTablePicker(QWidget):
         self.click_count = 0
         self.selected_cells = []
         # self.selection_color = QColor('#50C878')
-        self.selection_color = QColor(get_line_color("blue", "mpl", True))
+        self.selection_color = QColor(get_line_color("single_blue", "mpl", True))
 
         self.tables = []
         self.tabs = QTabWidget()
@@ -1194,7 +1194,7 @@ class DADSelector(QWidget):
         self.dips = None
         self.selection_count = 0
         self.selected_ranges = []
-        self.selection_color = QColor(get_line_color("blue", "mpl", True))
+        self.selection_color = QColor(get_line_color("single_blue", "mpl", True))
         # self.selection_color = QColor('#50C878')
 
         self.tables = []

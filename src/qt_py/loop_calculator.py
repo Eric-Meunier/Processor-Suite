@@ -10,7 +10,7 @@ from PySide2.QtGui import QKeySequence
 from PySide2.QtWidgets import (QMainWindow, QFileDialog, QApplication, QShortcut, QComboBox)
 
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
-from src.qt_py import NonScientific, get_icon
+from src.qt_py import NonScientific, get_icon, get_line_color
 from src.ui.loop_calculator import Ui_LoopCalculator
 
 logger = logging.getLogger(__name__)
@@ -18,11 +18,87 @@ logger = logging.getLogger(__name__)
 
 class LoopCalculator(QMainWindow, Ui_LoopCalculator):
 
-    def __init__(self):
+    def __init__(self, darkmode=False):
+        def format_plots():
+            # Plot widget
+            self.plot_widget.setAxisItems({'left': NonScientific(orientation='left'),
+                                           'bottom': NonScientific(orientation='bottom')})
+
+            self.plot_widget.hideButtons()
+            self.plot_widget.setMenuEnabled(False)
+            # Y label is changed during plotting
+            self.plot_widget.setLabel('bottom', 'Distance From Loop Center (m)')
+            self.plot_widget.getAxis("bottom").nudge -= 10  # Move the label so it doesn't get clipped
+
+            self.plot_widget.getAxis('left').setWidth(60)
+            self.plot_widget.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
+            self.plot_widget.showAxis('right', show=True)  # Show the axis edge line
+            self.plot_widget.showAxis('top', show=True)  # Show the axis edge line
+            self.plot_widget.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+            self.plot_widget.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+            self.plot_widget.showLabel('right', show=False)
+            self.plot_widget.showLabel('top', show=False)
+            self.plot_widget.getAxis('left').enableAutoSIPrefix(enable=False)
+            self.plot_widget.setLimits(xMin=-1000, xMax=1000, yMin=-500000, yMax=500000)
+            self.plot_widget.setXRange(-200, 200)
+
+            # Plan widget
+            self.plan_widget.setAxisItems({'left': NonScientific(orientation='left'),
+                                           'bottom': NonScientific(orientation='bottom')})
+            self.plan_widget.hideButtons()
+            self.plan_widget.setMenuEnabled(False)
+            """Y label is changed during plotting"""
+            self.plan_widget.setLabel('left', 'Northing (m)')
+            self.plan_widget.setLabel('bottom', 'Easting (m)')
+            self.plan_widget.getAxis("bottom").nudge -= 10  # Move the label so it doesn't get clipped
+
+            self.plan_widget.getAxis('left').setWidth(60)
+            self.plan_widget.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
+            self.plan_widget.showAxis('right', show=True)  # Show the axis edge line
+            self.plan_widget.showAxis('top', show=True)  # Show the axis edge line
+            self.plan_widget.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+            self.plan_widget.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+            self.plan_widget.showLabel('right', show=False)
+            self.plan_widget.showLabel('top', show=False)
+            self.plan_widget.getAxis('left').enableAutoSIPrefix(enable=False)
+            self.plan_widget.setAspectLocked()
+
+            # Link the X axis of the mag plot and plan map
+            # self.plan_widget.setXLink(self.plot_widget)
+
+        def init_signals():
+            self.tx_setup_combo.currentIndexChanged.connect(self.calculate_current)
+            self.num_tx_turns_sbox.valueChanged.connect(self.calculate_current)
+            self.loop_h_sbox.valueChanged.connect(self.calculate_current)
+            self.loop_w_sbox.valueChanged.connect(self.calculate_current)
+            self.loop_gauge_sbox.valueChanged.connect(self.calculate_current)
+            self.loop_quality_sbox.valueChanged.connect(self.calculate_current)
+            self.num_parallel_sbox.valueChanged.connect(self.calculate_current)
+            self.ramp_sbox.valueChanged.connect(self.calculate_current)
+            self.voltage_sbox.valueChanged.connect(self.calculate_current)
+
+            self.loop_h_sbox.valueChanged.connect(self.calculate_mag)  # Update the plot when the loop size is changed
+            self.loop_w_sbox.valueChanged.connect(self.calculate_mag)  # Update the plot when the loop size is changed
+
+            self.units_combo.currentIndexChanged.connect(self.calculate_current)
+            self.units_combo.currentIndexChanged.connect(self.calculate_mag)
+
+            self.current_sbox.valueChanged.connect(self.calculate_mag)
+            self.distance_sbox.valueChanged.connect(self.calculate_mag)
+
         super().__init__()
+        self.darkmode = darkmode
+        pg.setConfigOption('background', (66, 66, 66) if self.darkmode else 'w')
+        pg.setConfigOption('foreground', "w" if self.darkmode else (53, 53, 53))
+
         self.setupUi(self)
         self.setWindowTitle(f"Loop Current Calculator")
         self.setWindowIcon(get_icon('voltmeter.png'))
+
+        self.save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
+        self.copy_shortcut = QShortcut(QKeySequence("Ctrl+C"), self)
+        self.save_shortcut.activated.connect(self.save_img)
+        self.copy_shortcut.activated.connect(self.copy_img)
 
         # Add the units option to the status bar
         self.units_combo = QComboBox()
@@ -33,95 +109,68 @@ class LoopCalculator(QMainWindow, Ui_LoopCalculator):
         self.statusBar().addPermanentWidget(self.units_combo)
 
         self.current = None
+        self.foreground_color = get_line_color("foreground", "pyqt", self.darkmode)
+        self.background_color = get_line_color("background", "pyqt", self.darkmode)
+        self.teal_color = get_line_color("teal", "pyqt", self.darkmode)
+        self.blue_color = get_line_color("blue", "pyqt", self.darkmode)
+        self.purple_color = get_line_color("purple", "pyqt", self.darkmode)
+        self.aquamarine_color = get_line_color("aquamarine", "pyqt", self.darkmode)
+        self.green_color = get_line_color("green", "pyqt", self.darkmode)
+        self.pink_color = get_line_color("pink", "pyqt", self.darkmode)
+        self.gray_color = get_line_color("gray", "pyqt", self.darkmode)
+
+        # Legend must be added before thecurves
+        self.plot_widget_legend = self.plot_widget.addLegend(pen=pg.mkPen(self.foreground_color),
+                                                   brush=pg.mkBrush(self.background_color),
+                                                   labelTextSize="8pt",
+                                                   verSpacing=-1)
+        self.plot_widget_legend.setParent(self.plot_widget)
+
+        self.plan_widget_legend = self.plan_widget.addLegend(pen=pg.mkPen(self.foreground_color),
+                                                   brush=pg.mkBrush(self.background_color),
+                                                   labelTextSize="8pt",
+                                                   verSpacing=-1)
+        self.plan_widget_legend.setParent(self.plan_widget)
 
         # Format the mag response plot
-        self.mag_z = pg.PlotDataItem(pen=pg.mkPen('k'),
+        self.mag_z = pg.PlotDataItem(pen=pg.mkPen(self.teal_color),
                                      symbol=None,
-                                     symbolPen=pg.mkPen('k'),
-                                     symbolBrush=pg.mkBrush('w'),
-                                     symbolSize=8)
-        self.plot_widget.setAxisItems({'left': NonScientific(orientation='left'),
-                                       'bottom': NonScientific(orientation='bottom')})
+                                     symbolPen=pg.mkPen(self.teal_color),
+                                     symbolBrush=pg.mkBrush(self.background_color),
+                                     symbolSize=8,
+                                     name="Z Component")
+        self.mag_x = pg.PlotDataItem(pen=pg.mkPen(self.green_color),
+                                     symbol=None,
+                                     symbolPen=pg.mkPen(self.green_color),
+                                     symbolBrush=pg.mkBrush(self.background_color),
+                                     symbolSize=8,
+                                     name="X Component")
         self.plot_widget.addItem(self.mag_z)
-        self.plot_widget.hideButtons()
-        self.plot_widget.setMenuEnabled(False)
-        """Y label is changed during plotting"""
-        self.plot_widget.setLabel('bottom', 'Distance From Loop Center', units='m')
-        self.plot_widget.getAxis("bottom").nudge -= 10  # Move the label so it doesn't get clipped
+        self.plot_widget.addItem(self.mag_x)
 
-        self.plot_widget.getAxis('left').setWidth(60)
-        self.plot_widget.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
-        self.plot_widget.showAxis('right', show=True)  # Show the axis edge line
-        self.plot_widget.showAxis('top', show=True)  # Show the axis edge line
-        self.plot_widget.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
-        self.plot_widget.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
-        self.plot_widget.showLabel('right', show=False)
-        self.plot_widget.showLabel('top', show=False)
-        self.plot_widget.getAxis('left').enableAutoSIPrefix(enable=False)
-        self.plot_widget.setLimits(xMin=-1000, xMax=1000, yMin=-300000, yMax=300000)
-        self.plot_widget.setXRange(-200, 200)
-        h_line = pg.InfiniteLine(pos=200000, angle=0, pen=pg.mkPen('r', style=Qt.DashLine))
-        h_line2 = pg.InfiniteLine(pos=-200000, angle=0, pen=pg.mkPen('r', style=Qt.DashLine))
+        self.station_line = pg.InfiniteLine(pos=0, pen=pg.mkPen(self.gray_color, style=Qt.DotLine, width=1.25))
+        h_line = pg.InfiniteLine(pos=200000, angle=0, pen=pg.mkPen(self.pink_color, style=Qt.DashLine, width=1.25))
+        h_line2 = pg.InfiniteLine(pos=-200000, angle=0, pen=pg.mkPen(self.pink_color, style=Qt.DashLine, width=1.25))
+        # Add a legend entry for these lines
+        h_line_legend_item = pg.PlotDataItem(pen=pg.mkPen(self.pink_color, style=Qt.DotLine, width=1.25),
+                                              name="Overload Limit")
+        self.plot_widget.addItem(self.station_line, ignoreBounds=True)
         self.plot_widget.addItem(h_line, ignoreBounds=True)
         self.plot_widget.addItem(h_line2, ignoreBounds=True)
+        self.plot_widget.addItem(h_line_legend_item)
 
         # Format the plan map
-        # Format the plot
-        self.loop_item = pg.PlotCurveItem(pen=pg.mkPen('b'))
-        self.station_item = pg.ScatterPlotItem(pen=pg.mkPen('k'),
-                                               brush=pg.mkBrush('w'),
+        self.loop_item = pg.PlotCurveItem(pen=pg.mkPen(self.blue_color), name="Tx Loop")
+        self.station_item = pg.ScatterPlotItem(pen=pg.mkPen(self.gray_color),
+                                               brush=pg.mkBrush(self.background_color),
                                                symbol='+',
-                                               size=13)
+                                               size=13,
+                                               name="Station")
         self.plan_widget.addItem(self.loop_item)
         self.plan_widget.addItem(self.station_item)
 
-        self.plan_widget.setAxisItems({'left': NonScientific(orientation='left'),
-                                       'bottom': NonScientific(orientation='bottom')})
-        self.plan_widget.hideButtons()
-        self.plan_widget.setMenuEnabled(False)
-        """Y label is changed during plotting"""
-        self.plan_widget.setLabel('left', 'Northing', units='m')
-        self.plan_widget.setLabel('bottom', 'Easting', units='m')
-        self.plan_widget.getAxis("bottom").nudge -= 10  # Move the label so it doesn't get clipped
-
-        self.plan_widget.getAxis('left').setWidth(60)
-        self.plan_widget.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
-        self.plan_widget.showAxis('right', show=True)  # Show the axis edge line
-        self.plan_widget.showAxis('top', show=True)  # Show the axis edge line
-        self.plan_widget.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
-        self.plan_widget.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
-        self.plan_widget.showLabel('right', show=False)
-        self.plan_widget.showLabel('top', show=False)
-        self.plan_widget.getAxis('left').enableAutoSIPrefix(enable=False)
-        self.plan_widget.setAspectLocked()
-
-        # Link the X axis of the mag plot and plan map
-        # self.plan_widget.setXLink(self.plot_widget)
-
-        # Connect all the signals
-        self.tx_setup_combo.currentIndexChanged.connect(self.calculate_current)
-        self.num_tx_turns_sbox.valueChanged.connect(self.calculate_current)
-        self.loop_h_sbox.valueChanged.connect(self.calculate_current)
-        self.loop_w_sbox.valueChanged.connect(self.calculate_current)
-        self.loop_gauge_sbox.valueChanged.connect(self.calculate_current)
-        self.loop_quality_sbox.valueChanged.connect(self.calculate_current)
-        self.num_parallel_sbox.valueChanged.connect(self.calculate_current)
-        self.ramp_sbox.valueChanged.connect(self.calculate_current)
-        self.voltage_sbox.valueChanged.connect(self.calculate_current)
-
-        self.loop_h_sbox.valueChanged.connect(self.calculate_mag)  # Update the plot when the loop size is changed
-        self.loop_w_sbox.valueChanged.connect(self.calculate_mag)  # Update the plot when the loop size is changed
-
-        self.units_combo.currentIndexChanged.connect(self.calculate_current)
-        self.units_combo.currentIndexChanged.connect(self.calculate_mag)
-
-        self.current_sbox.valueChanged.connect(self.calculate_mag)
-        self.distance_sbox.valueChanged.connect(self.calculate_mag)
-
-        self.save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
-        self.copy_shortcut = QShortcut(QKeySequence("Ctrl+C"), self)
-        self.save_shortcut.activated.connect(self.save_img)
-        self.copy_shortcut.activated.connect(self.copy_img)
+        format_plots()
+        init_signals()
 
         self.calculate_current()
         self.calculate_mag()
@@ -208,7 +257,6 @@ class LoopCalculator(QMainWindow, Ui_LoopCalculator):
         """
         Calculate and display the current values
         """
-
         def get_current_by_voltage():
             """
             I = V / R
@@ -246,49 +294,59 @@ class LoopCalculator(QMainWindow, Ui_LoopCalculator):
         self.max_current_power_label.setText(f"{current_by_power:.1f}V")
         self.max_current_label.setText(f"{max_current:.1f}V")
 
-    def calculate_mag(self, closed_loop=True):
+    def calculate_mag(self):
         """
         Calculate and plot the magnetic field strength value of the Z component for a range of distances from the
         loop edge.
         """
         loop_coords = self.get_loop()
-        calculator = MagneticFieldCalculator(loop_coords, closed_loop=closed_loop)
+        em_calculator = MagneticFieldCalculator(loop_coords, closed_loop=True)
 
-        # TODO At loop edge z component reading is worse than when using elev. of 0.001
         # Create a list of positions that range from 5m from the loop edge (at the loop length half-way point) to 100m
         h, w = self.loop_h_sbox.value(), self.loop_w_sbox.value()
         distances = np.arange(-1005, 1005, 5)
-        positions = [(d + (w / 2), h / 2, 0.) for d in distances]
+        elevation = 1.
+        positions = [(d + (w / 2), h / 2, elevation) for d in distances]
 
         # Calculate the magnetic field strength at each position
         units = self.units_combo.currentText()
         ramp = self.ramp_sbox.value() / 1000
-        mag_values = []
+        mag_z_values = []
+        mag_x_values = []
         for dist, pos in zip(distances, positions):
-            mx, my, mz = calculator.calc_total_field(pos[0], pos[1], pos[2], self.current_sbox.value(),
+            mx, my, mz = em_calculator.calc_total_field(pos[0], pos[1], pos[2], self.current_sbox.value(),
                                                      out_units=units,
                                                      ramp=ramp)
-            mag_values.append(mz)
+
+            mag_z_values.append(mz)
+            mag_x_values.append(mx)
 
         # Plot only the Z component as it will always encompass the largest value
-        self.mag_z.setData(y=mag_values, x=distances)
+        self.mag_z.setData(y=mag_z_values, x=distances)
+        self.mag_x.setData(y=mag_x_values, x=distances)
 
         # Update the plot label in case of units change
-        self.plot_widget.setLabel('left', 'Z-Component Magnetic Field Strength', units=units)
+        self.plot_widget.setLabel('left', 'Magnetic Field Strength', units=units)
         self.plot_widget.autoRange()
 
         # Update the EM response label
         dist = self.distance_sbox.value()
-        pos = (dist, h / 2, 0.)
-        mx, my, mz = calculator.calc_total_field(pos[0], pos[1], pos[2], self.current_sbox.value(),
+        pos = (dist, h / 2, elevation)
+        mx, my, mz = em_calculator.calc_total_field(pos[0], pos[1], pos[2], self.current_sbox.value(),
                                                  out_units=units,
                                                  ramp=ramp)
 
-        self.response_label.setText(f"{abs(mz):,.0f} {units}")
+        self.z_response_label.setText(f"{abs(mz):,.0f} {units}")
+        self.x_response_label.setText(f"{abs(mx):,.0f} {units}")
         if abs(mz) >= 200000:
-            self.response_label.setStyleSheet("color: red")
+            self.z_response_label.setStyleSheet(f"color: rgb{str(tuple(get_line_color('pink', 'pyqt', self.darkmode)))}")
         else:
-            self.response_label.setStyleSheet("color: black")
+            self.z_response_label.setStyleSheet(f"color: rgb{str(tuple(get_line_color('foreground', 'pyqt', self.darkmode)))}")
+
+        if abs(mx) >= 200000:
+            self.x_response_label.setStyleSheet(f"color: rgb{str(tuple(get_line_color('pink', 'pyqt', self.darkmode)))}")
+        else:
+            self.x_response_label.setStyleSheet(f"color: rgb{str(tuple(get_line_color('foreground', 'pyqt', self.darkmode)))}")
 
         # Plot the plan map
         # Loop
@@ -296,6 +354,7 @@ class LoopCalculator(QMainWindow, Ui_LoopCalculator):
         self.loop_item.setData(loop_coords[:, 0], loop_coords[:, 1])
         x, y = dist, h / 2
         self.station_item.setData([x], [y])
+        self.station_line.setPos(pos[0] - (w / 2))
 
 
 if __name__ == '__main__':
@@ -310,7 +369,7 @@ if __name__ == '__main__':
     pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
     pg.setConfigOption('foreground', "w" if darkmode else (53, 53, 53))
 
-    lc = LoopCalculator()
+    lc = LoopCalculator(darkmode=darkmode)
     lc.show()
 
     app.exec_()
