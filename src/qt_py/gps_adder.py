@@ -1075,8 +1075,8 @@ class ExcelTablePicker(QWidget):
         self.elevation = None
         self.click_count = 0
         self.selected_cells = []
-        self.selection_color = QColor('#50C878')
-        # self.selection_color.setAlpha(50)
+        # self.selection_color = QColor('#50C878')
+        self.selection_color = QColor(get_line_color("blue", "mpl", True))
 
         self.tables = []
         self.tabs = QTabWidget()
@@ -1169,8 +1169,7 @@ class ExcelTablePicker(QWidget):
 
         for i, (sheet, info) in enumerate(self.content.items()):
             table = pg.TableWidget()
-            # table.setStyleSheet("selection-background-color: #353535;")
-            table.setStyleSheet("selection-background-color: #50C878;")
+            table.setStyleSheet(f"selection-background-color: {self.selection_color};")
             table.setData(info.replace(np.nan, '', regex=True).to_numpy())
             table.cellClicked.connect(self.cell_clicked)
             self.tables.append(table)
@@ -1195,8 +1194,8 @@ class DADSelector(QWidget):
         self.dips = None
         self.selection_count = 0
         self.selected_ranges = []
-        self.selection_color = QColor('#50C878')
-        # self.selection_color.setAlpha(50)
+        self.selection_color = QColor(get_line_color("blue", "mpl", True))
+        # self.selection_color = QColor('#50C878')
 
         self.tables = []
         self.tabs = QTabWidget()
@@ -1351,7 +1350,7 @@ class DADSelector(QWidget):
             self.tabs.addTab(table, filepath.name)
 
         for table in self.tables:
-            table.setStyleSheet("selection-background-color: #50C878;")
+            table.setStyleSheet(f"selection-background-color: {self.selection_color};")
             # table.cellDoubleClicked.connect(self.cell_double_clicked)
             table.setMouseTracking(True)
             table.viewport().installEventFilter(self)
@@ -1365,7 +1364,7 @@ def main():
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    darkmode = True
+    darkmode = False
     if darkmode:
         app.setPalette(dark_palette)
     pg.setConfigOptions(antialias=True)
@@ -1381,15 +1380,15 @@ def main():
     # mw = CollarPicker(darkmode=darkmode)
     # file = r"C:\_Data\2021\TMC\Laurentia\GEN-21-09\GPS\Loop 09_0823.gpx"
 
-    mw = LoopAdder(darkmode=darkmode)
-    file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
+    # mw = LoopAdder(darkmode=darkmode)
+    # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
     # loop = TransmitterLoop(file)
 
     # mw = LineAdder(darkmode=darkmode)
-    # mw = ExcelTablePicker(darkmode=darkmode)
-    # mw = DADSelector(darkmode=darkmode)
+    # mw = ExcelTablePicker()
+    mw = DADSelector()
 
-    # file = samples_folder.joinpath(r"Segments\BHEM-Belvais-2021-07-22.xlsx")
+    file = samples_folder.joinpath(r"Segments\BHEM-Belvais-2021-07-22.xlsx")
     # file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
     # file = samples_folder.joinpath(r'Raw Boreholes\OBS-88-027\RAW\Obalski.xlsx')
     # file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')
