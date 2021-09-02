@@ -24,7 +24,6 @@ class GPSConversionWidget(QWidget, Ui_GPSConversion):
         self.init_signals()
 
     def init_signals(self):
-
         def toggle_gps_system():
             """
             Toggle the datum and zone combo boxes and change their options based on the selected CRS system.
@@ -215,3 +214,23 @@ class GPSConversionWidget(QWidget, Ui_GPSConversion):
             epsg_code = convert_to_epsg()
 
         return epsg_code
+
+
+if __name__ == '__main__':
+    from pathlib import Path
+    import sys
+    from PySide2.QtWidgets import QApplication
+    from src.qt_py import dark_palette
+
+    app = QApplication(sys.argv)
+    app.setStyle("Fusion")
+    darkmode = True
+    if darkmode:
+        app.setPalette(dark_palette)
+
+    samples_folder = Path(__file__).parents[2].joinpath('sample_files')
+
+    mw = GPSConversionWidget()
+    mw.show()
+
+    app.exec_()
