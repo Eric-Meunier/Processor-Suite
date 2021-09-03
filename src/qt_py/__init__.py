@@ -52,7 +52,7 @@ def get_line_color(color, style, darkmode, alpha=255):
     :param alpha: int, between 0 and 255
     :return: str or list, depending on style.
     """
-    pink_color = [255, 153, 204, alpha] if darkmode else [204, 0, 204, alpha]
+    pink_color = [255, 153, 204, alpha] if darkmode else [255, 0, 127, alpha]
     teal_color = [102, 255, 255, alpha] if darkmode else [0, 204, 204, alpha]
     yellow_color = [255, 255, 153, alpha] if darkmode else [255, 255, 0, alpha]
     blue_color = [153, 204, 255, alpha] if darkmode else [46, 151, 255, alpha]

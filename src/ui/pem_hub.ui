@@ -1542,17 +1542,17 @@ Warnings</string>
     <property name="title">
      <string>Settings</string>
     </property>
+    <addaction name="actionSave_Settings"/>
+    <addaction name="actionReset_Settings"/>
+    <addaction name="separator"/>
     <addaction name="actionDark_Theme"/>
     <addaction name="actionAlt_Click_Plotting"/>
-    <addaction name="actionRe_Open_Last_Files"/>
     <addaction name="separator"/>
     <addaction name="auto_sort_files_cbox"/>
     <addaction name="auto_create_backup_files_cbox"/>
     <addaction name="separator"/>
     <addaction name="delete_merged_files_cbox"/>
     <addaction name="actionRename_Merged_Files"/>
-    <addaction name="separator"/>
-    <addaction name="actionReset_Settings"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -2168,6 +2168,15 @@ Warnings</string>
    </property>
    <property name="text">
     <string>Re-Open Last Files</string>
+   </property>
+  </action>
+  <action name="actionSave_Settings">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/save.png</normaloff>icons/save.png</iconset>
+   </property>
+   <property name="text">
+    <string>Save Settings</string>
    </property>
   </action>
  </widget>

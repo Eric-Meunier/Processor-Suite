@@ -9,14 +9,9 @@ from PySide2.QtWidgets import (QWidget, QFrame, QMainWindow, QLabel, QPushButton
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
+from src.qt_py import get_icon
 
 logger = logging.getLogger(__name__)
-
-if getattr(sys, 'frozen', False):
-    application_path = Path(sys.executable).parent
-else:
-    application_path = Path(__file__).absolute().parents[1]
-icons_path = application_path.joinpath('ui\\icons')
 
 
 class MagDeclinationCalculator(QMainWindow):
@@ -28,8 +23,7 @@ class MagDeclinationCalculator(QMainWindow):
         super().__init__()
         self.parent = parent
         self.setWindowTitle('Magnetic Declination')
-        self.setWindowIcon(QtGui.QIcon(os.path.join(icons_path, 'mag_field.png')))
-        # self.setLayout(QVBoxLayout())
+        self.setWindowIcon(get_icon('mag_field.png'))
         self.resize(400, 400)
         self.status_bar = self.statusBar()
 
@@ -82,7 +76,6 @@ class MagDeclinationCalculator(QMainWindow):
         :param pem_file: PEMFile object
         :return: None
         """
-
         if not pem_file:
             logger.warning(f"No PEM files passed.")
             return

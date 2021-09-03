@@ -28,6 +28,22 @@ class Derotator(QMainWindow, Ui_Derotator):
 
     def __init__(self, parent=None, darkmode=False):
         def format_plots():
+            self.dip_ax.setLabel('top', 'Dip Angle (Degrees)', pen=pg.mkPen(self.foreground_color))
+            self.dip_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
+            self.dip_ax.setLimits(xMin=-90, xMax=0)
+            self.dip_ax.setXRange(-90, 0)
+            self.dev_ax.setLabel('top', 'Angle Deviation From PP Rotation Angle (Degrees)',
+                                 pen=pg.mkPen(self.foreground_color))
+            self.dev_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
+            self.mag_ax.setLabel("top", "Total Magnetic Field (pT)")
+            self.mag_ax.setLabel('left', 'Station', units=None)
+            self.mag_ax.getAxis("left").setWidth(30)
+            self.mag_ax.getAxis("right").setWidth(10)
+            self.rot_ax.setLabel('top', 'Rotation Angle', units='Degrees', pen=pg.mkPen(self.foreground_color))
+            self.rot_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
+            self.pp_ax.setLabel('top', 'Primary Pulse Response', units='nT/s', pen=pg.mkPen(self.foreground_color))
+            self.pp_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
+
             # Format all axes
             for ax in np.concatenate([self.x_view_axes, self.y_view_axes]):
                 ax.hideButtons()
@@ -49,11 +65,9 @@ class Derotator(QMainWindow, Ui_Derotator):
             # Use the first axes to set the label and tick labels
             for ax in [self.x_ax0, self.y_ax0]:
                 ax.getAxis("left").setStyle(showValues=True)
-                ax.getAxis("left").setLabel("Station", color='1DD219', pen=pg.mkPen(self.foreground_color))
-            #
-            # for ax in [self.x_ax4, self.y_ax4]:
-            #     ax.showAxis("right")
-            #     ax.getAxis("right").setStyle(showValues=False)
+                ax.getAxis("left").setLabel("Station",
+                                            color=get_line_color("foreground", "mpl", self.darkmode),
+                                            pen=pg.mkPen(self.foreground_color))
 
             # Disable the 'A' button and auto-scaling SI units
             for ax in [self.dev_ax, self.dip_ax, self.mag_ax, self.rot_ax, self.pp_ax]:
@@ -70,7 +84,9 @@ class Derotator(QMainWindow, Ui_Derotator):
                 ax.getAxis("top").setStyle(showValues=True)
                 ax.getAxis("right").setStyle(showValues=False)
                 ax.getAxis("left").setStyle(showValues=True)
-                ax.getAxis("left").setLabel("Station", color='1DD219', pen=pg.mkPen(self.foreground_color))
+                ax.getAxis("left").setLabel("Station",
+                                            color=get_line_color("foreground", "mpl", self.darkmode),
+                                            pen=pg.mkPen(self.foreground_color))
                 ax.getAxis('top').enableAutoSIPrefix(enable=False)
                 ax.hideAxis("bottom")
 
@@ -111,6 +127,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.rotated_file = None
         self.rotation_note = None
         self.soa = self.soa_sbox.value()
+        self.message = QMessageBox()
 
         self.setWindowTitle('XY De-rotation')
         self.setWindowIcon(get_icon('derotate.png'))
@@ -124,12 +141,9 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.change_component_shortcut = QShortcut(QKeySequence('c'), self)
         self.change_component_shortcut.activated.connect(self.change_tab)
 
-        self.message = QMessageBox()
-
         self.bad_stations_label.hide()
         self.list.setText('')
         self.statusBar().hide()
-
         self.separator.hide()
         self.unrotate_btn.hide()
 
@@ -155,9 +169,7 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         # Create the deviation plot
         self.dev_ax = self.deviation_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
-        self.dev_ax.setLabel('top', 'Angle Deviation From PP Rotation Angle (Degrees)', pen=pg.mkPen(self.foreground_color))
-        self.dev_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
-        v_line = pg.InfiniteLine(pos=0, 
+        v_line = pg.InfiniteLine(pos=0,
                                  angle=90, 
                                  pen=pg.mkPen(self.foreground_color, width=0.5))
         self.dev_ax_legend = self.dev_ax.addLegend(pen=pg.mkPen(self.foreground_color),
@@ -181,13 +193,9 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         # Create the dip plot
         self.dip_ax = self.tool_view.addPlot(0, 0, axisItems={'top': NonScientific(orientation="top")})
-        self.dip_ax.setLabel('top', 'Dip Angle (Degrees)', pen=pg.mkPen(self.foreground_color))
-        self.dip_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
         v_line = pg.InfiniteLine(pos=0, angle=90, pen=pg.mkPen(self.foreground_color, width=0.5))
         self.dip_ax.addItem(v_line)
-        self.dip_ax.setLimits(xMin=-90, xMax=0)
-        self.dip_ax.setXRange(-90, 0)
-        self.dip_curve = pg.PlotCurveItem(pen=pg.mkPen(self.acc_color, width=2), 
+        self.dip_curve = pg.PlotCurveItem(pen=pg.mkPen(self.acc_color, width=2),
                                           name="Dip")
         self.dip_scatter = pg.ScatterPlotItem(pen=pg.mkPen(self.acc_color, width=2), 
                                               brush=pg.mkBrush(self.background_color), size=symbol_size)
@@ -196,11 +204,7 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         # Mag plot
         self.mag_ax = self.tool_view.addPlot(0, 1, axisItems={'top': NonScientific(orientation="top")})
-        self.mag_ax.setLabel("top", "Total Magnetic Field (pT)")
-        self.mag_ax.setLabel('left', 'Station', units=None)
-        self.mag_ax.getAxis("left").setWidth(30)
-        self.mag_ax.getAxis("right").setWidth(10)
-        self.mag_curve = pg.PlotCurveItem(pen=pg.mkPen(self.mag_color, width=2), 
+        self.mag_curve = pg.PlotCurveItem(pen=pg.mkPen(self.mag_color, width=2),
                                           name="Magnetic Field Strength")
         self.mag_scatter = pg.ScatterPlotItem(pen=pg.mkPen(self.mag_color, width=2),
                                               brush=pg.mkBrush(self.background_color), size=symbol_size)
@@ -214,8 +218,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                                                    labelTextSize="8pt",
                                                    verSpacing=-1)
         self.rot_ax_legend.setParent(self.rotation_view)
-        self.rot_ax.setLabel('top', 'Rotation Angle', units='Degrees', pen=pg.mkPen(self.foreground_color))
-        self.rot_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
+
         self.cpp_rot_curve = pg.PlotCurveItem(pen=pg.mkPen(self.cpp_color, width=2.), name='Cleaned PP')
         self.cpp_rot_scatter = pg.ScatterPlotItem(pen=pg.mkPen(self.cpp_color, width=2.),
                                                   symbol='o',
@@ -250,8 +253,6 @@ class Derotator(QMainWindow, Ui_Derotator):
                                                  labelTextSize="8pt",
                                                  verSpacing=-1)
         self.pp_ax_legend.setParent(self.pp_view)
-        self.pp_ax.setLabel('top', 'Primary Pulse Response', units='nT/s', pen=pg.mkPen(self.foreground_color))
-        self.pp_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
 
         self.cleaned_pp_curve = pg.PlotDataItem(pen=pg.mkPen(self.cpp_color, width=2),
                                                 name='Cleaned')
@@ -273,6 +274,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                                                     size=symbol_size)
 
         format_plots()
+        init_signals()
 
         self.profile_axes = np.concatenate([self.x_view_axes, self.y_view_axes])
         self.axes = np.concatenate([self.x_view_axes, self.y_view_axes, [self.dev_ax], [self.dip_ax], [self.mag_ax],

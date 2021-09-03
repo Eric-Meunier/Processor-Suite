@@ -344,7 +344,6 @@ class Map3DViewer(QMainWindow):
                     "t": 0,
                     "l": 0,
                     "b": 0},
-            body={"margin": 0},
             template="plotly_dark" if self.darkmode else "plotly"
         )
 
@@ -443,6 +442,7 @@ class Map3DViewer(QMainWindow):
                                         include_plotlyjs='cdn',
                                         config={'displayModeBar': False}
                                         )
+            # html += "body {margin: 0;}"  # Attempting to remove white border with darkmode
             html += '</body></html>'
 
             # Add the plot HTML to be shown in the plot widget
@@ -461,7 +461,7 @@ class Map3DViewer(QMainWindow):
         # Set the style of the markers and lines
         self.map_figure.update_traces(marker=dict(size=6,
                                                   line=dict(width=2,
-                                                            color='DarkSlateGrey')),
+                                                            color=get_line_color("gray", "mpl", self.darkmode))),
                                       line=dict(width=4)
                                       )
         # TODO Format the axis ticks
@@ -1233,24 +1233,21 @@ if __name__ == '__main__':
     pg.setConfigOption('foreground', "w" if darkmode else (53, 53, 53))
 
     getter = PEMGetter()
-    files = getter.get_pems(folder='Iscaycruz', subfolder='Loop 1')
-    # files = getter.get_pems(folder=r'Final folders\PX20002-W01\Final', file='XY.PEM')
+    # files = getter.get_pems(folder='Iscaycruz', subfolder='Loop 1')
+    # files = getter.get_pems(folder='Iscaycruz', subfolder='Loop 1')
+    files = getter.get_pems(folder=r'Final folders\PX20002-W01\Final', file='XY.PEM')
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
     # m = TileMapViewer()
-    # m = GPSViewer(darkmode=darkmode)
+    m = GPSViewer(darkmode=darkmode)
     # m = Map3DViewer(darkmode=darkmode)
-    # m.open(files)
-    # m.show()
+    m.open(files)
+    m.show()
 
-    # map = Map3DViewer()
-    # map.show()
-    # map.open(files)
-
-    cmap = ContourMapViewer(darkmode=darkmode)
-    cmap.show()
-    app.processEvents()
-    cmap.open(files)
+    # cmap = ContourMapViewer(darkmode=darkmode)
+    # cmap.show()
+    # app.processEvents()
+    # cmap.open(files)
     # cmap.channel_list_edit.setText("1, 3, 100, 4")
     # cmap.channel_list_rbtn.setChecked(True)
     # cmap.save_figure()

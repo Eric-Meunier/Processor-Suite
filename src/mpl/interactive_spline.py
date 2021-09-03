@@ -61,7 +61,7 @@ class InteractiveSpline:
                            ls="",
                            marker='o',
                            markerfacecolor=line_color,
-                           markeredgecolor='dimgray',
+                           markeredgecolor=line_color,
                            animated=True,
                            zorder=1,
                            label='Spline')

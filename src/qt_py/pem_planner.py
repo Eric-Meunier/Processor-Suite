@@ -1006,7 +1006,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
     Loop and borehole collar can be exported as KMZ or GPX files.
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, darkmode=False):
         super().__init__()
         self.setupUi(self)
         self.setAcceptDrops(True)
@@ -1017,6 +1017,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.status_bar.show()
 
         self.parent = parent
+        self.darkmode = darkmode
         self.save_name = None
 
         # Status bar

@@ -36,11 +36,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     share_collar_signal = Signal(object)
     share_segments_signal = Signal(object)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, darkmode=False):
         super().__init__()
         self.setupUi(self)
 
         self.parent = parent
+        self.darkmode = darkmode
         self.pem_file = None
         self.ri_file = None
         self.selected_row_info = None
@@ -332,7 +333,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :param files: list or str, filepath(s) of GPS files
         :param crs: Proj CRS object for the GPS objects
         """
-
         def merge_files(files, collar=False):
             """
             Merge contents of files into one list
@@ -406,13 +406,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         Open the PEMGeometry window
         """
-
         def accept_geometry(seg):
             self.pem_file.segments = seg
             self.refresh_row_signal.emit()
 
         global pem_geometry
-        pem_geometry = PEMGeometry(parent=self)
+        pem_geometry = PEMGeometry(parent=self, darkmode=self.darkmode)
         pem_geometry.accepted_sig.connect(accept_geometry)
         pem_geometry.open(self.pem_file)
 
@@ -426,7 +425,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.fill_gps_table(data, self.line_table)
 
         # global line_adder
-        self.line_adder = LineAdder(parent=self)
+        self.line_adder = LineAdder(parent=self, darkmode=self.darkmode)
         self.line_adder.accept_sig.connect(line_accept_sig_wrapper)
         self.line_adder.accept_sig.connect(lambda: self.gps_object_changed(self.line_table, refresh=True))
 
@@ -454,7 +453,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.fill_gps_table(data, self.loop_table)
 
         # global loop_adder
-        self.loop_adder = LoopAdder(parent=self)
+        self.loop_adder = LoopAdder(parent=self, darkmode=self.darkmode)
         self.loop_adder.accept_sig.connect(loop_accept_sig_wrapper)
         self.loop_adder.accept_sig.connect(lambda: self.gps_object_changed(self.loop_table, refresh=True))
 
@@ -498,7 +497,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.picker.accept_sig.connect(accept_collar)
         else:
             if len(collar_content) > 1:
-                self.picker = CollarPicker()
+                self.picker = CollarPicker(darkmode=self.darkmode)
                 self.picker.open(collar_content, name="GPX File")
                 self.picker.accept_sig.connect(accept_collar)
             else:

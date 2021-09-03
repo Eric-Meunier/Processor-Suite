@@ -21,8 +21,7 @@ from PySide2.QtGui import QIcon, QColor, QFont, QIntValidator, QCursor
 from PySide2.QtCore import Qt, QDir, Signal, QEvent, QTimer, QSettings, QSize, QPoint
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QMenu, QAction, QErrorMessage,
                                QFileDialog, QVBoxLayout, QLabel, QApplication, QFrame, QHBoxLayout, QLineEdit,
-                               QCalendarWidget, QFileSystemModel, QDoubleSpinBox, QHeaderView, QDesktopWidget,
-                               QInputDialog, QTableWidgetItem, QGroupBox, QFormLayout, QTextBrowser, QDialogButtonBox,
+                               QCalendarWidget, QFileSystemModel, QDoubleSpinBox, QHeaderView, QInputDialog, QTableWidgetItem, QGroupBox, QFormLayout, QTextBrowser, QDialogButtonBox,
                                QTableWidget, QShortcut, QSizePolicy, QPushButton, QComboBox, QListWidgetItem,
                                QAbstractItemView, QCheckBox)
 from matplotlib import pyplot as plt
@@ -30,13 +29,14 @@ from matplotlib.colors import LinearSegmentedColormap as LCMap
 from pyproj import CRS
 
 from src import __version__, app_data_dir
-from src.qt_py import (icons_path, get_extension_icon, get_icon, CustomProgressDialog, read_file, light_palette, dark_palette)
+from src.qt_py import (icons_path, get_extension_icon, get_icon, CustomProgressDialog, read_file, light_palette,
+                       dark_palette, get_line_color)
 from src.qt_py.db_plot import DBPlotter
 from src.qt_py.pem_geometry import PEMGeometry
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
 from src.qt_py.gpx_creator import GPXCreator
 from src.qt_py.loop_calculator import LoopCalculator
-from src.mag_field.mag_dec_widget import MagDeclinationCalculator
+from src.qt_py.mag_dec_widget import MagDeclinationCalculator
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser
 from src.pem.pem_plotter import PEMPrinter
 from src.qt_py.gps_conversion import GPSConversionWidget
@@ -71,6 +71,7 @@ logger = logging.getLogger(__name__)
 # TODO When opening loop lanner, prompt to re-open the last project.
 # TODO create large PDF with summary of file, including 3d map.
 # TODO Add progress bar to Contour map when it opens
+# TODO Hybrid PEMGeometry selection
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
@@ -127,6 +128,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.actionConvert_Timebase_Frequency.setIcon(get_icon("freq_timebase_calc.png"))
             self.actionGPX_Creator.setIcon(get_icon("garmin_file.png"))
 
+            self.actionSave_Settings.setIcon(get_icon("save.png"))
             self.actionReset_Settings.setIcon(get_icon("undo.png"))
             self.actionView_Logs.setIcon(get_icon("txt_file.png"))
 
@@ -162,255 +164,105 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             if splash_screen:
                 splash_screen.showMessage("Initializing actions")
 
-            self.actionDel_File = QAction("&Remove File", self)
             self.actionDel_File.setShortcut("Del")
             self.actionDel_File.triggered.connect(self.remove_pem_file)
             self.addAction(self.actionDel_File)
             self.actionDel_File.setEnabled(False)
 
             # Remove, open, and save PEM files
-            self.remove_file_action = QAction("Remove", self)
             self.remove_file_action.triggered.connect(self.remove_pem_file)
             self.remove_file_action.setIcon(get_icon('remove.png'))
-            self.open_file_action = QAction("Open", self)
             self.open_file_action.triggered.connect(self.open_in_text_editor)
             self.open_file_action.setIcon(get_icon('txt_file.png'))
-            self.save_file_action = QAction("Save", self)
             self.save_file_action.setIcon(get_icon('save.png'))
             self.save_file_action.triggered.connect(lambda: self.save_pem_files(selected=True))
-            self.save_file_as_action = QAction("Save As...", self)
             self.save_file_as_action.setIcon(get_icon('save_as.png'))
             self.save_file_as_action.triggered.connect(self.save_pem_file_as)
-            self.copy_to_cliboard_action = QAction("Copy to Clipboard", self)
             self.copy_to_cliboard_action.setIcon(get_icon('copy.png'))
             self.copy_to_cliboard_action.triggered.connect(self.copy_pems_to_clipboard)
 
             # Exports
-            self.export_pem_action = QAction("PEM", self)
             self.export_pem_action.setIcon(get_icon('crone_logo.png'))
             self.export_pem_action.triggered.connect(lambda: self.export_pem_files(selected=True, processed=False))
-
-            self.export_dad_action = QAction("DAD", self)
             self.export_dad_action.triggered.connect(self.export_dad)
-
-            self.export_gps_action = QAction("GPS", self)
             self.export_gps_action.triggered.connect(lambda: self.export_gps(selected=True))
 
             # View channel table
-            self.action_view_channels = QAction("Channel Table", self)
             self.action_view_channels.setIcon(get_icon("table.png"))
             self.action_view_channels.triggered.connect(self.open_channel_table_viewer)
 
             # Merge PEM files
-            self.merge_action = QAction("Merge", self)
             self.merge_action.setIcon(get_icon('pem_merger.png'))
             self.merge_action.triggered.connect(self.open_pem_merger)
 
             # Print PDFs
-            self.print_plots_action = QAction("Print Plots", self)
             self.print_plots_action.setIcon(get_icon('pdf.png'))
             self.print_plots_action.triggered.connect(lambda: self.open_pdf_plot_printer(selected=True))
 
             # Extract stations
-            self.extract_stations_action = QAction("Stations", self)
             self.extract_stations_action.triggered.connect(self.open_station_splitter)
 
-            self.extract_x_action = QAction("X Component", self)
             self.extract_x_action.triggered.connect(lambda: self.extract_component("X"))
-            self.extract_y_action = QAction("Y Component", self)
             self.extract_y_action.triggered.connect(lambda: self.extract_component("Y"))
-            self.extract_z_action = QAction("Z Component", self)
             self.extract_z_action.triggered.connect(lambda: self.extract_component("Z"))
 
             # Magnetic declination calculator
-            self.calc_mag_dec_action = QAction("Magnetic Declination", self)
             self.calc_mag_dec_action.setIcon(get_icon('mag_field.png'))
             self.calc_mag_dec_action.triggered.connect(self.open_mag_dec)
 
             # View GPS
-            self.view_loop_action = QAction("Loop GPS", self)
             self.view_loop_action.triggered.connect(lambda: self.pem_info_widgets[self.table.currentRow()].add_loop())
-            self.view_line_action = QAction("Line GPS", self)
             self.view_line_action.triggered.connect(lambda: self.pem_info_widgets[self.table.currentRow()].add_line())
 
             # Share GPS
-            self.share_loop_action = QAction("Loop GPS", self)
             self.share_loop_action.triggered.connect(lambda: share_gps('loop'))
-            self.share_line_action = QAction("Line GPS", self)
             self.share_line_action.triggered.connect(lambda: share_gps('line'))
-            self.share_collar_action = QAction("Collar GPS", self)
             self.share_collar_action.triggered.connect(lambda: share_gps('collar'))
-            self.share_segments_action = QAction("Segments", self)
             self.share_segments_action.triggered.connect(lambda: share_gps('segments'))
-            self.share_all_action = QAction("All", self)
             self.share_all_action.triggered.connect(lambda: share_gps('all'))
 
             # Plot editor
-            self.open_plot_editor_action = QAction("Plot", self)
             self.open_plot_editor_action.triggered.connect(self.open_pem_plot_editor)
             self.open_plot_editor_action.setIcon(get_icon('plot_editor.png'))
 
             # Quick Map
-            self.open_quick_map_action = QAction("Quick Map", self)
             self.open_quick_map_action.triggered.connect(lambda: self.open_quick_map(selected=True))
             self.open_quick_map_action.setIcon(get_icon('gps_viewer.png'))
 
             # Data editing/processing
-            self.average_action = QAction("Average", self)
             self.average_action.triggered.connect(lambda: self.average_pem_data(selected=True))
             self.average_action.setIcon(get_icon('average.png'))
-            self.split_action = QAction("Split Channels", self)
             self.split_action.triggered.connect(lambda: self.split_pem_channels(selected=True))
             self.split_action.setIcon(get_icon('split.png'))
-            self.scale_current_action = QAction("Scale Current", self)
             self.scale_current_action.triggered.connect(lambda: self.scale_pem_current(selected=True))
             self.scale_current_action.setIcon(get_icon('current.png'))
-            self.scale_ca_action = QAction("Scale Coil Area", self)
             self.scale_ca_action.triggered.connect(lambda: self.scale_pem_coil_area(selected=True))
             self.scale_ca_action.setIcon(get_icon('coil.png'))
             # self.mag_offset_action = QAction("Mag Offset", self)
             # self.mag_offset_action.triggered.connect(lambda: self.mag_offset_lastchn(selected=True))
 
             # Reversing
-            self.reverse_x_component_action = QAction("X Polarity", self)
             self.reverse_x_component_action.triggered.connect(
                 lambda: self.reverse_component_data(comp='X', selected=True))
-            self.reverse_y_component_action = QAction("Y Polarity", self)
             self.reverse_y_component_action.triggered.connect(
                 lambda: self.reverse_component_data(comp='Y', selected=True))
-            self.reverse_z_component_action = QAction("Z Polarity", self)
             self.reverse_z_component_action.triggered.connect(
                 lambda: self.reverse_component_data(comp='Z', selected=True))
 
-            self.reverse_station_order_action = QAction("Station Order", self)
             self.reverse_station_order_action.triggered.connect(
                 lambda: self.reverse_station_order(selected=True))
 
             # Derotation
-            self.derotate_action = QAction("De-rotate XY", self)
             self.derotate_action.triggered.connect(self.open_derotator)
             self.derotate_action.setIcon(get_icon('derotate.png'))
 
             # Borehole geometry
-            self.get_geometry_action = QAction("Geometry", self)
             self.get_geometry_action.triggered.connect(self.open_pem_geometry)
             self.get_geometry_action.setIcon(get_icon('pem_geometry.png'))
 
             # Rename lines and files
-            self.rename_lines_action = QAction("Rename Lines/Holes", self)
             self.rename_lines_action.triggered.connect(lambda: self.open_name_editor('Line', selected=True))
-            self.rename_files_action = QAction("Rename Files", self)
             self.rename_files_action.triggered.connect(lambda: self.open_name_editor('File', selected=True))
-
-        def init_menus():
-            def open_logs():
-                log_file = app_data_dir.joinpath('logs.txt')
-                if log_file.exists():
-                    os.startfile(str(log_file))
-                else:
-                    self.message.critical(self, 'File Not Found', f"'{log_file}' file not found.")
-
-            def add_mapbox_token():
-                token, ok_pressed = QInputDialog.getText(self, "Mapbox Access Token", "Enter Mapbox Access Token:")
-                if ok_pressed and token:
-                    app_data_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro")
-                    token_file = open(str(app_data_dir.joinpath(".mapbox")), 'w+')
-                    token_file.write(token)
-                    token_file.close()
-                    self.statusBar().showMessage("Mapbox token updated.", 1500)
-
-            if splash_screen:
-                splash_screen.showMessage("Initializing menus")
-
-            # Main right-click menu
-            self.menu = QMenu(self.table)
-
-            # View submenu
-            self.view_menu = QMenu('View', self.menu)
-            self.view_menu.setIcon(get_icon('view.png'))
-
-            # Add the export submenu
-            self.export_menu = QMenu('Export...', self.menu)
-            self.export_menu.setIcon(get_icon('export.png'))
-
-            # Add the extract submenu
-            self.extract_menu = QMenu('Extract...', self.menu)
-            self.extract_menu.setIcon(get_icon('station_splitter.png'))
-
-            # Share submenu
-            self.share_menu = QMenu('Share', self.menu)
-            self.share_menu.setIcon(get_icon('share_gps.png'))
-
-            # Reverse data submenu
-            self.reverse_menu = QMenu('Reverse', self.menu)
-            self.reverse_menu.setIcon(get_icon('reverse.png'))
-
-            # 'File' menu
-            self.actionOpenFile.triggered.connect(self.open_file_dialog)
-            self.actionSaveFiles.triggered.connect(lambda: self.save_pem_files(selected=False))
-            self.actionExport_As_XYZ.triggered.connect(self.export_as_xyz)
-            self.actionHeader_CSV.triggered.connect(self.export_pem_headers)
-            self.actionExport_As_PEM.triggered.connect(lambda: self.export_pem_files(selected=False,
-                                                                                     processed=False))
-            self.actionExport_Processed_PEM.triggered.connect(lambda: self.export_pem_files(selected=False,
-                                                                                            processed=True))
-            self.actionExport_Legacy_PEM.triggered.connect(lambda: self.export_pem_files(selected=False,
-                                                                                         legacy=True))
-            self.actionBackup_Files.triggered.connect(self.backup_files)
-            self.actionImport_RI_Files.triggered.connect(self.open_ri_importer)
-            self.actionImport_RI_Files.setShortcut("Ctrl+I")
-
-            self.actionPrint_Plots_to_PDF.triggered.connect(self.open_pdf_plot_printer)
-
-            # PEM menu
-            self.actionRename_Lines_Holes.triggered.connect(lambda: self.open_name_editor('Line', selected=False))
-            self.actionRename_Files.triggered.connect(lambda: self.open_name_editor('File', selected=False))
-            self.actionAverage_All_PEM_Files.triggered.connect(lambda: self.average_pem_data(selected=False))
-            self.actionSplit_All_PEM_Files.triggered.connect(lambda: self.split_pem_channels(selected=False))
-            self.actionScale_All_Currents.triggered.connect(lambda: self.scale_pem_current(selected=False))
-            self.actionChange_All_Coil_Areas.triggered.connect(lambda: self.scale_pem_coil_area(selected=False))
-            # self.actionOffset_Mag.triggered.connect(lambda: self.mag_offset_lastchn(selected=False))
-            self.actionAuto_Name_Lines_Holes.triggered.connect(self.auto_name_lines)
-
-            self.actionReverseX_Component.triggered.connect(
-                lambda: self.reverse_component_data(comp='X', selected=False))
-            self.actionReverseY_Component.triggered.connect(
-                lambda: self.reverse_component_data(comp='Y', selected=False))
-            self.actionReverseZ_Component.triggered.connect(
-                lambda: self.reverse_component_data(comp='Z', selected=False))
-            self.actionStation_Order.triggered.connect(lambda: self.reverse_station_order(selected=False))
-
-            # Map menu
-            self.actionQuick_Map.triggered.connect(self.open_quick_map)
-            self.actionTile_Map.triggered.connect(self.open_tile_map)
-            self.actionContour_Map.triggered.connect(self.open_contour_map)
-            self.action3D_Map.triggered.connect(self.open_3d_map)
-            self.actionGoogle_Earth.triggered.connect(lambda: self.save_as_kmz(save=False))
-            self.actionMake_DXF.triggered.connect(self.make_dxf)
-
-            # GPS menu
-            self.actionExport_All_GPS.triggered.connect(lambda: self.export_gps(selected=False))
-            self.actionConvert_GPS.triggered.connect(self.open_gps_conversion)
-            self.actionSave_as_KMZ.triggered.connect(lambda: self.save_as_kmz(save=True))
-
-            # Tools menu
-            self.actionLoop_Planner.triggered.connect(self.open_loop_planner)
-            self.actionGrid_Planner.triggered.connect(self.open_grid_planner)
-            self.actionLoop_Current_Calculator.triggered.connect(self.open_loop_calculator)
-            self.actionConvert_Timebase_Frequency.triggered.connect(self.open_freq_converter)
-            self.actionDamping_Box_Plotter.triggered.connect(self.open_db_plot)
-            self.actionUnpacker.triggered.connect(self.open_unpacker)
-            self.actionGPX_Creator.triggered.connect(self.open_gpx_creator)
-
-            # Settings menu
-            self.actionAdd_Mapbox_Token.triggered.connect(add_mapbox_token)
-            self.actionDark_Theme.triggered.connect(self.set_dark_mode)
-            self.actionReset_Settings.triggered.connect(self.reset_settings)
-
-            # Help menu
-            self.actionView_Logs.triggered.connect(open_logs)
-
-            self.enable_menus(False)
 
         def init_signals():
             if splash_screen:
@@ -678,6 +530,22 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.selection_survey_label.setText(survey_type)
                 self.selection_derotation_label.setText(derotated)
 
+            def open_logs():
+                log_file = app_data_dir.joinpath('logs.txt')
+                if log_file.exists():
+                    os.startfile(str(log_file))
+                else:
+                    self.message.critical(self, 'File Not Found', f"'{log_file}' file not found.")
+
+            def add_mapbox_token():
+                token, ok_pressed = QInputDialog.getText(self, "Mapbox Access Token", "Enter Mapbox Access Token:")
+                if ok_pressed and token:
+                    app_data_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro")
+                    token_file = open(str(app_data_dir.joinpath(".mapbox")), 'w+')
+                    token_file.write(token)
+                    token_file.close()
+                    self.statusBar().showMessage("Mapbox token updated.", 1500)
+
             # Widgets
             self.pem_list_filter.accept_sig.connect(self.fill_pem_list)
             self.gps_list_filter.accept_sig.connect(self.fill_gps_list)
@@ -724,6 +592,74 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 lambda: self.grid_edit.setEnabled(self.share_grid_cbox.isChecked()))
             self.share_loop_cbox.stateChanged.connect(
                 lambda: self.loop_edit.setEnabled(self.share_loop_cbox.isChecked()))
+
+            # 'File' menu
+            self.actionOpenFile.triggered.connect(self.open_file_dialog)
+            self.actionSaveFiles.triggered.connect(lambda: self.save_pem_files(selected=False))
+            self.actionExport_As_XYZ.triggered.connect(self.export_as_xyz)
+            self.actionHeader_CSV.triggered.connect(self.export_pem_headers)
+            self.actionExport_As_PEM.triggered.connect(lambda: self.export_pem_files(selected=False,
+                                                                                     processed=False))
+            self.actionExport_Processed_PEM.triggered.connect(lambda: self.export_pem_files(selected=False,
+                                                                                            processed=True))
+            self.actionExport_Legacy_PEM.triggered.connect(lambda: self.export_pem_files(selected=False,
+                                                                                         legacy=True))
+            self.actionBackup_Files.triggered.connect(self.backup_files)
+            self.actionImport_RI_Files.triggered.connect(self.open_ri_importer)
+            self.actionImport_RI_Files.setShortcut("Ctrl+I")
+
+            self.actionPrint_Plots_to_PDF.triggered.connect(self.open_pdf_plot_printer)
+
+            # PEM menu
+            self.actionRename_Lines_Holes.triggered.connect(lambda: self.open_name_editor('Line', selected=False))
+            self.actionRename_Files.triggered.connect(lambda: self.open_name_editor('File', selected=False))
+            self.actionAverage_All_PEM_Files.triggered.connect(lambda: self.average_pem_data(selected=False))
+            self.actionSplit_All_PEM_Files.triggered.connect(lambda: self.split_pem_channels(selected=False))
+            self.actionScale_All_Currents.triggered.connect(lambda: self.scale_pem_current(selected=False))
+            self.actionChange_All_Coil_Areas.triggered.connect(lambda: self.scale_pem_coil_area(selected=False))
+            # self.actionOffset_Mag.triggered.connect(lambda: self.mag_offset_lastchn(selected=False))
+            self.actionAuto_Name_Lines_Holes.triggered.connect(self.auto_name_lines)
+
+            self.actionReverseX_Component.triggered.connect(
+                lambda: self.reverse_component_data(comp='X', selected=False))
+            self.actionReverseY_Component.triggered.connect(
+                lambda: self.reverse_component_data(comp='Y', selected=False))
+            self.actionReverseZ_Component.triggered.connect(
+                lambda: self.reverse_component_data(comp='Z', selected=False))
+            self.actionStation_Order.triggered.connect(lambda: self.reverse_station_order(selected=False))
+
+            # Map menu
+            self.actionQuick_Map.triggered.connect(self.open_quick_map)
+            self.actionTile_Map.triggered.connect(self.open_tile_map)
+            self.actionContour_Map.triggered.connect(self.open_contour_map)
+            self.action3D_Map.triggered.connect(self.open_3d_map)
+            self.actionGoogle_Earth.triggered.connect(lambda: self.save_as_kmz(save=False))
+            self.actionMake_DXF.triggered.connect(self.make_dxf)
+
+            # GPS menu
+            self.actionExport_All_GPS.triggered.connect(lambda: self.export_gps(selected=False))
+            self.actionConvert_GPS.triggered.connect(self.open_gps_conversion)
+            self.actionSave_as_KMZ.triggered.connect(lambda: self.save_as_kmz(save=True))
+
+            # Tools menu
+            self.actionLoop_Planner.triggered.connect(self.open_loop_planner)
+            self.actionGrid_Planner.triggered.connect(self.open_grid_planner)
+            self.actionLoop_Current_Calculator.triggered.connect(self.open_loop_calculator)
+            self.actionConvert_Timebase_Frequency.triggered.connect(self.open_freq_converter)
+            self.actionDamping_Box_Plotter.triggered.connect(self.open_db_plot)
+            self.actionUnpacker.triggered.connect(self.open_unpacker)
+            self.actionGPX_Creator.triggered.connect(self.open_gpx_creator)
+
+            # Settings menu
+            self.actionSave_Settings.triggered.connect(self.save_settings)
+            self.actionSave_Settings.triggered.connect(lambda: self.status_bar.showMessage("Settings saved.", 1500))
+            self.actionReset_Settings.triggered.connect(self.reset_settings)
+            self.actionAdd_Mapbox_Token.triggered.connect(add_mapbox_token)
+            self.actionDark_Theme.triggered.connect(self.set_dark_mode)
+
+            # Help menu
+            self.actionView_Logs.triggered.connect(open_logs)
+            self.enable_menus(False)
 
         def init_crs():
             """
@@ -879,22 +815,17 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 splash_screen.showMessage("Initializing directory")
 
             # Project directory frame
-            self.dir_frame = QFrame()
             self.dir_frame.setLayout(QHBoxLayout())
             self.dir_frame.layout().setContentsMargins(3, 0, 3, 0)
             self.dir_frame.layout().setSpacing(2)
-            self.project_dir_edit = QLineEdit('')
             self.project_dir_edit.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
             self.project_dir_edit.setMinimumWidth(250)
-            self.project_dir_btn = QPushButton('Project Directory:')
             self.project_dir_btn.setFlat(True)
             self.project_dir_btn.clicked.connect(lambda: self.move_dir_tree(self.project_dir_edit.text()))
             self.dir_frame.layout().addWidget(self.project_dir_btn)
             self.dir_frame.layout().addWidget(self.project_dir_edit)
 
             # Project tree
-            self.project_dir = None
-            self.file_sys_model = QFileSystemModel()
             self.file_sys_model.setRootPath(QDir.rootPath())
             self.project_tree.setModel(self.file_sys_model)
             self.project_tree.setColumnHidden(1, True)
@@ -906,48 +837,16 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.project_tree.setAutoScroll(False)
             # self.move_dir_tree_to(self.file_sys_model.rootPath())
 
-        def init_table():
-            if splash_screen:
-                splash_screen.showMessage("Initializing table")
-            self.table_columns = [
-                'File',
-                'Date',
-                'Client',
-                'Grid',
-                'Line/Hole',
-                'Loop',
-                'Current',
-                'Coil\nArea',
-                'First\nStation',
-                'Last\nStation',
-                'Averaged',
-                'Split',
-                'Suffix\nWarnings',
-                'Repeat\nWarnings',
-                'Polarity\nWarnings'
-            ]
-            header = self.table.horizontalHeader()
-            header.setSectionResizeMode(0, QHeaderView.Stretch)
-            for i, col in enumerate(self.table_columns[1:]):
-                header.setSectionResizeMode(i + 1, QHeaderView.ResizeToContents)
-            self.table.horizontalHeader().hide()
-
         def init_status_bar():
             if splash_screen:
                 splash_screen.showMessage("Initializing status bar")
 
             # Status bar formatting
-            self.selection_files_label = QLabel()
             self.selection_files_label.setMargin(3)
-            self.selection_timebase_label = QLabel()
             self.selection_timebase_label.setMargin(3)
-            self.selection_zts_label = QLabel()
             self.selection_zts_label.setMargin(3)
-            self.selection_survey_label = QLabel()
             self.selection_survey_label.setMargin(3)
-            self.selection_derotation_label = QLabel()
             self.selection_derotation_label.setMargin(3)
-            self.epsg_label = QLabel()
             self.epsg_label.setMargin(3)
 
             self.status_bar.addPermanentWidget(self.selection_files_label, 0)
@@ -957,7 +856,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.addPermanentWidget(self.selection_derotation_label, 0)
             # self.status_bar.addPermanentWidget(QLabel(), 0)  # Spacer
             self.status_bar.addPermanentWidget(self.epsg_label, 0)
-            # self.status_bar.addPermanentWidget(self.dir_frame, 0)
+            self.status_bar.addPermanentWidget(self.dir_frame, 0)
 
         self.app = app
         self.parent = parent
@@ -967,6 +866,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.pem_editor_widgets = []
         self.tab_num = 1
         self.allow_signals = True
+        self.darkmode = False
         self.text_browsers = []
         self.channel_tables = []
         self.pem_dir = None
@@ -976,6 +876,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         if splash_screen:
             splash_screen.showMessage("Initializing widgets")
+
+        # Widgets
         self.file_dialog = QFileDialog()
         self.message = QMessageBox()
         self.error = QErrorMessage()
@@ -983,16 +885,106 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.calender.setWindowTitle('Select Date')
         self.pem_list_filter = PathFilter('PEM', parent=self)
         self.gps_list_filter = PathFilter('GPS', parent=self)
-
         self.unpacker = Unpacker(parent=self)
+        self.selection_files_label = QLabel()
+        self.selection_timebase_label = QLabel()
+        self.selection_zts_label = QLabel()
+        self.selection_survey_label = QLabel()
+        self.selection_derotation_label = QLabel()
+        self.epsg_label = QLabel()
 
         init_ui()
-        init_actions()
-        init_menus()
         init_crs()
+
+        # Menus
+        self.menu = QMenu(self.table)  # Main right-click menu
+        self.view_menu = QMenu('View', self.menu)
+        self.view_menu.setIcon(get_icon('view.png'))
+        self.export_menu = QMenu('Export...', self.menu)
+        self.export_menu.setIcon(get_icon('export.png'))
+        self.extract_menu = QMenu('Extract...', self.menu)
+        self.extract_menu.setIcon(get_icon('station_splitter.png'))
+        self.share_menu = QMenu('Share', self.menu)
+        self.share_menu.setIcon(get_icon('share_gps.png'))
+        self.reverse_menu = QMenu('Reverse', self.menu)
+        self.reverse_menu.setIcon(get_icon('reverse.png'))
+
+        # Actions
+        self.actionDel_File = QAction("&Remove File", self)
+        self.remove_file_action = QAction("Remove", self)
+        self.open_file_action = QAction("Open", self)
+        self.save_file_action = QAction("Save", self)
+        self.save_file_as_action = QAction("Save As...", self)
+        self.copy_to_cliboard_action = QAction("Copy to Clipboard", self)
+        self.export_pem_action = QAction("PEM", self)
+        self.export_dad_action = QAction("DAD", self)
+        self.export_gps_action = QAction("GPS", self)
+        self.action_view_channels = QAction("Channel Table", self)
+        self.merge_action = QAction("Merge", self)
+        self.print_plots_action = QAction("Print Plots", self)
+        self.extract_stations_action = QAction("Stations", self)
+        self.extract_x_action = QAction("X Component", self)
+        self.extract_y_action = QAction("Y Component", self)
+        self.extract_z_action = QAction("Z Component", self)
+        self.calc_mag_dec_action = QAction("Magnetic Declination", self)
+        self.view_loop_action = QAction("Loop GPS", self)
+        self.view_line_action = QAction("Line GPS", self)
+        self.share_loop_action = QAction("Loop GPS", self)
+        self.share_line_action = QAction("Line GPS", self)
+        self.share_collar_action = QAction("Collar GPS", self)
+        self.share_segments_action = QAction("Segments", self)
+        self.share_all_action = QAction("All", self)
+        self.open_plot_editor_action = QAction("Plot", self)
+        self.open_quick_map_action = QAction("Quick Map", self)
+        self.average_action = QAction("Average", self)
+        self.split_action = QAction("Split Channels", self)
+        self.scale_current_action = QAction("Scale Current", self)
+        self.scale_ca_action = QAction("Scale Coil Area", self)
+        self.reverse_x_component_action = QAction("X Polarity", self)
+        self.reverse_y_component_action = QAction("Y Polarity", self)
+        self.reverse_z_component_action = QAction("Z Polarity", self)
+        self.reverse_station_order_action = QAction("Station Order", self)
+        self.derotate_action = QAction("De-rotate XY", self)
+        self.get_geometry_action = QAction("Geometry", self)
+        self.rename_lines_action = QAction("Rename Lines/Holes", self)
+        self.rename_files_action = QAction("Rename Files", self)
+        init_actions()
+
+        # Project Directory
+        self.dir_frame = QFrame()
+        self.project_dir_edit = QLineEdit('')
+        self.project_dir_btn = QPushButton('Project Directory:')
+        self.project_dir = None
+        self.file_sys_model = QFileSystemModel()
         init_project_directory()
+
+        # Table
+        if splash_screen:
+            splash_screen.showMessage("Initializing table")
+        self.table_columns = [
+            'File',
+            'Date',
+            'Client',
+            'Grid',
+            'Line/Hole',
+            'Loop',
+            'Current',
+            'Coil\nArea',
+            'First\nStation',
+            'Last\nStation',
+            'Averaged',
+            'Split',
+            'Suffix\nWarnings',
+            'Repeat\nWarnings',
+            'Polarity\nWarnings'
+        ]
+        header = self.table.horizontalHeader()
+        header.hide()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+        for i, col in enumerate(self.table_columns[1:]):
+            header.setSectionResizeMode(i + 1, QHeaderView.ResizeToContents)
+
         init_status_bar()
-        init_table()
         init_signals()
 
         self.load_settings()
@@ -1013,14 +1005,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
     def save_settings(self):
         settings = QSettings("Crone Geophysics", "PEMPro")
-
         settings.beginGroup("MainWindow")
+
         # Window geometry
         settings.setValue("size", self.size())
         settings.setValue("pos", self.pos())
 
         # Setting options
-        settings.setValue("actionDark_Theme", self.actionDark_Theme.isChecked())
+        settings.setValue("actionDark_Theme", self.darkmode)
         settings.setValue("actionAlt_Click_Plotting", self.actionAlt_Click_Plotting.isChecked())
         settings.setValue("auto_sort_files_cbox", self.auto_sort_files_cbox.isChecked())
         settings.setValue("auto_create_backup_files_cbox", self.auto_create_backup_files_cbox.isChecked())
@@ -1029,6 +1021,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         # Project directory
         settings.setValue("project_dir", self.project_dir)
+
+        # Files
+        settings.setValue("last_opened_files", self.pem_files)
 
         # File filters
         settings.setValue("PEM_filter", self.pem_list_filter.get_settings())
@@ -1043,8 +1038,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
     def load_settings(self):
         settings = QSettings("Crone Geophysics", "PEMPro")
-
         settings.beginGroup("MainWindow")
+
         # Window geometry
         self.resize(settings.value("size", QSize(1700, 900)))
         self.move(settings.value("pos", QPoint(100, 50)))
@@ -1064,6 +1059,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             if Path(project_dir).is_dir():
                 self.move_dir_tree(str(project_dir), start_up=True)
 
+        # Files
+        last_opened_pems = settings.value("last_opened_files")
+        if last_opened_pems:
+            response = self.message.question(self, 'Open Previous Files', "Open the last previously opened PEM files?",
+                                             self.message.Yes | self.message.No)
+            if response == self.message.Yes:
+                self.add_pem_files(last_opened_pems)
+
         # File filters
         self.pem_list_filter.set_settings(settings.value("PEM_filter"), refresh=False)
         self.gps_list_filter.set_settings(settings.value("GPS_filter"), refresh=False)
@@ -1079,7 +1082,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         settings.clear()
         self.resize(1700, 900)
         self.center()
-        if self.actionDark_Theme.isChecked():
+        if self.darkmode:
             self.actionDark_Theme.trigger()
         self.actionAlt_Click_Plotting.setChecked(True)
         self.auto_sort_files_cbox.setChecked(True)
@@ -1504,7 +1507,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                 self.open_gps_share(obj, pem_info_widget)
 
-            pem_info_widget = PEMFileInfoWidget(parent=self)
+            pem_info_widget = PEMFileInfoWidget(parent=self, darkmode=self.darkmode)
             pem_info_widget.blockSignals(True)
 
             # Create the PEMInfoWidget for the PEM file
@@ -1816,7 +1819,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         # Open individual editors for each PEMFile
         for pem_file in pem_files:
-            editor = PEMPlotEditor(parent=self, darkmode=self.actionDark_Theme.isChecked())
+            editor = PEMPlotEditor(parent=self, darkmode=self.darkmode)
             self.pem_editor_widgets.append(editor)
             # Connect the 'save' and 'close' signals
             editor.save_sig.connect(save_editor_pem)
@@ -1834,10 +1837,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         pem_file, row = pem_files[0], rows[0]
 
-        self.derotator = Derotator(parent=self, darkmode=self.actionDark_Theme.isChecked())
-        # refs.append(derotator)
-        self.derotator.accept_sig.connect(accept_file)
-        self.derotator.open(pem_file)
+        derotator = Derotator(parent=self, darkmode=self.darkmode)
+        refs.append(derotator)
+        derotator.accept_sig.connect(accept_file)
+        derotator.open(pem_file)
 
     def open_pem_geometry(self):
         def accept_geometry(seg):
@@ -1849,7 +1852,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         pem_files, rows = self.get_pem_files(selected=True)
 
-        pem_geometry = PEMGeometry(parent=self, darkmode=self.actionDark_Theme.isChecked())
+        print(f"Pre PEMGeometry darkmode: {self.darkmode}")
+        pem_geometry = PEMGeometry(parent=self, darkmode=self.darkmode)
         refs.append(pem_geometry)
         pem_geometry.accepted_sig.connect(accept_geometry)
         pem_geometry.open(pem_files)
@@ -1918,7 +1922,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             return
 
         if check_pems():
-            merger = PEMMerger(parent=self, darkmode=self.actionDark_Theme.isChecked())
+            merger = PEMMerger(parent=self, darkmode=self.darkmode)
             refs.append(merger)
             merger.accept_sig.connect(accept_merge)
             merger.open(pem_files)
@@ -1993,7 +1997,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
     def open_db_plot(self):
         """Open the damping box plotter."""
-        db_plot = DBPlotter(parent=self, darkmode=self.actionDark_Theme.isChecked())
+        db_plot = DBPlotter(parent=self, darkmode=self.darkmode)
         refs.append(db_plot)
         db_plot.show()
 
@@ -2036,7 +2040,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         Opens BatchRIImporter for bulk importing RI files.
         :return: None
         """
-
         def open_ri_files(files):
             if len(files) > 0:
                 for pem_file, ri_file in files.items():
@@ -2056,7 +2059,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         Open the GPSViewer if there's any GPS in any of the opened PEM files.
         """
-        quick_map = GPSViewer(parent=self)
+        quick_map = GPSViewer(parent=self, darkmode=self.darkmode)
         refs.append(quick_map)
 
         pem_files, rows = self.get_pem_files(selected=selected)
@@ -2096,7 +2099,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         Open the Map3DViewer if there's any GPS in any of the opened PEM files.
         """
-        map_3d = Map3DViewer(parent=self)
+        map_3d = Map3DViewer(parent=self, darkmode=self.darkmode)
         refs.append(map_3d)
 
         if not self.pem_files:
@@ -2116,7 +2119,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         Open the GPS conversion widget.
         """
-
         def convert_gps(epsg_code):
             """
             Convert the GPS of all GPS objects to the new EPSG code.
@@ -2300,12 +2302,12 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         channel_viewer.show()
 
     def open_grid_planner(self):
-        grid_planner = GridPlanner(parent=self)
+        grid_planner = GridPlanner(parent=self, darkmode=self.darkmode)
         refs.append(grid_planner)
         grid_planner.show()
 
     def open_loop_planner(self):
-        loop_planner = LoopPlanner(parent=self)
+        loop_planner = LoopPlanner(parent=self, darkmode=self.darkmode)
         refs.append(loop_planner)
         loop_planner.show()
 
@@ -2335,7 +2337,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.message.information(self, 'Error', 'No file has any GPS to plot.')
             return
 
-        contour_map = ContourMapViewer(parent=self)
+        contour_map = ContourMapViewer(parent=self, darkmode=self.darkmode)
         refs.append(contour_map)
         contour_map.open(self.pem_files)
 
@@ -2350,7 +2352,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         gps_converter.show()
 
     def open_loop_calculator(self):
-        loop_calculator = LoopCalculator()
+        loop_calculator = LoopCalculator(parent=self, darkmode=self.darkmode)
         refs.append(loop_calculator)
         loop_calculator.show()
 
@@ -3379,7 +3381,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             """
             date_column = self.table_columns.index('Date')
             current_year = str(datetime.datetime.now().year)
-            dark_mode = self.actionDark_Theme.isChecked()
+            dark_mode = self.darkmode
             red_color = QColor("#FFC0C0" if dark_mode else "#FF4040")
             default_color = Qt.white if dark_mode else Qt.black
 
@@ -3823,19 +3825,20 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.status_bar.showMessage(f"CRS information changed to {crs.name}.", 2000)
 
     def set_dark_mode(self):
-        darkmode = self.actionDark_Theme.isChecked()
-        self.app.setPalette(dark_palette if darkmode else light_palette)
-        pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
-        pg.setConfigOption('foreground', 'w' if darkmode else (53, 53, 53))
+        self.darkmode = self.actionDark_Theme.isChecked()
+        self.app.setPalette(dark_palette if self.darkmode else light_palette)
+        pg.setConfigOption('background', get_line_color("background", "pyqt", self.darkmode))
+        pg.setConfigOption('foreground', get_line_color("foreground", "pyqt", self.darkmode))
 
-        # text_color = "rgb(192, 192, 255)" if self.actionDark_Theme.isChecked() else "rgb(64, 64, 255)"
-        # text_color = "rgb(42,130,218)" if self.actionDark_Theme.isChecked() else "rgb(0,120,215)"
         text_color = f"rgb{str(tuple(get_line_color('single_blue', 'mpl', self.darkmode)))}"
         self.selection_files_label.setStyleSheet(f'color: {text_color}')
         self.selection_timebase_label.setStyleSheet(f'color: {text_color}')
         self.selection_zts_label.setStyleSheet(f'color: {text_color}')
         self.selection_survey_label.setStyleSheet(f'color: {text_color}')
         self.selection_derotation_label.setStyleSheet(f'color: {text_color}')
+
+        for piw in self.pem_info_widgets:
+            piw.darkmode = self.darkmode
 
         self.refresh_table()
 
@@ -5154,7 +5157,6 @@ class BatchNameEditor(QWidget):
 
 
 def main():
-    import time
     from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
     mw = PEMHub(app)

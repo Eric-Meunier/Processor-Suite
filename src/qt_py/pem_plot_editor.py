@@ -43,14 +43,14 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         super().__init__()
         self.parent = parent
         self.darkmode = darkmode
-        pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
-        pg.setConfigOption('foreground', 'w' if darkmode else (53, 53, 53))
 
-        self.linecolor = get_line_color("foreground", "pyqt", self.darkmode)
+        self.foreground_color = get_line_color("foreground", "pyqt", self.darkmode)
         self.selection_color = get_line_color("teal", "pyqt", self.darkmode)
         self.deletion_color = get_line_color("red", "pyqt", self.darkmode)
         self.autoclean_color = get_line_color("gray", "pyqt", self.darkmode)
         # self.autoclean_color = [0, 153, 153] if self.darkmode else [0, 0, 153]
+        pg.setConfigOption('background', get_line_color("background", "pyqt", self.darkmode))
+        pg.setConfigOption('foreground', self.foreground_color)
 
         self.setupUi(self)
         self.setFocusPolicy(Qt.StrongFocus)
@@ -186,8 +186,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
                 # Add the vertical selection line
                 # color = (23, 23, 23, 100)
-                color = copy.copy(self.selection_color)
-                color.append(200 if self.darkmode else 150)
+                color = get_line_color("teal", "pyqt", self.darkmode, alpha=200 if self.darkmode else 150)
+                # color.append(200 if self.darkmode else 150)
                 font = QFont("Helvetica", 10)
                 # hover_color = (102, 178, 255, 100)
                 # select_color = (51, 51, 255, 100)
@@ -610,7 +610,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         repeats = self.pem_file.get_repeats()
         self.number_of_repeats.setText(f'{len(repeats)} repeat(s)')
         if len(repeats) > 0:
-            self.number_of_repeats.setStyleSheet('color: red')
+            self.number_of_repeats.setStyleSheet(f'color: {get_line_color("red", "mpl", self.darkmode)}')
         else:
             self.number_of_repeats.setStyleSheet('')  # Reset the color automatically
 
@@ -717,7 +717,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 x, y = df_avg.index.to_numpy(), df_avg.to_numpy()
 
                 ax.plot(x=x, y=y,
-                        pen=pg.mkPen(self.linecolor, width=1.))
+                        pen=pg.mkPen(self.foreground_color, width=1.))
 
             def plot_scatters(df, ax):
                 """
@@ -729,7 +729,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 x, y = df.index.to_numpy(), df.to_numpy()
 
                 scatter = pg.ScatterPlotItem(x=x, y=y,
-                                             pen=pg.mkPen(self.linecolor, width=1.),
+                                             pen=pg.mkPen(self.foreground_color, width=1.),
                                              symbol='o',
                                              size=2,
                                              brush='w',
@@ -873,12 +873,14 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             # Change the pen if the data is flagged for deletion or overload
             if row.Deleted is False:
                 # color = (96, 96, 96, 150)
-                color = copy.copy(self.linecolor)
-                color.append(255)
+                # color = copy.copy(self.foreground_color)
+                color = get_line_color("foreground", "pyqt", self.darkmode, alpha=255)
+                # color.append(255)
                 z_value = 2
             else:
-                color = copy.copy(self.deletion_color)
-                color.append(200)
+                # color = copy.copy(self.deletion_color)
+                # color.append(200)
+                color = get_line_color("red", "pyqt", self.darkmode, alpha=200)
                 z_value = 1
 
             # Use a dotted line for readings that are flagged as Overloads
@@ -902,7 +904,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             decay_line.sigClicked.connect(self.decay_line_clicked)
 
             # Add the line at y=0
-            ax.addLine(y=0, pen=pg.mkPen('w' if self.darkmode else 'k', width=0.15))
+            ax.addLine(y=0, pen=pg.mkPen(self.foreground_color, width=0.15))
             # Plot the decay
             ax.addItem(decay_line)
             # Add the plot item to the list of plotted items
@@ -1187,12 +1189,14 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Change the pen if the data is flagged for deletion
             if Deleted is False:
-                color = copy.copy(self.linecolor)
-                color.append(200)
+                color = get_line_color("foreground", "pyqt", self.darkmode, alpha=200)
+                # color = copy.copy(self.foreground_color)
+                # color.append(200)
                 z_value = 2
             else:
-                color = copy.copy(self.deletion_color)
-                color.append(150)
+                color = get_line_color("red", "pyqt", self.darkmode, alpha=150)
+                # color = copy.copy(self.deletion_color)
+                #                 # color.append(150)
                 z_value = 1
 
             # Change the line style if the reading is overloaded
@@ -1204,12 +1208,14 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             # Colors for the lines if they selected
             if line in self.selected_lines:
                 if Deleted is False:
-                    color = copy.copy(self.selection_color)
-                    color.append(250)
+                    color = get_line_color("teal", "pyqt", self.darkmode, alpha=250)
+                    # color = copy.copy(self.selection_color)
+                    # color.append(250)
                     z_value = 4
                 else:
-                    color = copy.copy(self.deletion_color)
-                    color.append(200)
+                    color = get_line_color("red", "pyqt", self.darkmode, alpha=200)
+                    # color = copy.copy(self.deletion_color)
+                    # color.append(200)
                     z_value = 3
 
                 line.setPen(color, width=2, style=style)
