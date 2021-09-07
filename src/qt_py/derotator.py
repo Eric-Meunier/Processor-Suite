@@ -115,13 +115,13 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.parent = parent
         self.darkmode = darkmode
         
-        self.foreground_color = get_line_color("foreground", "mpl", self.darkmode)
-        self.background_color = get_line_color("background", "mpl", self.darkmode)
-        self.cpp_color = get_line_color("teal", "mpl", self.darkmode)
-        self.mpp_color = get_line_color("pink", "mpl", self.darkmode)
-        self.theory_color = get_line_color("gray", "mpl", self.darkmode)
-        self.acc_color = get_line_color("blue", "mpl", self.darkmode)
-        self.mag_color = get_line_color("green", "mpl", self.darkmode)
+        self.foreground_color = get_line_color("foreground", "pyqt", self.darkmode)
+        self.background_color = get_line_color("background", "pyqt", self.darkmode)
+        self.cpp_color = get_line_color("teal", "pyqt", self.darkmode)
+        self.mpp_color = get_line_color("pink", "pyqt", self.darkmode)
+        self.theory_color = get_line_color("gray", "pyqt", self.darkmode)
+        self.acc_color = get_line_color("blue", "pyqt", self.darkmode)
+        self.mag_color = get_line_color("green", "pyqt", self.darkmode)
 
         self.pem_file = None
         self.rotated_file = None
@@ -778,7 +778,7 @@ def main():
     from src.qt_py import dark_palette
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    darkmode = False
+    darkmode = True
     if darkmode:
         app.setPalette(dark_palette)
 

@@ -11,7 +11,7 @@ from PySide2.QtWidgets import (QMainWindow, QMessageBox, QAction, QFileDialog, Q
                                QHBoxLayout, QLineEdit, QPushButton)
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine
-from src.qt_py import get_icon
+from src.qt_py import get_icon, get_line_color
 from src.ui.pem_merger import Ui_PEMMerger
 
 logger = logging.getLogger(__name__)
@@ -136,17 +136,18 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         self.darkmode = darkmode
         self.setWindowTitle('PEM Merger')
         self.setWindowIcon(get_icon('pem_merger.png'))
+        self.actionSave_As.setIcon(get_icon("crone_logo.png"))
+        self.actionSave_Screenshot.setIcon(get_icon("save.png"))
+        self.actionCopy_Screenshot.setIcon(get_icon("copy.png"))
 
-        self.pf1_color = (255, 255, 255) if self.darkmode else (53, 53, 53)
-        # self.pf1_color = (255, 255, 255) if self.darkmode else (28, 28, 27)
-        # self.pf2_color = (102, 255, 255) if self.darkmode else (206, 74, 126)
-        self.pf2_color = (255, 153, 204) if self.darkmode else (206, 74, 126)
-        self.brush_color = (66, 66, 66) if self.darkmode else "w"
+        self.pf1_color = get_line_color("foreground", "pyqt", self.darkmode)
+        self.pf2_color = get_line_color("teal", "pyqt", self.darkmode)
+        self.brush_color = get_line_color("background", "pyqt", self.darkmode)
 
-        self.frame.setStyleSheet(f"color: rgb{self.pf1_color}")
-        self.frame_2.setStyleSheet(f"color: rgb{self.pf2_color}")
-        self.file_label_1.setStyleSheet(f"color: rgb{self.pf1_color}")
-        self.file_label_2.setStyleSheet(f"color: rgb{self.pf2_color}")
+        self.frame.setStyleSheet(f"color: rgb{str(tuple(self.pf1_color))}")
+        self.frame_2.setStyleSheet(f"color: rgb{str(tuple(self.pf2_color))}")
+        self.file_label_1.setStyleSheet(f"color: rgb{str(tuple(self.pf1_color))}")
+        self.file_label_2.setStyleSheet(f"color: rgb{str(tuple(self.pf2_color))}")
         self.pf1 = None
         self.pf2 = None
         self.units = None
@@ -670,7 +671,7 @@ if __name__ == '__main__':
     from src.qt_py import dark_palette
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    darkmode = False
+    darkmode = True
     if darkmode:
         app.setPalette(dark_palette)
     pg.setConfigOptions(antialias=True)

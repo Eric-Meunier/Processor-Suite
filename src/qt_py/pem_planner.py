@@ -7,6 +7,7 @@ from pathlib import Path
 
 import geopandas as gpd
 import gpxpy
+import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.ticker as ticker
 import numpy as np
@@ -29,26 +30,23 @@ from scipy import spatial
 from shapely.geometry import asMultiPoint
 
 from src import app_data_dir
+from src.qt_py import get_icon, get_line_color, NonScientific, PlanMapAxis
+from src.qt_py.map_widgets import TileMapViewer
+from src.qt_py.pem_geometry import dad_to_seg
 # from src.logger import Log
 from src.gps.gps_editor import BoreholeCollar, BoreholeGeometry
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
-from src.qt_py import get_icon, NonScientific, PlanMapAxis
-from src.qt_py.map_widgets import TileMapViewer
-from src.qt_py.pem_geometry import dad_to_seg
 from src.ui.grid_planner import Ui_GridPlanner
 from src.ui.loop_planner import Ui_LoopPlanner
 
 logger = logging.getLogger(__name__)
-
-default_color = (0, 0, 0, 150)
-selection_color = '#1976D2'
+selection_color = get_line_color("single_blue", "mpl", True)
 
 
 class SurveyPlanner(QMainWindow):
     """
     Base class for the LoopPlanner and GridPlanner
     """
-
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
@@ -75,7 +73,6 @@ class SurveyPlanner(QMainWindow):
         Return the EPSG code currently selected. Will convert the drop boxes to EPSG code.
         :return: str, EPSG code
         """
-
         def convert_to_epsg():
             """
             Convert and return the EPSG code of the project CRS combo boxes
@@ -165,21 +162,166 @@ class HoleWidget(QWidget):
     plot_hole_sig = Signal()
     remove_sig = Signal()
 
-    def __init__(self, properties, plot_widget, name=''):
+    def __init__(self, properties, plot_widget, name='', darkmode=False):
         """
         Widget representing a hole as tab in Loop Planner.
         :param properties: dict, properties of a previous hole to be used as a starting point.
         :param plot_widget: pyqtgraph plot widget to plot on.
         :param name: str, name of the hole.
         """
+        def init_signals():
+            def toggle_geometry():
+                self.hole_azimuth_edit.setEnabled(self.manual_geometry_rbtn.isChecked())
+                self.hole_dip_edit.setEnabled(self.manual_geometry_rbtn.isChecked())
+                self.hole_length_edit.setEnabled(self.manual_geometry_rbtn.isChecked())
+
+                self.dad_file_edit.setEnabled(self.dad_geometry_rbtn.isChecked())
+
+                # Update the plots
+                self.get_hole_projection()
+                self.draw_hole()
+                self.plot_hole_sig.emit()
+
+            def toggle_visibility():
+                if self.show_cbox.isChecked():
+                    self.hole_collar.show()
+                    self.hole_name.show()
+                    self.hole_trace.show()
+                    self.hole_end.show()
+                    self.section_extent_line.show()
+                else:
+                    self.hole_collar.hide()
+                    self.hole_name.hide()
+                    self.hole_trace.hide()
+                    self.hole_end.hide()
+                    self.section_extent_line.hide()
+
+            self.show_cbox.toggled.connect(toggle_visibility)
+
+            # Radio buttons
+            self.manual_geometry_rbtn.toggled.connect(toggle_geometry)
+            self.dad_geometry_rbtn.toggled.connect(toggle_geometry)
+
+            # Buttons
+            self.add_dad_file_btn.clicked.connect(self.get_dad_file)
+
+            # Editing
+            self.hole_name_edit.textChanged.connect(self.name_changed_sig.emit)
+            self.hole_name_edit.textChanged.connect(lambda: self.hole_name.setText(self.hole_name_edit.text()))
+            self.remove_btn.clicked.connect(self.remove_sig.emit)
+
+            self.hole_easting_edit.editingFinished.connect(self.get_hole_projection)
+            self.hole_easting_edit.editingFinished.connect(self.draw_hole)
+            self.hole_northing_edit.editingFinished.connect(self.get_hole_projection)
+            self.hole_northing_edit.editingFinished.connect(self.draw_hole)
+            self.hole_elevation_edit.editingFinished.connect(self.get_hole_projection)
+            self.hole_elevation_edit.editingFinished.connect(self.draw_hole)
+            self.hole_azimuth_edit.editingFinished.connect(self.get_hole_projection)
+            self.hole_azimuth_edit.editingFinished.connect(self.draw_hole)
+            self.hole_dip_edit.editingFinished.connect(self.get_hole_projection)
+            self.hole_dip_edit.editingFinished.connect(self.draw_hole)
+            self.hole_length_edit.editingFinished.connect(self.get_hole_projection)
+            self.hole_length_edit.editingFinished.connect(self.draw_hole)
+
+        def init_ui():
+            self.hole_easting_edit.setMaximum(1e9)
+            self.hole_easting_edit.setMinimum(-1e9)
+            self.hole_easting_edit.setSuffix("m")
+            self.hole_northing_edit.setMaximum(1e9)
+            self.hole_northing_edit.setMinimum(-1e9)
+            self.hole_northing_edit.setSuffix("m")
+            self.hole_elevation_edit.setMaximum(1e9)
+            self.hole_elevation_edit.setMinimum(-1e9)
+            self.hole_elevation_edit.setSuffix("m")
+            self.hole_azimuth_edit.setMaximum(360)
+            self.hole_azimuth_edit.setMinimum(0)
+            self.hole_azimuth_edit.setSuffix("°")
+            self.hole_dip_edit.setMaximum(90)
+            self.hole_dip_edit.setMinimum(-90)
+            self.hole_dip_edit.setSuffix("°")
+            self.hole_length_edit.setMaximum(1e9)
+            self.hole_length_edit.setMinimum(0.1)
+            self.hole_length_edit.setSuffix("m")
+
+            # Position
+            position_gbox = QGroupBox('Position')
+            position_gbox.setLayout(QFormLayout())
+            position_gbox.setFlat(True)
+            self.hole_easting_edit.setValue(float(properties.get('easting')))
+            self.hole_northing_edit.setValue(float(properties.get('northing')))
+            self.hole_elevation_edit.setValue(float(properties.get('elevation')))
+            position_gbox.layout().addRow('Easting', self.hole_easting_edit)
+            position_gbox.layout().addRow('Northing', self.hole_northing_edit)
+            position_gbox.layout().addRow('Elevation\nFrom Loop', self.hole_elevation_edit)
+            self.layout().addRow(position_gbox)
+
+            # Geometry
+            geometry_gbox = QGroupBox('Geometry')
+            geometry_gbox.setFlat(True)
+            geometry_gbox.setLayout(QGridLayout())
+            geometry_gbox.layout().setContentsMargins(0, 0, 0, 0)
+            geometry_gbox.layout().setVerticalSpacing(0)
+            self.show_cbox.setChecked(True)
+            self.layout().addRow(self.show_cbox)
+            self.manual_geometry_rbtn.setChecked(True)
+
+            # Manual geometry frame
+            manual_geometry_frame = QFrame()
+            manual_geometry_frame.setLayout(QFormLayout())
+            manual_geometry_frame.setContentsMargins(0, 0, 0, 0)
+            self.hole_azimuth_edit.setValue(float(properties.get('azimuth')))
+            self.hole_dip_edit.setValue(float(properties.get('dip')))
+            self.hole_length_edit.setValue(float(properties.get('length')))
+            manual_geometry_frame.layout().addRow('Azimuth', self.hole_azimuth_edit)
+            manual_geometry_frame.layout().addRow('Dip', self.hole_dip_edit)
+            manual_geometry_frame.layout().addRow('Length', self.hole_length_edit)
+
+            # DAD file frame
+            dad_geometry_frame = QFrame()
+            dad_geometry_frame.setLayout(QHBoxLayout())
+            dad_geometry_frame.setContentsMargins(0, 0, 0, 0)
+            self.dad_file_edit = QLineEdit()
+            self.dad_file_edit.setEnabled(False)
+            self.dad_file_edit.setReadOnly(True)
+            self.add_dad_file_btn = QPushButton('...')
+            # self.add_dad_file_btn.setEnabled(False)
+            self.add_dad_file_btn.setMaximumWidth(23)
+            dad_geometry_frame.layout().addWidget(QLabel('DAD File'))
+            dad_geometry_frame.layout().addWidget(self.dad_file_edit)
+            dad_geometry_frame.layout().addWidget(self.add_dad_file_btn)
+
+            geometry_gbox.layout().addWidget(self.manual_geometry_rbtn, 0, 0)
+            geometry_gbox.layout().addWidget(manual_geometry_frame, 0, 1)
+            geometry_gbox.layout().addWidget(self.dad_geometry_rbtn, 1, 0)
+            geometry_gbox.layout().addWidget(dad_geometry_frame, 1, 1)
+            self.layout().addRow(geometry_gbox)
+
+            # Hole name
+            name_frame = QFrame()
+            name_frame.setLayout(QHBoxLayout())
+            name_frame.layout().setContentsMargins(0, 0, 0, 0)
+            self.hole_name_edit.setPlaceholderText('(Optional)')
+
+            self.remove_btn.setFlat(True)
+            self.remove_btn.setToolTip("Remove")
+
+            name_frame.layout().addWidget(QLabel("Name"))
+            name_frame.layout().addWidget(self.hole_name_edit)
+            name_frame.layout().addWidget(self.remove_btn)
+            self.layout().addRow(name_frame)
+
         super().__init__()
-        layout = QFormLayout()
-        self.setLayout(layout)
+        self.darkmode = darkmode
+        self.setLayout(QFormLayout())
         self.plan_view = plot_widget
         self.projection = DataFrame()
         self.segments = None
         self.section_length = None
         self.loop = None
+
+        self.hole_color = get_line_color("foreground", "pyqt", self.darkmode)
+        self.foreground_color = get_line_color("foreground", "pyqt", self.darkmode)
+        self.background_color = get_line_color("background", "pyqt", self.darkmode)
 
         if not properties:
             properties = {
@@ -193,142 +335,44 @@ class HoleWidget(QWidget):
 
         # Create all the inner widget items
         self.show_cbox = QCheckBox("Show in plan map")
-        self.show_cbox.setChecked(True)
-        self.layout().addRow(self.show_cbox)
-
         self.hole_easting_edit = QDoubleSpinBox()
-        self.hole_easting_edit.setMaximum(1e9)
-        self.hole_easting_edit.setMinimum(-1e9)
-        self.hole_easting_edit.setSuffix("m")
         self.hole_northing_edit = QDoubleSpinBox()
-        self.hole_northing_edit.setMaximum(1e9)
-        self.hole_northing_edit.setMinimum(-1e9)
-        self.hole_northing_edit.setSuffix("m")
         self.hole_elevation_edit = QDoubleSpinBox()
-        self.hole_elevation_edit.setMaximum(1e9)
-        self.hole_elevation_edit.setMinimum(-1e9)
-        self.hole_elevation_edit.setSuffix("m")
         self.hole_azimuth_edit = QDoubleSpinBox()
-        self.hole_azimuth_edit.setMaximum(360)
-        self.hole_azimuth_edit.setMinimum(0)
-        self.hole_azimuth_edit.setSuffix("°")
         self.hole_dip_edit = QDoubleSpinBox()
-        self.hole_dip_edit.setMaximum(90)
-        self.hole_dip_edit.setMinimum(-90)
-        self.hole_dip_edit.setSuffix("°")
         self.hole_length_edit = QDoubleSpinBox()
-        self.hole_length_edit.setMaximum(1e9)
-        self.hole_length_edit.setMinimum(0.1)
-        self.hole_length_edit.setSuffix("m")
-
-        # Position
-        position_gbox = QGroupBox('Position')
-        position_gbox.setLayout(QFormLayout())
-        position_gbox.setFlat(True)
-        self.hole_easting_edit.setValue(float(properties.get('easting')))
-        self.hole_northing_edit.setValue(float(properties.get('northing')))
-        self.hole_elevation_edit.setValue(float(properties.get('elevation')))
-        position_gbox.layout().addRow('Easting', self.hole_easting_edit)
-        position_gbox.layout().addRow('Northing', self.hole_northing_edit)
-        position_gbox.layout().addRow('Elevation\nFrom Loop', self.hole_elevation_edit)
-        self.layout().addRow(position_gbox)
-
-        # Geometry
-        geometry_gbox = QGroupBox('Geometry')
-        geometry_gbox.setFlat(True)
-        geometry_gbox.setLayout(QGridLayout())
-        geometry_gbox.layout().setContentsMargins(0, 0, 0, 0)
-        geometry_gbox.layout().setVerticalSpacing(0)
-
         self.manual_geometry_rbtn = QRadioButton()
-        self.manual_geometry_rbtn.setChecked(True)
         self.dad_geometry_rbtn = QRadioButton()
-
-        # Manual geometry frame
-        manual_geometry_frame = QFrame()
-        manual_geometry_frame.setLayout(QFormLayout())
-        manual_geometry_frame.setContentsMargins(0, 0, 0, 0)
-        self.hole_azimuth_edit.setValue(float(properties.get('azimuth')))
-        self.hole_dip_edit.setValue(float(properties.get('dip')))
-        self.hole_length_edit.setValue(float(properties.get('length')))
-        manual_geometry_frame.layout().addRow('Azimuth', self.hole_azimuth_edit)
-        manual_geometry_frame.layout().addRow('Dip', self.hole_dip_edit)
-        manual_geometry_frame.layout().addRow('Length', self.hole_length_edit)
-
-        # DAD file frame
-        dad_geometry_frame = QFrame()
-        dad_geometry_frame.setLayout(QHBoxLayout())
-        dad_geometry_frame.setContentsMargins(0, 0, 0, 0)
-        self.dad_file_edit = QLineEdit()
-        self.dad_file_edit.setEnabled(False)
-        self.dad_file_edit.setReadOnly(True)
-        self.add_dad_file_btn = QPushButton('...')
-        # self.add_dad_file_btn.setEnabled(False)
-        self.add_dad_file_btn.setMaximumWidth(23)
-        dad_geometry_frame.layout().addWidget(QLabel('DAD File'))
-        dad_geometry_frame.layout().addWidget(self.dad_file_edit)
-        dad_geometry_frame.layout().addWidget(self.add_dad_file_btn)
-
-        geometry_gbox.layout().addWidget(self.manual_geometry_rbtn, 0, 0)
-        geometry_gbox.layout().addWidget(manual_geometry_frame, 0, 1)
-        geometry_gbox.layout().addWidget(self.dad_geometry_rbtn, 1, 0)
-        geometry_gbox.layout().addWidget(dad_geometry_frame, 1, 1)
-        self.layout().addRow(geometry_gbox)
-
-        # Hole name
-        name_frame = QFrame()
-        name_frame.setLayout(QHBoxLayout())
-        name_frame.layout().setContentsMargins(0, 0, 0, 0)
         self.hole_name_edit = QLineEdit(name)
-        self.hole_name_edit.setPlaceholderText('(Optional)')
-
         self.remove_btn = QPushButton(get_icon("remove2.png"), "")
-        self.remove_btn.setFlat(True)
-        self.remove_btn.setToolTip("Remove")
+        init_ui()
 
-        name_frame.layout().addWidget(QLabel("Name"))
-        name_frame.layout().addWidget(self.hole_name_edit)
-        name_frame.layout().addWidget(self.remove_btn)
-        self.layout().addRow(name_frame)
-
-        # Validators
-        self.int_validator = QIntValidator()
-        self.size_validator = QIntValidator()
-        self.size_validator.setBottom(1)
-        self.az_validator = QIntValidator()
-        self.az_validator.setRange(0, 360)
-        self.dip_validator = QIntValidator()
-        self.dip_validator.setRange(0, 90)
-
-        """Plotting"""
         # Hole collar
         self.hole_collar = pg.ScatterPlotItem(clickable=True,
-                                           pen=pg.mkPen(default_color, width=1.),
+                                           pen=pg.mkPen(self.hole_color, width=1.),
                                            symbol='o',
-                                           brush=pg.mkBrush('w'),
-                                           )
+                                           brush=pg.mkBrush(self.background_color))
         self.hole_collar.setZValue(5)
 
         # Hole trace
-        self.hole_trace = pg.PlotCurveItem(clickable=True, pen=pg.mkPen(default_color, width=1.))
+        self.hole_trace = pg.PlotCurveItem(clickable=True, pen=pg.mkPen(self.hole_color, width=1.))
         self.hole_trace.setZValue(4)
 
         # The end bar
         self.hole_end = pg.ArrowItem(headLen=0,
                                   tailLen=0,
                                   tailWidth=15,
-                                  pen=pg.mkPen(default_color, width=1.),
-                                  )
+                                  pen=pg.mkPen(self.hole_color, width=1.))
         self.hole_end.setZValue(5)
 
         # Hole name
-        self.hole_name = pg.TextItem(name, anchor=(-0.15, 0.5), color=(0, 0, 0, 150))
+        self.hole_name = pg.TextItem(name, anchor=(-0.15, 0.5), color=self.foreground_color)
         self.hole_name.setZValue(100)
 
         # Add a single section line to be used by all holes
         self.section_extent_line = pg.PlotDataItem(width=1,
-                                                pen=pg.mkPen(color=0.5,
-                                                          style=Qt.DashLine))
+                                                   pen=pg.mkPen(color=get_line_color("gray", "pyqt", self.darkmode),
+                                                                style=Qt.DashLine))
         self.hole_end.setZValue(1)
 
         self.plan_view.addItem(self.hole_collar)
@@ -340,60 +384,7 @@ class HoleWidget(QWidget):
         self.get_hole_projection()
         self.draw_hole()
 
-        """Signals"""
-
-        def toggle_geometry():
-            self.hole_azimuth_edit.setEnabled(self.manual_geometry_rbtn.isChecked())
-            self.hole_dip_edit.setEnabled(self.manual_geometry_rbtn.isChecked())
-            self.hole_length_edit.setEnabled(self.manual_geometry_rbtn.isChecked())
-
-            self.dad_file_edit.setEnabled(self.dad_geometry_rbtn.isChecked())
-
-            # Update the plots
-            self.get_hole_projection()
-            self.draw_hole()
-            self.plot_hole_sig.emit()
-
-        def toggle_visibility():
-            if self.show_cbox.isChecked():
-                self.hole_collar.show()
-                self.hole_name.show()
-                self.hole_trace.show()
-                self.hole_end.show()
-                self.section_extent_line.show()
-            else:
-                self.hole_collar.hide()
-                self.hole_name.hide()
-                self.hole_trace.hide()
-                self.hole_end.hide()
-                self.section_extent_line.hide()
-
-        self.show_cbox.toggled.connect(toggle_visibility)
-
-        # Radio buttons
-        self.manual_geometry_rbtn.toggled.connect(toggle_geometry)
-        self.dad_geometry_rbtn.toggled.connect(toggle_geometry)
-
-        # Buttons
-        self.add_dad_file_btn.clicked.connect(self.get_dad_file)
-
-        # Editing
-        self.hole_name_edit.textChanged.connect(self.name_changed_sig.emit)
-        self.hole_name_edit.textChanged.connect(lambda: self.hole_name.setText(self.hole_name_edit.text()))
-        self.remove_btn.clicked.connect(self.remove_sig.emit)
-
-        self.hole_easting_edit.editingFinished.connect(self.get_hole_projection)
-        self.hole_easting_edit.editingFinished.connect(self.draw_hole)
-        self.hole_northing_edit.editingFinished.connect(self.get_hole_projection)
-        self.hole_northing_edit.editingFinished.connect(self.draw_hole)
-        self.hole_elevation_edit.editingFinished.connect(self.get_hole_projection)
-        self.hole_elevation_edit.editingFinished.connect(self.draw_hole)
-        self.hole_azimuth_edit.editingFinished.connect(self.get_hole_projection)
-        self.hole_azimuth_edit.editingFinished.connect(self.draw_hole)
-        self.hole_dip_edit.editingFinished.connect(self.get_hole_projection)
-        self.hole_dip_edit.editingFinished.connect(self.draw_hole)
-        self.hole_length_edit.editingFinished.connect(self.get_hole_projection)
-        self.hole_length_edit.editingFinished.connect(self.draw_hole)
+        init_signals()
 
     def select(self):
         self.hole_collar.setPen(pg.mkPen(selection_color, width=1.5))
@@ -401,7 +392,7 @@ class HoleWidget(QWidget):
         self.hole_collar.setZValue(10)
 
         self.hole_trace.setPen(pg.mkPen(selection_color, width=1.5))
-        self.hole_trace.setShadowPen(pg.mkPen('w', width=3.))
+        self.hole_trace.setShadowPen(pg.mkPen(selection_color, width=3.))
         self.hole_trace.setZValue(9)
 
         self.hole_end.setPen(pg.mkPen(selection_color, width=1.5))
@@ -411,17 +402,17 @@ class HoleWidget(QWidget):
             self.section_extent_line.show()
 
     def deselect(self):
-        self.hole_collar.setPen(pg.mkPen(default_color, width=1.))
+        self.hole_collar.setPen(pg.mkPen(self.hole_color, width=1.))
         self.hole_collar.setSize(11)
         self.hole_collar.setZValue(5)
 
-        self.hole_trace.setPen(pg.mkPen(default_color, width=1.))
+        self.hole_trace.setPen(pg.mkPen(self.hole_color, width=1.))
         self.hole_trace.setShadowPen(None)
         self.hole_trace.setZValue(4)
 
-        self.hole_end.setPen(pg.mkPen(default_color, width=1.))
+        self.hole_end.setPen(pg.mkPen(self.hole_color, width=1.))
 
-        self.hole_name.setColor(default_color)
+        self.hole_name.setColor(self.hole_color)
         if self.show_cbox.isChecked():
             self.section_extent_line.hide()
 
@@ -484,7 +475,6 @@ class HoleWidget(QWidget):
         Calculates the two coordinates to be used for the section plot.
         :return: (x, y) tuples of the two end-points.
         """
-
         if self.projection.empty:
             return None, None
 
@@ -592,9 +582,7 @@ class HoleWidget(QWidget):
                     df.Dip = df.Dip * -1
                     # Create a BoreholeSegment object from the DAD file, to more easily calculate the projection
                     self.segments = dad_to_seg(df.dropna())
-                    # Update the hole projection
                     self.get_hole_projection()
-                    # Draw the hole and update the section plot
                     self.draw_hole()
                     self.plot_hole_sig.emit()
 
@@ -650,7 +638,7 @@ class LoopWidget(QWidget):
     plot_hole_sig = Signal()
     remove_sig = Signal()
 
-    def __init__(self, coords, plot_widget, name='', angle=0.):
+    def __init__(self, coords, plot_widget, name='', angle=0., darkmode=False):
         """
         Widget representing a loop as tab in Loop Planner.
         :param coords: list of lists, coordinates of the loop. If one is passed, it will be used as the center and
@@ -659,10 +647,102 @@ class LoopWidget(QWidget):
         :param angle: angle of a previous loop to be used as a starting point.
         :param plot_widget: pyqtgraph plot widget to plot on.
         """
+        def init_ui():
+            self.setLayout(QFormLayout())
+            
+            self.show_cbox.setChecked(True)
+            self.layout().addRow(self.show_cbox)
+            
+            self.loop_angle_sbox.setRange(-360, 360)
+            self.loop_angle_sbox.setValue(int(angle))
+            self.loop_name_edit.setPlaceholderText('(Optional)')
+            self.layout().addRow('Angle', self.loop_angle_sbox)
+
+            self.coords_table.setColumnCount(2)
+            self.coords_table.setHorizontalHeaderLabels(["Easting", "Northing"])
+            self.coords_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+            float_delegate = QItemDelegate()
+            self.coords_table.setItemDelegateForColumn(0, float_delegate)
+            self.coords_table.setItemDelegateForColumn(1, float_delegate)
+            self.layout().addRow(self.coords_table)
+
+            h_line = QFrame()
+            h_line.setFrameShape(QFrame().HLine)
+            h_line.setFrameShadow(QFrame().Sunken)
+            self.layout().addRow(h_line)
+            self.layout().addRow(self.copy_loop_btn)
+
+            name_frame = QFrame()
+            name_frame.setLayout(QHBoxLayout())
+            name_frame.layout().setContentsMargins(0, 0, 0, 0)
+            self.loop_name_edit.setPlaceholderText('(Optional)')
+
+            self.remove_btn.setFlat(True)
+            self.remove_btn.setToolTip("Remove")
+
+            name_frame.layout().addWidget(QLabel("Name"))
+            name_frame.layout().addWidget(self.loop_name_edit)
+            name_frame.layout().addWidget(self.remove_btn)
+            self.layout().addRow(name_frame)
+
+        def init_signals():
+            def toggle_visibility():
+                if self.show_cbox.isChecked():
+                    self.loop_roi.show()
+                    self.loop_name.show()
+                    if self.show_corners:
+                        for label in self.corner_labels:
+                            label.show()
+                    if self.show_segments:
+                        for label in self.segment_labels:
+                            label.show()
+                else:
+                    self.loop_roi.hide()
+                    self.loop_name.hide()
+                    for label in np.concatenate([self.corner_labels, self.segment_labels]):
+                        label.hide()
+
+            self.coords_table.cellChanged.connect(self.update_loop_corners)
+            self.show_cbox.toggled.connect(toggle_visibility)
+            self.remove_btn.clicked.connect(self.remove_sig.emit)
+            self.loop_angle_sbox.valueChanged.connect(self.update_loop_roi)
+
+            self.loop_name_edit.textChanged.connect(self.name_changed_sig.emit)
+            self.loop_name_edit.textChanged.connect(lambda: self.loop_name.setText(self.loop_name_edit.text()))
+            self.loop_roi.setAcceptedMouseButtons(Qt.LeftButton)
+            self.loop_roi.sigHandleAdded.connect(self.update_loop_values)
+            self.loop_roi.sigHandleAdded.connect(self.label_loop_corners)
+            self.loop_roi.sigRegionChanged.connect(self.update_loop_values)
+            self.loop_roi.sigRegionChanged.connect(self.plot_loop_name)
+            self.loop_roi.sigRegionChangeFinished.connect(lambda: self.plot_hole_sig.emit())
+
+        def get_corners(coords):
+            if len(coords) == 1:
+                center = coords[0]
+                # Set the position of the loop by the center (and not the bottom-left corner)
+                h, w = 500, 500
+                pos = QPointF(center.x() - (w / 2), center.y() - (h / 2))  # Adjusted position for the center
+                # angle = 0
+
+                c1 = QPointF(pos)
+                c2 = QPointF(c1.x() + w * (math.cos(math.radians(angle))), c1.y() + w * (math.sin(math.radians(angle))))
+                c3 = QPointF(c2.x() - h * (math.sin(math.radians(angle))),
+                             c2.y() + h * (math.sin(math.radians(90 - angle))))
+                c4 = QPointF(c3.x() + w * (math.cos(math.radians(180 - angle))),
+                             c3.y() - w * (math.sin(math.radians(180 - angle))))
+                corners = [(c1.x(), c1.y()),
+                           (c2.x(), c2.y()),
+                           (c3.x(), c3.y()),
+                           (c4.x(), c4.y()),
+                           ]
+            else:
+                corners = coords
+            
+            return corners
+        
         super().__init__()
+        self.darkmode = darkmode
         self.setAcceptDrops(True)
-        layout = QFormLayout()
-        self.setLayout(layout)
         self.plan_view = plot_widget
         self.corner_labels = []
         self.segment_labels = []
@@ -670,132 +750,39 @@ class LoopWidget(QWidget):
         self.show_segments = True
         self.is_selected = True
 
+        self.foreground_color = get_line_color("foreground", "pyqt", self.darkmode)
+        self.loop_color = get_line_color("foreground", "pyqt", self.darkmode)
+
         # Create all the inner widget items
         self.show_cbox = QCheckBox("Show in plan map")
-        self.show_cbox.setChecked(True)
-        self.layout().addRow(self.show_cbox)
-
         self.loop_angle_sbox = QSpinBox()
-        self.loop_angle_sbox.setRange(-360, 360)
-        self.loop_angle_sbox.setValue(int(angle))
         self.loop_name_edit = QLineEdit(name)
-        self.loop_name_edit.setPlaceholderText('(Optional)')
-
-        # Add the widgets to the layout
-        self.layout().addRow('Angle', self.loop_angle_sbox)
-
         self.coords_table = QTableWidget()
-        self.coords_table.setColumnCount(2)
-        self.coords_table.setHorizontalHeaderLabels(["Easting", "Northing"])
-        self.coords_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        # self.coords_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        # self.coords_table.setSelectionMode(QAbstractItemView.SingleSelection)
-        float_delegate = QItemDelegate()
-        self.coords_table.setItemDelegateForColumn(0, float_delegate)
-        self.coords_table.setItemDelegateForColumn(1, float_delegate)
-        self.layout().addRow(self.coords_table)
-
-        # Create the horizontal line for the header
-        h_line = QFrame()
-        h_line.setFrameShape(QFrame().HLine)
-        h_line.setFrameShadow(QFrame().Sunken)
-        self.layout().addRow(h_line)
-
         self.copy_loop_btn = QPushButton(get_icon('copy.png'), "Copy Corners")
-        self.layout().addRow(self.copy_loop_btn)
-
-        name_frame = QFrame()
-        name_frame.setLayout(QHBoxLayout())
-        name_frame.layout().setContentsMargins(0, 0, 0, 0)
         self.loop_name_edit = QLineEdit(name)
-        self.loop_name_edit.setPlaceholderText('(Optional)')
-
         self.remove_btn = QPushButton(get_icon("remove2.png"), "")
-        self.remove_btn.setFlat(True)
-        self.remove_btn.setToolTip("Remove")
+        init_ui()
 
-        name_frame.layout().addWidget(QLabel("Name"))
-        name_frame.layout().addWidget(self.loop_name_edit)
-        name_frame.layout().addWidget(self.remove_btn)
-        self.layout().addRow(name_frame)
-
-        # Validators
-        self.size_validator = QIntValidator()
-        self.size_validator.setBottom(1)
-        self.loop_angle_validator = QIntValidator()
-        self.loop_angle_validator.setRange(0, 360)
-
-        if len(coords) == 1:
-            center = coords[0]
-            # Set the position of the loop by the center (and not the bottom-left corner)
-            h, w = 500, 500
-            pos = QPointF(center.x() - (w / 2), center.y() - (h / 2))  # Adjusted position for the center
-            # angle = 0
-
-            c1 = QPointF(pos)
-            c2 = QPointF(c1.x() + w * (math.cos(math.radians(angle))), c1.y() + w * (math.sin(math.radians(angle))))
-            c3 = QPointF(c2.x() - h * (math.sin(math.radians(angle))),
-                         c2.y() + h * (math.sin(math.radians(90 - angle))))
-            c4 = QPointF(c3.x() + w * (math.cos(math.radians(180 - angle))),
-                         c3.y() - w * (math.sin(math.radians(180 - angle))))
-            corners = [(c1.x(), c1.y()),
-                       (c2.x(), c2.y()),
-                       (c3.x(), c3.y()),
-                       (c4.x(), c4.y()),
-                       ]
-        else:
-            corners = coords
-
+        # Plots
+        corners = get_corners(coords)
         self.loop_roi = PolyLoop(corners,
                                  scaleSnap=True,
                                  snapSize=5,
                                  closed=True,
-                                 pen=pg.mkPen(default_color, width=1.),
-                                 )
-        self.loop_roi.hoverPen = pg.mkPen(default_color, width=2.)
+                                 pen=pg.mkPen(self.loop_color, width=1.))
+        self.loop_roi.hoverPen = pg.mkPen(self.loop_color, width=2.)
         self.loop_roi.setZValue(15)
         self.update_loop_values()
 
-        # Add loop name
         self.loop_name = pg.TextItem(name, anchor=(0.5, 0.5), color=(0, 0, 0, 100))
         self.loop_name.setZValue(0)
 
-        # Add the items to the plot
         self.plan_view.addItem(self.loop_roi)
         self.plan_view.addItem(self.loop_name, ignoreBounds=True)
+
         self.plot_loop_name()
 
-        """Signals"""
-
-        def toggle_visibility():
-            if self.show_cbox.isChecked():
-                self.loop_roi.show()
-                self.loop_name.show()
-                if self.show_corners:
-                    for label in self.corner_labels:
-                        label.show()
-                if self.show_segments:
-                    for label in self.segment_labels:
-                        label.show()
-            else:
-                self.loop_roi.hide()
-                self.loop_name.hide()
-                for label in np.concatenate([self.corner_labels, self.segment_labels]):
-                    label.hide()
-
-        self.coords_table.cellChanged.connect(self.update_loop_corners)
-        self.show_cbox.toggled.connect(toggle_visibility)
-        self.remove_btn.clicked.connect(self.remove_sig.emit)
-        self.loop_angle_sbox.valueChanged.connect(self.update_loop_roi)
-
-        self.loop_name_edit.textChanged.connect(self.name_changed_sig.emit)
-        self.loop_name_edit.textChanged.connect(lambda: self.loop_name.setText(self.loop_name_edit.text()))
-        self.loop_roi.setAcceptedMouseButtons(Qt.LeftButton)
-        self.loop_roi.sigHandleAdded.connect(self.update_loop_values)
-        self.loop_roi.sigHandleAdded.connect(self.label_loop_corners)
-        self.loop_roi.sigRegionChanged.connect(self.update_loop_values)
-        self.loop_roi.sigRegionChanged.connect(self.plot_loop_name)
-        self.loop_roi.sigRegionChangeFinished.connect(lambda: self.plot_hole_sig.emit())
+        init_signals()
 
     def select(self):
         """When the loop is selected"""
@@ -813,8 +800,8 @@ class LoopWidget(QWidget):
         self.is_selected = True
 
     def deselect(self):
-        self.loop_roi.setPen(pg.mkPen(default_color), width=1.)
-        self.loop_name.setColor(default_color)
+        self.loop_roi.setPen(pg.mkPen(self.loop_color), width=1.)
+        self.loop_name.setColor(self.loop_color)
         for label in self.corner_labels:
             label.hide()
         for label in self.segment_labels:
@@ -992,7 +979,7 @@ class LoopWidget(QWidget):
             p2 = self.loop_roi.mapSceneToParent(p2[1])
             x, y = ((p2.x() - p1.x()) / 2) + p1.x(), ((p2.y() - p1.y()) / 2) + p1.y()
             dist = spatial.distance.euclidean((p1.x(), p1.y()), (p2.x(), p2.y()))
-            label = pg.TextItem(f"{dist:.0f}m", color=pg.mkColor(default_color))
+            label = pg.TextItem(f"{dist:.0f}m", color=pg.mkColor(self.loop_color))
             label.setPos(x, y)
             self.segment_labels.append(label)
             self.plan_view.addItem(label, ignoreBounds=True)
@@ -1005,39 +992,268 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
     Program that plots the magnetic field projected to a plane perpendicular to a borehole for a interactive loop.
     Loop and borehole collar can be exported as KMZ or GPX files.
     """
-
     def __init__(self, parent=None, darkmode=False):
+        def init_ui():
+            self.setAcceptDrops(True)
+            self.setWindowTitle('Loop Planner')
+            self.setWindowIcon(get_icon('loop_planner.png'))
+            self.resize(1500, 800)
+            self.status_bar.show()
+
+            # Status bar
+            self.status_bar.addPermanentWidget(self.epsg_label, 0)
+            self.plan_view.setMenuEnabled(False)
+
+            # Icons
+            self.actionOpen_Project.setIcon(get_icon("open.png"))
+            self.actionSave_Project.setIcon(get_icon("save.png"))
+            self.actionSave_As.setIcon(get_icon("save_as.png"))
+            self.actionSave_as_KMZ.setIcon(get_icon("google_earth.png"))
+            self.actionSave_as_GPX.setIcon(get_icon("garmin_file.png"))
+            self.view_map_action.setIcon(get_icon("folium.png"))
+            self.add_hole_btn.setIcon(get_icon("add.png"))
+            self.add_loop_btn.setIcon(get_icon("add.png"))
+
+        def init_signals():
+            def toggle_annotations():
+                for hole in self.hole_widgets:
+                    if self.show_names_cbox.isChecked():
+                        hole.hole_name.show()
+                    else:
+                        hole.hole_name.hide()
+
+                for loop in self.loop_widgets:
+                    if self.show_names_cbox.isChecked():
+                        loop.loop_name.show()
+                    else:
+                        loop.loop_name.hide()
+
+                    if self.show_corners_cbox.isChecked():
+                        loop.show_corners = True
+                        if loop.is_selected:
+                            for label in loop.corner_labels:
+                                label.show()
+                    else:
+                        loop.show_corners = False
+                        for label in loop.corner_labels:
+                            label.hide()
+
+                    if self.show_segments_cbox.isChecked():
+                        loop.show_segments = True
+                        if loop.is_selected:
+                            for label in loop.segment_labels:
+                                label.show()
+                    else:
+                        loop.show_segments = False
+                        for label in loop.segment_labels:
+                            label.hide()
+
+            def toggle_gps_system():
+                """
+                Toggle the datum and zone combo boxes and change their options based on the selected CRS system.
+                """
+                current_zone = self.gps_zone_cbox.currentText()
+                datum = self.gps_datum_cbox.currentText()
+                system = self.gps_system_cbox.currentText()
+
+                if system == '':
+                    self.gps_zone_cbox.setEnabled(False)
+                    self.gps_datum_cbox.setEnabled(False)
+
+                elif system == 'Lat/Lon':
+                    self.gps_datum_cbox.setCurrentText('WGS 1984')
+                    self.gps_zone_cbox.setCurrentText('')
+                    self.gps_datum_cbox.setEnabled(False)
+                    self.gps_zone_cbox.setEnabled(False)
+
+                elif system == 'UTM':
+                    self.gps_datum_cbox.setEnabled(True)
+
+                    if datum == '':
+                        self.gps_zone_cbox.setEnabled(False)
+                        return
+                    else:
+                        self.gps_zone_cbox.clear()
+                        self.gps_zone_cbox.setEnabled(True)
+
+                    # NAD 27 and 83 only have zones from 1N to 22N/23N
+                    if datum == 'NAD 1927':
+                        zones = [''] + [f"{num} North" for num in range(1, 23)] + ['59 North', '60 North']
+                    elif datum == 'NAD 1983':
+                        zones = [''] + [f"{num} North" for num in range(1, 24)] + ['59 North', '60 North']
+                    # WGS 84 has zones from 1N and 1S to 60N and 60S
+                    else:
+                        zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in
+                                                                                   range(1, 61)]
+
+                    for zone in zones:
+                        self.gps_zone_cbox.addItem(zone)
+
+                    # Keep the same zone number if possible
+                    self.gps_zone_cbox.setCurrentText(current_zone)
+
+            def toggle_crs_rbtn():
+                """
+                Toggle the radio buttons for the project CRS box, switching between the CRS drop boxes and the EPSG edit.
+                """
+                if self.crs_rbtn.isChecked():
+                    # Enable the CRS drop boxes and disable the EPSG line edit
+                    self.gps_system_cbox.setEnabled(True)
+                    toggle_gps_system()
+
+                    self.epsg_edit.setEnabled(False)
+                else:
+                    # Disable the CRS drop boxes and enable the EPSG line edit
+                    self.gps_system_cbox.setEnabled(False)
+                    self.gps_datum_cbox.setEnabled(False)
+                    self.gps_zone_cbox.setEnabled(False)
+
+                    self.epsg_edit.setEnabled(True)
+
+            def check_epsg():
+                """
+                Try to convert the EPSG code to a Proj CRS object, reject the input if it doesn't work.
+                """
+                epsg_code = self.epsg_edit.text()
+                self.epsg_edit.blockSignals(True)
+
+                if epsg_code:
+                    try:
+                        crs = CRS.from_epsg(epsg_code)
+                    except Exception as e:
+                        logger.error(f"Invalid EPSG code: {epsg_code}.")
+                        self.message.critical(self, 'Invalid EPSG Code', f"{epsg_code} is not a valid EPSG code.")
+                        self.epsg_edit.setText('')
+                    finally:
+                        set_epsg_label()
+
+                self.epsg_edit.blockSignals(False)
+
+            def set_epsg_label():
+                """
+                Convert the current project CRS combo box values into the EPSG code and set the status bar label.
+                """
+                epsg_code = self.get_epsg()
+                if epsg_code:
+                    crs = CRS.from_epsg(epsg_code)
+                    self.epsg_label.setText(f"{crs.name} ({crs.type_name})")
+                else:
+                    self.epsg_label.setText('')
+
+            self.hole_cbox.currentIndexChanged.connect(self.select_hole)
+            self.loop_cbox.currentIndexChanged.connect(self.select_loop)
+
+            # Menu
+            self.actionOpen_Project.triggered.connect(lambda: self.open_project(filepath=None))
+            self.actionSave_Project.triggered.connect(lambda: self.save_project(save_as=False))
+            self.actionSave_As.triggered.connect(lambda: self.save_project(save_as=True))
+            self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
+            self.actionSave_as_GPX.triggered.connect(self.save_gpx)
+            self.view_map_action.triggered.connect(self.view_map)
+
+            # Checkbox
+            self.show_names_cbox.toggled.connect(toggle_annotations)
+            self.show_corners_cbox.toggled.connect(toggle_annotations)
+            self.show_segments_cbox.toggled.connect(toggle_annotations)
+            self.show_grid_cbox.toggled.connect(lambda: self.plan_view.showGrid(x=self.show_grid_cbox.isChecked(),
+                                                                                y=self.show_grid_cbox.isChecked()))
+
+            # Buttons
+            self.add_hole_btn.clicked.connect(self.add_hole)
+            self.add_loop_btn.clicked.connect(self.add_loop)
+
+            # CRS
+            self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
+            self.gps_system_cbox.currentIndexChanged.connect(set_epsg_label)
+            self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_system)
+            self.gps_datum_cbox.currentIndexChanged.connect(set_epsg_label)
+            self.gps_zone_cbox.currentIndexChanged.connect(set_epsg_label)
+            self.crs_rbtn.clicked.connect(toggle_crs_rbtn)
+            self.crs_rbtn.clicked.connect(set_epsg_label)
+            self.epsg_rbtn.clicked.connect(toggle_crs_rbtn)
+            self.epsg_rbtn.clicked.connect(set_epsg_label)
+            self.epsg_edit.editingFinished.connect(check_epsg)
+
+        def init_crs():
+            """
+            Populate the CRS drop boxes and connect all their signals
+            """
+            # Add the GPS system and datum drop box options
+            gps_systems = ['', 'Lat/Lon', 'UTM']
+            for system in gps_systems:
+                self.gps_system_cbox.addItem(system)
+
+            datums = ['', 'WGS 1984', 'NAD 1927', 'NAD 1983']
+            for datum in datums:
+                self.gps_datum_cbox.addItem(datum)
+
+            int_valid = QIntValidator()
+            self.epsg_edit.setValidator(int_valid)
+
+            self.gps_system_cbox.setCurrentIndex(2)
+            self.gps_datum_cbox.setCurrentIndex(1)
+            self.gps_zone_cbox.setCurrentIndex(17)
+
+        def init_plan_view():
+            """
+            Initial set-up of the plan view. Creates the plot widget, custom axes for the Y and X axes, and adds the loop ROI.
+            :return: None
+            """
+            self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
+                                         'bottom': NonScientific(orientation='bottom')})
+            self.plan_view.showGrid(x=self.show_grid_cbox.isChecked(), y=self.show_grid_cbox.isChecked(), alpha=0.2)
+            self.plan_view.getViewBox().disableAutoRange('xy')
+            self.plan_view.setAspectLocked()
+            self.plan_view.hideButtons()
+            self.plan_view.setLabel('left', 'Northing')
+            self.plan_view.setLabel('bottom', 'Easting')
+            self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)
+            self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)
+            self.plan_view.getAxis('right').setWidth(15)
+            self.plan_view.getAxis('top').setHeight(15)
+            self.plan_view.getAxis("bottom").nudge -= 10  # Move the label so it doesn't get clipped
+
+            # Add the right and top borders
+            self.plan_view.getAxis('right').setStyle(showValues=False)  # Disable showing the values of axis
+            self.plan_view.getAxis('top').setStyle(showValues=False)  # Disable showing the values of axis
+            self.plan_view.showAxis('right', show=True)  # Show the axis edge line
+            self.plan_view.showAxis('top', show=True)  # Show the axis edge line
+            self.plan_view.showLabel('right', show=False)
+            self.plan_view.showLabel('top', show=False)
+
+        def init_section_view():
+            """
+            Initial set-up of the section plot. Sets the axes to have equal aspect ratios.
+            :return: None
+            """
+            self.ax.set_aspect('equal')
+            self.ax.use_sticky_edges = False  # So the plot doesn't re-size after the first time it's plotted
+            self.ax.spines['top'].set_visible(False)
+            self.ax.spines['left'].set_visible(False)
+            self.ax.spines['right'].set_visible(False)
+            self.ax.spines['bottom'].set_visible(False)
+            self.ax.get_xaxis().set_visible(False)
+            self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}'))
+            self.ax.figure.subplots_adjust(left=0.1, bottom=0.02, right=0.98, top=0.98)
+            self.ax.get_yaxis().set_visible(False)  # Hide the section plot until a loop is added.
+
         super().__init__()
         self.setupUi(self)
-        self.setAcceptDrops(True)
-        self.setWindowTitle('Loop Planner')
-        self.setWindowIcon(get_icon('loop_planner.png'))
-        self.resize(1500, 800)
-        # self.installEventFilter(self)
-        self.status_bar.show()
-
         self.parent = parent
         self.darkmode = darkmode
+
+        self.background_color = get_line_color("background", "mpl", self.darkmode)
+        self.foreground_color = get_line_color("foreground", "mpl", self.darkmode)
+        self.hole_color = get_line_color("foreground", "mpl", self.darkmode)
+        self.loop_color = get_line_color("purple", "mpl", self.darkmode)
+
+        plt.style.use('dark_background' if self.darkmode else 'default')
+        plt.rcParams['axes.facecolor'] = self.background_color
+        plt.rcParams['figure.facecolor'] = self.background_color
+
         self.save_name = None
-
-        # Status bar
-        self.status_bar.addPermanentWidget(self.epsg_label, 0)
-        self.plan_view.setMenuEnabled(False)
-
-        # Icons
-        self.actionOpen_Project.setIcon(get_icon("open.png"))
-        self.actionSave_Project.setIcon(get_icon("save.png"))
-        self.actionSave_As.setIcon(get_icon("save_as.png"))
-        self.actionSave_as_KMZ.setIcon(get_icon("google_earth.png"))
-        self.actionSave_as_GPX.setIcon(get_icon("garmin_file.png"))
-        self.view_map_action.setIcon(get_icon("folium.png"))
-        self.add_hole_btn.setIcon(get_icon("add.png"))
-        self.add_loop_btn.setIcon(get_icon("add.png"))
-
-        # Plotting
         self.selected_hole = None
         self.selected_loop = None
-
         self.loop_widgets = []
         self.hole_widgets = []
 
@@ -1047,244 +1263,14 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.section_view_layout.addWidget(self.section_canvas)
 
         self.add_hole('Hole')
-        # # TODO Comment out later
-        # self.add_loop('Loop')
+        self.add_loop('Loop')
         self.loop_tab_widget.hide()
 
-        # Signals
-        self.hole_cbox.currentIndexChanged.connect(self.select_hole)
-        self.loop_cbox.currentIndexChanged.connect(self.select_loop)
-
-        # Menu
-        self.actionOpen_Project.triggered.connect(self.open_project)
-        self.actionSave_Project.triggered.connect(lambda: self.save_project(save_as=False))
-        self.actionSave_As.triggered.connect(lambda: self.save_project(save_as=True))
-        self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
-        self.actionSave_as_GPX.triggered.connect(self.save_gpx)
-        self.view_map_action.triggered.connect(self.view_map)
-
-        # Checkbox
-        def toggle_annotations():
-            for hole in self.hole_widgets:
-                if self.show_names_cbox.isChecked():
-                    hole.hole_name.show()
-                else:
-                    hole.hole_name.hide()
-
-            for loop in self.loop_widgets:
-                if self.show_names_cbox.isChecked():
-                    loop.loop_name.show()
-                else:
-                    loop.loop_name.hide()
-
-                if self.show_corners_cbox.isChecked():
-                    loop.show_corners = True
-                    if loop.is_selected:
-                        for label in loop.corner_labels:
-                            label.show()
-                else:
-                    loop.show_corners = False
-                    for label in loop.corner_labels:
-                        label.hide()
-
-                if self.show_segments_cbox.isChecked():
-                    loop.show_segments = True
-                    if loop.is_selected:
-                        for label in loop.segment_labels:
-                            label.show()
-                else:
-                    loop.show_segments = False
-                    for label in loop.segment_labels:
-                        label.hide()
-
-        self.show_names_cbox.toggled.connect(toggle_annotations)
-        self.show_corners_cbox.toggled.connect(toggle_annotations)
-        self.show_segments_cbox.toggled.connect(toggle_annotations)
-        self.show_grid_cbox.toggled.connect(lambda: self.plan_view.showGrid(x=self.show_grid_cbox.isChecked(),
-                                                                            y=self.show_grid_cbox.isChecked()))
-
-        # Buttons
-        self.add_hole_btn.clicked.connect(self.add_hole)
-        self.add_loop_btn.clicked.connect(self.add_loop)
-
-        # Qt size change
-        # self.section_frame.resizeEvent = self.event
-
-        self.init_crs()
-        self.init_plan_view()
-        self.init_section_view()
-
-    def init_crs(self):
-        """
-        Populate the CRS drop boxes and connect all their signals
-        """
-
-        def toggle_gps_system():
-            """
-            Toggle the datum and zone combo boxes and change their options based on the selected CRS system.
-            """
-            current_zone = self.gps_zone_cbox.currentText()
-            datum = self.gps_datum_cbox.currentText()
-            system = self.gps_system_cbox.currentText()
-
-            if system == '':
-                self.gps_zone_cbox.setEnabled(False)
-                self.gps_datum_cbox.setEnabled(False)
-
-            elif system == 'Lat/Lon':
-                self.gps_datum_cbox.setCurrentText('WGS 1984')
-                self.gps_zone_cbox.setCurrentText('')
-                self.gps_datum_cbox.setEnabled(False)
-                self.gps_zone_cbox.setEnabled(False)
-
-            elif system == 'UTM':
-                self.gps_datum_cbox.setEnabled(True)
-
-                if datum == '':
-                    self.gps_zone_cbox.setEnabled(False)
-                    return
-                else:
-                    self.gps_zone_cbox.clear()
-                    self.gps_zone_cbox.setEnabled(True)
-
-                # NAD 27 and 83 only have zones from 1N to 22N/23N
-                if datum == 'NAD 1927':
-                    zones = [''] + [f"{num} North" for num in range(1, 23)] + ['59 North', '60 North']
-                elif datum == 'NAD 1983':
-                    zones = [''] + [f"{num} North" for num in range(1, 24)] + ['59 North', '60 North']
-                # WGS 84 has zones from 1N and 1S to 60N and 60S
-                else:
-                    zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in
-                                                                               range(1, 61)]
-
-                for zone in zones:
-                    self.gps_zone_cbox.addItem(zone)
-
-                # Keep the same zone number if possible
-                self.gps_zone_cbox.setCurrentText(current_zone)
-
-        def toggle_crs_rbtn():
-            """
-            Toggle the radio buttons for the project CRS box, switching between the CRS drop boxes and the EPSG edit.
-            """
-            if self.crs_rbtn.isChecked():
-                # Enable the CRS drop boxes and disable the EPSG line edit
-                self.gps_system_cbox.setEnabled(True)
-                toggle_gps_system()
-
-                self.epsg_edit.setEnabled(False)
-            else:
-                # Disable the CRS drop boxes and enable the EPSG line edit
-                self.gps_system_cbox.setEnabled(False)
-                self.gps_datum_cbox.setEnabled(False)
-                self.gps_zone_cbox.setEnabled(False)
-
-                self.epsg_edit.setEnabled(True)
-
-        def check_epsg():
-            """
-            Try to convert the EPSG code to a Proj CRS object, reject the input if it doesn't work.
-            """
-            epsg_code = self.epsg_edit.text()
-            self.epsg_edit.blockSignals(True)
-
-            if epsg_code:
-                try:
-                    crs = CRS.from_epsg(epsg_code)
-                except Exception as e:
-                    logger.error(f"Invalid EPSG code: {epsg_code}.")
-                    self.message.critical(self, 'Invalid EPSG Code', f"{epsg_code} is not a valid EPSG code.")
-                    self.epsg_edit.setText('')
-                finally:
-                    set_epsg_label()
-
-            self.epsg_edit.blockSignals(False)
-
-        def set_epsg_label():
-            """
-            Convert the current project CRS combo box values into the EPSG code and set the status bar label.
-            """
-            epsg_code = self.get_epsg()
-            if epsg_code:
-                crs = CRS.from_epsg(epsg_code)
-                self.epsg_label.setText(f"{crs.name} ({crs.type_name})")
-            else:
-                self.epsg_label.setText('')
-
-        # Add the GPS system and datum drop box options
-        gps_systems = ['', 'Lat/Lon', 'UTM']
-        for system in gps_systems:
-            self.gps_system_cbox.addItem(system)
-
-        datums = ['', 'WGS 1984', 'NAD 1927', 'NAD 1983']
-        for datum in datums:
-            self.gps_datum_cbox.addItem(datum)
-
-        int_valid = QIntValidator()
-        self.epsg_edit.setValidator(int_valid)
-
-        # Signals
-        # Combo boxes
-        self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
-        self.gps_system_cbox.currentIndexChanged.connect(set_epsg_label)
-        self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_system)
-        self.gps_datum_cbox.currentIndexChanged.connect(set_epsg_label)
-        self.gps_zone_cbox.currentIndexChanged.connect(set_epsg_label)
-
-        # Radio buttons
-        self.crs_rbtn.clicked.connect(toggle_crs_rbtn)
-        self.crs_rbtn.clicked.connect(set_epsg_label)
-        self.epsg_rbtn.clicked.connect(toggle_crs_rbtn)
-        self.epsg_rbtn.clicked.connect(set_epsg_label)
-
-        self.epsg_edit.editingFinished.connect(check_epsg)
-
-        self.gps_system_cbox.setCurrentIndex(2)
-        self.gps_datum_cbox.setCurrentIndex(1)
-        self.gps_zone_cbox.setCurrentIndex(17)
-
-    def init_plan_view(self):
-        """
-        Initial set-up of the plan view. Creates the plot widget, custom axes for the Y and X axes, and adds the loop ROI.
-        :return: None
-        """
-        self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
-                                     'bottom': NonScientific(orientation='bottom')})
-        self.plan_view.showGrid(x=self.show_grid_cbox.isChecked(), y=self.show_grid_cbox.isChecked(), alpha=0.2)
-        self.plan_view.getViewBox().disableAutoRange('xy')
-        self.plan_view.setAspectLocked()
-        self.plan_view.hideButtons()
-        self.plan_view.setLabel('left', 'Northing')
-        self.plan_view.setLabel('bottom', 'Easting')
-        self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)
-        self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)
-        self.plan_view.getAxis('right').setWidth(15)
-        self.plan_view.getAxis('top').setHeight(15)
-        self.plan_view.getAxis("bottom").nudge -= 10  # Move the label so it doesn't get clipped
-
-        # Add the right and top borders
-        self.plan_view.getAxis('right').setStyle(showValues=False)  # Disable showing the values of axis
-        self.plan_view.getAxis('top').setStyle(showValues=False)  # Disable showing the values of axis
-        self.plan_view.showAxis('right', show=True)  # Show the axis edge line
-        self.plan_view.showAxis('top', show=True)  # Show the axis edge line
-        self.plan_view.showLabel('right', show=False)
-        self.plan_view.showLabel('top', show=False)
-
-    def init_section_view(self):
-        """
-        Initial set-up of the section plot. Sets the axes to have equal aspect ratios.
-        :return: None
-        """
-        self.ax.set_aspect('equal')
-        self.ax.use_sticky_edges = False  # So the plot doesn't re-size after the first time it's plotted
-        self.ax.spines['top'].set_visible(False)
-        self.ax.spines['left'].set_visible(False)
-        self.ax.spines['right'].set_visible(False)
-        self.ax.spines['bottom'].set_visible(False)
-        self.ax.get_xaxis().set_visible(False)
-        self.ax.yaxis.set_major_formatter(ticker.StrMethodFormatter('{x:.0f}'))
-        self.ax.figure.subplots_adjust(left=0.1, bottom=0.02, right=0.98, top=0.98)
-        self.ax.get_yaxis().set_visible(False)  # Hide the section plot until a loop is added.
+        init_ui()
+        init_signals()
+        init_crs()
+        init_plan_view()
+        init_section_view()
 
     def dragEnterEvent(self, e):
         e.accept()
@@ -1314,10 +1300,8 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         :param ind: int, index of the hole
         """
         if ind == -1:
-            print(f"No hole selected")
             self.selected_hole = None
         else:
-            print(f"Hole {ind} selected")
             self.selected_hole = self.hole_widgets[ind]
             self.hole_tab_widget.setCurrentIndex(ind)
 
@@ -1335,10 +1319,8 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         :param ind: int, index of the hole
         """
         if ind == -1:
-            print(f"No loop selected")
             self.selected_loop = None
         else:
-            print(f"loop {ind} selected")
             self.selected_loop = self.loop_widgets[ind]
             self.loop_tab_widget.setCurrentIndex(ind)
 
@@ -1362,7 +1344,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         :param length: str or float
         :return: None
         """
-
         def name_changed(widget):
             """
             Rename the tab name when the hole name is changed.
@@ -1413,7 +1394,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                     properties[prop_names[i]] = float(value)
 
             # Create the hole widget for the tab
-            hole_widget = HoleWidget(properties, self.plan_view, name=name)
+            hole_widget = HoleWidget(properties, self.plan_view, name=name, darkmode=self.darkmode)
             self.hole_widgets.append(hole_widget)
             hole_widget.name_changed_sig.connect(lambda: name_changed(hole_widget))
             hole_widget.hole_collar.sigClicked.connect(lambda: hole_clicked(hole_widget))
@@ -1481,7 +1462,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                 # Create the loop widget for the tab
                 coords = [self.plan_view.viewRect().center()]
 
-            loop_widget = LoopWidget(coords, self.plan_view, name=name, angle=int(angle))
+            loop_widget = LoopWidget(coords, self.plan_view, name=name, angle=int(angle), darkmode=self.darkmode)
             self.loop_widgets.append(loop_widget)
 
             # Connect signals
@@ -1547,13 +1528,11 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         Plots the hole on the plan plot and section plot, and plots the vector magnetic field on the section plot.
         :return: None
         """
-
         def plot_hole_section(proj):
             """
             Plot the hole trace
             :param proj: pd DataFrame, 3D projected hole trace of the geometry
             """
-
             def get_plane_projection(p1, p2, proj):
                 """
                 Projects each 3D point in proj to the plane defined by p1 and p2.
@@ -1562,7 +1541,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                 :param proj: dataframe, 3D projected borehole trace
                 :return: list of x, z tuples
                 """
-
                 def project(row):
                     """
                     Project the 3D point to a 2D plane
@@ -1586,7 +1564,9 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             # Get the 2D projected coordinates onto the plane defined by points p1 and p2
             plane_projection = get_plane_projection(p1, p2, proj)
 
-            buffer = [mpl.patheffects.Stroke(linewidth=3, foreground='white'), mpl.patheffects.Normal()]
+            buffer = [mpl.patheffects.Stroke(linewidth=3,
+                                             foreground=self.background_color),
+                      mpl.patheffects.Normal()]
             hole_len = self.selected_hole.projection.Relative_depth.iloc[-1]
             collar_elevation = 0.
 
@@ -1602,7 +1582,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
             # Circle at top of hole
             self.ax.plot([plotx[0]], collar_elevation, 'o',
-                         markerfacecolor='w',
+                         markerfacecolor=self.background_color,
                          markeredgecolor=selection_color,
                          markersize=8,
                          zorder=11)
@@ -1640,11 +1620,10 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
             # Add the horizontal line
             self.ax.axhline(y=0,
-                            color='dimgray',
+                            color=get_line_color("gray", "mpl", self.darkmode),
                             lw=0.6,
-                            path_effects=buffer,
-                            zorder=0
-                            )
+                            # path_effects=buffer,
+                            zorder=0)
 
         def plot_mag(c1, c2):
             """
@@ -1659,7 +1638,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             mag_calculator = MagneticFieldCalculator(wire_coords)
             xx, yy, zz, uproj, vproj, wproj, plotx, plotz, arrow_len = mag_calculator.get_2d_magnetic_field(c1, c2)
             self.ax.quiver(xx, zz, plotx, plotz,
-                           color='dimgray',
+                           color=get_line_color("gray", "mpl", self.darkmode),
                            label='Field',
                            pivot='middle',
                            zorder=1,
@@ -1731,7 +1710,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                 y=0.99,
                 xanchor="left",
                 x=0.01,
-                bordercolor="Black",
+                bordercolor=self.foreground_color,
                 borderwidth=1
             ),
         )
@@ -2064,283 +2043,175 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
     """
     Program to plan a surface grid.
     """
+    def __init__(self, parent=None, darkmode=False):
+        def init_ui():
+            self.setWindowTitle('Grid Planner')
+            self.setWindowIcon(get_icon('grid_planner.png'))
+            self.setGeometry(200, 200, 1100, 700)
+            self.actionSave_as_KMZ.setIcon(get_icon("google_earth.png"))
+            self.actionSave_as_GPX.setIcon(get_icon("garmin_file.png"))
+            self.view_map_action.setIcon(get_icon("folium.png"))
+            self.status_bar.addPermanentWidget(self.epsg_label, 0)
 
-    def __init__(self, parent=None):
-        super().__init__()
-        self.setupUi(self)
-        self.parent = parent
+        def init_signals():
+            def change_loop_width():
+                """
+                Signal slot: Change the loop ROI dimensions from user input
+                :return: None
+                """
+                height = self.loop_roi.size()[1]
+                width = self.loop_width_sbox.value()
+                logger.debug(f"Loop width changed to {width}")
+                self.loop_roi.setSize((width, height))
 
-        self.setWindowTitle('Grid Planner')
-        self.setWindowIcon(get_icon('grid_planner.png'))
-        self.setGeometry(200, 200, 1100, 700)
+            def change_loop_height():
+                """
+                Signal slot: Change the loop ROI dimensions from user input
+                :return: None
+                """
+                height = self.loop_height_sbox.value()
+                width = self.loop_roi.size()[0]
+                logger.debug(f"Loop height changed to {height}")
+                self.loop_roi.setSize((width, height))
 
-        self.actionSave_as_KMZ.setIcon(get_icon("google_earth.png"))
-        self.actionSave_as_GPX.setIcon(get_icon("garmin_file.png"))
-        self.view_map_action.setIcon(get_icon("folium.png"))
-        # self.installEventFilter(self)
+            def change_loop_angle():
+                """
+                Signal slot: Change the loop ROI angle from user input
+                :return: None
+                """
+                angle = self.loop_angle_sbox.value()
+                logger.info(f"Loop angle changed to {angle}")
+                self.loop_roi.setAngle(angle)
 
-        self.loop_height = self.loop_height_sbox.value()
-        self.loop_width = self.loop_width_sbox.value()
-        self.loop_angle = self.loop_angle_sbox.value()
+            def change_grid_angle():
+                """
+                Signal slot: Change the grid ROI angle from user input. Converts from azimuth to angle
+                :return: None
+                """
+                az = self.grid_az_sbox.value()
+                angle = 90 - az
+                logger.info(f"Grid angle changed to {az}")
+                self.grid_roi.setAngle(angle)
 
-        self.grid_easting = self.grid_easting_sbox.value()
-        self.grid_northing = self.grid_northing_sbox.value()
-        self.grid_az = self.grid_az_sbox.value()
-        self.line_number = self.line_number_sbox.value()
-        self.line_length = self.line_length_sbox.value()
-        self.station_spacing = self.station_spacing_sbox.value()
-        self.line_spacing = self.line_spacing_sbox.value()
+            def change_grid_size():
+                """
+                Signal slot: Change the grid ROI dimensions from user input
+                :return: None
+                """
+                self.line_length = self.line_length_sbox.value()
+                self.line_number = self.line_number_sbox.value()
+                self.line_spacing = self.line_spacing_sbox.value()
+                self.grid_roi.setSize((self.line_length, max((self.line_number - 1) * self.line_spacing, 10)))
+                logger.info(
+                    f"Grid size changed to {self.line_length} x {max((self.line_number - 1) * self.line_spacing, 10)}")
 
-        self.grid_east_center, self.grid_north_center = 0, 0
-        self.lines = []
+            def change_grid_pos():
+                """
+                Change the position of the grid ROI based on the input from the grid easting and northing spin boxes.
+                :return: None
+                """
+                self.grid_roi.blockSignals(True)
 
-        # Status bar
-        self.status_bar.addPermanentWidget(self.epsg_label, 0)
+                self.grid_east_center, self.grid_north_center = self.grid_easting_sbox.value(), self.grid_northing_sbox.value()
+                self.grid_roi.setPos(self.grid_east_center, self.grid_north_center)
 
-        # Plots
-        self.grid_lines_plot = pg.MultiPlotItem()
-        self.grid_lines_plot.setZValue(1)
-        self.init_plan_view()
+                self.plot_grid()
+                self.plan_view.autoRange(items=[self.loop_roi, self.grid_roi])
 
-        self.plan_view.autoRange()
-        self.plot_grid()
+                self.grid_roi.blockSignals(False)
 
-        self.init_signals()
-        self.init_crs()
+            def toggle_gps_system():
+                """
+                Toggle the datum and zone combo boxes and change their options based on the selected CRS system.
+                """
+                current_zone = self.gps_zone_cbox.currentText()
+                datum = self.gps_datum_cbox.currentText()
+                system = self.gps_system_cbox.currentText()
 
-    def init_signals(self):
-
-        def change_loop_width():
-            """
-            Signal slot: Change the loop ROI dimensions from user input
-            :return: None
-            """
-            height = self.loop_roi.size()[1]
-            width = self.loop_width_sbox.value()
-            logger.debug(f"Loop width changed to {width}")
-            self.loop_roi.setSize((width, height))
-
-        def change_loop_height():
-            """
-            Signal slot: Change the loop ROI dimensions from user input
-            :return: None
-            """
-            height = self.loop_height_sbox.value()
-            width = self.loop_roi.size()[0]
-            logger.debug(f"Loop height changed to {height}")
-            self.loop_roi.setSize((width, height))
-
-        def change_loop_angle():
-            """
-            Signal slot: Change the loop ROI angle from user input
-            :return: None
-            """
-            angle = self.loop_angle_sbox.value()
-            logger.info(f"Loop angle changed to {angle}")
-            self.loop_roi.setAngle(angle)
-
-        def change_grid_angle():
-            """
-            Signal slot: Change the grid ROI angle from user input. Converts from azimuth to angle
-            :return: None
-            """
-            az = self.grid_az_sbox.value()
-            angle = 90 - az
-            logger.info(f"Grid angle changed to {az}")
-            self.grid_roi.setAngle(angle)
-
-        def change_grid_size():
-            """
-            Signal slot: Change the grid ROI dimensions from user input
-            :return: None
-            """
-            self.line_length = self.line_length_sbox.value()
-            self.line_number = self.line_number_sbox.value()
-            self.line_spacing = self.line_spacing_sbox.value()
-            self.grid_roi.setSize((self.line_length, max((self.line_number - 1) * self.line_spacing, 10)))
-            logger.info(
-                f"Grid size changed to {self.line_length} x {max((self.line_number - 1) * self.line_spacing, 10)}")
-
-        def change_grid_pos():
-            """
-            Change the position of the grid ROI based on the input from the grid easting and northing spin boxes.
-            :return: None
-            """
-            self.grid_roi.blockSignals(True)
-
-            self.grid_east_center, self.grid_north_center = self.grid_easting_sbox.value(), self.grid_northing_sbox.value()
-            self.grid_roi.setPos(self.grid_east_center, self.grid_north_center)
-
-            self.plot_grid()
-            self.plan_view.autoRange(items=[self.loop_roi, self.grid_roi])
-
-            self.grid_roi.blockSignals(False)
-
-        # Menu
-        self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
-        self.actionSave_as_KMZ.setIcon(get_icon('google_earth.png'))
-        self.actionSave_as_GPX.triggered.connect(self.save_gpx)
-        self.actionSave_as_GPX.setIcon(get_icon('garmin_file.png'))
-        # self.view_map_action.setDisabled(True)
-        self.view_map_action.triggered.connect(self.view_map)
-        self.view_map_action.setIcon(get_icon('folium.png'))
-        self.actionCopy_Loop_to_Clipboard.triggered.connect(self.copy_loop_to_clipboard)
-        self.actionCopy_Grid_to_Clipboard.triggered.connect(self.copy_grid_to_clipboard)
-
-        self.loop_height_sbox.valueChanged.connect(change_loop_height)
-        self.loop_width_sbox.valueChanged.connect(change_loop_width)
-        self.loop_angle_sbox.valueChanged.connect(change_loop_angle)
-        self.grid_az_sbox.valueChanged.connect(change_grid_angle)
-
-        self.grid_easting_sbox.valueChanged.connect(self.plot_grid)
-        self.grid_easting_sbox.valueChanged.connect(change_grid_pos)
-        self.grid_northing_sbox.valueChanged.connect(self.plot_grid)
-        self.grid_northing_sbox.valueChanged.connect(change_grid_pos)
-        self.grid_az_sbox.valueChanged.connect(self.plot_grid)
-        self.line_number_sbox.valueChanged.connect(self.plot_grid)
-        self.line_number_sbox.valueChanged.connect(change_grid_size)
-        self.line_length_sbox.valueChanged.connect(self.plot_grid)
-        self.line_length_sbox.valueChanged.connect(change_grid_size)
-        self.station_spacing_sbox.valueChanged.connect(self.plot_grid)
-        self.line_spacing_sbox.valueChanged.connect(self.plot_grid)
-        self.line_spacing_sbox.valueChanged.connect(change_grid_size)
-
-    def init_crs(self):
-        """
-        Populate the CRS drop boxes and connect all their signals
-        """
-        def toggle_gps_system():
-            """
-            Toggle the datum and zone combo boxes and change their options based on the selected CRS system.
-            """
-            current_zone = self.gps_zone_cbox.currentText()
-            datum = self.gps_datum_cbox.currentText()
-            system = self.gps_system_cbox.currentText()
-
-            if system == '':
-                self.gps_zone_cbox.setEnabled(False)
-                self.gps_datum_cbox.setEnabled(False)
-
-            elif system == 'Lat/Lon':
-                self.gps_datum_cbox.setCurrentText('WGS 1984')
-                self.gps_zone_cbox.setCurrentText('')
-                self.gps_datum_cbox.setEnabled(False)
-                self.gps_zone_cbox.setEnabled(False)
-
-            elif system == 'UTM':
-                self.gps_datum_cbox.setEnabled(True)
-
-                if datum == '':
+                if system == '':
                     self.gps_zone_cbox.setEnabled(False)
-                    return
+                    self.gps_datum_cbox.setEnabled(False)
+
+                elif system == 'Lat/Lon':
+                    self.gps_datum_cbox.setCurrentText('WGS 1984')
+                    self.gps_zone_cbox.setCurrentText('')
+                    self.gps_datum_cbox.setEnabled(False)
+                    self.gps_zone_cbox.setEnabled(False)
+
+                elif system == 'UTM':
+                    self.gps_datum_cbox.setEnabled(True)
+
+                    if datum == '':
+                        self.gps_zone_cbox.setEnabled(False)
+                        return
+                    else:
+                        self.gps_zone_cbox.clear()
+                        self.gps_zone_cbox.setEnabled(True)
+
+                    # NAD 27 and 83 only have zones from 1N to 22N/23N
+                    if datum == 'NAD 1927':
+                        zones = [''] + [f"{num} North" for num in range(1, 23)] + ['59 North', '60 North']
+                    elif datum == 'NAD 1983':
+                        zones = [''] + [f"{num} North" for num in range(1, 24)] + ['59 North', '60 North']
+                    # WGS 84 has zones from 1N and 1S to 60N and 60S
+                    else:
+                        zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in
+                                                                                   range(1, 61)]
+
+                    for zone in zones:
+                        self.gps_zone_cbox.addItem(zone)
+
+                    # Keep the same zone number if possible
+                    self.gps_zone_cbox.setCurrentText(current_zone)
+
+            def toggle_crs_rbtn():
+                """
+                Toggle the radio buttons for the project CRS box, switching between the CRS drop boxes and the EPSG edit.
+                """
+                if self.crs_rbtn.isChecked():
+                    # Enable the CRS drop boxes and disable the EPSG line edit
+                    self.gps_system_cbox.setEnabled(True)
+                    toggle_gps_system()
+
+                    self.epsg_edit.setEnabled(False)
                 else:
-                    self.gps_zone_cbox.clear()
-                    self.gps_zone_cbox.setEnabled(True)
+                    # Disable the CRS drop boxes and enable the EPSG line edit
+                    self.gps_system_cbox.setEnabled(False)
+                    self.gps_datum_cbox.setEnabled(False)
+                    self.gps_zone_cbox.setEnabled(False)
 
-                # NAD 27 and 83 only have zones from 1N to 22N/23N
-                if datum == 'NAD 1927':
-                    zones = [''] + [f"{num} North" for num in range(1, 23)] + ['59 North', '60 North']
-                elif datum == 'NAD 1983':
-                    zones = [''] + [f"{num} North" for num in range(1, 24)] + ['59 North', '60 North']
-                # WGS 84 has zones from 1N and 1S to 60N and 60S
-                else:
-                    zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in
-                                                                               range(1, 61)]
+                    self.epsg_edit.setEnabled(True)
 
-                for zone in zones:
-                    self.gps_zone_cbox.addItem(zone)
+            def check_epsg():
+                """
+                Try to convert the EPSG code to a Proj CRS object, reject the input if it doesn't work.
+                """
+                epsg_code = self.epsg_edit.text()
+                self.epsg_edit.blockSignals(True)
 
-                # Keep the same zone number if possible
-                self.gps_zone_cbox.setCurrentText(current_zone)
+                if epsg_code:
+                    try:
+                        crs = CRS.from_epsg(epsg_code)
+                    except Exception as e:
+                        logger.error(f"Invalid EPSG code: {epsg_code}.")
+                        self.message.critical(self, 'Invalid EPSG Code', f"{epsg_code} is not a valid EPSG code.")
+                        self.epsg_edit.setText('')
+                    finally:
+                        set_epsg_label()
 
-        def toggle_crs_rbtn():
-            """
-            Toggle the radio buttons for the project CRS box, switching between the CRS drop boxes and the EPSG edit.
-            """
-            if self.crs_rbtn.isChecked():
-                # Enable the CRS drop boxes and disable the EPSG line edit
-                self.gps_system_cbox.setEnabled(True)
-                toggle_gps_system()
+                self.epsg_edit.blockSignals(False)
 
-                self.epsg_edit.setEnabled(False)
-            else:
-                # Disable the CRS drop boxes and enable the EPSG line edit
-                self.gps_system_cbox.setEnabled(False)
-                self.gps_datum_cbox.setEnabled(False)
-                self.gps_zone_cbox.setEnabled(False)
-
-                self.epsg_edit.setEnabled(True)
-
-        def check_epsg():
-            """
-            Try to convert the EPSG code to a Proj CRS object, reject the input if it doesn't work.
-            """
-            epsg_code = self.epsg_edit.text()
-            self.epsg_edit.blockSignals(True)
-
-            if epsg_code:
-                try:
+            def set_epsg_label():
+                """
+                Convert the current project CRS combo box values into the EPSG code and set the status bar label.
+                """
+                epsg_code = self.get_epsg()
+                if epsg_code:
                     crs = CRS.from_epsg(epsg_code)
-                except Exception as e:
-                    logger.error(f"Invalid EPSG code: {epsg_code}.")
-                    self.message.critical(self, 'Invalid EPSG Code', f"{epsg_code} is not a valid EPSG code.")
-                    self.epsg_edit.setText('')
-                finally:
-                    set_epsg_label()
+                    self.epsg_label.setText(f"{crs.name} ({crs.type_name})")
+                else:
+                    self.epsg_label.setText('')
 
-            self.epsg_edit.blockSignals(False)
-
-        def set_epsg_label():
-            """
-            Convert the current project CRS combo box values into the EPSG code and set the status bar label.
-            """
-            epsg_code = self.get_epsg()
-            if epsg_code:
-                crs = CRS.from_epsg(epsg_code)
-                self.epsg_label.setText(f"{crs.name} ({crs.type_name})")
-            else:
-                self.epsg_label.setText('')
-
-        # Add the GPS system and datum drop box options
-        gps_systems = ['', 'Lat/Lon', 'UTM']
-        for system in gps_systems:
-            self.gps_system_cbox.addItem(system)
-
-        datums = ['', 'WGS 1984', 'NAD 1927', 'NAD 1983']
-        for datum in datums:
-            self.gps_datum_cbox.addItem(datum)
-
-        int_valid = QIntValidator()
-        self.epsg_edit.setValidator(int_valid)
-
-        # Signals
-        # Combo boxes
-        self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
-        self.gps_system_cbox.currentIndexChanged.connect(set_epsg_label)
-        self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_system)
-        self.gps_datum_cbox.currentIndexChanged.connect(set_epsg_label)
-        self.gps_zone_cbox.currentIndexChanged.connect(set_epsg_label)
-
-        # Radio buttons
-        self.crs_rbtn.clicked.connect(toggle_crs_rbtn)
-        self.crs_rbtn.clicked.connect(set_epsg_label)
-        self.epsg_rbtn.clicked.connect(toggle_crs_rbtn)
-        self.epsg_rbtn.clicked.connect(set_epsg_label)
-
-        self.epsg_edit.editingFinished.connect(check_epsg)
-
-        self.gps_system_cbox.setCurrentIndex(2)
-        self.gps_datum_cbox.setCurrentIndex(1)
-        self.gps_zone_cbox.setCurrentIndex(17)
-        set_epsg_label()
-
-    def init_plan_view(self):
-        """
-        Initial set-up of the plan view. Creates the plot widget, custom axes for the Y and X axes, and adds the loop ROI.
-        :return: None
-        """
-
-        def set_loop():
             def loop_moved():
                 """
                 Signal slot: Updates the values of the loop width, height and angle when the loop ROI is changed, then
@@ -2361,27 +2232,6 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
                 self.loop_angle_sbox.blockSignals(False)
                 self.plot_grid()
 
-            # Create the loop ROI
-            center_x, center_y = self.get_grid_center(self.grid_easting, self.grid_northing)
-
-            self.loop_roi = RectLoop([center_x - (self.loop_width / 2),
-                                      center_y - (self.loop_height / 2)],
-                                     [self.loop_width, self.loop_height],
-                                     scaleSnap=True,
-                                     pen=pg.mkPen('m', width=1.5))
-            self.plan_view.addItem(self.loop_roi)
-            self.loop_roi.setZValue(0)
-            self.loop_roi.addScaleHandle([0, 0], [0.5, 0.5], lockAspect=True)
-            self.loop_roi.addScaleHandle([1, 0], [0.5, 0.5], lockAspect=True)
-            self.loop_roi.addScaleHandle([1, 1], [0.5, 0.5], lockAspect=True)
-            self.loop_roi.addScaleHandle([0, 1], [0.5, 0.5], lockAspect=True)
-            self.loop_roi.addRotateHandle([1, 0.5], [0.5, 0.5])
-            self.loop_roi.addRotateHandle([0.5, 0], [0.5, 0.5])
-            self.loop_roi.addRotateHandle([0.5, 1], [0.5, 0.5])
-            self.loop_roi.addRotateHandle([0, 0.5], [0.5, 0.5])
-            self.loop_roi.sigRegionChangeFinished.connect(loop_moved)
-
-        def set_grid():
             def grid_moved():
                 """
                 Signal slot: Update the grid easting and northing text based on the new position of the grid when the ROI
@@ -2401,32 +2251,197 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
                 self.grid_northing_sbox.blockSignals(False)
                 self.plot_grid()
 
-            # Create the grid
-            self.grid_roi = RectLoop([self.grid_easting, self.grid_northing],
-                                     [self.line_length, (self.line_number - 1) * self.line_spacing],
-                                     scaleSnap=True,
-                                     pen=pg.mkPen(None, width=1.5))
-            self.grid_roi.setAngle(90)
-            self.plan_view.addItem(self.grid_roi)
+            def copy_loop_to_clipboard():
+                """
+                Copy the loop corner coordinates to the clipboard.
+                """
+                epsg = self.get_epsg()
+                if epsg:
+                    crs_str = CRS.from_epsg(self.get_epsg()).name
+                else:
+                    crs_str = 'No CRS selected'
+
+                result = crs_str + '\n'
+                corners = self.get_loop_coords()
+                for point in corners:
+                    easting = f"{point[0]:.0f} E"
+                    northing = f"{point[1]:.0f} N"
+                    result += easting + ', ' + northing + '\n'
+                cb = QApplication.clipboard()
+                cb.clear(mode=cb.Clipboard)
+                cb.setText(result, mode=cb.Clipboard)
+
+                self.status_bar.showMessage('Loop corner coordinates copied to clipboard.', 1000)
+
+            def copy_grid_to_clipboard():
+                """
+                Copy the grid station coordinates to the clipboard.
+                :return: None
+                """
+                crs_str = f"{self.gps_system_cbox.currentText()} Zone {self.gps_zone_cbox.currentText()}, {self.gps_datum_cbox.currentText()}"
+                result = crs_str + '\n'
+                for line in self.lines:
+                    line_name = line['line_name']
+                    coords = line['station_coords']
+                    result += f"Line {line_name.strip()}" + '\n'
+                    for point in coords:
+                        result += f"{point[0]:.0f} E, {point[1]:.0f} N, {point[2]}" + '\n'
+                    result += '\n'
+                cb = QApplication.clipboard()
+                cb.clear(mode=cb.Clipboard)
+                cb.setText(result, mode=cb.Clipboard)
+                self.status_bar.showMessage('Grid coordinates copied to clipboard', 1000)
+
+            # Menu
+            self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
+            self.actionSave_as_KMZ.setIcon(get_icon('google_earth.png'))
+            self.actionSave_as_GPX.triggered.connect(self.save_gpx)
+            self.actionSave_as_GPX.setIcon(get_icon('garmin_file.png'))
+            # self.view_map_action.setDisabled(True)
+            self.view_map_action.triggered.connect(self.view_map)
+            self.view_map_action.setIcon(get_icon('folium.png'))
+            self.actionCopy_Loop_to_Clipboard.triggered.connect(copy_loop_to_clipboard)
+            self.actionCopy_Grid_to_Clipboard.triggered.connect(copy_grid_to_clipboard)
+
+            self.loop_height_sbox.valueChanged.connect(change_loop_height)
+            self.loop_width_sbox.valueChanged.connect(change_loop_width)
+            self.loop_angle_sbox.valueChanged.connect(change_loop_angle)
+            self.grid_az_sbox.valueChanged.connect(change_grid_angle)
+
+            self.grid_easting_sbox.valueChanged.connect(self.plot_grid)
+            self.grid_easting_sbox.valueChanged.connect(change_grid_pos)
+            self.grid_northing_sbox.valueChanged.connect(self.plot_grid)
+            self.grid_northing_sbox.valueChanged.connect(change_grid_pos)
+            self.grid_az_sbox.valueChanged.connect(self.plot_grid)
+            self.line_number_sbox.valueChanged.connect(self.plot_grid)
+            self.line_number_sbox.valueChanged.connect(change_grid_size)
+            self.line_length_sbox.valueChanged.connect(self.plot_grid)
+            self.line_length_sbox.valueChanged.connect(change_grid_size)
+            self.station_spacing_sbox.valueChanged.connect(self.plot_grid)
+            self.line_spacing_sbox.valueChanged.connect(self.plot_grid)
+            self.line_spacing_sbox.valueChanged.connect(change_grid_size)
+
+            # CRS
+            self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
+            self.gps_system_cbox.currentIndexChanged.connect(set_epsg_label)
+            self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_system)
+            self.gps_datum_cbox.currentIndexChanged.connect(set_epsg_label)
+            self.gps_zone_cbox.currentIndexChanged.connect(set_epsg_label)
+            self.crs_rbtn.clicked.connect(toggle_crs_rbtn)
+            self.crs_rbtn.clicked.connect(set_epsg_label)
+            self.epsg_rbtn.clicked.connect(toggle_crs_rbtn)
+            self.epsg_rbtn.clicked.connect(set_epsg_label)
+            self.epsg_edit.editingFinished.connect(check_epsg)
+            set_epsg_label()
+
+            # Plots
             self.grid_roi.sigRegionChangeStarted.connect(lambda: self.grid_roi.setPen('b'))
             self.grid_roi.sigRegionChangeFinished.connect(lambda: self.grid_roi.setPen(None))
             self.grid_roi.sigRegionChangeFinished.connect(grid_moved)
+            self.loop_roi.sigRegionChangeFinished.connect(loop_moved)
 
-        yaxis = PlanMapAxis(orientation='left')
-        xaxis = PlanMapAxis(orientation='bottom')
-        self.plan_view.setAxisItems({'bottom': xaxis, 'left': yaxis})
-        self.plan_view.showGrid(x=True, y=True, alpha=0.2)
-        self.plan_view.setAspectLocked()
-        self.plan_view.hideButtons()
-        self.plan_view.getAxis('right').setWidth(15)
-        self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
-        self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
-        self.plan_view.showAxis('right', show=True)  # Show the axis edge line
-        self.plan_view.showAxis('top', show=True)  # Show the axis edge line
-        self.plan_view.showLabel('right', show=False)
-        self.plan_view.showLabel('top', show=False)
-        set_grid()
-        set_loop()
+        def init_crs():
+            """
+            Populate the CRS drop boxes and connect all their signals
+            """
+            # Add the GPS system and datum drop box options
+            gps_systems = ['', 'Lat/Lon', 'UTM']
+            for system in gps_systems:
+                self.gps_system_cbox.addItem(system)
+
+            datums = ['', 'WGS 1984', 'NAD 1927', 'NAD 1983']
+            for datum in datums:
+                self.gps_datum_cbox.addItem(datum)
+
+            int_valid = QIntValidator()
+            self.epsg_edit.setValidator(int_valid)
+
+            self.gps_system_cbox.setCurrentIndex(2)
+            self.gps_datum_cbox.setCurrentIndex(1)
+            self.gps_zone_cbox.setCurrentIndex(17)
+
+        def init_plan_view():
+            """
+            Initial set-up of the plan view. Creates the plot widget, custom axes for the Y and X axes, and adds the loop ROI.
+            :return: None
+            """
+            yaxis = PlanMapAxis(orientation='left')
+            xaxis = PlanMapAxis(orientation='bottom')
+            self.grid_roi.setAngle(90)
+            self.loop_roi.setZValue(0)
+            self.loop_roi.addScaleHandle([0, 0], [0.5, 0.5], lockAspect=True)
+            self.loop_roi.addScaleHandle([1, 0], [0.5, 0.5], lockAspect=True)
+            self.loop_roi.addScaleHandle([1, 1], [0.5, 0.5], lockAspect=True)
+            self.loop_roi.addScaleHandle([0, 1], [0.5, 0.5], lockAspect=True)
+            self.loop_roi.addRotateHandle([1, 0.5], [0.5, 0.5])
+            self.loop_roi.addRotateHandle([0.5, 0], [0.5, 0.5])
+            self.loop_roi.addRotateHandle([0.5, 1], [0.5, 0.5])
+            self.loop_roi.addRotateHandle([0, 0.5], [0.5, 0.5])
+            self.plan_view.setAxisItems({'bottom': xaxis, 'left': yaxis})
+            self.plan_view.showGrid(x=True, y=True, alpha=0.2)
+            self.plan_view.setAspectLocked()
+            self.plan_view.hideButtons()
+            self.plan_view.getAxis('right').setWidth(15)
+            self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+            self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+            self.plan_view.showAxis('right', show=True)  # Show the axis edge line
+            self.plan_view.showAxis('top', show=True)  # Show the axis edge line
+            self.plan_view.showLabel('right', show=False)
+            self.plan_view.showLabel('top', show=False)
+
+        super().__init__()
+        self.setupUi(self)
+        init_ui()
+
+        self.parent = parent
+        self.darkmode = darkmode
+
+        self.background_color = get_line_color("background", "mpl", self.darkmode)
+        self.foreground_color = get_line_color("foreground", "mpl", self.darkmode)
+        self.line_color = get_line_color("blue", "mpl", self.darkmode)
+        self.loop_color = get_line_color("purple", "mpl", self.darkmode)
+
+        self.loop_roi = None
+        self.grid_roi = None
+        self.loop_height = self.loop_height_sbox.value()
+        self.loop_width = self.loop_width_sbox.value()
+        self.loop_angle = self.loop_angle_sbox.value()
+        self.grid_easting = self.grid_easting_sbox.value()
+        self.grid_northing = self.grid_northing_sbox.value()
+        self.grid_az = self.grid_az_sbox.value()
+        self.line_number = self.line_number_sbox.value()
+        self.line_length = self.line_length_sbox.value()
+        self.station_spacing = self.station_spacing_sbox.value()
+        self.line_spacing = self.line_spacing_sbox.value()
+        self.grid_east_center, self.grid_north_center = 0, 0
+        self.lines = []
+
+        # Plots
+        # Create the grid
+        self.grid_roi = RectLoop([self.grid_easting, self.grid_northing],
+                                 [self.line_length, (self.line_number - 1) * self.line_spacing],
+                                 scaleSnap=True,
+                                 pen=pg.mkPen(None, width=1.5))
+        self.plan_view.addItem(self.grid_roi)
+
+        # Create the loop ROI
+        center_x, center_y = self.get_grid_center(self.grid_easting, self.grid_northing)
+        self.loop_roi = RectLoop([center_x - (self.loop_width / 2),
+                                  center_y - (self.loop_height / 2)],
+                                 [self.loop_width, self.loop_height],
+                                 scaleSnap=True,
+                                 pen=pg.mkPen(self.loop_color, width=1.5))
+        self.plan_view.addItem(self.loop_roi)
+
+        self.grid_lines_plot = pg.MultiPlotItem()
+        self.grid_lines_plot.setZValue(1)
+        init_plan_view()
+
+        self.plan_view.autoRange()
+        self.plot_grid()
+
+        init_signals()
+        init_crs()
 
     def closeEvent(self, e):
         self.deleteLater()
@@ -2437,7 +2452,6 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         Plots the stations and lines on the plan map.
         :return: None
         """
-
         def transform_station(x, y, l):
             """
             Calculate the position of a station based on the distance away from the start station for that line.
@@ -2518,9 +2532,10 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
             station_xs, station_ys, station_names = [], [], []
 
             x_start, y_start = transform_line_start(x, y, i * self.line_spacing)
-            station_text = pg.TextItem(text=line_name, color='b', angle=text_angle,
-                                    rotateAxis=(0, 1),
-                                    anchor=text_anchor)
+            station_text = pg.TextItem(text=line_name, color=self.line_color,
+                                       angle=text_angle,
+                                       rotateAxis=(0, 1),
+                                       anchor=text_anchor)
             station_text.setPos(x_start, y_start)
             self.plan_view.addItem(station_text)
 
@@ -2533,16 +2548,16 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
                 station_ys.append(station_y)
             self.lines[i]['station_coords'] = list(zip(station_xs, station_ys, station_names))
 
-            line_plot = pg.PlotDataItem(station_xs, station_ys, pen='b')
+            line_plot = pg.PlotDataItem(station_xs, station_ys, pen=self.line_color)
             line_plot.setZValue(1)
-            stations_plot = pg.ScatterPlotItem(station_xs, station_ys, pen='b', brush='w')
+            stations_plot = pg.ScatterPlotItem(station_xs, station_ys, pen=self.line_color, brush=self.background_color)
             stations_plot.setZValue(2)
 
             self.plan_view.addItem(line_plot)
             self.plan_view.addItem(stations_plot)
 
         # Plot a symbol at the center of the grid
-        grid_center = pg.ScatterPlotItem([center_x], [center_y], pen='b', symbol='+')
+        grid_center = pg.ScatterPlotItem([center_x], [center_y], pen=self.line_color, symbol='+')
         grid_center.setZValue(1)
         self.plan_view.addItem(grid_center)
 
@@ -2740,6 +2755,9 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         tile_map.load_page()
         tile_map.show()
 
+    def save_project(self):
+        pass
+
     def save_kmz(self):
         """
         Save the loop and grid lines/stations to a KMZ file.
@@ -2880,48 +2898,6 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
                 logger.error(f'No application to open {save_path}.')
                 pass
 
-    def copy_loop_to_clipboard(self):
-        """
-        Copy the loop corner coordinates to the clipboard.
-        """
-
-        epsg = self.get_epsg()
-        if epsg:
-            crs_str = CRS.from_epsg(self.get_epsg()).name
-        else:
-            crs_str = 'No CRS selected'
-
-        result = crs_str + '\n'
-        corners = self.get_loop_coords()
-        for point in corners:
-            easting = f"{point[0]:.0f} E"
-            northing = f"{point[1]:.0f} N"
-            result += easting + ', ' + northing + '\n'
-        cb = QApplication.clipboard()
-        cb.clear(mode=cb.Clipboard)
-        cb.setText(result, mode=cb.Clipboard)
-
-        self.status_bar.showMessage('Loop corner coordinates copied to clipboard.', 1000)
-
-    def copy_grid_to_clipboard(self):
-        """
-        Copy the grid station coordinates to the clipboard.
-        :return: None
-        """
-        crs_str = f"{self.gps_system_cbox.currentText()} Zone {self.gps_zone_cbox.currentText()}, {self.gps_datum_cbox.currentText()}"
-        result = crs_str + '\n'
-        for line in self.lines:
-            line_name = line['line_name']
-            coords = line['station_coords']
-            result += f"Line {line_name.strip()}" + '\n'
-            for point in coords:
-                result += f"{point[0]:.0f} E, {point[1]:.0f} N, {point[2]}" + '\n'
-            result += '\n'
-        cb = QApplication.clipboard()
-        cb.clear(mode=cb.Clipboard)
-        cb.setText(result, mode=cb.Clipboard)
-        self.status_bar.showMessage('Grid coordinates copied to clipboard', 1000)
-
 
 class PolyLoop(pg.PolyLineROI):
     """
@@ -2988,8 +2964,7 @@ class PolyLoop(pg.PolyLineROI):
         seg.setZValue(self.zValue() + 1)
         for h in seg.handles:
             h['item'].setDeletable(True)
-            h['item'].setAcceptedMouseButtons(h[
-                                                  'item'].acceptedMouseButtons() | Qt.LeftButton)  ## have these handles take left clicks too, so that handles cannot be added on top of other handles
+            h['item'].setAcceptedMouseButtons(h['item'].acceptedMouseButtons() | Qt.LeftButton)  ## have these handles take left clicks too, so that handles cannot be added on top of other handles
 
     def addHandle(self, info, index=None):
 
@@ -2997,7 +2972,6 @@ class PolyLoop(pg.PolyLineROI):
             """
             Re-implementing Handle to change the size and color (especially when hovering) of the handles.
             """
-
             def __init__(self, *args, **kwds):
                 Handle.__init__(self, *args, **kwds)
                 self.pen = pg.mkPen(selection_color, width=1.)
@@ -3123,8 +3097,8 @@ def main():
     pg.setConfigOption('foreground', "w" if darkmode else (53, 53, 53))
 
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
-    planner = LoopPlanner()
-    # planner = GridPlanner()
+    planner = LoopPlanner(darkmode=darkmode)
+    # planner = GridPlanner(darkmode=darkmode)
 
     # hole_data = read_excel(r"C:\_Data\2021\Canadian Palladium\_Planning\Crone_BHEM_Collars.xlsx").dropna()
     # for ind, hole in hole_data.iterrows():
@@ -3137,11 +3111,11 @@ def main():
     #                      )
     planner.show()
     # planner.save_project()
-    planner.open_project(filepath=r"C:\_Data\2021\TMC\Galloway Project\_Planning\GA mk2.LPF")
+    # planner.open_project(filepath=r"C:\_Data\2021\TMC\Galloway Project\_Planning\GA mk2.LPF")
     # planner.gps_system_cbox.setCurrentIndex(2)
     # planner.gps_datum_cbox.setCurrentIndex(3)
     # planner.gps_zone_cbox.setCurrentIndex(18)
-    planner.crs_rbtn.click()
+    # planner.crs_rbtn.click()
     # planner.view_map()
 
     # tx_file = samples_folder.joinpath(r"Tx Files/Loop.tx")

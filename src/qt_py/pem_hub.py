@@ -72,6 +72,7 @@ logger = logging.getLogger(__name__)
 # TODO create large PDF with summary of file, including 3d map.
 # TODO Add progress bar to Contour map when it opens
 # TODO Hybrid PEMGeometry selection
+# TODO Add settings to PEM planner, to remember last opened project.
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []

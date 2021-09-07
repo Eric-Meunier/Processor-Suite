@@ -5,6 +5,7 @@ import sys
 
 import numpy as np
 import pyqtgraph as pg
+from scipy.spatial.transform import Rotation as R
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QKeySequence
 from PySide2.QtWidgets import (QMainWindow, QFileDialog, QApplication, QShortcut, QComboBox)
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 class LoopCalculator(QMainWindow, Ui_LoopCalculator):
 
-    def __init__(self, darkmode=False):
+    def __init__(self, parent=None, darkmode=False):
         def format_plots():
             # Plot widget
             self.plot_widget.setAxisItems({'left': NonScientific(orientation='left'),
@@ -87,6 +88,7 @@ class LoopCalculator(QMainWindow, Ui_LoopCalculator):
             self.distance_sbox.valueChanged.connect(self.calculate_mag)
 
         super().__init__()
+        self.parent = parent
         self.darkmode = darkmode
         pg.setConfigOption('background', (66, 66, 66) if self.darkmode else 'w')
         pg.setConfigOption('foreground', "w" if self.darkmode else (53, 53, 53))
@@ -318,6 +320,13 @@ class LoopCalculator(QMainWindow, Ui_LoopCalculator):
                                                      out_units=units,
                                                      ramp=ramp)
 
+            # # Rotate the theoretical values into the same frame of reference used with boreholes/surface lines
+            # rTx, rTy, rTz = R.from_euler('Z', -90, degrees=True).apply([mx, my, mz])
+            #
+            # # Rotate the theoretical values by the azimuth/dip
+            # r = R.from_euler('YZ', [0, 90], degrees=True)
+            # rT = r.apply([rTx, rTy, rTz])  # The rotated theoretical values
+
             mag_z_values.append(mz)
             mag_x_values.append(mx)
 
@@ -336,8 +345,8 @@ class LoopCalculator(QMainWindow, Ui_LoopCalculator):
                                                  out_units=units,
                                                  ramp=ramp)
 
-        self.z_response_label.setText(f"{abs(mz):,.0f} {units}")
-        self.x_response_label.setText(f"{abs(mx):,.0f} {units}")
+        self.z_response_label.setText(f"{mz:,.0f} {units}")
+        self.x_response_label.setText(f"{mx:,.0f} {units}")
         if abs(mz) >= 200000:
             self.z_response_label.setStyleSheet(f"color: rgb{str(tuple(get_line_color('pink', 'pyqt', self.darkmode)))}")
         else:
@@ -349,7 +358,6 @@ class LoopCalculator(QMainWindow, Ui_LoopCalculator):
             self.x_response_label.setStyleSheet(f"color: rgb{str(tuple(get_line_color('foreground', 'pyqt', self.darkmode)))}")
 
         # Plot the plan map
-        # Loop
         loop_coords = np.vstack((loop_coords, loop_coords[0]))
         self.loop_item.setData(loop_coords[:, 0], loop_coords[:, 1])
         x, y = dist, h / 2
@@ -361,7 +369,7 @@ if __name__ == '__main__':
     from src.qt_py import dark_palette
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    darkmode = False
+    darkmode = True
     if darkmode:
         app.setPalette(dark_palette)
     pg.setConfigOptions(antialias=True)
