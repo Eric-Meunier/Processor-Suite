@@ -220,6 +220,7 @@ class Ui_LoopPlanner(object):
         self.verticalLayout_2.setObjectName(u"verticalLayout_2")
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.section_view_layout = QVBoxLayout()
+        self.section_view_layout.setSpacing(0)
         self.section_view_layout.setObjectName(u"section_view_layout")
 
         self.verticalLayout_2.addLayout(self.section_view_layout)
@@ -259,8 +260,8 @@ class Ui_LoopPlanner(object):
         self.loop_tab_widget.setSizePolicy(sizePolicy1)
         self.loop_tab_widget.setMinimumSize(QSize(0, 0))
         self.loop_tab_widget.setMaximumSize(QSize(16777215, 16777215))
-        self.loop_tab_widget.setFrameShape(QFrame.Box)
-        self.loop_tab_widget.setFrameShadow(QFrame.Sunken)
+        self.loop_tab_widget.setFrameShape(QFrame.StyledPanel)
+        self.loop_tab_widget.setFrameShadow(QFrame.Plain)
 
         self.verticalLayout_3.addWidget(self.loop_tab_widget)
 

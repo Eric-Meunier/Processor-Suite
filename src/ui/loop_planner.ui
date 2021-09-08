@@ -303,7 +303,11 @@
          <number>0</number>
         </property>
         <item>
-         <layout class="QVBoxLayout" name="section_view_layout"/>
+         <layout class="QVBoxLayout" name="section_view_layout">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+         </layout>
         </item>
        </layout>
       </widget>
@@ -377,10 +381,10 @@
            </size>
           </property>
           <property name="frameShape">
-           <enum>QFrame::Box</enum>
+           <enum>QFrame::StyledPanel</enum>
           </property>
           <property name="frameShadow">
-           <enum>QFrame::Sunken</enum>
+           <enum>QFrame::Plain</enum>
           </property>
          </widget>
         </item>

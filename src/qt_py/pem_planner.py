@@ -13,7 +13,7 @@ import matplotlib.ticker as ticker
 import numpy as np
 import plotly.graph_objects as go
 import simplekml
-from PySide2.QtCore import Qt, Signal, QEvent, QPointF
+from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QPointF, QSettings, QSize
 from PySide2.QtGui import QIntValidator, QKeySequence, QTransform
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QFileDialog, QLabel, QApplication,
                                QFrame, QHBoxLayout, QLineEdit,
@@ -320,6 +320,7 @@ class HoleWidget(QWidget):
         self.loop = None
 
         self.hole_color = get_line_color("foreground", "pyqt", self.darkmode)
+        self.selection_color = get_line_color("teal", "pyqt", self.darkmode) if self.darkmode else selection_color
         self.foreground_color = get_line_color("foreground", "pyqt", self.darkmode)
         self.background_color = get_line_color("background", "pyqt", self.darkmode)
 
@@ -387,17 +388,17 @@ class HoleWidget(QWidget):
         init_signals()
 
     def select(self):
-        self.hole_collar.setPen(pg.mkPen(selection_color, width=1.5))
+        self.hole_collar.setPen(pg.mkPen(self.selection_color, width=1.5))
         self.hole_collar.setSize(12)
         self.hole_collar.setZValue(10)
 
-        self.hole_trace.setPen(pg.mkPen(selection_color, width=1.5))
-        self.hole_trace.setShadowPen(pg.mkPen(selection_color, width=3.))
+        self.hole_trace.setPen(pg.mkPen(self.selection_color, width=1.5))
+        self.hole_trace.setShadowPen(pg.mkPen(self.selection_color, width=3.))
         self.hole_trace.setZValue(9)
 
-        self.hole_end.setPen(pg.mkPen(selection_color, width=1.5))
+        self.hole_end.setPen(pg.mkPen(self.selection_color, width=1.5))
 
-        self.hole_name.setColor(selection_color)
+        self.hole_name.setColor(self.selection_color)
         if self.show_cbox.isChecked():
             self.section_extent_line.show()
 
@@ -752,6 +753,7 @@ class LoopWidget(QWidget):
 
         self.foreground_color = get_line_color("foreground", "pyqt", self.darkmode)
         self.loop_color = get_line_color("foreground", "pyqt", self.darkmode)
+        self.selection_color = get_line_color("teal", "pyqt", self.darkmode) if self.darkmode else selection_color
 
         # Create all the inner widget items
         self.show_cbox = QCheckBox("Show in plan map")
@@ -769,8 +771,8 @@ class LoopWidget(QWidget):
                                  scaleSnap=True,
                                  snapSize=5,
                                  closed=True,
-                                 pen=pg.mkPen(self.loop_color, width=1.))
-        self.loop_roi.hoverPen = pg.mkPen(self.loop_color, width=2.)
+                                 pen=pg.mkPen(self.selection_color, width=1.))
+        self.loop_roi.hoverPen = pg.mkPen(self.selection_color, width=2.)
         self.loop_roi.setZValue(15)
         self.update_loop_values()
 
@@ -786,8 +788,8 @@ class LoopWidget(QWidget):
 
     def select(self):
         """When the loop is selected"""
-        self.loop_roi.setPen(selection_color, width=1.5)
-        self.loop_name.setColor(selection_color)
+        self.loop_roi.setPen(self.selection_color, width=1.5)
+        self.loop_name.setColor(self.selection_color)
         if self.show_corners is True:
             for label in self.corner_labels:
                 label.show()
@@ -966,7 +968,7 @@ class LoopWidget(QWidget):
 
         corners = self.get_loop_coords()
         for i, corner in enumerate(corners):
-            label = pg.TextItem(str(i + 1), color=pg.mkColor(selection_color))
+            label = pg.TextItem(str(i + 1), color=pg.mkColor(self.selection_color))
             label.setPos(corner)
             self.corner_labels.append(label)
             self.plan_view.addItem(label, ignoreBounds=True)
@@ -1246,6 +1248,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.foreground_color = get_line_color("foreground", "mpl", self.darkmode)
         self.hole_color = get_line_color("foreground", "mpl", self.darkmode)
         self.loop_color = get_line_color("purple", "mpl", self.darkmode)
+        self.selection_color = get_line_color("teal", "mpl", self.darkmode) if self.darkmode else selection_color
 
         plt.style.use('dark_background' if self.darkmode else 'default')
         plt.rcParams['axes.facecolor'] = self.background_color
@@ -1272,6 +1275,8 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         init_plan_view()
         init_section_view()
 
+        self.load_settings()
+
     def dragEnterEvent(self, e):
         e.accept()
 
@@ -1291,8 +1296,41 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         return QMainWindow.event(self, e)
 
     def closeEvent(self, e):
+        self.save_settings()
         self.deleteLater()
         e.accept()
+
+    def save_settings(self):
+        settings = QSettings("Crone Geophysics", "PEMPro")
+        settings.beginGroup("LoopPlanner")
+
+        # Window geometry
+        settings.setValue("size", self.size())
+        settings.setValue("pos", self.pos())
+
+        # Project
+        settings.setValue("last_opened_project", self.save_name)
+
+        settings.endGroup()
+
+    def load_settings(self):
+        settings = QSettings("Crone Geophysics", "PEMPro")
+        settings.beginGroup("LoopPlanner")
+
+        # Window geometry
+        self.resize(settings.value("size", QSize(1500, 800)))
+        self.move(settings.value("pos", QPoint(100, 50)))
+
+        # Project
+        project_file = settings.value("last_opened_project")
+        if project_file:
+            if Path(project_file).is_file():
+                response = self.message.question(self, "Open Project", "Continue last project?",
+                                                 self.message.Yes, self.message.No)
+                if response == self.message.Yes:
+                    self.open_project(project_file)
+
+        settings.endGroup()
 
     def select_hole(self, ind):
         """
@@ -1575,7 +1613,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
             # Plot the hole section line
             self.ax.plot(plotx, plotz,
-                         color=selection_color,
+                         color=self.selection_color,
                          lw=1,
                          # path_effects=buffer,
                          zorder=10)
@@ -1583,7 +1621,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             # Circle at top of hole
             self.ax.plot([plotx[0]], collar_elevation, 'o',
                          markerfacecolor=self.background_color,
-                         markeredgecolor=selection_color,
+                         markeredgecolor=self.selection_color,
                          markersize=8,
                          zorder=11)
 
@@ -1593,7 +1631,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             self.ax.annotate(f"{hole_name}", (plotx[0], collar_elevation),
                              xytext=(0, 12),
                              textcoords='offset pixels',
-                             color=selection_color,
+                             color=self.selection_color,
                              ha='center',
                              size=9,
                              transform=trans,
@@ -1603,7 +1641,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             # Label end-of-hole depth
             angle = math.degrees(math.atan2(plotz[-1] - plotz[-2], plotx[-1] - plotx[-2])) + 90
             self.ax.text(plotx[-1] + self.selected_hole.section_length * .01, plotz[-1], f" {hole_len:.0f} m ",
-                         color=selection_color,
+                         color=self.selection_color,
                          ha='left',
                          size=8,
                          rotation=angle,
@@ -1614,7 +1652,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             # Plot the end of hole tick
             self.ax.scatter(plotx[-1], plotz[-1],
                             marker=(2, 0, angle + 90),
-                            color=selection_color,
+                            color=self.selection_color,
                             s=100,  # Size
                             zorder=12)
 
@@ -1827,40 +1865,37 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                 r">> Hole\n(name:.*\neasting:.*\nnorthing:.*\nelevation:.*\nazimuth:.*\ndip:.*\nlength:.*\n)<<", file)
             loops = re.findall(r">> Loop\n(name:.*\n(?:c.*\n)+)<<", file)
 
-            progress = QProgressDialog("Opening Project...", "Cancel", 0, len(holes) + len(loops), self)
-            progress.setWindowModality(Qt.WindowModal)
-            count = 0
-            progress.show()
-
             self.epsg_edit.setText(epsg)
             self.epsg_rbtn.click()
 
-            for hole in holes:
-                if progress.wasCanceled():
-                    break
-                properties = dict()
-                for line in hole.split():
-                    key, value = line.split(":")
-                    if key != "name":
-                        value = float(value)
-                    properties[key] = value
+            with pg.ProgressDialog("Opening Project...", 0, len(holes) + len(loops)) as dlg:
+                for hole in holes:
+                    if dlg.wasCanceled():
+                        break
 
-                self.add_hole(**properties)
-                count += 1
-                progress.setValue(count)
+                    properties = dict()
+                    for line in hole.split():
+                        key, value = line.split(":")
+                        if key != "name":
+                            value = float(value)
+                        properties[key] = value
 
-            for loop in loops:
-                if progress.wasCanceled():
-                    break
-                name = re.search("name:(.*)\n", loop).group(1)
-                coord_str = [re.sub("c\d+:", "", line).split(",") for line in loop.split("\n")[1:-1]]
-                coords = [QPointF(float(c[0].strip()), float(c[1].strip())) for c in coord_str]
+                    self.add_hole(**properties)
 
-                self.add_loop(name=name, coords=coords)
-                count += 1
-                progress.setValue(count)
+                    dlg += 1
 
-            progress.deleteLater()
+                for loop in loops:
+                    if dlg.wasCanceled():
+                        break
+
+                    name = re.search("name:(.*)\n", loop).group(1)
+                    coord_str = [re.sub("c\d+:", "", line).split(",") for line in loop.split("\n")[1:-1]]
+                    coords = [QPointF(float(c[0].strip()), float(c[1].strip())) for c in coord_str]
+
+                    self.add_loop(name=name, coords=coords)
+
+                    dlg += 1
+
             self.plan_view.autoRange()
 
     def save_project(self, save_as=False):
@@ -2234,8 +2269,8 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
 
             def grid_moved():
                 """
-                Signal slot: Update the grid easting and northing text based on the new position of the grid when the ROI
-                is moved.
+                Signal slot: Update the grid easting and northing text based on the new position of the grid when the
+                ROI is moved.
                 :return: None
                 """
                 self.grid_easting_sbox.blockSignals(True)
@@ -2360,13 +2395,15 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
             self.gps_datum_cbox.setCurrentIndex(1)
             self.gps_zone_cbox.setCurrentIndex(17)
 
-        def init_plan_view():
+        def format_plots():
             """
             Initial set-up of the plan view. Creates the plot widget, custom axes for the Y and X axes, and adds the loop ROI.
             :return: None
             """
             yaxis = PlanMapAxis(orientation='left')
             xaxis = PlanMapAxis(orientation='bottom')
+            # yaxis = NonScientific(orientation='left')
+            # xaxis = NonScientific(orientation='bottom')
             self.grid_roi.setAngle(90)
             self.loop_roi.setZValue(0)
             self.loop_roi.addScaleHandle([0, 0], [0.5, 0.5], lockAspect=True)
@@ -2382,12 +2419,15 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
             self.plan_view.setAspectLocked()
             self.plan_view.hideButtons()
             self.plan_view.getAxis('right').setWidth(15)
+            # self.plan_view.setContentsMargins(150, 150, 150, 150)
             self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
             self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
             self.plan_view.showAxis('right', show=True)  # Show the axis edge line
             self.plan_view.showAxis('top', show=True)  # Show the axis edge line
             self.plan_view.showLabel('right', show=False)
             self.plan_view.showLabel('top', show=False)
+            self.plan_view.setLabel('left', 'Northing (m)')
+            self.plan_view.setLabel('bottom', 'Easting (m)')
 
         super().__init__()
         self.setupUi(self)
@@ -2400,6 +2440,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         self.foreground_color = get_line_color("foreground", "mpl", self.darkmode)
         self.line_color = get_line_color("blue", "mpl", self.darkmode)
         self.loop_color = get_line_color("purple", "mpl", self.darkmode)
+        self.selection_color = get_line_color("teal", "mpl", self.darkmode) if self.darkmode else selection_color
 
         self.loop_roi = None
         self.grid_roi = None
@@ -2413,21 +2454,24 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         self.line_length = self.line_length_sbox.value()
         self.station_spacing = self.station_spacing_sbox.value()
         self.line_spacing = self.line_spacing_sbox.value()
-        self.grid_east_center, self.grid_north_center = 0, 0
+        self.grid_east_center = None
+        self.grid_north_center = None
         self.lines = []
 
         # Plots
         # Create the grid
-        self.grid_roi = RectLoop([self.grid_easting, self.grid_northing],
-                                 [self.line_length, (self.line_number - 1) * self.line_spacing],
+        center_x, center_y = self.get_grid_center(self.grid_easting, self.grid_northing, az=0)
+        grid_width, grid_length = (self.line_number - 1) * self.line_spacing, self.line_length
+        self.grid_roi = RectLoop([self.grid_easting + (grid_width / 2), self.grid_northing - (grid_length / 2)],
+                                 [grid_length, grid_width],
                                  scaleSnap=True,
                                  pen=pg.mkPen(None, width=1.5))
         self.plan_view.addItem(self.grid_roi)
 
+        self.show()
+
         # Create the loop ROI
-        center_x, center_y = self.get_grid_center(self.grid_easting, self.grid_northing)
-        self.loop_roi = RectLoop([center_x - (self.loop_width / 2),
-                                  center_y - (self.loop_height / 2)],
+        self.loop_roi = RectLoop([self.grid_easting - (grid_length / 2), self.grid_northing - (grid_length / 2)],
                                  [self.loop_width, self.loop_height],
                                  scaleSnap=True,
                                  pen=pg.mkPen(self.loop_color, width=1.5))
@@ -2435,7 +2479,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
 
         self.grid_lines_plot = pg.MultiPlotItem()
         self.grid_lines_plot.setZValue(1)
-        init_plan_view()
+        format_plots()
 
         self.plan_view.autoRange()
         self.plot_grid()
@@ -2586,7 +2630,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         """
         x, y = self.grid_roi.pos()
         w, h = self.grid_roi.size()
-        angle = self.grid_roi.angle()
+        angle = self.grid_roi.angle() - 90
         c1 = (x, y)
         c2 = (c1[0] + w * (math.cos(math.radians(angle))), c1[1] + w * (math.sin(math.radians(angle))))
         c3 = (c2[0] - h * (math.sin(math.radians(angle))), c2[1] + h * (math.sin(math.radians(90 - angle))))
@@ -2597,19 +2641,21 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         #                        [coord[1] for coord in corners], pen=pg.mkPen(width=3, color='r'))
         return corners
 
-    def get_grid_center(self, x, y):
+    def get_grid_center(self, x, y, az=None):
         """
         Find the center of the grid given the bottom-right coordinate of the grid.
-        :param x: X coordinate of the bottom-right corner
-        :param y: Y coordinate of the bottom-right corner
+        :param x: float, X coordinate of the bottom-right corner
+        :param y: float, Y coordinate of the bottom-right corner
+        :param az: float, azimuth of the grid ROI.
         :return: X, Y coordinate of the center of the grid.
         """
-        a = 90 - self.grid_roi.angle()
+        if az is None:
+            az = self.grid_roi.angle() - 90
         w = max((self.line_number - 1) * self.line_spacing, 10)
         h = self.line_length
 
         hypo = math.sqrt(w ** 2 + h ** 2)
-        angle = math.degrees(math.atan(h / w)) + a
+        angle = math.degrees(math.atan(h / w)) + az
         theta = math.radians(angle)
         dx = (hypo / 2) * math.cos(theta)
         dy = (hypo / 2) * math.sin(theta)
@@ -2974,7 +3020,7 @@ class PolyLoop(pg.PolyLineROI):
             """
             def __init__(self, *args, **kwds):
                 Handle.__init__(self, *args, **kwds)
-                self.pen = pg.mkPen(selection_color, width=1.)
+                # self.pen = pg.mkPen(selection_color, width=1.)
 
             def hoverEvent(self, ev):
                 hover = False
@@ -2986,13 +3032,14 @@ class PolyLoop(pg.PolyLineROI):
                             hover = True
 
                 if hover:
-                    self.currentPen = pg.mkPen(self.pen.color(), width=self.pen.width() + 0.5)
+                    self.currentPen = pg.mkPen(self.pen.color(), width=self.pen.width() + 1.5)
                 else:
                     self.currentPen = self.pen
                 self.update()
 
         # Reimplement so a signal can be emitted
-        h = CustomHandle(6, typ="r", pen=pg.mkPen(selection_color, width=1.), parent=self)
+        # h = CustomHandle(6, typ="r", pen=pg.mkPen(selection_color, width=1.), parent=self)
+        h = CustomHandle(6, typ="r", pen=self.pen, parent=self)
         h.setPos(info['pos'] * self.state['size'])
         info['item'] = h
 
@@ -3072,7 +3119,6 @@ class RectLoop(pg.RectROI):
     """
     Custom ROI for transmitter loops. Created in order to change the color of the ROI lines when highlighted.
     """
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -3083,12 +3129,54 @@ class RectLoop(pg.RectROI):
         else:
             return self.pen
 
+    def addHandle(self, info, index=None):
+
+        class CustomHandle(Handle):
+            """
+            Re-implementing Handle to change the size and color (especially when hovering) of the handles.
+            """
+            def __init__(self, *args, **kwds):
+                Handle.__init__(self, *args, **kwds)
+                # self.pen = pg.mkPen(selection_color, width=1.)
+
+            def hoverEvent(self, ev):
+                hover = False
+                if not ev.isExit():
+                    if ev.acceptDrags(Qt.LeftButton):
+                        hover = True
+                    for btn in [Qt.LeftButton, Qt.RightButton, Qt.MidButton]:
+                        if int(self.acceptedMouseButtons() & btn) > 0 and ev.acceptClicks(btn):
+                            hover = True
+
+                if hover:
+                    self.currentPen = pg.mkPen(self.pen.color(), width=self.pen.width() + 1.5)
+                else:
+                    self.currentPen = self.pen
+                self.update()
+
+        # Reimplement so a signal can be emitted
+        # h = CustomHandle(6, typ="r", pen=pg.mkPen(selection_color, width=1.), parent=self)
+        h = CustomHandle(6, typ="r", pen=self.pen, parent=self)
+        h.setPos(info['pos'] * self.state['size'])
+        info['item'] = h
+
+        h.connectROI(self)
+        if index is None:
+            self.handles.append(info)
+        else:
+            self.handles.insert(index, info)
+
+        h.setZValue(self.zValue() + 1)
+        h.sigRemoveRequested.connect(self.removeHandle)
+        self.stateChanged(finish=True)
+        # self.sigHandleAdded.emit(h)
+        return h
 
 def main():
     from src.qt_py import dark_palette
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    darkmode = False
+    darkmode = True
     if darkmode:
         app.setPalette(dark_palette)
     pg.setConfigOptions(antialias=True)
@@ -3097,8 +3185,8 @@ def main():
     pg.setConfigOption('foreground', "w" if darkmode else (53, 53, 53))
 
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
-    planner = LoopPlanner(darkmode=darkmode)
-    # planner = GridPlanner(darkmode=darkmode)
+    # planner = LoopPlanner(darkmode=darkmode)
+    planner = GridPlanner(darkmode=darkmode)
 
     # hole_data = read_excel(r"C:\_Data\2021\Canadian Palladium\_Planning\Crone_BHEM_Collars.xlsx").dropna()
     # for ind, hole in hole_data.iterrows():

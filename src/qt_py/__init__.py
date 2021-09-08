@@ -351,13 +351,13 @@ class NonScientific(pg.AxisItem):
         self.picture = None
 
 
-class PlanMapAxis(pg.AxisItem):
+class PlanMapAxis(NonScientific):
     """
     Custom pyqtgraph axis used for Loop Planner plan view
     """
-
     def __init__(self, *args, **kwargs):
-        pg.AxisItem.__init__(self, *args, **kwargs)
+        NonScientific.__init__(self, *args, **kwargs)
+        self.enableAutoSIPrefix(False)
 
     def tickStrings(self, values, scale, spacing):
         """Return the strings that should be placed next to ticks. This method is called
@@ -375,14 +375,10 @@ class PlanMapAxis(pg.AxisItem):
         if self.logMode:
             return self.logTickStrings(values, scale, spacing)
 
+        values = [float(value) for value in values]
         letter = 'N' if self.orientation == 'left' else 'E'
-        places = max(0, np.ceil(-np.log10(spacing * scale)))
         strings = []
         for v in values:
-            vs = v * scale
-            if abs(vs) < .001 or abs(vs) >= 10000:
-                vstr = f"{vs:.0f}{letter}"
-            else:
-                vstr = ("%%0.%df" % places) % vs
+            vstr = f"{v:.0f}{letter}"
             strings.append(vstr)
         return strings
