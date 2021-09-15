@@ -36,6 +36,7 @@ class GPSAdder(QMainWindow):
         self.resize(1000, 800)
         self.setWindowIcon(get_icon('gps_adder.png'))
 
+        self.parent = None
         self.darkmode = darkmode
         self.df = None
         self.error = False  # For pending errors
@@ -166,7 +167,9 @@ class GPSAdder(QMainWindow):
         pass
 
     def open_file_dialog(self):
-        default_path = ""
+        default_path = None
+        if self.parent:
+            default_path = self.parent.project_dir_edit.text()
         file, extension = QFileDialog().getOpenFileName(self, "Open GPS File", default_path, "Text Files (*.TXT);;"
                                                                                              "CSV Files (*.CSV);;"
                                                                                              "GPX Files (*.GPX)")

@@ -1848,7 +1848,13 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         :return: None
         """
         if filepath is None:
-            filepath, filetype = QFileDialog.getOpenFileName(self, "Loop Planning File", "", "Loop Planning File (*.LPF)")
+            default_path = None
+            if self.parent:
+                default_path = self.parent.project_dir_edit.text()
+
+            filepath, filetype = QFileDialog.getOpenFileName(self, "Loop Planning File",
+                                                             default_path,
+                                                             "Loop Planning File (*.LPF)")
 
         if filepath:
             self.save_name = filepath

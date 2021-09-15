@@ -219,9 +219,13 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         """
         Open files through the file dialog
         """
-        path = Path(self.dialog.getExistingDirectory(self, 'Open Folder'))
+        default_path = None
+        if self.parent:
+            default_path = self.parent.project_dir_edit.text()
+
+        path = QFileDialog().getExistingDirectory(self, 'Open Folder', default_path)
         if path:
-            self.open_folder(path)
+            self.open_folder(Path(path))
         else:
             pass
 
@@ -529,19 +533,16 @@ class UnpackerTable(QTableWidget):
         return rect.contains(pos, True) and not (int(self.model().flags(index)) & Qt.ItemIsDropEnabled) and pos.y() >= rect.center().y()
 
 
-def main():
+if __name__ == '__main__':
     app = QApplication(sys.argv)
     samples_folder = Path(__file__).parents[2].joinpath(r"sample_files\Unpacker files")
 
     up = Unpacker()
-    up.move(app.desktop().screen().rect().center() - up.rect().center())
-    up.open_folder(samples_folder.joinpath(r"March 06, 2021.zip"))
+    up.show()
+    # up.move(app.desktop().screen().rect().center() - up.rect().center())
+    # up.open_folder(samples_folder.joinpath(r"March 06, 2021.zip"))
     # folder = r'C:\Users\Mortulo\Desktop\Aug4DataGaribaldiResourcesNickelMountainLoop1Holes2&8Complete.zip'
     # zip_file = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\__SAPR-19-003\DUMP\December 19.rar'
     # up.open_folder(folder)
 
-    sys.exit(app.exec())
-
-
-if __name__ == '__main__':
-    main()
+    app.exec_()

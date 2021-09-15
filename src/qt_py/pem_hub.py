@@ -60,8 +60,6 @@ logger = logging.getLogger(__name__)
 # TODO Create a theory vs measured plot (similar to step)
 # TODO Look into slowness when changing station number and such in pem plot editor
 # TODO Add more theory responses to plot editor.
-# TODO add icons to plot editor menu
-# TODO Add option for alt-click plotting, and add it to settings.
 # TODO add NRcan website for magnetic decl as webengine view
 # TODO Move progress dialog or error box when there's an error.
 # TODO dark mode the progress dialog.
@@ -72,7 +70,7 @@ logger = logging.getLogger(__name__)
 # TODO create large PDF with summary of file, including 3d map.
 # TODO Add progress bar to Contour map when it opens
 # TODO Hybrid PEMGeometry selection
-# TODO Add settings to PEM planner, to remember last opened project.
+# TODO drag and drop as administrator
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
@@ -2578,13 +2576,13 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             return filtered_gps
 
         if not self.project_dir:
-            logger.error('No projected directory selected')
-            self.message.information(self, 'Error', 'No project directory has been selected.')
+            logger.info('No projected directory selected')
+            self.status_bar.showMessage('No valid project directory has been selected.', 2000)
             return
 
         self.gps_list.clear()
 
-        # Try to find a GPS folder, but time out after 1 second
+        # Try to find a GPS folder, but time out after 0.5 second
         self.available_gps = find_gps_files(timeout=0.5)
 
         if self.available_gps is None:
@@ -2683,13 +2681,13 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             return filtered_pems
 
         if not self.project_dir:
-            logger.error('No projected directory selected')
-            self.message.information(self, 'Error', 'No project directory has been selected.')
+            logger.info('No projected directory selected')
+            self.status_bar.showMessage('No valid project directory has been selected.', 2000)
             return
 
         self.pem_list.clear()
 
-        # Try to find .PEM files, but time out after 1 second
+        # Try to find .PEM files, but time out after 0.5 seconds
         self.available_pems = find_pem_files(timeout=0.5)
 
         if self.available_pems is None:
@@ -5190,13 +5188,13 @@ def main():
     # mw.show()
     app.processEvents()
 
-    mw.add_pem_files(pem_files)
+    # mw.add_pem_files(pem_files)
     mw.show()
 
     # mw.open_3d_map()
     # mw.add_dmp_files(dmp_files)
     # mw.table.selectRow(0)
-    mw.table.selectAll()
+    # mw.table.selectAll()
     # mw.open_pem_merger()
     # mw.open_pem_geometry()
     # mw.open_pem_plot_editor()

@@ -207,7 +207,12 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
         """
         Open files through the file dialog
         """
+        default_path = None
+        if self.parent:
+            default_path = self.parent.project_dir_edit.text()
+
         file = self.dialog.getOpenFileNames(self, 'Open File',
+                                            default_path,
                                             filter='CSV files (*.csv);;'
                                                    'Excel files (*.xlsx)')[0]
         if file:

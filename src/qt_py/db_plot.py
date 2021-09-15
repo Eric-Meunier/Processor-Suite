@@ -142,7 +142,11 @@ class DBPlotter(QMainWindow):
         self.open(urls)
 
     def open_file_dialog(self):
+        default_path = None
+        if self.parent:
+            default_path = self.parent.project_dir_edit.text()
         files = QFileDialog().getOpenFileNames(self, 'Open Files',
+                                               default_path,
                                                filter='Damp files (*.log *.txt *.rtf)')[0]
         if files:
             for file in files:

@@ -410,8 +410,6 @@ class Ui_PEMPlotEditor(object):
         QWidget.setTabOrder(self.z_profile_layout, self.x_profile_layout)
 
         self.menubar.addAction(self.menuFile.menuAction())
-        self.menuFile.addAction(self.actionOpen)
-        self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionSave)
         self.menuFile.addAction(self.actionSave_As)
         self.menuFile.addSeparator()

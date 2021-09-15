@@ -17,6 +17,7 @@ from pandas import DataFrame, options, isna
 from scipy import spatial, signal
 
 from src.pem import convert_station
+from src.pem.pem_file import PEMParser
 from src.qt_py import get_icon, get_line_color
 from src.ui.pem_plot_editor import Ui_PEMPlotEditor
 # from src.logger import Log
@@ -58,7 +59,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.activateWindow()
         self.setWindowTitle('PEM Plot Editor')
         self.setWindowIcon(get_icon('plot_editor.png'))
-        self.actionOpen.setIcon(get_icon('open.png'))
         self.actionSave.setIcon(get_icon('save.png'))
         self.actionSave_As.setIcon(get_icon('save_as.png'))
         self.actionCopy_Screenshot.setIcon(get_icon('copy.png'))
@@ -231,7 +231,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.select_all_action.activated.connect(select_all_stations)
 
             # Menu
-            self.actionOpen.triggered.connect(self.open_file_dialog)
             self.actionSave.triggered.connect(self.save)
             self.actionSave_As.triggered.connect(self.save_as)
             self.actionUn_Delete_All.triggered.connect(self.undelete_all)
@@ -464,7 +463,13 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         """
         Open files through the file dialog
         """
-        files = QFileDialog.getOpenFileNames(self, 'Open File', filter='PEM files (*.pem)')
+        default_path = None
+        if self.parent:
+            default_path = self.parent.project_dir_edit.text()
+
+        files = QFileDialog.getOpenFileNames(self, 'Open File',
+                                             default_path,
+                                             filter='PEM files (*.pem)')
         if files[0] != '':
             file = files[0][0]
             if file.lower().endswith('.pem'):
@@ -501,8 +506,12 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.status_bar.showMessage(f'File saved to {file_path}', 2000)
             QTimer.singleShot(2000, lambda: self.station_text.setText(station_text))
 
-    def update_file(self):
-
+    def update_(self):
+        """
+        Updates all the plots, hide/show components as needed, reset the limits of the plots, re-calculate the stations
+        in the PEMFile.
+        :return: None
+        """
         def toggle_decay_plots():
             """
             Show/hide decay plots and profile plot tabs based on the components in the pem file
@@ -783,7 +792,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             plot_theory_pp(theory_data, axes[0])
             plot_mag()
 
-        self.update_file()
+        self.update_()
 
         file = copy.deepcopy(self.pem_file)
         file.data = file.data.loc[~file.data.Deleted.astype(bool)]

@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "PEMPro"
-#define MyAppVersion "0.12.0"
+#define MyAppVersion "0.12.1"
 #define MyAppPublisher "Crone Geophysics & Exploration Ltd."
 #define MyAppURL "https://www.cronegeophysics.com/"
 #define MyAppExeName "PEMPro.exe"
@@ -22,7 +22,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
-OutputBaseFilename=PEMPro {#MyAppVersion} installer
+OutputBaseFilename=PEMPro V{#MyAppVersion} installer
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -34,8 +34,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\Users\Eric\PycharmProjects\PEMPro\dist\PEMPro V0.12.0\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\Users\Eric\PycharmProjects\PEMPro\dist\PEMPro V0.12.0\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "C:\Users\Eric\PycharmProjects\PEMPro\dist\PEMPro V{#MyAppVersion}\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "C:\Users\Eric\PycharmProjects\PEMPro\dist\PEMPro V{#MyAppVersion}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
