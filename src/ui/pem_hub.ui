@@ -1534,6 +1534,7 @@ Warnings</string>
     <addaction name="actionLoop_Planner"/>
     <addaction name="actionGrid_Planner"/>
     <addaction name="actionLoop_Current_Calculator"/>
+    <addaction name="actionNRCan_Declination_Calculator"/>
     <addaction name="separator"/>
     <addaction name="actionConvert_Timebase_Frequency"/>
     <addaction name="actionGPX_Creator"/>
@@ -2177,6 +2178,15 @@ Warnings</string>
    </property>
    <property name="text">
     <string>Save Settings</string>
+   </property>
+  </action>
+  <action name="actionNRCan_Declination_Calculator">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/canada.png</normaloff>icons/canada.png</iconset>
+   </property>
+   <property name="text">
+    <string>NRCan Declination Calculator</string>
    </property>
   </action>
  </widget>

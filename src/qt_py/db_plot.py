@@ -9,6 +9,7 @@ from threading import Timer
 
 import pandas as pd
 import pyqtgraph as pg
+import matplotlib.pyplot as plt
 from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QMenu, QAction,
@@ -229,6 +230,10 @@ class DBPlotter(QMainWindow):
             name = Path(file).name
             logger.info(f"Parsing file {name}.")
             str_contents = read_file(file, as_list=False)
+            # For files with spaces
+            # str_contents = re.sub(r" (\w)", r"\g<1>", str_contents)
+            # str_contents = re.sub(r"  ", r" ", str_contents)
+            # str_contents = re.sub(r" ([/:])", r"\g<1>", str_contents)
 
             # Try to create a DBPlot for each 'read' command found
             reads = re.split(r'read ', str_contents)
@@ -247,7 +252,7 @@ class DBPlotter(QMainWindow):
                 if df.empty:
                     raise ValueError(f"No data found in {name}.\nEnsure that the file's encoding is UTF-8.")
 
-                db_widget = DBPlot(df, command, name, date_str, parent=self, darkmode=self.darkmode)
+                db_widget = DBPlotWidget(df, command, name, date_str, parent=self, darkmode=self.darkmode)
                 self.db_widgets.append(db_widget)
                 self.add_widget(db_widget)
 
@@ -257,6 +262,11 @@ class DBPlotter(QMainWindow):
                     logger.info(F"Parsing read command #{i}.")
                     read = read.strip()
                     lines = read.split('\n')
+
+                    if len(lines[0].strip()) == 8:
+                        logger.info(f"Ramp read found.")
+                        continue
+
                     command = 'read ' + lines[0]  # The "read" command input
 
                     if len(lines) < 3:  # Meaning it is only the command and no data following
@@ -274,7 +284,7 @@ class DBPlotter(QMainWindow):
                         continue
                     else:
                         data_found = True
-                        db_widget = DBPlot(df, command, name, date_str, parent=self, darkmode=self.darkmode)
+                        db_widget = DBPlotWidget(df, command, name, date_str, parent=self, darkmode=self.darkmode)
                         self.db_widgets.append(db_widget)
                         self.add_widget(db_widget)
 
@@ -364,7 +374,7 @@ class DBPlotter(QMainWindow):
         self.statusBar().showMessage(f"Screen shot copied to clipboard.", 1000)
 
 
-class DBPlot(QMainWindow):
+class DBPlotWidget(QMainWindow):
     """
     A widget that plots damping box data, with a linear region item that, when moved, updates
     the status bar with information within the region.
@@ -393,8 +403,8 @@ class DBPlot(QMainWindow):
         self.statusBar().show()
 
         # Create the plot
-        axis = pg.DateAxisItem(orientation='bottom')
-        self.plot_widget = pg.PlotWidget(axisItems={'bottom': axis})
+        time_axis = pg.DateAxisItem(orientation='bottom')
+        self.plot_widget = pg.PlotWidget(axisItems={'bottom': time_axis})
         self.setCentralWidget(self.plot_widget)
 
         # Format the plot
@@ -517,7 +527,7 @@ if __name__ == '__main__':
     from src.qt_py import dark_palette
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    darkmode = False
+    darkmode = True
     if darkmode:
         app.setPalette(dark_palette)
     pg.setConfigOptions(antialias=True)
@@ -528,9 +538,9 @@ if __name__ == '__main__':
 
     samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files\Damping box files'))
 
-    files = str(Path(samples_folder).joinpath('YAT-Log-20201106-165508_box231.txt'))
+    # files = str(Path(samples_folder).joinpath('CM 252.txt'))
     # files = str(Path(samples_folder).joinpath('Date error/0511_May11Dampingbox232Voltage.txt'))
-    # files = str(Path(samples_folder).joinpath('0724_238-20210724 (no data error).log'))
+    files = str(Path(samples_folder).joinpath('0724_238-20210724 (no data error).log'))
     # files = str(Path(samples_folder).joinpath('Date error/16_Damp Box 222 Current 01.16.2021.txt'))
     mw.open(files)
     mw.show()

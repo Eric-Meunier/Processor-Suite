@@ -947,7 +947,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
                     std = np.array([self.auto_clean_std_sbox.value()] * window_size)
 
-                    off_time_median_data = median_data.loc[:, ~self.pem_file.channel_times.Remove.astype(bool)]
+                    off_time_median_data = median_data.loc[:, ~self.pem_file.channel_times.Remove.reset_index(drop=True).astype(bool)]
                     if not self.plot_ontime_decays_cbox.isChecked():
                         off_time_median_data.rename(dict(zip(off_time_median_data.columns,
                                                              range(len(off_time_median_data.columns)))),

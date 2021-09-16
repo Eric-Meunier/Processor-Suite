@@ -19,6 +19,7 @@ import pandas as pd
 import pyqtgraph as pg
 from PySide2.QtGui import QIcon, QColor, QFont, QIntValidator, QCursor
 from PySide2.QtCore import Qt, QDir, Signal, QEvent, QTimer, QSettings, QSize, QPoint
+from PySide2.QtWebEngineWidgets import QWebEngineView
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QMenu, QAction, QErrorMessage,
                                QFileDialog, QVBoxLayout, QLabel, QApplication, QFrame, QHBoxLayout, QLineEdit,
                                QCalendarWidget, QFileSystemModel, QDoubleSpinBox, QHeaderView, QInputDialog, QTableWidgetItem, QGroupBox, QFormLayout, QTextBrowser, QDialogButtonBox,
@@ -62,15 +63,10 @@ logger = logging.getLogger(__name__)
 # TODO Add more theory responses to plot editor.
 # TODO add NRcan website for magnetic decl as webengine view
 # TODO Move progress dialog or error box when there's an error.
-# TODO dark mode the progress dialog.
-# TODO dark mode PEMMerger.
-# TODO PEMPlotEditor selection text needs dark mode compat.
 # TODO fix print issue, caused by PEMGeometry (matplotlib figures).
-# TODO When opening loop lanner, prompt to re-open the last project.
 # TODO create large PDF with summary of file, including 3d map.
 # TODO Add progress bar to Contour map when it opens
 # TODO Hybrid PEMGeometry selection
-# TODO drag and drop as administrator
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
@@ -124,6 +120,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.actionLoop_Planner.setIcon(get_icon("loop_planner.png"))
             self.actionGrid_Planner.setIcon(get_icon("grid_planner.png"))
             self.actionLoop_Current_Calculator.setIcon(get_icon("voltmeter.png"))
+            self.actionNRCan_Declination_Calculator.setIcon(get_icon("canada.png"))
             self.actionConvert_Timebase_Frequency.setIcon(get_icon("freq_timebase_calc.png"))
             self.actionGPX_Creator.setIcon(get_icon("garmin_file.png"))
 
@@ -262,6 +259,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             # Rename lines and files
             self.rename_lines_action.triggered.connect(lambda: self.open_name_editor('Line', selected=True))
             self.rename_files_action.triggered.connect(lambda: self.open_name_editor('File', selected=True))
+
+            self.actionNRCan_Declination_Calculator.triggered.connect(self.open_nrcan_calculator)
 
         def init_signals():
             if splash_screen:
@@ -2368,12 +2367,21 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         refs.append(ss)
         ss.show()
 
+    def open_nrcan_calculator(self):
+        """NRCan website for magnetic field values"""
+        view = QWebEngineView()
+        refs.append(view)
+        view.setWindowIcon(get_icon("canada.png"))
+        view.setWindowTitle("NRCan Magnetic Field Calculator")
+        view.setContentsMargins(0, 0, 0, 0)
+        view.setUrl("https://geomag.nrcan.gc.ca/calc/mfcal-en.php")
+        view.show()
+
     def open_dir_tree_context_menu(self, position):
         """
         Right click context menu for directory tree
         :param position: QPoint, position of mouse at time of right-click
         """
-
         def open_step():
             # Open the Step window at the selected location in the project tree
             path = self.get_current_project_path()
@@ -5189,7 +5197,6 @@ def main():
     app.processEvents()
 
     # mw.add_pem_files(pem_files)
-    mw.show()
 
     # mw.open_3d_map()
     # mw.add_dmp_files(dmp_files)
