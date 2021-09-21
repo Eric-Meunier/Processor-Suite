@@ -1,5 +1,4 @@
 import logging
-import math
 import os
 import sys
 from pathlib import Path
@@ -8,13 +7,14 @@ import matplotlib.pyplot as plt
 import mplcursors
 import numpy as np
 import pandas as pd
+from math import radians, sin, cos, acos, tan, pi, degrees
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QKeySequence
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QWidget, QErrorMessage,
                                QFileDialog, QVBoxLayout, QApplication, QShortcut)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 
-from src.gps.gps_editor import BoreholeSegments
+from src.gps.gps_editor import BoreholeSegments, BoreholeGeometry
 from src.mpl.interactive_spline import InteractiveSpline
 from src.mpl.zoom_pan import ZoomPan
 from src.qt_py import get_icon, get_line_color
@@ -45,7 +45,7 @@ def smooth_azimuth(azimuth):
         else:
             az = az
 
-        smooth_az = np.append((az), smooth_az)
+        smooth_az = np.append(smooth_az, az)
 
     if all(smooth_az < 0):
         smooth_az = smooth_az + 360
@@ -103,6 +103,78 @@ def dad_to_seg(df, units='m'):
 
     return BoreholeSegments(seg)
 
+def dad_to_seg2(df, units='m'):
+    """
+    Minimum Curvature test. Doesn't work.
+    :param df: pandas pd.DataFrame with Depth, Azimuth, Dip columns
+    :param units: str, units of the segments, either 'm' or 'ft'
+    :return: pandas pd.DataFrame with Azimuth, Dip, segment length, unit, and depth columns
+    """
+    # Interpolate the DAD to 1m segments
+    # depths = df.Depth.to_numpy()
+    # azimuths = smooth_azimuth(df.Azimuth.to_numpy())
+    # dips = df.Dip.to_numpy()
+
+    depths = [1914.75, 1940.3]
+    dips = [13.6, 10.7]
+    azimuths = [315.2, 314]
+
+    for i, (depth2, az2, dip2) in enumerate(list(zip(depths, azimuths, dips))[1:]):
+        depth1 = depths[i]
+        dip1 = dips[i]
+        az1 = azimuths[i]
+
+        md = depth2 - depth1
+
+        beta = acos((sin(dip1) * sin(dip2) * cos(az2 - az1)) + cos(dip1) * cos(dip2))
+
+        rf = (2 / beta) * tan(beta / 2)
+
+        north = (md / 2) * (sin(dip1) * cos(az1) + sin(dip2) * cos(az2)) * rf
+        east = (md / 2) * (sin(dip1) * sin(az1) + sin(dip2) * sin(az2)) * rf
+        tvd = (md / 2) * (cos(dip1) + cos(dip2)) * rf
+
+        print(north, east, tvd)
+
+    # i_depth = np.arange(depth[0], depth[-1] + 1)
+    # i_azimuth = np.interp(i_depth, depth, azimuth)
+    # i_dip = np.interp(i_depth, depth, dip)
+    # df = pd.DataFrame(zip(i_depth, i_azimuth, i_dip), columns=df.columns)
+    #
+    # # Create the segment data frame
+    # seg = df.head(0).copy()
+    # depth_count, az_count, dip_count = 0, 0, 0
+    #
+    # # Calculate the iterative differences in depth, azimuth, and dip going down the hole
+    # depth_diff = df.Depth.diff().dropna()
+    # az_diff = df.Azimuth.diff().dropna()
+    # dip_diff = df.Dip.diff().dropna()
+    #
+    # # Start a counter for each attribute. When the threshold for any attribute is met, append current df row
+    # for i, (depth, az, dip) in enumerate(list(zip(depth_diff, az_diff, dip_diff))):
+    #     depth_count += abs(depth)
+    #     az_count += abs(az)
+    #     dip_count += abs(dip)
+    #     if any([depth_count >= 10, az_count >= 1., dip_count >= 1.]):
+    #         seg = seg.append(df.iloc[i + 1])
+    #         # Reset the counters
+    #         depth_count, az_count, dip_count = 0, 0, 0
+    #
+    # # Add the last segment if it isn't there from the iterative calculations
+    # if seg.tail(1).Depth.iloc[0] != df.tail(1).Depth.iloc[0]:
+    #     seg = seg.append(df.iloc[-1])
+    #
+    # seg_length = seg.Depth.diff()
+    # seg_length.iloc[0] = seg.Depth.iloc[0]
+    # seg['Segment_length'] = seg_length
+    #
+    # # Re-arrange the columns
+    # depths = seg.pop('Depth')
+    # seg.insert(3, 'Depth', depths)
+    # seg.reset_index(inplace=True, drop=True)
+    # seg = seg.round(2)
+    #
+    # return BoreholeSegments(seg)
 
 class PEMGeometry(QMainWindow, Ui_PEMGeometry):
     accepted_sig = Signal(object)
@@ -451,7 +523,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
                                                        zorder=1)
 
                 # Plot the line in the polar plot
-                self.collar_az_line_p, = self.polar_ax.plot([math.radians(az) for az in collar_az], collar_depths,
+                self.collar_az_line_p, = self.polar_ax.plot([radians(az) for az in collar_az], collar_depths,
                                                             color=self.azimuth_color,
                                                             linestyle=(0, (5, 10)),
                                                             label='Fixed Azimuth',
@@ -491,7 +563,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
                                                          zorder=1)
 
                 # Plot in the polar plot
-                self.collar_dip_line_p, = self.polar_ax.plot([-math.radians(dip) for dip in collar_dip], collar_depths,
+                self.collar_dip_line_p, = self.polar_ax.plot([-radians(dip) for dip in collar_dip], collar_depths,
                                                              color=self.dip_color,
                                                              linestyle=(0, (5, 10)),
                                                              label='Fixed Dip',
@@ -535,14 +607,14 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
                                                            zorder=1)
 
                 # Plot the lines in the polar plot
-                self.existing_az_line_p, = self.polar_ax.plot([math.radians(az) for az in seg_az], seg_depth,
+                self.existing_az_line_p, = self.polar_ax.plot([radians(az) for az in seg_az], seg_depth,
                                                               color=self.azimuth_color,
                                                               linestyle='-.',
                                                               label='Existing Azimuth',
                                                               lw=0.8,
                                                               zorder=1)
 
-                self.existing_dip_line_p, = self.polar_ax.plot([-math.radians(dip) for dip in seg_dip], seg_depth,
+                self.existing_dip_line_p, = self.polar_ax.plot([-radians(dip) for dip in seg_dip], seg_depth,
                                                                color=self.dip_color,
                                                                linestyle='-.',
                                                                label='Existing Dip',
@@ -699,13 +771,13 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
                                            zorder=1)
 
         # Plot the information in the polar plot
-        self.tool_az_line_p, = self.polar_ax.plot([math.radians(az) for az in self.tool_az], self.stations,
+        self.tool_az_line_p, = self.polar_ax.plot([radians(az) for az in self.tool_az], self.stations,
                                                   color=self.azimuth_color,
                                                   label='Tool Azimuth',
                                                   lw=1.,
                                                   zorder=2)
 
-        self.tool_dip_line_p, = self.polar_ax.plot([-math.radians(dip) for dip in self.tool_dip], self.stations,
+        self.tool_dip_line_p, = self.polar_ax.plot([-radians(dip) for dip in self.tool_dip], self.stations,
                                                    color=self.dip_color,
                                                    label='Tool Dip',
                                                    lw=1.,
@@ -768,7 +840,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
                                                        zorder=1)
 
             # Add the lines to the polar plot
-            self.imported_az_line_p, = self.polar_ax.plot([math.radians(z) for z in az], depths,
+            self.imported_az_line_p, = self.polar_ax.plot([radians(z) for z in az], depths,
                                                           color=self.azimuth_color,
                                                           # color='crimson',
                                                           ls='dashed',
@@ -776,7 +848,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
                                                           lw=0.8,
                                                           zorder=1)
 
-            self.imported_dip_line_p, = self.polar_ax.plot([-math.radians(z) for z in dip], depths,
+            self.imported_dip_line_p, = self.polar_ax.plot([-radians(z) for z in dip], depths,
                                                           color=self.dip_color,
                                                            # color='dodgerblue',
                                                            ls='dashed',
@@ -795,8 +867,8 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             # Update the data
             self.imported_az_line.set_data(az, depths)
             self.imported_dip_line.set_data(dip, depths)
-            self.imported_az_line_p.set_data([math.radians(z) for z in az], depths)
-            self.imported_dip_line_p.set_data([-math.radians(z) for z in dip], depths)
+            self.imported_az_line_p.set_data([radians(z) for z in az], depths)
+            self.imported_dip_line_p.set_data([-radians(z) for z in dip], depths)
 
         self.toggle_imported_geom()
         self.update_plots()
@@ -844,7 +916,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         """
         v = self.mag_dec_sbox.value()
         self.tool_az_line.set_data(self.tool_az + v, self.stations)
-        self.tool_az_line_p.set_data([math.radians(x + v) for x in self.tool_az], self.stations)
+        self.tool_az_line_p.set_data([radians(x + v) for x in self.tool_az], self.stations)
         self.update_plots(self.az_ax)
 
     def redraw_collar_az_line(self):
@@ -853,7 +925,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         """
         v = [self.collar_az_sbox.value()] * 2
         self.collar_az_line.set_data(v, collar_depths)
-        self.collar_az_line_p.set_data([math.radians(x) for x in v], collar_depths)
+        self.collar_az_line_p.set_data([radians(x) for x in v], collar_depths)
         self.update_plots(self.az_ax)
 
     def redraw_collar_dip_line(self):
@@ -862,7 +934,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         """
         v = [self.collar_dip_sbox.value()] * 2
         self.collar_dip_line.set_data(v, collar_depths)
-        self.collar_dip_line_p.set_data([-math.radians(x) for x in v], collar_depths)
+        self.collar_dip_line_p.set_data([-radians(x) for x in v], collar_depths)
         self.update_plots(self.dip_ax)
 
     def toggle_az_spline(self):
@@ -1216,19 +1288,38 @@ if __name__ == '__main__':
     # files = pg.get_pems(folder='PEM Rotation', file='_PU-340 XY.PEM')
     # files = pg.get_pems(folder='Raw Boreholes', number=1, random=True, incl='xy')
     # files = pg.get_pems(file=r"Raw Boreholes\HOLE STE-21-02\RAW\ste-21-02 xy.pem")
-    files = pg.get_pems(folder='Raw Boreholes', file=r'GEN-21-06\RAW\xy_0825.PEM')
+    pem_file = pg.get_pems(folder='Segments', file=r'_BX-081 XY.PEM')[0]
     # files = pg.get_pems(client='Minera', subfolder='CPA-5057', file='XY.PEM')
 
-    win = PEMGeometry(darkmode=darkmode)
-    win.open(files)
+    # win = PEMGeometry(darkmode=darkmode)
+    # win.open(files)
+
     # dad = samples_folder.joinpath(r"Raw Boreholes\GEN-21-06\RAW\gyro.csv")
+    dad = samples_folder.joinpath(r"Segments\test dad.csv")
     # win.open_dad_file(dad)
 
-    # df = pd.read_csv(dad,
-    #                   usecols=[0, 1, 2],
-    #                   names=['Depth', 'Azimuth', 'Dip'],
-    #                   dtype=float)
-    # seg = dad_to_seg(df)
+    df = pd.read_csv(dad,
+                      usecols=[0, 1, 2],
+                      names=['Depth', 'Azimuth', 'Dip'],
+                      dtype=float)
+    seg = dad_to_seg(df)
+    # seg2 = dad_to_seg2(df)
+    # print(seg.df)
+    # print(seg2.df)
+
+    # geom = BoreholeGeometry(pem_file.collar, seg)
+    # geom2 = BoreholeGeometry(pem_file.collar, seg2)
+    # print(geom.get_projection())
+    # print(geom2.get_projection())
+    #
+    # fig, ax = plt.subplots()
+    # ax.plot(geom.df.Easting, geom.df.Northing, "b")
+    # ax.plot(geom.df.Easting.iloc[0], geom.df.Northing.iloc[0], "b", marker="o", zorder=2)
+    # ax.plot(geom2.df.Easting, geom2.df.Northing, "r")
+    # ax.plot(geom2.df.Easting.iloc[0], geom2.df.Northing.iloc[0], "r", marker="o", zorder=2)
+    #
+    # plt.show()
+
     # print(seg.to_string())
 
     # win.az_output_combo.setCurrentIndex(1)

@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "PEMPro"
-#define MyAppVersion "0.12.1"
+#define MyAppVersion "0.12.2"
 #define MyAppPublisher "Crone Geophysics & Exploration Ltd."
 #define MyAppURL "https://www.cronegeophysics.com/"
 #define MyAppExeName "PEMPro.exe"
@@ -22,7 +22,7 @@ DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
-OutputBaseFilename=PEMPro V{#MyAppVersion} installer
+OutputBaseFilename=PEMPro installer [{#MyAppVersion}]
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern

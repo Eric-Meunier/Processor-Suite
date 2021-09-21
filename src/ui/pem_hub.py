@@ -435,7 +435,7 @@ class Ui_PEMHub(object):
 
         self.line = QFrame(self.project_crs_box)
         self.line.setObjectName(u"line")
-        self.line.setFrameShadow(QFrame.Sunken)
+        self.line.setFrameShadow(QFrame.Plain)
         self.line.setLineWidth(1)
         self.line.setMidLineWidth(0)
         self.line.setFrameShape(QFrame.HLine)

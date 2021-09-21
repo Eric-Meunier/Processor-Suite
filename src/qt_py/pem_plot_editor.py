@@ -8,12 +8,12 @@ import sys
 import keyboard
 import pyqtgraph as pg
 import numpy as np
+import pandas as pd
 import pylineclip as lc
 from PySide2.QtCore import Qt, Signal, QEvent, QTimer, QPointF, QRectF
 from PySide2.QtGui import QColor, QFont, QTransform, QBrush, QPen, QKeySequence
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QLabel, QApplication, QLineEdit,
                                QInputDialog, QPushButton, QShortcut)
-from pandas import DataFrame, options, isna
 from scipy import spatial, signal
 
 from src.pem import convert_station
@@ -28,7 +28,7 @@ will not intersect the area of the QRectF.
 """
 
 logger = logging.getLogger(__name__)
-options.mode.chained_assignment = None  # default='warn'
+pd.options.mode.chained_assignment = None  # default='warn'
 
 # TODO Change auto clean to have a start and end channel
 # TODO maybe increase starting window size
@@ -76,7 +76,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         self.line_selected = False
         self.selected_station = None
-        self.selected_data = DataFrame()
+        self.selected_data = pd.DataFrame()
         self.selected_lines = []
         self.deleted_lines = []
         self.selected_profile_stations = np.array([])
@@ -88,7 +88,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.last_active_ax = None  # last_active_ax is always a plotitem object, and never None after the init.
         self.last_active_ax_ind = None  # last_active_ax is always a plotitem object, and never None after the init.
         self.plotted_decay_lines = []
-        self.plotted_decay_data = DataFrame()
+        self.plotted_decay_data = pd.DataFrame()
 
         def init_statusbar():
             # Status bar formatting
@@ -935,7 +935,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
                     # Ignore deleted data when calculating median
                     existing_data = self.plotted_decay_data[comp_filt][~self.plotted_decay_data[comp_filt].Deleted.astype(bool)]
-                    median_data = DataFrame.from_records(existing_data.Reading.reset_index(drop=True))
+                    median_data = pd.DataFrame.from_records(existing_data.Reading.reset_index(drop=True))
                     if median_data.empty:
                         continue
 
@@ -1034,7 +1034,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         #
         #         # Ignore deleted data when calculating median
         #         existing_data = self.plotted_decay_data[comp_filt][~self.plotted_decay_data[comp_filt].Deleted]
-        #         median_data = DataFrame.from_records(existing_data.Reading.reset_index(drop=True))
+        #         median_data = pd.DataFrame.from_records(existing_data.Reading.reset_index(drop=True))
         #         if median_data.empty:
         #             continue
         #
@@ -1157,7 +1157,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                     decay_selection_text.append(stack_number)
 
                     # Add the time stamp if it exists
-                    if not isna(selected_decay.Timestamp):
+                    if not pd.isna(selected_decay.Timestamp):
                         date_time = f"Timestamp: {selected_decay.Timestamp.strftime('%b %d - %H:%M:%S')}"
                         decay_selection_text.append(date_time)
 
@@ -1914,21 +1914,22 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             return False
 
-        def clean_group(group):
-            readings = np.array(group[~group.Deleted.astype(bool)].Reading.to_list())
-            data_std = np.array([threshold_value] * len(readings[0]))
-            data_median = np.median(group[~group.Deleted.astype(bool)].Reading.to_list(), axis=0)
-
-            if len(group.loc[~group.Deleted.astype(bool)]) > 2:
-                global local_count
-                local_count = 0  # The number of readings that have been deleted so far for this group.
-                max_removable = len(group) - 2  # Maximum number of readings that are allowed to be deleted.
-                # Order the group by degree of deviation from the median
-                group["Deviation"] = group.Reading.map(lambda y: abs(y - data_median).sum())
-                group = group.sort_values(by="Deviation", ascending=False).drop("Deviation", axis=1)
-                group.Deleted = group.Reading.map(lambda x: eval_decay(x, data_std, data_median, max_removable))
-
-            return group
+        # def clean_group(group):
+        #     """For some reason, this breaks when cleaning a split PEM."""
+        #     readings = np.array(group[~group.Deleted.astype(bool)].Reading.to_list())
+        #     data_std = np.array([threshold_value] * len(readings[0]))
+        #     data_median = np.median(group[~group.Deleted.astype(bool)].Reading.to_list(), axis=0)
+        #
+        #     if len(group.loc[~group.Deleted.astype(bool)]) > 2:
+        #         global local_count
+        #         local_count = 0  # The number of readings that have been deleted so far for this group.
+        #         max_removable = len(group) - 2  # Maximum number of readings that are allowed to be deleted.
+        #         # Order the group by degree of deviation from the median
+        #         group["Deviation"] = group.Reading.map(lambda y: abs(y - data_median).sum())
+        #         group = group.sort_values(by="Deviation", ascending=False).drop("Deviation", axis=1)  # This causes the error
+        #         group.Deleted = group.Reading.map(lambda x: eval_decay(x, data_std, data_median, max_removable))
+        #
+        #     return group
 
         if self.pem_file.is_averaged():
             return
@@ -1944,8 +1945,26 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         data = self.pem_file.data[~self.pem_file.data.Deleted.astype(bool)]
         # Filter the readings to only consider off-time channels
         mask = np.asarray(~self.pem_file.channel_times.Remove.astype(bool))
+
         # Clean the data
-        cleaned_data = data.groupby(['Station', 'Component'], as_index=False, group_keys=False).apply(clean_group)
+        # cleaned_data = data.groupby(['Station', 'Component'], as_index=False, group_keys=False).apply(clean_group)
+        cleaned_data = pd.DataFrame()
+        for id, group in data.groupby(['Station', 'Component'], as_index=False, group_keys=False):
+            readings = np.array(group[~group.Deleted.astype(bool)].Reading.to_list())
+            data_std = np.array([threshold_value] * len(readings[0]))
+            data_median = np.median(group[~group.Deleted.astype(bool)].Reading.to_list(), axis=0)
+
+            if len(group.loc[~group.Deleted.astype(bool)]) > 2:
+                global local_count
+                local_count = 0  # The number of readings that have been deleted so far for this group.
+                max_removable = len(group) - 2  # Maximum number of readings that are allowed to be deleted.
+                # Order the group by degree of deviation from the median
+                group["Deviation"] = group.Reading.map(lambda y: abs(y - data_median).sum())
+                group = group.sort_values(by="Deviation", ascending=False).drop("Deviation", axis=1)
+                group.Deleted = group.Reading.map(lambda x: eval_decay(x, data_std, data_median, max_removable))
+
+            cleaned_data = cleaned_data.append(group)
+
         # Update the data
         self.pem_file.data[~self.pem_file.data.Deleted.astype(bool)] = cleaned_data
 
@@ -2174,7 +2193,7 @@ class ProfileViewBox(pg.ViewBox):
 
 if __name__ == '__main__':
     from src.pem.pem_getter import PEMGetter
-    from src.pem.pem_file import PEMParser, DMPParser
+    from src.pem.pem_file import parse_file
     from pathlib import Path
     from src.qt_py import dark_palette
 
@@ -2190,14 +2209,12 @@ if __name__ == '__main__':
 
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
     pem_g = PEMGetter()
-    parser = PEMParser()
-    dmp_parser = DMPParser()
 
-    file = r"C:\_Data\2021\Raglan\718-3849\RAW\718-3849_0825.dmp2"
-    pem_file, errors = dmp_parser.parse(file)
-    pem_file.prep_rotation()
-    pem_file.rotate()
-    # pem_file = parser.parse(r"C:\_Data\2021\Nantou BF\Surface\Loop 5\RAW\_0816_pp.PEM")
+    file = r"C:\_Data\2021\TMC\Murchison\Barraute B\3000E.PEM"  # Error
+    # file = r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW\3000E.PEM"  # No error
+    pem_file = parse_file(file)
+    # pem_file.prep_rotation()
+    # pem_file.rotate()
     # pem_file = pem_g.get_pems(folder="Raw Boreholes", file=r"SR-15-04 Z.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Boreholes", file="em21-155 z_0415.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM")[0]

@@ -58,15 +58,16 @@ from src.ui.plan_map_options import Ui_PlanMapOptions
 logger = logging.getLogger(__name__)
 
 # TODO Add quick view to unpacker? Or separate EXE entirely?
-# TODO Create a theory vs measured plot (similar to step)
 # TODO Look into slowness when changing station number and such in pem plot editor
-# TODO Add more theory responses to plot editor.
-# TODO add NRcan website for magnetic decl as webengine view
 # TODO Move progress dialog or error box when there's an error.
 # TODO fix print issue, caused by PEMGeometry (matplotlib figures).
 # TODO create large PDF with summary of file, including 3d map.
 # TODO Add progress bar to Contour map when it opens
 # TODO Hybrid PEMGeometry selection
+# TODO Plot some profile channels on plan map
+# TODO Log recently opened files.
+# TODO Create weekly report writer, using GeophysicsSheet info.
+# TODO PEMFilter should delete files
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
@@ -1899,16 +1900,23 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         def accept_merge(filepath):
             """
             Open the new merged PEMFile, and remove the old ones if the delete_merged_files_cbox is checked.
-            :param filepath: Path object.
+            :param filepath: str.
             """
+            filepath = Path(filepath)
+            project_dir = self.project_dir_edit.text()
+            removal_rows = []
             if self.actionRename_Merged_Files.isChecked():
                 for row in rows:
-                    new_name = "[M]" + self.table.item(row, self.table_columns.index("File")).text()
-                    # Also triggers file re-name.
-                    self.table.item(row, self.table_columns.index("File")).setText(new_name)
+                    name = self.table.item(row, self.table_columns.index("File")).text()
+                    if name != filepath.name:
+                        removal_rows.append(row)
+                        if Path(project_dir + name).is_file():
+                            new_name = "[M]" + name
+                            # Also triggers file re-name.
+                            self.table.item(row, self.table_columns.index("File")).setText(new_name)
 
             if self.delete_merged_files_cbox.isChecked():
-                self.remove_pem_file(rows)
+                self.remove_pem_file(removal_rows)
 
             self.add_pem_files(filepath)
             self.fill_pem_list()

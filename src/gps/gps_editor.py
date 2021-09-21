@@ -634,7 +634,7 @@ class BoreholeSegments(BaseGPS):
 
     def __init__(self, segments):
         """
-        :param segments: Union (str filepath, pd.DataFrame, list), GPS data
+        :param segments: Union (str filepath, pd.DataFrame, list, BoreholeSegments), GPS data
         """
         super().__init__()
         self.df, self.units, self.errors, self.error_msg = self.parse_segments(segments)

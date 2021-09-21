@@ -23,6 +23,25 @@ logger = logging.getLogger(__name__)
 pd.options.mode.chained_assignment = None  # default='warn'
 
 
+def parse_file(filepath):
+    """
+    Helper function to simplify parsing either DMP, DMP2, or PEM files.
+    :param filepath: str or Path
+    :return: PEMFile object.
+    """
+    filepath = Path(filepath)
+    ext = filepath.suffix.lower()
+    if ext == ".dmp" or ext == ".dmp2":
+        dmp_parser = DMPParser()
+        pem_file, errors = dmp_parser.parse(filepath)
+    elif ext == ".pem":
+        pem_parser = PEMParser()
+        pem_file = pem_parser.parse(filepath)
+    else:
+        raise NotImplementedError(F"{ext.upper()} parsing not implemented.")
+
+    return pem_file
+
 def sort_data(data):
     # Sort the data frame
     df = data.reindex(index=natsort.order_by_index(
@@ -2167,7 +2186,6 @@ class PEMParser:
         :param filepath: string containing path to a PEM file
         :return: A PEM_File object representing the data found inside of filename
         """
-
         def parse_tags(text):
             cols = [
                 'Format',

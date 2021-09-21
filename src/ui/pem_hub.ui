@@ -472,7 +472,7 @@
               <item row="4" column="0" colspan="3">
                <widget class="Line" name="line">
                 <property name="frameShadow">
-                 <enum>QFrame::Sunken</enum>
+                 <enum>QFrame::Plain</enum>
                 </property>
                 <property name="lineWidth">
                  <number>1</number>
