@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" creator="MapSource 6.16.3" version="1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+
+  <metadata>
+    <link href="http://www.garmin.com">
+      <text>Garmin International</text>
+    </link>
+    <time>2021-08-19T14:01:09Z</time>
+    <bounds maxlat="48.495863238349557" maxlon="-77.647705134004354" minlat="48.494546776637435" minlon="-77.647764142602682"/>
+  </metadata>
+
+  <wpt lat="48.494546776637435" lon="-77.647711085155606">
+    <ele>298.853271484375</ele>
+    <name>34 2150</name>
+    <cmt>16-AOU-21 11:09:15</cmt>
+    <desc>16-AOU-21 11:09:15</desc>
+    <sym>Oil Field</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="48.4947454277426" lon="-77.647705134004354">
+    <ele>301.0162353515625</ele>
+    <name>34 2175</name>
+    <cmt>16-AOU-21 11:05:53</cmt>
+    <desc>16-AOU-21 11:05:53</desc>
+    <sym>Oil Field</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="48.495055641978979" lon="-77.647759029641747">
+    <ele>295.008056640625</ele>
+    <name>34 2200</name>
+    <cmt>16-AOU-21 11:02:36</cmt>
+    <desc>16-AOU-21 11:02:36</desc>
+    <sym>Oil Field</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="48.495229315012693" lon="-77.647730279713869">
+    <ele>296.449951171875</ele>
+    <name>34 2225</name>
+    <cmt>16-AOU-21 10:59:05</cmt>
+    <desc>16-AOU-21 10:59:05</desc>
+    <sym>Oil Field</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="48.495479095727205" lon="-77.64775525778532">
+    <ele>294.52734375</ele>
+    <name>34 2250</name>
+    <cmt>16-AOU-21 10:55:59</cmt>
+    <desc>16-AOU-21 10:55:59</desc>
+    <sym>Oil Field</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="48.495671208947897" lon="-77.647760035470128">
+    <ele>296.6903076171875</ele>
+    <name>34 2275</name>
+    <cmt>16-AOU-21 10:52:37</cmt>
+    <desc>16-AOU-21 10:52:37</desc>
+    <sym>Oil Field</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="48.495863238349557" lon="-77.647764142602682">
+    <ele>303.659912109375</ele>
+    <name>34 2300</name>
+    <cmt>16-AOU-21 10:42:05</cmt>
+    <desc>16-AOU-21 10:42:05</desc>
+    <sym>Oil Field</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+</gpx>

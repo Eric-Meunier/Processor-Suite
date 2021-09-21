@@ -11,6 +11,7 @@ import simplekml
 import stopit
 import subprocess
 import sys
+import warnings
 from itertools import groupby
 from pathlib import Path
 
@@ -27,6 +28,7 @@ from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, Q
                                QAbstractItemView, QCheckBox)
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
+import matplotlib.cbook
 from pyproj import CRS
 
 from src import __version__, app_data_dir
@@ -68,12 +70,14 @@ logger = logging.getLogger(__name__)
 # TODO Log recently opened files.
 # TODO Create weekly report writer, using GeophysicsSheet info.
 # TODO PEMFilter should delete files
+# TODO Add GPS errors to table
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('crashWarning', True)
+warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)  # Ignore MatplotlibDeprecationWarning
 
 
 class PEMHub(QMainWindow, Ui_PEMHub):

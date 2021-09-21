@@ -1,0 +1,31 @@
+ls
+ğ
+
+Serial communication
+Type 'h or ?' for help.
+
+/> 
+ls
+ls
+<CR>
+         TIME          Size       File name 
+----A 2021/08/14 08:39       664  0814
+----A 2021/08/14 08:30      2560  08140828
+----A 2021/08/15 08:27      1272  0815
+----A 2021/08/15 08:11    128640  08150754
+----A 2021/08/15 08:27     60800  08150809
+
+   5 File(s),    193936 bytes total
+   0 Dir(s),    1000336K bytes free
+
+/> 
+delete_oldest
+
+<CR>
+
+/> 
+delete_oldest
+delete_oldest
+<CR>
+
+/> 

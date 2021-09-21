@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" creator="MapSource 6.16.3" version="1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+
+  <metadata>
+    <link href="http://www.garmin.com">
+      <text>Garmin International</text>
+    </link>
+    <time>2021-08-18T16:46:55Z</time>
+    <bounds maxlat="48.494923794642091" maxlon="-77.648884551599622" minlat="48.492609802633524" minlon="-77.649084040895104"/>
+  </metadata>
+
+  <wpt lat="48.492609802633524" lon="-77.648884551599622">
+    <ele>305.58251953125</ele>
+    <name>33 1950</name>
+    <cmt>17-AOU-21 12:04:12</cmt>
+    <desc>17-AOU-21 12:04:12</desc>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="48.492816165089607" lon="-77.648890586569905">
+    <time>2021-08-17T19:55:31Z</time>
+    <name>33 1975</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="48.493112633004785" lon="-77.648923443630338">
+    <time>2021-08-17T19:55:45Z</time>
+    <name>33 2000</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="48.493364173918962" lon="-77.648983793333173">
+    <time>2021-08-17T19:55:58Z</time>
+    <name>33 2025</name>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="48.4935971070081" lon="-77.648996282368898">
+    <ele>309.9083251953125</ele>
+    <name>33 2050</name>
+    <cmt>17-AOU-21 12:18:02</cmt>
+    <desc>17-AOU-21 12:18:02</desc>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="48.493778491392732" lon="-77.649002401158214">
+    <ele>296.449951171875</ele>
+    <name>33 2075</name>
+    <cmt>17-AOU-21 12:19:40</cmt>
+    <desc>17-AOU-21 12:19:40</desc>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="48.493997175246477" lon="-77.649015812203288">
+    <ele>296.449951171875</ele>
+    <name>33 2100</name>
+    <cmt>17-AOU-21 12:22:35</cmt>
+    <desc>17-AOU-21 12:22:35</desc>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="48.49424796178937" lon="-77.649031486362219">
+    <ele>299.3338623046875</ele>
+    <name>33 2125</name>
+    <cmt>17-AOU-21 12:25:57</cmt>
+    <desc>17-AOU-21 12:25:57</desc>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="48.494486259296536" lon="-77.649057973176241">
+    <ele>304.6212158203125</ele>
+    <name>33 2150</name>
+    <cmt>17-AOU-21 12:30:41</cmt>
+    <desc>17-AOU-21 12:30:41</desc>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="48.494761604815722" lon="-77.649050261825323">
+    <ele>305.8228759765625</ele>
+    <name>33 2175</name>
+    <cmt>17-AOU-21 12:34:20</cmt>
+    <desc>17-AOU-21 12:34:20</desc>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+  <wpt lat="48.494923794642091" lon="-77.649084040895104">
+    <ele>299.57421875</ele>
+    <name>33 2200</name>
+    <cmt>17-AOU-21 12:38:19</cmt>
+    <desc>17-AOU-21 12:38:19</desc>
+    <sym>Waypoint</sym>
+    <extensions>
+      <gpxx:WaypointExtension xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3">
+        <gpxx:DisplayMode>SymbolAndName</gpxx:DisplayMode>
+      </gpxx:WaypointExtension>
+    </extensions>
+  </wpt>
+
+</gpx>

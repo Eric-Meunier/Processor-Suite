@@ -243,7 +243,6 @@ class ProfilePlotter:
         :param y: arr, base Y values
         :return: arr tuple, interpolated X and Y arrays with gaps masked if enabled
         """
-
         def mask_gaps(interp_y, interp_x, stations, gap=None):
             """
             Mask an array in data gaps so it is not plotted by Matplotlib
@@ -253,7 +252,8 @@ class ProfilePlotter:
             :param gap: optional int, minimum gap size to trigger the mask
             :return: np.array tuple,  interpolated Y and interpolated X values with data inside of gaps masked
             """
-            min_gap = 50 if self.pem_file.is_borehole() else 200
+            # min_gap = 50 if self.pem_file.is_borehole() else 200
+            min_gap = int(.2 * (stations.max() - stations.min()))
             station_gaps = np.diff(stations)
 
             if gap is None:
@@ -265,11 +265,13 @@ class ProfilePlotter:
             # Masks the intervals that are between gap[0] and gap[1]
             for gap in gap_intervals:
                 interp_y = np.ma.masked_where((interp_x > gap[0]) & (interp_x < gap[1]), interp_y)
+                interp_x = np.ma.masked_where((interp_x > gap[0]) & (interp_x < gap[1]), interp_x)
 
+            # Causes the mask to still be plotted.
             # Apply the mask
-            mask = np.isclose(interp_y, interp_y.astype('float64'))
-            interp_x = interp_x[mask]
-            interp_y = interp_y[mask]
+            # mask = np.isclose(interp_y, interp_y.astype('float64'))
+            # interp_x = interp_x[mask]
+            # interp_y = interp_y[mask]
 
             return interp_x, interp_y
 
@@ -320,7 +322,6 @@ class LINPlotter(ProfilePlotter):
         self.figure.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.885)
 
     def plot(self, component):
-
         def add_ylabels():
             if self.pem_file.is_fluxgate():
                 if float(self.pem_file.current) == 1.:
@@ -2952,7 +2953,6 @@ class PEMPrinter:
         :param save_path: str, PDF document filepath
         :param files: list of PEMFile and RIFile objects. RI files are optional.
         """
-
         def save_plots(pem_files, ri_files, x_min, x_max):
             """
             Create the plots and save them as a PDF file
@@ -3267,29 +3267,30 @@ if __name__ == '__main__':
     pem_getter = PEMGetter()
     # pem_files = pem_getter.get_pems(folder='RI files', subfolder=r"PEMPro RI and Suffix Error Files/KBNorth", file="2200EAv KBNorth.PEM")
     # pem_files = [PEMParser().parse(r"C:\_Data\2021\TMC\131-21-38\Final\131-21-38 XYT.PEM")]
-    pem_files = pem_getter.get_pems(folder="Raw Surface", subfolder=r"Loop L\Final", file="100E.PEM")
+    # pem_files = pem_getter.get_pems(folder="Raw Surface", subfolder=r"Loop L\Final", file="100E.PEM")
+    pem_files = pem_getter.get_pems(folder="Raw Surface\Barraute B\Final", file="3400E.PEM")
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
     # planner = LoopPlanner()
 
-    map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
-    # map_plot = PlanMap(pem_files, map_fig, CRS.from_epsg(32644)).plot()
-    map_plot = PlanMap(pem_files, map_fig, pem_files[0].get_crs()).plot()
-    plt.show()
+    # map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
+    # # map_plot = PlanMap(pem_files, map_fig, CRS.from_epsg(32644)).plot()
+    # map_plot = PlanMap(pem_files, map_fig, pem_files[0].get_crs()).plot()
+    # plt.show()
 
     # fig = plt.figure(figsize=(8.5, 11), dpi=100)
     # sp = SectionPlot()
     # sp.plot(pem_files[0], figure=fig)
     # plt.show()
 
-    # lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
-    # ax6 = ax5.twiny()
-    # ax6.get_shared_x_axes().join(ax5, ax6)
-    # # pem = r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.PEM'
-    # lin_plot = LINPlotter(pem_files[0], lin_fig)
-    # lin_plot.plot('X')
-    # lin_plot.plot('Y')
-    # plt.show()
+    lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
+    ax6 = ax5.twiny()
+    ax6.get_shared_x_axes().join(ax5, ax6)
+    # pem = r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.PEM'
+    lin_plot = LINPlotter(pem_files[0], lin_fig)
+    lin_plot.plot('X')
+    lin_plot.plot('Y')
+    plt.show()
 
     # log_fig, ax = plt.subplots(1, 1, num=1, clear=True, figsize=(8.5, 11))
     # ax2 = ax.twiny()
