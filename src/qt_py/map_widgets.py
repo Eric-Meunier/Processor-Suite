@@ -2,17 +2,20 @@ import logging
 import os
 import re
 import sys
+import keyboard
 from pathlib import Path
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import math
 import natsort
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
+from pyqtgraph.graphicsItems.ROI import Handle
 import plotly
 import plotly.graph_objects as go
-from PySide2.QtCore import Qt, QTimer
+from PySide2.QtCore import Qt, QTimer, QPointF
 from PySide2.QtGui import QFont
 from PySide2.QtWebEngineWidgets import QWebEngineView
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QAction, QErrorMessage,
@@ -963,7 +966,8 @@ class GPSViewer(QMainWindow):
         self.background_color = get_line_color("background", "mpl", self.darkmode)
         self.line_color = get_line_color("teal", "mpl", self.darkmode)
         self.loop_color = get_line_color("foreground", "mpl", self.darkmode)
-        self.hole_color = get_line_color("purple", "mpl", self.darkmode)
+        self.hole_color = get_line_color("blue", "mpl", self.darkmode)
+        self.green_color = get_line_color("green", "mpl", self.darkmode)
 
         # Format the plots
         self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
@@ -988,6 +992,11 @@ class GPSViewer(QMainWindow):
         self.plan_view.showLabel('right', show=False)
         self.plan_view.showLabel('top', show=False)
 
+        self.ruler = None
+        self.ruler_text = None
+        self.measuring_pos = None
+        self.measuring_state = 0
+
         # Actions
         self.save_img_action = QShortcut("Ctrl+S", self)
         self.save_img_action.activated.connect(self.save_img)
@@ -995,6 +1004,74 @@ class GPSViewer(QMainWindow):
         self.copy_image_action.activated.connect(self.copy_img)
         self.auto_range_action = QShortcut(" ", self)
         self.auto_range_action.activated.connect(lambda: self.plan_view.autoRange())
+        self.plan_view.scene().sigMouseClicked.connect(self.mouse_clicked)
+
+    def mouse_clicked(self, e):
+        """
+        When the plot is clicked. Add the measuring tool if CTRL is held. Otherwise, the first normal click
+        will stop moving the measuring tool end, and the second normal click will remove the tool all together.
+        :param e: MouseClickEvent object.
+        """
+        def update_ruler():
+            """
+            Move the distance text and position when the ruler is moved or changed.
+            :return: None
+            """
+            def get_ruler_info():
+                handles = self.ruler.getHandles()
+                handle_positions = np.array([vb.mapSceneToView(h.scenePos()) for h in handles])
+
+                distance = math.sqrt((handle_positions[0].x() - handle_positions[1].x()) ** 2 +
+                                     (handle_positions[0].y() - handle_positions[1].y()) ** 2)
+
+                new_pos = QPointF(np.mean([h.x() for h in handle_positions]), np.mean([h.y() for h in handle_positions]))
+                return new_pos, distance
+
+            vb = self.plan_view.getPlotItem().vb
+            new_pos, distance = get_ruler_info()
+            self.ruler_text.setText(f"{distance:.2f} m")
+            self.ruler_text.setPos(new_pos)
+
+        if keyboard.is_pressed("CTRL"):
+            """Add the measuring tool"""
+            self.plan_view.removeItem(self.ruler)
+            self.plan_view.removeItem(self.ruler_text)
+
+            pos = self.plan_view.getPlotItem().vb.mapSceneToView(e.scenePos())
+            self.measuring_pos = pos
+            self.ruler = Ruler(positions=[pos, pos],
+                                        pen=pg.mkPen(self.green_color,
+                                                     style=Qt.DashLine,
+                                                     width=1.5))
+            self.ruler.setZValue(10)
+            self.ruler.sigRegionChanged.connect(update_ruler)
+            self.ruler_text = pg.TextItem("length",
+                                          color=pg.mkColor(self.green_color),
+                                          anchor=(0.5, 1),
+                                          fill=pg.mkBrush(self.background_color))
+            self.ruler_text.setParentItem(self.ruler)
+            # self.ruler_text.setFont(QFont("Helvetica", 9, QFont.Normal))
+            self.ruler_text.setZValue(10)
+            self.plan_view.addItem(self.ruler, ignoreBounds=True)
+            self.plan_view.addItem(self.ruler_text, ignoreBounds=True)
+            self.plan_view.scene().sigMouseMoved.connect(self.move_measuring_tool)
+            update_ruler()
+        else:
+            if self.ruler in self.plan_view.items():
+                if self.measuring_state % 2 == 0:  # On first click, stop moving the second handle, but keep the tool.
+                    self.plan_view.scene().sigMouseMoved.disconnect()
+                else:
+                    self.plan_view.removeItem(self.ruler)  # On second click, remove the tool entirely.
+                    self.plan_view.removeItem(self.ruler_text)  # On second click, remove the tool entirely.
+                self.measuring_state += 1
+
+    def move_measuring_tool(self, e):
+        """
+        Move the second measuring tool handle when the measuring tool is out.
+        :param e: QPointF, position of the mouse.
+        """
+        pos = self.plan_view.getPlotItem().vb.mapSceneToView(e)
+        self.ruler.movePoint(self.ruler.getHandles()[-1], pos)
 
     def save_img(self):
         save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image', 'gps.png', 'PNG file (*.PNG)')
@@ -1024,7 +1101,7 @@ class GPSViewer(QMainWindow):
                 self.plan_view.addItem(text_item, ignoreBounds=True)
                 text_item.setPos(row.Easting, row.Northing)
                 text_item.setParentItem(loop_item)
-                # text_item.setFont(QFont("Helvetica", 8, QFont.Normal))
+                # text_item.setFont(QFont("Helvetica", 7, QFont.Normal))
                 text_item.setZValue(0)
 
             loop = pem_file.get_loop(sorted=False, closed=True).dropna()
@@ -1058,7 +1135,7 @@ class GPSViewer(QMainWindow):
                 self.plan_view.addItem(text_item, ignoreBounds=True)
                 text_item.setPos(center[0], center[1])
                 text_item.setParentItem(loop_item)
-                text_item.setFont(QFont("Helvetica", 8, QFont.Normal))
+                # text_item.setFont(QFont("Helvetica", 8, QFont.Normal))
                 text_item.setZValue(0)
 
         def plot_line():
@@ -1217,6 +1294,58 @@ class GPSViewer(QMainWindow):
                 else:
                     plot_line()
                 dlg += 1
+
+
+class Ruler(pg.LineSegmentROI):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.handlePen = pg.mkPen(self.pen.color())
+
+    def _makePen(self):
+        # Generate the pen color for this ROI based on its current state.
+        if self.mouseHovering:
+            return pg.mkPen(self.pen.color(), width=self.pen.width() + 0.5)
+        else:
+            return self.pen
+
+    def addHandle(self, info, index=None):
+        class CustomHandle(Handle):
+            """
+            Re-implementing Handle to change the size and color (especially when hovering) of the handles.
+            """
+            def __init__(self, *args, **kwds):
+                Handle.__init__(self, *args, **kwds)
+
+            def hoverEvent(self, ev):
+                hover = False
+                if not ev.isExit():
+                    if ev.acceptDrags(Qt.LeftButton):
+                        hover = True
+                    for btn in [Qt.LeftButton, Qt.RightButton, Qt.MidButton]:
+                        if int(self.acceptedMouseButtons() & btn) > 0 and ev.acceptClicks(btn):
+                            hover = True
+
+                if hover:
+                    self.currentPen = pg.mkPen(self.pen.color(), width=self.pen.width() + 1.5)
+                else:
+                    self.currentPen = self.pen
+                self.update()
+
+        # Reimplement so a signal can be emitted
+        h = CustomHandle(5, typ="r", pen=self.pen, parent=self)
+        h.setPos(info['pos'] * self.state['size'])
+        info['item'] = h
+
+        h.connectROI(self)
+        if index is None:
+            self.handles.append(info)
+        else:
+            self.handles.insert(index, info)
+
+        h.setZValue(self.zValue() + 1)
+        h.sigRemoveRequested.connect(self.removeHandle)
+        self.stateChanged(finish=True)
+        return h
 
 
 if __name__ == '__main__':

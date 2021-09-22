@@ -68,9 +68,9 @@ logger = logging.getLogger(__name__)
 # TODO Hybrid PEMGeometry selection
 # TODO Plot some profile channels on plan map
 # TODO Log recently opened files.
-# TODO Create weekly report writer, using GeophysicsSheet info.
 # TODO PEMFilter should delete files
 # TODO Add GPS errors to table
+# TODO Add measure tool to quickmap
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
