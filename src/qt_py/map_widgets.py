@@ -1047,7 +1047,7 @@ class GPSViewer(QMainWindow):
             self.ruler.sigRegionChanged.connect(update_ruler)
             self.ruler_text = pg.TextItem("length",
                                           color=pg.mkColor(self.green_color),
-                                          anchor=(0.5, 1),
+                                          anchor=(0.5, 0.5),
                                           fill=pg.mkBrush(self.background_color))
             self.ruler_text.setParentItem(self.ruler)
             # self.ruler_text.setFont(QFont("Helvetica", 9, QFont.Normal))

@@ -70,7 +70,6 @@ logger = logging.getLogger(__name__)
 # TODO Log recently opened files.
 # TODO PEMFilter should delete files
 # TODO Add GPS errors to table
-# TODO Add measure tool to quickmap
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
@@ -1783,7 +1782,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         Open files through the file dialog
         """
-        files = QFileDialog().getOpenFileNames(self, 'Open PEM Files', filter='PEM files (*.pem)')[0]
+        files = QFileDialog().getOpenFileNames(self, 'Open PEM Files', self.project_dir_edit.text(),
+                                               filter='PEM files (*.pem)')[0]
         if files:
             self.add_pem_files(files)
 
@@ -1948,7 +1948,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             return
 
         pem_files, rows = self.get_pem_files(selected=selected)
-        pdf_plot_printer = PDFPlotPrinter(parent=self)
+        pdf_plot_printer = PDFPlotPrinter(parent=self, darkmode=self.darkmode)
         refs.append(pdf_plot_printer)
 
         # Gather the RI files
@@ -3790,9 +3790,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         :param inf_file: str, .INF filepath
         """
         crs_dict = self.parse_crs(inf_file)
-        coord_sys = crs_dict.get('System')
-        coord_zone = crs_dict.get('Zone')
-        datum = crs_dict.get('Datum')
+        coord_sys = crs_dict.get('System').strip()
+        coord_zone = crs_dict.get('Zone').strip()
+        datum = crs_dict.get('Datum').strip()
+        logger.info(f"Reading INF file {Path(inf_file).name}.\nSystem: {coord_sys}, Datum: {datum}, Zone: {coord_zone}")
         if all([coord_sys in [self.gps_system_cbox.itemText(i) for i in range(self.gps_system_cbox.count())],
                 # coord_zone in [self.gps_zone_cbox.itemText(i) for i in range(self.gps_zone_cbox.count())],  # Isn't populated until later
                 datum in [self.gps_datum_cbox.itemText(i) for i in range(self.gps_datum_cbox.count())]]):
@@ -4461,10 +4462,11 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
     """
     Widget to handle printing PDF plots for PEM/RI files.
     """
-
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, darkmode=False):
         super().__init__()
         self.parent = parent
+        self.darkmode = darkmode
+        plt.style.use('default')
         self.setupUi(self)
         self.setWindowTitle("PDF Printing Options")
         self.setWindowIcon(get_icon('pdf.png'))
@@ -4588,6 +4590,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
             printer = PEMPrinter(**plot_kwargs)
             printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
             os.startfile(save_dir + ".PDF")
+            plt.style.use('dark_background' if self.darkmode else 'default')  # Reset darkmode theme
             self.close()
         else:
             logger.error(f"No file name passed.")

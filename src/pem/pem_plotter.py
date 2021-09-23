@@ -67,6 +67,7 @@ class ProfilePlotter:
         self.x_min = x_min
         self.x_max = x_max
         self.hide_gaps = hide_gaps
+        self.linewidth = 0.5
 
     def format_figure(self, component):
         """
@@ -293,7 +294,6 @@ class ProfilePlotter:
 
     @staticmethod
     def annotate_line(ax, annotation, interp_x, interp_y, offset):
-
         for i, x_position in enumerate(interp_x[int(offset)::int(len(interp_x) * 0.4)]):
             y = interp_y[list(interp_x).index(x_position)]
 
@@ -352,7 +352,7 @@ class LINPlotter(ProfilePlotter):
                 interp_stations, interp_data = self.get_interp_data(stations, data)
 
                 # Plot the data
-                ax.plot(interp_stations, interp_data, color=line_color)
+                ax.plot(interp_stations, interp_data, color=line_color, linewidth=self.linewidth)
 
                 # Annotate the lines
                 self.annotate_line(ax, 'PP' if ch == 0 else str(ch), interp_stations, interp_data, offset)
@@ -410,7 +410,7 @@ class LOGPlotter(ProfilePlotter):
             interp_stations, interp_data = self.get_interp_data(stations, data)
 
             # Plot the data
-            ax.plot(interp_stations, interp_data, color=line_color)
+            ax.plot(interp_stations, interp_data, color=line_color, linewidth=self.linewidth)
 
             # Annotate the lines
             self.annotate_line(ax, 'PP' if ch == 0 else str(ch), interp_stations, interp_data, offset)
@@ -524,21 +524,21 @@ class STEPPlotter(ProfilePlotter):
 
                 if i < 3:  # Plotting TP, PP, and S1 to the first axes
                     ax = self.figure.axes[0]
-                    ax.plot(interp_stations, interp_data, color=line_color)
+                    ax.plot(interp_stations, interp_data, color=line_color, linewidth=self.linewidth)
                     self.annotate_line(ax, annotations[i], interp_stations, interp_data, offset)
                     offset += len(interp_stations) * 0.15
                 elif i < 5:  # Plotting the PP and S1% to the second axes
                     if i == 3:  # Resetting the annotation positions
                         offset = 100
                     ax = self.figure.axes[1]
-                    ax.plot(interp_stations, interp_data, color=line_color)
+                    ax.plot(interp_stations, interp_data, color=line_color, linewidth=self.linewidth)
                     self.annotate_line(ax, annotations[i], interp_stations, interp_data, offset)
                     offset += len(interp_stations) * 0.15
                 else:  # Plotting S2% to S4% to the third axes
                     if i == 5:
                         offset = 100
                     ax = self.figure.axes[2]
-                    ax.plot(interp_stations, interp_data, color=line_color)
+                    ax.plot(interp_stations, interp_data, color=line_color, linewidth=self.linewidth)
                     self.annotate_line(ax, annotations[i], interp_stations, interp_data, offset)
                     offset += len(interp_stations) * 0.15
 
@@ -554,7 +554,7 @@ class STEPPlotter(ProfilePlotter):
             for i, data in enumerate(off_time_channel_data[-num_channels_to_plot:]):
                 x_intervals, interp_data = self.get_interp_data(stations, data)
                 ax = self.figure.axes[3]
-                ax.plot(x_intervals, interp_data, color=line_color)
+                ax.plot(x_intervals, interp_data, color=line_color, linewidth=self.linewidth)
                 self.annotate_line(ax, str(num_off_time_channels - num_channels_to_plot + i + 1),
                                    x_intervals,
                                    interp_data,
