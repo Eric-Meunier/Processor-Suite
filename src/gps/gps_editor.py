@@ -991,11 +991,12 @@ if __name__ == '__main__':
     # gps_parser = GPSParser()
     gpx_editor = GPXParser()
     # crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 1983'})
-    gpx_file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
+    gpx_file = r'C:\_Data\2021\Eastern\L5N.gpx'
+    # gpx_file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
     # gpx_file = samples_folder.joinpath(r'GPX files\2000E_0524.gpx')
 
-    print(gpx_editor.get_utm(gpx_file))
-    file, errors = gpx_editor.parse_gpx(gpx_file)
+    utm_gps, zone, hemisphere, crs, errors = gpx_editor.get_utm(gpx_file)
+    # file, errors = gpx_editor.parse_gpx(gpx_file)
 
     # file = samples_folder.joinpath(r'Line GPS\LINE 0S.txt')
     # file = r'C:\Users\Mortulo\PycharmProjects\PEMPro\sample_files\Collar GPS\LT19003_collar.txt'
@@ -1007,7 +1008,8 @@ if __name__ == '__main__':
     # geometry.get_projection(num_segments=1000)
     # loop = TransmitterLoop(file)
     # loop.to_nad83()
-    line = SurveyLine(file)
+    line = SurveyLine(utm_gps)
+    print(line.df)
     # print(loop.get_sorted_loop(), '\n', loop.get_loop())
     # collar = BoreholeCollar(file)
     # seg = BoreholeSegments(file)

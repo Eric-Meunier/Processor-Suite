@@ -609,22 +609,22 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             reverse = True if (table_stations[0] > table_stations[-1]) else False
             sorted_stations = sorted(sorted_stations, reverse=reverse)
 
-            blue_color, red_color = QColor('blue'), QColor('red')
-            blue_color.setAlpha(50)
-            red_color.setAlpha(50)
+            purple_color = QColor(get_line_color("purple", "mpl", self.darkmode, alpha=50))
+            pink_color = QColor(get_line_color("pink", "mpl", self.darkmode, alpha=50))
+            gray_color = QColor(get_line_color("gray", "mpl", self.darkmode, alpha=50))
 
             for row in range(self.table.rowCount()):
                 station_item = self.table.item(row, stations_column)
                 station_num = table_stations[row]
                 # station_num = re.search('-?\d+', table_stations[row]).group()
                 if not station_num and station_num != 0:
-                    station_item.setBackground(QColor('dimgray'))
+                    station_item.setBackground(gray_color)
                 else:
                     if int(station_num) > sorted_stations[row]:
-                        station_item.setBackground()
+                        station_item.setBackground(purple_color)
                         errors += 1
                     elif int(station_num) < sorted_stations[row]:
-                        station_item.setBackground(red_color)
+                        station_item.setBackground(pink_color)
                         errors += 1
                     else:
                         station_item.setBackground(empty_background)
@@ -1367,7 +1367,7 @@ def main():
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    darkmode = False
+    darkmode = True
     if darkmode:
         app.setPalette(dark_palette)
     pg.setConfigOptions(antialias=True)
@@ -1387,12 +1387,13 @@ def main():
     # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
     # loop = TransmitterLoop(file)
 
-    # mw = LineAdder(darkmode=darkmode)
+    mw = LineAdder(darkmode=darkmode)
     # mw = ExcelTablePicker()
-    mw = DADSelector()
+    # mw = DADSelector()
 
-    file = samples_folder.joinpath(r"Segments\BHEM-Belvais-2021-07-22.xlsx")
+    # file = samples_folder.joinpath(r"Segments\BHEM-Belvais-2021-07-22.xlsx")
     # file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
+    file = r"C:\_Data\2021\Eastern\Maritime Resources\Birchy 2\GPS\L5N.GPX"
     # file = samples_folder.joinpath(r'Raw Boreholes\OBS-88-027\RAW\Obalski.xlsx')
     # file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')
     # line = SurveyLine(str(file))
