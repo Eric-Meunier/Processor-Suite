@@ -62,13 +62,10 @@ logger = logging.getLogger(__name__)
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO Look into slowness when changing station number and such in pem plot editor
 # TODO Move progress dialog or error box when there's an error.
-# TODO fix print issue, caused by PEMGeometry (matplotlib figures).
 # TODO create large PDF with summary of file, including 3d map.
-# TODO Add progress bar to Contour map when it opens
 # TODO Hybrid PEMGeometry selection
 # TODO Plot some profile channels on plan map
 # TODO Log recently opened files.
-# TODO PEMFilter should delete files
 # TODO Add GPS errors to table
 
 # Keep a list of widgets so they don't get garbage collected
@@ -483,21 +480,31 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             def remove_pem_list_files():
                 """
-                Signal slot, remove the selected items from the list. Can be brought back by refreshing.
+                Signal slot, delete selected PEM files.
                 """
-                selected_rows = [self.pem_list.row(i) for i in self.pem_list.selectedItems()]
-                for row in sorted(selected_rows, reverse=True):
-                    self.pem_list.takeItem(row)
-                    self.available_pems.pop(row)
+                response = self.message.question(self, "Confirm Delete", f"Delete selected PEM file(s)?",
+                                                 self.message.Yes, self.message.No)
+                if response == self.message.Yes:
+                    selected_rows = [self.pem_list.row(i) for i in self.pem_list.selectedItems()]
+                    for row in sorted(selected_rows, reverse=True):
+                        print(f"Deleting {self.available_pems[row]}")
+                        os.remove(self.available_pems[row])
+                        self.pem_list.takeItem(row)
+                        self.available_pems.pop(row)
 
             def remove_gps_list_files():
                 """
-                Signal slot, remove the selected items from the list. Can be brought back by refreshing.
+                Signal slot, delete selected GPS files.
                 """
-                selected_rows = [self.gps_list.row(i) for i in self.gps_list.selectedItems()]
-                for row in sorted(selected_rows, reverse=True):
-                    self.gps_list.takeItem(row)
-                    self.available_gps.pop(row)
+                response = self.message.question(self, "Confirm Delete", f"Delete selected GPS file(s)?",
+                                                 self.message.Yes, self.message.No)
+                if response == self.message.Yes:
+                    selected_rows = [self.gps_list.row(i) for i in self.gps_list.selectedItems()]
+                    for row in sorted(selected_rows, reverse=True):
+                        print(f"Deleting {self.available_gps[row]}")
+                        os.remove(self.available_gps[row])
+                        self.gps_list.takeItem(row)
+                        self.available_gps.pop(row)
 
             def update_selection_text():
                 """
@@ -2514,7 +2521,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         Populate the GPS files list based on the files found in the nearest 'GPS' folder in the project directory
         """
-
         @stopit.threading_timeoutable(default='timeout')
         def find_gps_files():
             files = list(natsort.os_sorted(self.project_dir.rglob('*.txt')))
@@ -2524,7 +2530,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             files.extend(natsort.os_sorted(self.project_dir.rglob('*.xls')))
             return files
 
-        def get_filtered_gps():
+        def get_filtered_gps(gps_files):
             """
             Filter the list of GPS files based on filepath names from the user inputs in GPSPathFilter.
             :return: list of GPS files.
@@ -2536,7 +2542,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     stripped_arr.append(r.strip())
                 return stripped_arr
 
-            filtered_gps = self.available_gps
+            filtered_gps = gps_files
 
             # Filter the GPS files by file name
             include_files = strip(self.gps_list_filter.include_files_edit.text().split(','))
@@ -2558,7 +2564,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     [f.lower() in str(p.name).lower() for f in include_files if f]
                 )]
 
-            # Inclusive files
+            # Exclusive files
             if any(exclude_files):
                 filtered_gps = [p for p in filtered_gps if all(
                     [f.lower() not in str(p.name).lower() for f in exclude_files if f]
@@ -2577,9 +2583,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 )]
 
             include_exts = strip(self.gps_list_filter.include_exts_edit.text().split(','))
-            # logger.info(f"Include extensions: {include_exts}")
             exclude_exts = strip(self.gps_list_filter.exclude_exts_edit.text().split(','))
-            # logger.info(f"Exclude extensions: {exclude_exts}")
 
             # Filter the PEM files by file extension
             # Inclusive extensions
@@ -2593,6 +2597,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     [re.sub(r'[\*\.]', '', f.lower()) != p.suffix.lower()[1:] for f in exclude_exts if f]
                 )]
 
+            # Manually remove the '.txt' file if it exists
+            for file in filtered_gps:
+                if file.stem == '.txt':
+                    filtered_gps.remove(file)
             return filtered_gps
 
         if not self.project_dir:
@@ -2603,20 +2611,19 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.gps_list.clear()
 
         # Try to find a GPS folder, but time out after 0.5 second
-        self.available_gps = find_gps_files(timeout=0.5)
+        gps_files = find_gps_files(timeout=0.5)
 
-        if self.available_gps is None:
+        if gps_files is None:
             return
-        elif self.available_gps == 'timeout':
+        elif gps_files == 'timeout':
             logger.warning(f"Searching for GPS files timed out.")
             self.status_bar.showMessage(f"Searching for GPS files timed out.", 1000)
             return
         else:
-            gps_files = get_filtered_gps()
-            for file in gps_files:
-                if file.stem != '.txt':
-                    self.gps_list.addItem(QListWidgetItem(get_extension_icon(file),
-                                                          f"{str(file.relative_to(self.project_dir))}"))
+            self.available_gps = get_filtered_gps(gps_files)
+            for file in self.available_gps:
+                self.gps_list.addItem(QListWidgetItem(get_extension_icon(file),
+                                                      f"{str(file.relative_to(self.project_dir))}"))
 
     def fill_pem_list(self):
         """
@@ -2631,7 +2638,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             files.extend(natsort.os_sorted(list(self.project_dir.rglob('*.DMP2'))))
             return files
 
-        def get_filtered_pems():
+        def get_filtered_pems(pem_files):
             """
             Filter the list of PEM files based on filepath names from the user inputs in PathFilter.
             :return: list of PEM files.
@@ -2643,7 +2650,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     stripped_arr.append(r.strip())
                 return stripped_arr
 
-            filtered_pems = self.available_pems
+            filtered_pems = pem_files
 
             # Filter the PEM files by file name
             include_files = strip(self.pem_list_filter.include_files_edit.text().split(','))
@@ -2708,17 +2715,17 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.pem_list.clear()
 
         # Try to find .PEM files, but time out after 0.5 seconds
-        self.available_pems = find_pem_files(timeout=0.5)
+        pem_files = find_pem_files(timeout=0.5)
 
-        if self.available_pems is None:
+        if pem_files is None:
             return
-        elif self.available_pems == 'timeout':
+        elif pem_files == 'timeout':
             logger.warning(f"Searching for PEM/DMP files timed out.")
             self.status_bar.showMessage(f"Searching for PEM/DMP files timed out.", 1000)
             return
         else:
-            pem_files = get_filtered_pems()
-            for file in pem_files:
+            self.available_pems = get_filtered_pems(pem_files)
+            for file in self.available_pems:
                 self.pem_list.addItem(QListWidgetItem(get_extension_icon(file),
                                                       f"{str(file.relative_to(self.project_dir))}"))
 

@@ -691,7 +691,7 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
         """
         self.data = pd.DataFrame()
         with CustomProgressDialog("Gathering PEM Data", 0, len(self.pem_files)) as dlg:
-            app.processEvents()
+            # app.processEvents()
             for pem_file in self.pem_files:
                 if dlg.wasCanceled():
                     break

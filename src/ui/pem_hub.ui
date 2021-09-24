@@ -930,6 +930,9 @@ Warnings</string>
                         <property name="toolTip">
                          <string>Refresh</string>
                         </property>
+                        <property name="statusTip">
+                         <string>Refresh</string>
+                        </property>
                         <property name="text">
                          <string/>
                         </property>
@@ -954,6 +957,9 @@ Warnings</string>
                          </size>
                         </property>
                         <property name="toolTip">
+                         <string>Filter</string>
+                        </property>
+                        <property name="statusTip">
                          <string>Filter</string>
                         </property>
                         <property name="text">
@@ -1002,6 +1008,9 @@ Warnings</string>
                          </size>
                         </property>
                         <property name="toolTip">
+                         <string>Add the selected PEM files to the project</string>
+                        </property>
+                        <property name="statusTip">
                          <string>Add the selected PEM files to the project</string>
                         </property>
                         <property name="text">
@@ -1194,6 +1203,9 @@ Warnings</string>
                         <property name="toolTip">
                          <string>Refresh</string>
                         </property>
+                        <property name="statusTip">
+                         <string>Refresh</string>
+                        </property>
                         <property name="text">
                          <string/>
                         </property>
@@ -1212,6 +1224,9 @@ Warnings</string>
                          </size>
                         </property>
                         <property name="toolTip">
+                         <string>Filter</string>
+                        </property>
+                        <property name="statusTip">
                          <string>Filter</string>
                         </property>
                         <property name="text">
@@ -1260,6 +1275,9 @@ Warnings</string>
                          </size>
                         </property>
                         <property name="toolTip">
+                         <string>Add the selected GPS files to the currently selected PEM file and Information tab</string>
+                        </property>
+                        <property name="statusTip">
                          <string>Add the selected GPS files to the currently selected PEM file and Information tab</string>
                         </property>
                         <property name="text">

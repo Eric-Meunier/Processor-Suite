@@ -1078,7 +1078,6 @@ class ExcelTablePicker(QWidget):
         self.elevation = None
         self.click_count = 0
         self.selected_cells = []
-        # self.selection_color = QColor('#50C878')
         self.selection_color = QColor(get_line_color("single_blue", "mpl", True))
 
         self.tables = []
