@@ -517,6 +517,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                 if len(pem_files) == 1:
                     file = pem_files[0]
+                    self.status_bar.showMessage(f"{file.filepath}")
                     timebase = f"Timebase: {file.timebase}ms"
                     zts = f"ZTS: {', '.join(file.data.ZTS.unique().astype(int).astype(str))}"
                     survey_type = f"Survey Type: {file.get_survey_type()}"
@@ -528,6 +529,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     else:
                         derotated = ""
                 else:
+                    self.status_bar.showMessage("")
                     timebase = f"Timebase(s): {', '.join(natsort.os_sorted(np.unique([str(f.timebase) + 'ms' for f in pem_files])))}"
                     zts = f"ZTS: {', '.join(np.unique(np.concatenate([f.data.ZTS.unique().astype(int).astype(str) for f in pem_files])))}"
                     survey_type = f"Survey Type(s): {', '.join(np.unique([f.get_survey_type() for f in pem_files]))}"
@@ -1115,6 +1117,12 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         :param event: Right-click event.
         :return: None
         """
+        def has_any_gps():
+            if any([pem_file.has_any_gps() for pem_file in selected_pems]):
+                return True
+            else:
+                return False
+
         if not self.table.underMouse():
             return
 
@@ -1165,8 +1173,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         self.view_line_action.setDisabled(True)
                     else:
                         self.view_line_action.setDisabled(False)
-
-                # self.menu.addSeparator()
 
                 # Add the export menu
                 self.menu.addMenu(self.export_menu)
@@ -1250,6 +1256,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             # Plot
             self.menu.addAction(self.open_plot_editor_action)
             self.menu.addAction(self.open_quick_map_action)
+            if not has_any_gps():
+                self.open_quick_map_action.setDisabled(True)
+            else:
+                self.open_quick_map_action.setDisabled(False)
             self.menu.addSeparator()
 
             # Merge PEMs
@@ -1298,12 +1308,11 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.menu.popup(QCursor.pos())
 
     def eventFilter(self, source, event):
-        # # Clear the selection when clicking away from any file
+        # Clear the selection when clicking away from any file
         if (event.type() == QEvent.MouseButtonPress and
                 source is self.table.viewport() and
                 self.table.itemAt(event.pos()) is None):
             self.reset_selection_labels()
-        #     self.table.clearSelection()
 
         if source == self.table:
             # Change the focus to the table so the 'Del' key works
@@ -3325,6 +3334,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(F"{Path(new_file).name} saved successfully.", 1500)
 
     def reset_selection_labels(self):
+        self.status_bar.showMessage("")
         for label in [self.selection_files_label,
                       self.selection_timebase_label,
                       self.selection_zts_label,
@@ -3333,7 +3343,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             label.setText("")
 
     def format_row(self, row):
-
         def color_row():
             """
             Color cells of the main table based on conditions. Ex: Red text if the PEM file isn't averaged.
@@ -5214,21 +5223,22 @@ def main():
     # pem_files = pem_getter.get_pems(folder='Iscaycruz', subfolder='Loop 1', number=4)
     # pem_files = pem_getter.get_pems(folder="Raw Boreholes\EB-21-68\RAW", number=1)
     pem_files = pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0823.PEM")
-    pem_files.extend(pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0824.PEM"))
+    # pem_files.extend(pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0824.PEM"))
     # pem_files.extend(pem_getter.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_getter.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
     # assert len(pem_files) == len(ri_files)
 
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
-    # mw.show()
-    app.processEvents()
+    mw.show()
+    # app.processEvents()
 
-    # mw.add_pem_files(pem_files)
+    mw.add_pem_files(pem_files)
 
     # mw.open_3d_map()
     # mw.add_dmp_files(dmp_files)
-    # mw.table.selectRow(0)
+    mw.table.selectRow(0)
+    mw.scale_pem_coil_area(selected=True)
     # mw.table.selectAll()
     # mw.open_pem_merger()
     # mw.open_pem_geometry()

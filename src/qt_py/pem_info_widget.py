@@ -16,7 +16,7 @@ from PySide2.QtWidgets import (QMessageBox, QWidget, QAction, QErrorMessage,
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
     GPXParser
 from src.pem import convert_station
-from src.qt_py import clear_table, read_file, table_to_df, df_to_table
+from src.qt_py import clear_table, read_file, table_to_df, df_to_table, get_line_color
 from src.qt_py.gps_adder import LoopAdder, LineAdder, CollarPicker, ExcelTablePicker
 from src.qt_py.pem_geometry import PEMGeometry
 from src.qt_py.ri_importer import RIFile
@@ -653,10 +653,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         sorted_stations = sorted(stations, reverse=bool(stations[0] > stations[-1]))
         em_stations = self.pem_file.data.Station.map(convert_station).unique().astype(int)
 
-        blue_color, red_color, gray_color = QColor("blue"), QColor("red"), QColor("darkGray")
-        blue_color.setAlpha(50)
-        red_color.setAlpha(50)
-        gray_color.setAlpha(50)
+        blue_color = QColor(get_line_color("blue", "mpl", self.darkmode, alpha=50))
+        red_color = QColor(get_line_color("red", "mpl", self.darkmode, alpha=50))
+        gray_color = QColor(get_line_color("gray", "mpl", self.darkmode, alpha=50))
         station_col = self.line_table_columns.index('Station')
 
         for row in range(self.line_table.rowCount()):
@@ -685,15 +684,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.line_table.blockSignals(True)
         stations_column = self.line_table_columns.index('Station')
         stations = []
+        red_color = QColor(get_line_color("red", "mpl", self.darkmode))
         for row in range(self.line_table.rowCount()):
             if self.line_table.item(row, stations_column):
                 station = self.line_table.item(row, stations_column).text()
                 if station in stations:
                     other_station_index = stations.index(station)
-                    self.line_table.item(row, stations_column).setForeground(QColor('red'))
-                    self.line_table.item(other_station_index, stations_column).setForeground(QColor('red'))
-                # else:
-                #     self.line_table.item(row, stations_column).setForeground(QColor('black'))
+                    self.line_table.item(row, stations_column).setForeground(red_color)
+                    self.line_table.item(other_station_index, stations_column).setForeground(red_color)
                 stations.append(station)
         self.line_table.blockSignals(False)
 
@@ -704,7 +702,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         self.missing_gps_list.clear()
         data_stations = self.pem_file.get_stations(converted=True)
-        gps_stations = self.get_line().df.Station.astype(int).unique()
+        line_gps = self.get_line().df
+        if line_gps.empty:
+            return
+        gps_stations = line_gps.Station.astype(int).unique()
         filt = np.isin(data_stations, gps_stations, invert=True)
         missing_gps = data_stations[filt]
 
