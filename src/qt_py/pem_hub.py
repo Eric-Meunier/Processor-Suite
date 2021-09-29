@@ -1,52 +1,50 @@
 import copy
 import csv
 import datetime
-import keyboard
 import logging
-import natsort
 import os
 import re
 import shutil
-import simplekml
-import stopit
 import subprocess
 import sys
 import warnings
 from itertools import groupby
 from pathlib import Path
 
+import keyboard
+import matplotlib.cbook
+import natsort
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PySide2.QtGui import QIcon, QColor, QFont, QIntValidator, QCursor
+import simplekml
+import stopit
 from PySide2.QtCore import Qt, QDir, Signal, QEvent, QTimer, QSettings, QSize, QPoint
+from PySide2.QtGui import QIcon, QColor, QFont, QIntValidator, QCursor
 from PySide2.QtWebEngineWidgets import QWebEngineView
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QMenu, QAction, QErrorMessage,
                                QFileDialog, QVBoxLayout, QLabel, QApplication, QFrame, QHBoxLayout, QLineEdit,
-                               QCalendarWidget, QFileSystemModel, QDoubleSpinBox, QHeaderView, QInputDialog, QTableWidgetItem, QGroupBox, QFormLayout, QTextBrowser, QDialogButtonBox,
+                               QCalendarWidget, QFileSystemModel, QDoubleSpinBox, QHeaderView, QInputDialog,
+                               QTableWidgetItem, QGroupBox, QFormLayout, QTextBrowser, QDialogButtonBox,
                                QTableWidget, QShortcut, QSizePolicy, QPushButton, QComboBox, QListWidgetItem,
                                QAbstractItemView, QCheckBox)
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
-import matplotlib.cbook
 from pyproj import CRS
 
 from src import __version__, app_data_dir
+from src.dxf.pem_dxf import PEMDXFDrawing
+from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
+from src.pem.pem_file import PEMFile, PEMParser, DMPParser
+from src.pem.pem_plotter import PEMPrinter
 from src.qt_py import (icons_path, get_extension_icon, get_icon, CustomProgressDialog, read_file, light_palette,
                        dark_palette, get_line_color)
 from src.qt_py.db_plot import DBPlotter
-from src.qt_py.pem_geometry import PEMGeometry
-from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
-from src.qt_py.gpx_creator import GPXCreator
-from src.qt_py.loop_calculator import LoopCalculator
-from src.qt_py.mag_dec_widget import MagDeclinationCalculator
-from src.pem.pem_file import PEMFile, PEMParser, DMPParser
-from src.pem.pem_plotter import PEMPrinter
-from src.qt_py.gps_conversion import GPSConversionWidget
-from src.dxf.pem_dxf import PEMDXFDrawing
 from src.qt_py.derotator import Derotator
-from src.qt_py.extractor_widgets import StationSplitter
+from src.qt_py.gps_tools import GPXCreator, GPSConversionWidget
+from src.qt_py.loop_calculator import LoopCalculator
 from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, TileMapViewer, GPSViewer
+from src.qt_py.pem_geometry import PEMGeometry
 from src.qt_py.pem_info_widget import PEMFileInfoWidget
 from src.qt_py.pem_merger import PEMMerger
 from src.qt_py.pem_planner import LoopPlanner, GridPlanner
@@ -5068,6 +5066,87 @@ class WarningViewer(QMainWindow):
         self.table.resizeRowsToContents()
 
 
+class StationSplitter(QWidget):
+    """
+    Class that will extract selected stations from a PEM File and save them as a new PEM File.
+    """
+    def __init__(self, pem_file, parent=None):
+        super().__init__()
+        self.pem_file = pem_file
+        self.parent = parent
+
+        self.setWindowTitle('Station Splitter')
+        self.resize(300, 500)
+        self.setWindowIcon(get_icon("station_splitter.png"))
+
+        self.extract_btn = QPushButton('Extract')
+        self.cancel_btn = QPushButton('Cancel')
+        self.extract_btn.clicked.connect(self.extract_selection)
+        self.cancel_btn.clicked.connect(self.close)
+
+        self.table = QTableWidget()
+        self.table_columns = ['Station']
+        self.table.setColumnCount(len(self.table_columns))
+        self.table.setHorizontalHeaderLabels(self.table_columns)
+        self.table.setAlternatingRowColors(True)
+        header = self.table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.Stretch)
+
+        self.layout = QGridLayout()
+        self.setLayout(self.layout)
+        self.layout.addWidget(self.table, 0, 0, 1, 2)
+        self.layout.addWidget(self.extract_btn, 1, 0)
+        self.layout.addWidget(self.cancel_btn, 1, 1)
+
+        self.fill_table()
+
+    def closeEvent(self, e):
+        self.deleteLater()
+        e.accept()
+
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_Escape:
+            self.close()
+        elif e.key() == Qt.Key_Return:
+            self.close()
+
+    def fill_table(self):
+        """
+        Add each station in the PEM file as a row in the table.
+        :return: None
+        """
+        stations = self.pem_file.get_stations()
+
+        for i, station in enumerate(stations):
+            row = i
+            self.table.insertRow(row)
+            item = QTableWidgetItem(station)
+            item.setTextAlignment(Qt.AlignCenter)
+            self.table.setItem(row, 0, item)
+
+    def extract_selection(self):
+        selected_rows = [model.row() for model in self.table.selectionModel().selectedRows()]
+        selected_stations = []
+        for row in selected_rows:
+            selected_stations.append(self.table.item(row, 0).text())
+
+        if selected_stations:
+            default_path = str(self.pem_file.filepath.parent)
+            save_file = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0] + '.PEM'
+            if save_file:
+                new_pem_file = self.pem_file.copy()
+                filt = new_pem_file.data.Station.isin(selected_stations)
+                new_data = new_pem_file.data.loc[filt]
+                new_pem_file.data = new_data
+                new_pem_file.filepath = Path(save_file)
+                new_pem_file.number_of_readings = len(new_data.index)
+                new_pem_file.save()
+                self.parent.add_pem_files(new_pem_file)
+                self.close()
+            else:
+                pass
+
+
 class BatchNameEditor(QWidget):
     """
     Class to bulk rename PEM File line/hole names or file names.
@@ -5198,6 +5277,96 @@ class BatchNameEditor(QWidget):
             new_names.append(new_name)
 
         self.acceptChangesSignal.emit(new_names)
+
+
+class MagDeclinationCalculator(QMainWindow):
+    """
+    Converts the first coordinates found into lat lon. Must have GPS information in order to convert to lat lon.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent = parent
+        self.setWindowTitle('Magnetic Declination')
+        self.setWindowIcon(get_icon('mag_field.png'))
+        self.resize(400, 400)
+        self.status_bar = self.statusBar()
+
+        self.pos_label = QLabel()
+        self.status_bar.addPermanentWidget(self.pos_label)
+
+        main_widget = QWidget()
+        main_widget.setLayout(QVBoxLayout())
+        main_widget.layout().setContentsMargins(0, 0, 0, 0)
+        self.setCentralWidget(main_widget)
+
+        frame = QFrame()
+        frame.setLayout(QFormLayout())
+
+        self.dec_edit = QPushButton()
+        self.dec_edit.clicked.connect(lambda: self.copy_text(self.dec_edit.text()))
+        self.inc_edit = QPushButton()
+        self.inc_edit.clicked.connect(lambda: self.copy_text(self.inc_edit.text()))
+        self.tf_edit = QPushButton()
+        self.tf_edit.clicked.connect(lambda: self.copy_text(self.tf_edit.text()))
+
+        frame.layout().addRow(QLabel('Declination (°)'), self.dec_edit)
+        frame.layout().addRow(QLabel('Inclination (°)'), self.inc_edit)
+        frame.layout().addRow(QLabel('Total Field (nT)'), self.tf_edit)
+        main_widget.layout().addWidget(frame)
+
+        self.figure = Figure()
+        self.ax = None
+        plt.subplots_adjust(left=0, right=100, top=100, bottom=0)
+        canvas = FigureCanvas(self.figure)
+        main_widget.layout().addWidget(canvas)
+
+    def closeEvent(self, e):
+        self.deleteLater()
+
+    def copy_text(self, str_value):
+        """
+        Copy the str_value to the clipboard
+        :param str_value: str
+        :return None
+        """
+        cb = QtGui.QtWidgets.QApplication.clipboard()
+        cb.clear(mode=cb.Clipboard)
+        cb.setText(str_value, mode=cb.Clipboard)
+        self.status_bar.showMessage(f"{str_value} copied to clipboard", 1000)
+
+    def calc_mag_dec(self, pem_file):
+        """
+        Calculate the magnetic declination for the PEM file.
+        :param pem_file: PEMFile object
+        :return: None
+        """
+        if not pem_file:
+            logger.warning(f"No PEM files passed.")
+            return
+
+        if not pem_file.get_crs():
+            logger.warning(f"No CRS.")
+            self.message.information(self, 'Error', 'GPS coordinate system information is invalid')
+            return
+
+        mag = pem_file.get_mag_dec()
+
+        self.dec_edit.setText(f"{mag.dec:.2f}")
+        self.inc_edit.setText(f"{mag.dip:.2f}")
+        self.tf_edit.setText(f"{mag.ti:.2f}")
+        self.pos_label.setText(f"Latitude: {mag.lat:5f}°  Longitude: {mag.lon:.5f}°")
+
+        # Draw the globe map
+        self.ax = self.figure.add_subplot(projection=cartopy.crs.Orthographic(mag.lon, mag.lat))
+        self.ax.plot(mag.lon, mag.lat, 'o', color='red', markeredgecolor='black', transform=cartopy.crs.Geodetic())
+        self.ax.add_feature(cartopy.feature.OCEAN, zorder=0)
+        #  self.ax.add_feature(cartopy.feature.COASTLINE, zorder=0, edgecolor='black', linewidth=0.8)
+        self.ax.add_feature(cartopy.feature.LAND, zorder=0, edgecolor='black')
+        self.ax.add_feature(cartopy.feature.BORDERS, zorder=0, edgecolor='gray', linewidth=0.5)
+
+        self.ax.set_global()
+        self.ax.gridlines(color='black', linewidth=0.4)
 
 
 def main():

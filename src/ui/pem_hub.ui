@@ -1553,9 +1553,11 @@ Warnings</string>
     <addaction name="actionGrid_Planner"/>
     <addaction name="actionLoop_Current_Calculator"/>
     <addaction name="actionNRCan_Declination_Calculator"/>
-    <addaction name="separator"/>
     <addaction name="actionConvert_Timebase_Frequency"/>
+    <addaction name="separator"/>
     <addaction name="actionGPX_Creator"/>
+    <addaction name="actionGPX_Extractor"/>
+    <addaction name="actionKMZ_to_CSV"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
@@ -1800,7 +1802,7 @@ Warnings</string>
   <action name="action3D_Map">
    <property name="icon">
     <iconset>
-     <normaloff>icons/3d_map2.png</normaloff>icons/3d_map2.png</iconset>
+     <normaloff>icons/3d_map.png</normaloff>icons/3d_map.png</iconset>
    </property>
    <property name="text">
     <string>3D Map</string>
@@ -1815,7 +1817,7 @@ Warnings</string>
   <action name="actionContour_Map">
    <property name="icon">
     <iconset>
-     <normaloff>icons/contour_map3.png</normaloff>icons/contour_map3.png</iconset>
+     <normaloff>icons/contour_map.png</normaloff>icons/contour_map.png</iconset>
    </property>
    <property name="text">
     <string>Contour Map</string>
@@ -2205,6 +2207,24 @@ Warnings</string>
    </property>
    <property name="text">
     <string>NRCan Declination Calculator</string>
+   </property>
+  </action>
+  <action name="actionGPX_Extractor">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/garmin_file.png</normaloff>icons/garmin_file.png</iconset>
+   </property>
+   <property name="text">
+    <string>GPX Extractor</string>
+   </property>
+  </action>
+  <action name="actionKMZ_to_CSV">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/google_earth.png</normaloff>icons/google_earth.png</iconset>
+   </property>
+   <property name="text">
+    <string>KMZ Extractor</string>
    </property>
   </action>
  </widget>

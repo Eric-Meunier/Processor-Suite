@@ -18,7 +18,7 @@ from src.gps.gps_editor import BoreholeSegments, BoreholeGeometry
 from src.mpl.interactive_spline import InteractiveSpline
 from src.mpl.zoom_pan import ZoomPan
 from src.qt_py import get_icon, get_line_color
-from src.qt_py.gps_adder import DADSelector
+from src.qt_py.gps_tools import DADSelector
 from src.ui.pem_geometry import Ui_PEMGeometry
 
 logger = logging.getLogger(__name__)

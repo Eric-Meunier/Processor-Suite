@@ -5,4 +5,7 @@ from pathlib import Path
 app_data_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro")
 app_data_dir.mkdir(exist_ok=True)
 
-__version__ = '0.12.3'
+app_temp_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro/temp")
+app_temp_dir.mkdir(exist_ok=True)
+
+__version__ = '0.12.4'

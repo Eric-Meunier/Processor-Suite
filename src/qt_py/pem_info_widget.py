@@ -17,7 +17,7 @@ from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, Bore
     GPXParser
 from src.pem import convert_station
 from src.qt_py import clear_table, read_file, table_to_df, df_to_table, get_line_color
-from src.qt_py.gps_adder import LoopAdder, LineAdder, CollarPicker, ExcelTablePicker
+from src.qt_py.gps_tools import LoopAdder, LineAdder, CollarPicker, ExcelTablePicker
 from src.qt_py.pem_geometry import PEMGeometry
 from src.qt_py.ri_importer import RIFile
 from src.ui.pem_info_widget import Ui_PEMInfoWidget

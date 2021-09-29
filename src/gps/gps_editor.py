@@ -11,10 +11,14 @@ import gpxpy
 import numpy as np
 import pandas as pd
 import utm
+import simplekml
+import fiona
 from pyproj import CRS
 from scipy import spatial
 from shapely.geometry import asMultiPoint
+from zipfile import ZipFile
 
+from src import app_temp_dir
 from src.pem import convert_station
 from src.qt_py import read_file
 
@@ -190,6 +194,28 @@ def parse_gps(file, gps_object):
         gps['Station'] = gps['Station'].map(convert_station)
 
     return gps, units, error_gps, error_msg
+
+
+def parse_kml(file):
+    gpd.io.file.fiona.drvsupport.supported_drivers["KML"] = "rw"
+
+    # KMZs are just zipped KML, so extract the KMZ and the KML is always named 'doc.kml'.
+    kmz = ZipFile(file, 'r')
+    kmz.extract('doc.kml', app_temp_dir)
+
+    df = gpd.read_file(app_temp_dir.joinpath('doc.kml'), driver="KML")
+    df["Lon"] = df.geometry.map(lambda p: p.x)
+    df["Lat"] = df.geometry.map(lambda p: p.y)
+
+    eastings, northings = [], []
+    for name, row in df.iterrows():
+        easting, northing, zone, south = utm.from_latlon(row.Lat, row.Lon)
+        eastings.append(easting)
+        northings.append(northing)
+    df["Easting"] = eastings
+    df["Northing"] = northings
+
+    return df
 
 
 class BaseGPS:
@@ -995,7 +1021,9 @@ if __name__ == '__main__':
     # gpx_file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
     # gpx_file = samples_folder.joinpath(r'GPX files\2000E_0524.gpx')
 
-    utm_gps, zone, hemisphere, crs, errors = gpx_editor.get_utm(gpx_file)
+    kml_file = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\KML Files\BHP Arizona OCLT-1801D.kmz"
+    parse_kml(kml_file)
+    # utm_gps, zone, hemisphere, crs, errors = gpx_editor.get_utm(gpx_file)
     # df = pd.DataFrame(utm_gps)
     # df.to_csv(r"C:\_Data\2021\Eastern\L5N.CSV")
     # print(df)
