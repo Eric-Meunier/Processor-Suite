@@ -22,12 +22,11 @@ from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, Q
                                QFileDialog, QApplication, QHBoxLayout, QShortcut)
 from matplotlib import patheffects
 from matplotlib.backends.backend_pdf import PdfPages
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
-    NavigationToolbar2QT as NavigationToolbar
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from scipy import interpolate as interp
 
-from src.qt_py import get_icon, CustomProgressDialog, NonScientific, get_line_color
+from src.qt_py import get_icon, CustomProgressDialog, NonScientific, get_line_color, MapToolbar
 from src.gps.gps_editor import BoreholeGeometry
 from src.pem.pem_plotter import MapPlotter
 from src.ui.contour_map import Ui_ContourMap
@@ -530,18 +529,9 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
         self.channel_times = None
         self.channel_pairs = None
 
-        """Figure and canvas"""
-        class ContourMapToolbar(NavigationToolbar):
-            """
-            Custom Matplotlib toolbar for ContourMap.
-            """
-            # only display the buttons we need
-            toolitems = [t for t in NavigationToolbar.toolitems if
-                         t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom')]
-
         self.figure, self.ax, self.cbar_ax = self.get_figure()
         self.canvas = FigureCanvas(self.figure)
-        self.toolbar = ContourMapToolbar(self.canvas, self)
+        self.toolbar = MapToolbar(self.canvas, self)
         self.toolbar_layout.addWidget(self.toolbar)
         self.toolbar.setFixedHeight(30)
         self.map_layout.addWidget(self.canvas)

@@ -1067,7 +1067,6 @@ class MapPlotter:
             new_height = map_height
             # Set the new width to be the correct ratio larger than height
             new_width = new_height * (bbox.width / bbox.height)
-
         else:
             new_width = map_width
             new_height = new_width * (bbox.height / bbox.width)

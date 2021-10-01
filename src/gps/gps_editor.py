@@ -15,7 +15,7 @@ import simplekml
 import fiona
 from pyproj import CRS
 from scipy import spatial
-from shapely.geometry import asMultiPoint
+from shapely.geometry import asMultiPoint, Point, Polygon, MultiLineString, MultiPoint, LineString
 from zipfile import ZipFile
 
 from src import app_temp_dir
@@ -196,26 +196,90 @@ def parse_gps(file, gps_object):
     return gps, units, error_gps, error_msg
 
 
-def parse_kml(file):
+def read_kmz(file):
+    """
+    Parse a KMZ file, and create a DataFrame with the coordinates in UTM. Only keeps coordinates and name and description.
+    Includes polygons and multilines.
+    :param file: str
+    :return: DataFrame
+    """
+    pd.set_option("display.precision", 2)
     gpd.io.file.fiona.drvsupport.supported_drivers["KML"] = "rw"
 
-    # KMZs are just zipped KML, so extract the KMZ and the KML is always named 'doc.kml'.
+    # KMZs are just zipped KML, so extract the KMZ and the KML is the only object in there, so extract that.
     kmz = ZipFile(file, 'r')
-    kmz.extract('doc.kml', app_temp_dir)
+    kmz.extract(kmz.filelist[0], app_temp_dir)
+    print(kmz.filelist)
 
     df = gpd.read_file(app_temp_dir.joinpath('doc.kml'), driver="KML")
-    df["Lon"] = df.geometry.map(lambda p: p.x)
-    df["Lat"] = df.geometry.map(lambda p: p.y)
+    crs = df.estimate_utm_crs()
+    df = df.to_crs(crs)
 
-    eastings, northings = [], []
-    for name, row in df.iterrows():
-        easting, northing, zone, south = utm.from_latlon(row.Lat, row.Lon)
-        eastings.append(easting)
-        northings.append(northing)
-    df["Easting"] = eastings
-    df["Northing"] = northings
+    utm_df = pd.DataFrame(columns=["geometry", "Type", "Name", "Description"])
 
-    return df
+    # For multilines, ignore the last coordinate as it is a repeat of the first to close the shape.
+    multilines = df.iloc[0:-1][df.iloc[0:-1].geometry.apply(lambda x: isinstance(x, MultiLineString))]
+    linestrings = df[df.geometry.apply(lambda x: isinstance(x, LineString))]
+    points = df[df.geometry.apply(lambda x: isinstance(x, Point))]
+    polygons = df[df.geometry.apply(lambda x: isinstance(x, Polygon))]
+
+    for name, multiline in multilines.iterrows():
+        multiline_geometry = [Point(x) for x in [line.coords for line in multiline.geometry.geoms]]
+        multiline_df = pd.DataFrame(multiline_geometry, columns=["geometry"])
+        multiline_df["Type"] = ["Multiline"]  * len(multiline_geometry)
+        multiline_df["Name"] = multiline.Name * len(multiline_geometry)
+        multiline_df["Description"] = [""] * len(multiline_geometry)  # Ignore Multiline descriptions, they are gibberish.
+
+        utm_df = pd.concat([utm_df, multiline_df])
+
+    for name, linestring in linestrings.iterrows():
+        linestring_geometry = [Point(x) for x in linestring.geometry.coords]
+        linestring_df = pd.DataFrame(linestring_geometry, columns=["geometry"])
+        linestring_df["Type"] = ["Linestring"]  * len(linestring_geometry)
+        linestring_df["Name"] = linestring.Name * len(linestring_geometry)
+        linestring_df["Description"] = linestring.Description  # Ignore Multiline descriptions, they are gibberish.
+
+        utm_df = pd.concat([utm_df, linestring_df])
+
+    for name, polygon in polygons.iterrows():
+        polygon_geometry = [Point(x) for x in polygon.geometry.boundary.coords]
+        polygon_df = pd.DataFrame(polygon_geometry, columns=["geometry"])
+        polygon_df["Type"] = ["Polygon"]  * len(polygon_geometry)
+        polygon_df["Name"] = polygon.Name
+        polygon_df["Description"] = polygon.Description
+
+        utm_df = pd.concat([utm_df, polygon_df])
+
+    # point_df = points.rename(columns={"geometry": "Geometry"})
+    point_df = points.copy()
+    point_df["Type"] = ["Point"] * len(point_df)
+    utm_df = pd.concat([utm_df, point_df])
+
+    utm_df["Easting"] = utm_df.geometry.map(lambda p: p.x).round(decimals=2)
+    utm_df["Northing"] = utm_df.geometry.map(lambda p: p.y).round(decimals=2)
+    # Re-arrange the columns and get rid of Geometry column
+    utm_df = utm_df[["Easting", "Northing", "Type", "Name", "Description", "geometry"]]
+    print(utm_df)
+    return utm_df, df, crs
+
+
+def read_gpx(file):
+    """
+    Parse a GPX file, and create a DataFrame with the coordinates in UTM. Only keeps coordinates and name and description.
+    :param file: str
+    :return: DataFrame
+    """
+    geo_df = gpd.read_file(file)
+    crs = geo_df.estimate_utm_crs()
+    geo_df = geo_df.to_crs(crs)
+    utm_df = pd.DataFrame()
+    utm_df["Easting"] = geo_df.geometry.map(lambda p: p.x).round(decimals=2)
+    utm_df["Northing"] = geo_df.geometry.map(lambda p: p.y).round(decimals=2)
+    utm_df["Elevation"] = geo_df.ele
+    utm_df["Name"] = geo_df.name
+    utm_df["Description"] = geo_df.desc
+    utm_df["geometry"] = geo_df.geometry
+    return utm_df, geo_df, crs
 
 
 class BaseGPS:
@@ -900,7 +964,10 @@ class BoreholeGeometry(BaseGPS):
 
 
 class GPXParser:
-
+    """
+    GPX parsing tool for PEM files specifically.
+    Renames stations and creates elevation values of 0 for those which are missing.
+    """
     @staticmethod
     def parse_gpx(filepath):
         with open(filepath, 'rb') as byte_file:
@@ -1021,8 +1088,10 @@ if __name__ == '__main__':
     # gpx_file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
     # gpx_file = samples_folder.joinpath(r'GPX files\2000E_0524.gpx')
 
-    kml_file = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\KML Files\BHP Arizona OCLT-1801D.kmz"
-    parse_kml(kml_file)
+    # kml_file = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\KML Files\BHP Arizona OCLT-1801D.kmz"
+    kml_file = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\KML Files\CAPA_A_stations.kmz"
+    read_kmz(kml_file)
+    # read_gpx(gpx_file)
     # utm_gps, zone, hemisphere, crs, errors = gpx_editor.get_utm(gpx_file)
     # df = pd.DataFrame(utm_gps)
     # df.to_csv(r"C:\_Data\2021\Eastern\L5N.CSV")

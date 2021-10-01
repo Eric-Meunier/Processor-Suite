@@ -65,6 +65,7 @@ logger = logging.getLogger(__name__)
 # TODO Plot some profile channels on plan map
 # TODO Log recently opened files.
 # TODO Add GPS errors to table
+# TODO Redo GPX parsing to use Geopandas. Might also want to revamp converting GPS.
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []

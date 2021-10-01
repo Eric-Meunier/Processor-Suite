@@ -191,7 +191,6 @@ class Ui_GPXCreator(object):
 
         self.menubar.addAction(self.menuFile.menuAction())
         self.menuFile.addAction(self.openAction)
-        self.menuFile.addAction(self.exportGPX)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.create_csv_template_action)
 
@@ -206,6 +205,7 @@ class Ui_GPXCreator(object):
         self.exportGPX.setText(QCoreApplication.translate("GPXCreator", u"Export GPX", None))
         self.create_csv_template_action.setText(QCoreApplication.translate("GPXCreator", u"Create CSV Template", None))
         self.label_4.setText(QCoreApplication.translate("GPXCreator", u"Name", None))
+        self.name_edit.setPlaceholderText(QCoreApplication.translate("GPXCreator", u"(Optional)", None))
         self.groupBox.setTitle(QCoreApplication.translate("GPXCreator", u"Input CRS", None))
         self.label.setText(QCoreApplication.translate("GPXCreator", u"System:", None))
         self.zone_number_label.setText(QCoreApplication.translate("GPXCreator", u"Zone:", None))

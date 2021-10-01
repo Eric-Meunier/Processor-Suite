@@ -1710,8 +1710,8 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         max_z = max(self.ax.get_ylim()[1], 0)
         ratio = self.section_frame.height() / (self.section_frame.width() * 0.9)
         min_z = max_z - (self.selected_hole.section_length * ratio)  # Try to fill the entire plot
-        c1 = np.append(p1, max_z)  # Add the max Z
-        c2 = np.append(p2, min_z)  # Add the min Z
+        c1 = np.append(p1, max_z)
+        c2 = np.append(p2, min_z)
         plot_mag(c1, c2)
 
         self.ax.get_yaxis().set_visible(True)

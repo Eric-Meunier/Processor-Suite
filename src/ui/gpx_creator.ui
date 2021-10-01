@@ -66,6 +66,9 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="placeholderText">
+          <string>(Optional)</string>
+         </property>
         </widget>
        </item>
        <item>
@@ -298,7 +301,6 @@
      <string>File</string>
     </property>
     <addaction name="openAction"/>
-    <addaction name="exportGPX"/>
     <addaction name="separator"/>
     <addaction name="create_csv_template_action"/>
    </widget>

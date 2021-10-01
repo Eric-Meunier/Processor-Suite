@@ -8,7 +8,8 @@ import pyqtgraph as pg
 from PySide2 import QtWidgets
 from PySide2.QtCore import Qt, QSizeF, QPointF
 from PySide2.QtGui import QPixmap, QIcon, QPalette, QColor
-from PySide2.QtWidgets import QTableWidgetItem
+from PySide2.QtWidgets import QTableWidgetItem, QItemDelegate
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from src.logger import logger
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -41,6 +42,7 @@ dark_palette.setColor(QPalette.Highlight, QColor(42, 130, 218))
 dark_palette.setColor(QPalette.Disabled, QPalette.Highlight, QColor(80, 80, 80))
 dark_palette.setColor(QPalette.HighlightedText, Qt.white)
 dark_palette.setColor(QPalette.Disabled, QPalette.HighlightedText, Qt.gray)  # QColor(127, 127, 127))
+
 
 def get_line_color(color, style, darkmode, alpha=255):
     """
@@ -128,14 +130,18 @@ def get_line_color(color, style, darkmode, alpha=255):
     else:
         raise NotImplementedError(f"{color} is not implemented.")
 
+
 def rgb2hex(r,g,b):
     return "#{:02x}{:02x}{:02x}".format(r,g,b)
+
 
 def hex2rgb(hexcode):
     return tuple(map(ord,hexcode[1:].decode('hex')))
 
+
 def get_icon(filename):
     return QIcon(str(icons_path.joinpath(filename)))
+
 
 def get_extension_icon(filepath):
     ext = filepath.suffix.lower()
@@ -186,14 +192,6 @@ def get_extension_icon(filepath):
         icon = QIcon(icon_pix)
     return icon
 
-def clear_table(table):
-    """
-    Clear a given table
-    """
-    table.blockSignals(True)
-    while table.rowCount() > 0:
-        table.removeRow(0)
-    table.blockSignals(False)
 
 def read_file(file, as_list=False):
     """
@@ -211,6 +209,7 @@ def read_file(file, as_list=False):
         contents = [c.strip().split() for c in contents.splitlines()]
     return contents
 
+
 def df_to_table(df, table):
     """
     Add the contents of the data frame to the table
@@ -227,7 +226,7 @@ def df_to_table(df, table):
         def series_to_items(x):
             # if isinstance(x, float):
             #     return QTableWidgetItem(f"{x}")
-            #     # return Qpg.TableWidgetItem(f"{x:.2f}")
+            #     # return QTableWidgetItem(f"{x:.2f}")
             # else:
             return QTableWidgetItem(str(x))
 
@@ -241,14 +240,15 @@ def df_to_table(df, table):
             table.setItem(row_pos, m, item)
 
     if df.empty:
-        logger.error(f"No GPS found.")
-        raise ValueError("No GPS found.")
+        logger.error(f"Empty data frame passed.")
+        raise ValueError("Empty data frame passed.")
     else:
         columns = df.columns.to_list()
         table.setColumnCount(len(columns))
         table.setHorizontalHeaderLabels(columns)
         # Cast as type "object" to prevent ints being upcasted as floats
         df.astype("O").apply(write_row, axis=1)
+
 
 def table_to_df(table, dtypes=None):
     """
@@ -270,6 +270,51 @@ def table_to_df(table, dtypes=None):
     else:
         df = df.apply(pd.to_numeric, errors='ignore')
     return df
+
+
+# TODO Create function which will re-limit axes to match a given (or the widget's) size.
+def set_ax_size(size, ax, figure):
+    """
+    Re-size the extents to make the axes 11" by 8.5"
+    :param size: tuple, desired size of the plot in inches
+    :param ax: Matplotlib Axes object
+    :param figure: Matplotlib Figure object
+    """
+    bbox = ax.get_window_extent().transformed(figure.dpi_scale_trans.inverted())
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+    # xmin, xmax, ymin, ymax = ax.get_extent()
+    map_width, map_height = xmax - xmin, ymax - ymin
+
+    current_ratio = map_width / map_height
+
+    if current_ratio < (bbox.width / bbox.height):
+        new_height = map_height
+        # Set the new width to be the correct ratio larger than height
+        new_width = new_height * (bbox.width / bbox.height)
+    else:
+        new_width = map_width
+        new_height = new_width * (bbox.height / bbox.width)
+
+    x_offset = 0
+    y_offset = 0.06 * new_height
+    new_xmin = (xmin - x_offset) - ((new_width - map_width) / 2)
+    new_xmax = (xmax - x_offset) + ((new_width - map_width) / 2)
+    new_ymin = (ymin + y_offset) - ((new_height - map_height) / 2)
+    new_ymax = (ymax + y_offset) + ((new_height - map_height) / 2)
+
+    ax.set_xlim(new_xmin, new_xmax)
+    ax.set_ylim(new_ymin, new_ymax)
+
+
+def clear_table(table):
+    """
+    Clear a given table
+    """
+    table.blockSignals(True)
+    while table.rowCount() > 0:
+        table.removeRow(0)
+    table.blockSignals(False)
 
 
 class CustomProgressDialog(pg.ProgressDialog):
@@ -382,3 +427,26 @@ class PlanMapAxis(NonScientific):
             vstr = f"{v:.0f}{letter}"
             strings.append(vstr)
         return strings
+
+
+class FloatDelegate(QItemDelegate):
+    def __init__(self, decimals, parent=None):
+        QItemDelegate.__init__(self, parent=parent)
+        self.nDecimals = decimals
+
+    def paint(self, painter, option, index):
+        value = index.model().data(index, Qt.EditRole)
+        try:
+            number = float(value)
+            painter.drawText(option.rect, Qt.AlignLeft, "{:.{}f}".format(number, self.nDecimals))
+        except :
+            QItemDelegate.paint(self, painter, option, index)
+
+
+class MapToolbar(NavigationToolbar):
+    """
+    Custom Matplotlib toolbar for maps. Only has the Home, Back, Forward, Pan, and Zoom buttons.
+    """
+    # only display the buttons we need
+    toolitems = [t for t in NavigationToolbar.toolitems if
+                 t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom')]
