@@ -252,7 +252,7 @@ def df_to_table(df, table):
 
 def table_to_df(table, dtypes=None):
     """
-    Return a data frame from the information in the table.
+    Create a DataFrame from the information in the table.
     :param table: QTableWidget
     :return: pandas pd.DataFrame
     """
@@ -272,35 +272,32 @@ def table_to_df(table, dtypes=None):
     return df
 
 
-# TODO Create function which will re-limit axes to match a given (or the widget's) size.
-def set_ax_size(size, ax, figure):
+def set_ax_size(ax, figure):
     """
-    Re-size the extents to make the axes 11" by 8.5"
-    :param size: tuple, desired size of the plot in inches
+    Change the limits of the axes so the axes fills the full size of the figure.
     :param ax: Matplotlib Axes object
     :param figure: Matplotlib Figure object
+    :return: None
     """
-    bbox = ax.get_window_extent().transformed(figure.dpi_scale_trans.inverted())
     xmin, xmax = ax.get_xlim()
     ymin, ymax = ax.get_ylim()
-    # xmin, xmax, ymin, ymax = ax.get_extent()
     map_width, map_height = xmax - xmin, ymax - ymin
 
     current_ratio = map_width / map_height
+    figure_ratio = figure.bbox.width / figure.bbox.height
 
-    if current_ratio < (bbox.width / bbox.height):
+    if current_ratio < figure_ratio:
         new_height = map_height
-        # Set the new width to be the correct ratio larger than height
-        new_width = new_height * (bbox.width / bbox.height)
+        new_width = new_height * figure_ratio
     else:
         new_width = map_width
-        new_height = new_width * (bbox.height / bbox.width)
+        new_height = new_width * (1 / figure_ratio)
 
     x_offset = 0
     y_offset = 0.06 * new_height
     new_xmin = (xmin - x_offset) - ((new_width - map_width) / 2)
-    new_xmax = (xmax - x_offset) + ((new_width - map_width) / 2)
-    new_ymin = (ymin + y_offset) - ((new_height - map_height) / 2)
+    new_xmax = (xmax + x_offset) + ((new_width - map_width) / 2)
+    new_ymin = (ymin - y_offset) - ((new_height - map_height) / 2)
     new_ymax = (ymax + y_offset) + ((new_height - map_height) / 2)
 
     ax.set_xlim(new_xmin, new_xmax)

@@ -7,6 +7,7 @@ from pathlib import Path
 import geopandas as gpd
 import gpxpy
 import pandas as pd
+import numpy as np
 import pyqtgraph as pg
 import matplotlib.pyplot as plt
 from matplotlib import ticker
@@ -24,7 +25,7 @@ from shapely.geometry import asMultiPoint
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser, read_gpx, read_kmz
 from src.logger import logger
 from src.qt_py import (get_icon, NonScientific, read_file, table_to_df, df_to_table, get_line_color, FloatDelegate,
-                       clear_table, MapToolbar)
+                       clear_table, MapToolbar, set_ax_size)
 from src.ui.gps_conversion import Ui_GPSConversion
 from src.ui.gpx_creator import Ui_GPXCreator
 from src.ui.line_adder import Ui_LineAdder
@@ -2002,10 +2003,11 @@ class GPSExtractor(QMainWindow):
         super().__init__()
         self.parent = parent
         self.darkmode = darkmode
+        self.filepath = None
         self.setAcceptDrops(True)
         self.setWindowTitle("GPS Extractor")
         self.setWindowIcon(get_icon('gps_extractor.png'))
-        self.resize(1200, 600)
+        self.resize(1200, 800)
         self.statusBar().show()
 
         self.background_color = get_line_color("background", "mpl", self.darkmode)
@@ -2028,8 +2030,14 @@ class GPSExtractor(QMainWindow):
         self.open_file_action.setIcon(get_icon("open.png"))
         self.open_file_action.triggered.connect(self.open_file_dialog)
 
+        self.save_file_action = QAction("Save As...")
+        self.save_file_action.setIcon(get_icon("save_as.png"))
+        self.save_file_action.triggered.connect(self.save_file)
+
         self.file_menu = QMenu("File")
         self.file_menu.addAction(self.open_file_action)
+        self.file_menu.addSeparator()
+        self.file_menu.addAction(self.save_file_action)
 
         self.menuBar().addMenu(self.file_menu)
 
@@ -2050,14 +2058,12 @@ class GPSExtractor(QMainWindow):
         self.crs_label = QLabel()
         self.statusBar().addPermanentWidget(self.crs_label)
 
-        float_delegate = FloatDelegate(2)  # Must keep this reference or else it is garbage collected
         self.table = QTableWidget()
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        # self.table.setItemDelegateForColumn(0, float_delegate)
-        # self.table.setItemDelegateForColumn(1, float_delegate)
 
         splitter.addWidget(frame)
         splitter.addWidget(self.table)
+        splitter.setStretchFactor(1, 1)
 
     def dragEnterEvent(self, e):
         e.acceptProposedAction()
@@ -2085,18 +2091,18 @@ class GPSExtractor(QMainWindow):
             pass
 
     def open_file(self, filepath):
-        filepath = Path(filepath)
-        self.setWindowTitle(f"GPS Extractor - {filepath.name}")
-        suffix = filepath.suffix.lower()
+        self.filepath = Path(filepath)
+        self.setWindowTitle(f"GPS Extractor - {self.filepath.name}")
+        suffix = self.filepath.suffix.lower()
         if suffix == ".kmz":
             try:
-                df, geo_df, crs = read_kmz(filepath)
+                df, geo_df, crs = read_kmz(self.filepath)
             except Exception as e:
                 self.error_msg.showMessage(str(e))
                 return
         elif suffix == ".gpx":
             try:
-                df, geo_df, crs = read_gpx(filepath)
+                df, geo_df, crs = read_gpx(self.filepath)
             except Exception as e:
                 self.error_msg.showMessage(str(e))
                 return
@@ -2108,6 +2114,14 @@ class GPSExtractor(QMainWindow):
         self.plot_data(geo_df)
         df_to_table(df.drop(columns=["geometry"]), self.table)
         self.crs_label.setText(f"CRS: {crs.name} ({crs.to_string()})")
+
+    def save_file(self):
+        filepath, ext = QFileDialog.getSaveFileName(self, "Save File", str(self.filepath.with_suffix(".CSV")),
+                                                    "CSV Files (*.CSV);;TXT Files (*.TXT);;")
+        if filepath:
+            df = table_to_df(self.table)
+            df.to_csv(filepath)
+            self.statusBar().showMessage("File saved successfully.", 1500)
 
     def plot_data(self, geo_df):
         self.ax.clear()
@@ -2127,6 +2141,7 @@ class GPSExtractor(QMainWindow):
         # geo_df.plot(column="Name", ax=self.ax, legend=True)
         geo_df:gpd.GeoDataFrame
         geo_df.plot(ax=self.ax, color=self.line_color)
+        set_ax_size(self.ax, self.figure)  # Resize the axes so it takes up the entire figure's space.
         # Move the legend outside the plot
         # self.ax.get_legend()._loc = 2  # upper left
         # self.ax.get_legend().set_bbox_to_anchor((1, 1))
@@ -2137,7 +2152,7 @@ if __name__ == '__main__':
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
-    darkmode = False
+    darkmode = True
     if darkmode:
         app.setPalette(dark_palette)
 

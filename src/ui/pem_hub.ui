@@ -1556,8 +1556,7 @@ Warnings</string>
     <addaction name="actionConvert_Timebase_Frequency"/>
     <addaction name="separator"/>
     <addaction name="actionGPX_Creator"/>
-    <addaction name="actionGPX_Extractor"/>
-    <addaction name="actionKMZ_to_CSV"/>
+    <addaction name="actionGPS_Extractor"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
@@ -1622,10 +1621,13 @@ Warnings</string>
      <normaloff>icons/open.png</normaloff>icons/open.png</iconset>
    </property>
    <property name="text">
-    <string>Open PEM Files...</string>
+    <string>Open Files...</string>
    </property>
    <property name="toolTip">
-    <string>Open PEM files</string>
+    <string>Open PEM or DMP files.</string>
+   </property>
+   <property name="statusTip">
+    <string>Open PEM or DMP files.</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
@@ -1643,7 +1645,10 @@ Warnings</string>
     <string>Save Files</string>
    </property>
    <property name="toolTip">
-    <string>Save all PEM files</string>
+    <string>Save all PEM files.</string>
+   </property>
+   <property name="statusTip">
+    <string>Save all PEM files.</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
@@ -1654,6 +1659,9 @@ Warnings</string>
     <string>XYZ</string>
    </property>
    <property name="toolTip">
+    <string>Export all PEM files as XYZ files.</string>
+   </property>
+   <property name="statusTip">
     <string>Export all PEM files as XYZ files.</string>
    </property>
   </action>
@@ -1673,7 +1681,10 @@ Warnings</string>
     <string>Backup Files</string>
    </property>
    <property name="toolTip">
-    <string>Create backup files of each opened PEM files</string>
+    <string>Create backup files of all PEM files.</string>
+   </property>
+   <property name="statusTip">
+    <string>Create backup files of all PEM files.</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+B</string>
@@ -1684,7 +1695,10 @@ Warnings</string>
     <string>Import RI Files</string>
    </property>
    <property name="toolTip">
-    <string>Import RI files</string>
+    <string>Import RI files.</string>
+   </property>
+   <property name="statusTip">
+    <string>Import RI files.</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+I</string>
@@ -1699,7 +1713,10 @@ Warnings</string>
     <string>Print Plots to PDF</string>
    </property>
    <property name="toolTip">
-    <string>Create PDF plots</string>
+    <string>Create delivery PDF plots for the PEM files.</string>
+   </property>
+   <property name="statusTip">
+    <string>Create delivery PDF plots for the PEM files.</string>
    </property>
    <property name="shortcut">
     <string>F12</string>
@@ -1719,7 +1736,10 @@ Warnings</string>
     <string>Average All PEM Files</string>
    </property>
    <property name="toolTip">
-    <string>Average all PEM files</string>
+    <string>Average all PEM files.</string>
+   </property>
+   <property name="statusTip">
+    <string>Average all PEM files.</string>
    </property>
    <property name="shortcut">
     <string>F5</string>
@@ -1734,7 +1754,10 @@ Warnings</string>
     <string>Split All PEM Files</string>
    </property>
    <property name="toolTip">
-    <string>Remove on-time channels for all PEM files</string>
+    <string>Remove on-time channels for all PEM files.</string>
+   </property>
+   <property name="statusTip">
+    <string>Remove on-time channels for all PEM files.</string>
    </property>
    <property name="shortcut">
     <string>F6</string>
@@ -1749,7 +1772,10 @@ Warnings</string>
     <string>Scale All Currents</string>
    </property>
    <property name="toolTip">
-    <string>Scale the current of all PEM Files to the same value</string>
+    <string>Scale the current of all PEM Files to the same value.</string>
+   </property>
+   <property name="statusTip">
+    <string>Scale the current of all PEM Files to the same value.</string>
    </property>
    <property name="shortcut">
     <string>F7</string>
@@ -1764,7 +1790,10 @@ Warnings</string>
     <string>Change All Coil Areas</string>
    </property>
    <property name="toolTip">
-    <string>Scale all coil areas of all PEM files to the same value</string>
+    <string>Scale all coil areas of all PEM files to the same value.</string>
+   </property>
+   <property name="statusTip">
+    <string>Scale all coil areas of all PEM files to the same value.</string>
    </property>
    <property name="shortcut">
     <string>F8</string>
@@ -1779,7 +1808,10 @@ Warnings</string>
     <string>Save as KMZ</string>
    </property>
    <property name="toolTip">
-    <string>Create a KMZ file using the GPS of the PEM files</string>
+    <string>Create a KMZ file using the GPS of the PEM files.</string>
+   </property>
+   <property name="statusTip">
+    <string>Create a KMZ file using the GPS of the PEM files.</string>
    </property>
   </action>
   <action name="actionExport_All_GPS">
@@ -1791,7 +1823,10 @@ Warnings</string>
     <string>Export All GPS</string>
    </property>
    <property name="toolTip">
-    <string>Export all GPS in the PEM files to separate CSV files</string>
+    <string>Export all GPS in the PEM files to separate CSV files.</string>
+   </property>
+   <property name="statusTip">
+    <string>Export all GPS in the PEM files to separate CSV files.</string>
    </property>
   </action>
   <action name="actionPlan_Map">
@@ -1808,7 +1843,10 @@ Warnings</string>
     <string>3D Map</string>
    </property>
    <property name="toolTip">
-    <string>Plot all PEM files in a 3D map</string>
+    <string>Plot all PEM files in a 3D map.</string>
+   </property>
+   <property name="statusTip">
+    <string>Plot all PEM files in a 3D map.</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+M</string>
@@ -1823,7 +1861,10 @@ Warnings</string>
     <string>Contour Map</string>
    </property>
    <property name="toolTip">
-    <string>Show a contour map of surface PEM files</string>
+    <string>Show a contour map of surface PEM files.</string>
+   </property>
+   <property name="statusTip">
+    <string>Show a contour map of surface PEM files.</string>
    </property>
   </action>
   <action name="actionLoop_Planner">
@@ -1835,7 +1876,10 @@ Warnings</string>
     <string>Loop Planner</string>
    </property>
    <property name="toolTip">
-    <string>Loop planning tool</string>
+    <string>Borehole loop planning tool.</string>
+   </property>
+   <property name="statusTip">
+    <string>Borehole loop planning tool.</string>
    </property>
   </action>
   <action name="actionGrid_Planner">
@@ -1847,7 +1891,10 @@ Warnings</string>
     <string>Grid Planner</string>
    </property>
    <property name="toolTip">
-    <string>Surface grid planning tool</string>
+    <string>Surface grid planning tool.</string>
+   </property>
+   <property name="statusTip">
+    <string>Surface grid planning tool.</string>
    </property>
   </action>
   <action name="actionConvert_Timebase_Frequency">
@@ -1859,7 +1906,10 @@ Warnings</string>
     <string>Convert Timebase/Frequency</string>
    </property>
    <property name="toolTip">
-    <string>Two way conversion between timebase and frequency</string>
+    <string>Two way conversion between timebase and frequency.</string>
+   </property>
+   <property name="statusTip">
+    <string>Two way conversion between timebase and frequency.</string>
    </property>
   </action>
   <action name="actionDamping_Box_Plotter">
@@ -1871,7 +1921,10 @@ Warnings</string>
     <string>Damping Box Plotter</string>
    </property>
    <property name="toolTip">
-    <string>Plot damping box data</string>
+    <string>Plot damping box data.</string>
+   </property>
+   <property name="statusTip">
+    <string>Plot damping box data.</string>
    </property>
   </action>
   <action name="actionUnpacker">
@@ -1883,19 +1936,25 @@ Warnings</string>
     <string>Unpacker</string>
    </property>
    <property name="toolTip">
-    <string>Unpack and organize a raw folder</string>
+    <string>Unpack and organize raw data folders.</string>
+   </property>
+   <property name="statusTip">
+    <string>Unpack and organize raw data folders.</string>
    </property>
   </action>
   <action name="actionGPX_Creator">
    <property name="icon">
     <iconset>
-     <normaloff>icons/gpx_creator.png</normaloff>icons/gpx_creator.png</iconset>
+     <normaloff>icons/garmin_file.png</normaloff>icons/garmin_file.png</iconset>
    </property>
    <property name="text">
     <string>GPX Creator</string>
    </property>
    <property name="toolTip">
-    <string>GPX file creator</string>
+    <string>Convert a CSV file to a GPX file.</string>
+   </property>
+   <property name="statusTip">
+    <string>Convert a CSV file to a GPX file.</string>
    </property>
   </action>
   <action name="actionAuto_name_Lines_Holes">
@@ -1916,7 +1975,10 @@ Warnings</string>
     <string>X Polarity</string>
    </property>
    <property name="toolTip">
-    <string>Reverse the polarity of all X component data</string>
+    <string>Reverse the polarity of all X component data.</string>
+   </property>
+   <property name="statusTip">
+    <string>Reverse the polarity of all X component data.</string>
    </property>
   </action>
   <action name="actionReverseY_Component">
@@ -1924,7 +1986,10 @@ Warnings</string>
     <string>Y Polarity</string>
    </property>
    <property name="toolTip">
-    <string>Reverse the polarity of all Y component data</string>
+    <string>Reverse the polarity of all Y component data.</string>
+   </property>
+   <property name="statusTip">
+    <string>Reverse the polarity of all Y component data.</string>
    </property>
   </action>
   <action name="actionReverseZ_Component">
@@ -1932,7 +1997,10 @@ Warnings</string>
     <string>Z Polarity</string>
    </property>
    <property name="toolTip">
-    <string>Reverse the polarity of all Z component data</string>
+    <string>Reverse the polarity of all Z component data.</string>
+   </property>
+   <property name="statusTip">
+    <string>Reverse the polarity of all Z component data.</string>
    </property>
   </action>
   <action name="actionRename_Files">
@@ -1940,7 +2008,10 @@ Warnings</string>
     <string>File Names</string>
    </property>
    <property name="toolTip">
-    <string>Rename all file names</string>
+    <string>Rename all file names.</string>
+   </property>
+   <property name="statusTip">
+    <string>Rename all file names.</string>
    </property>
   </action>
   <action name="actionRename_Lines_Holes">
@@ -1948,7 +2019,10 @@ Warnings</string>
     <string>Lines/Hole Names</string>
    </property>
    <property name="toolTip">
-    <string>Re-name all line/hole names</string>
+    <string>Re-name all line/hole names.</string>
+   </property>
+   <property name="statusTip">
+    <string>Re-name all line/hole names.</string>
    </property>
   </action>
   <action name="actionAuto_Name_Lines_Holes">
@@ -1956,7 +2030,10 @@ Warnings</string>
     <string>Auto-Name Lines/Holes</string>
    </property>
    <property name="toolTip">
-    <string>Automatically re-name line/hole names based on their file names</string>
+    <string>Automatically re-name line/hole names based on their file names.</string>
+   </property>
+   <property name="statusTip">
+    <string>Automatically re-name line/hole names based on their file names.</string>
    </property>
   </action>
   <action name="actionAuto_Name_Repeat_Stations">
@@ -1981,7 +2058,10 @@ Warnings</string>
     <string>Convert GPS</string>
    </property>
    <property name="toolTip">
-    <string>Convert GPS to a selected CRS</string>
+    <string>Convert the GPS of the PEM files to a new CRS.</string>
+   </property>
+   <property name="statusTip">
+    <string>Convert the GPS of the PEM files to a new CRS.</string>
    </property>
   </action>
   <action name="auto_sort_files_cbox">
@@ -1995,7 +2075,10 @@ Warnings</string>
     <string>Sort Table Automatically</string>
    </property>
    <property name="toolTip">
-    <string>Automatically sort the table when a PEM file is opened</string>
+    <string>Automatically sort the table when a PEM file is opened.</string>
+   </property>
+   <property name="statusTip">
+    <string>Automatically sort the table when a PEM file is opened.</string>
    </property>
   </action>
   <action name="auto_create_backup_files_cbox">
@@ -2009,7 +2092,10 @@ Warnings</string>
     <string>Backup Files Automatically</string>
    </property>
    <property name="toolTip">
-    <string>Automatically create backup files</string>
+    <string>Automatically create backup files.</string>
+   </property>
+   <property name="statusTip">
+    <string>Automatically create backup files.</string>
    </property>
   </action>
   <action name="delete_merged_files_cbox">
@@ -2023,7 +2109,10 @@ Warnings</string>
     <string>Remove Merged Files</string>
    </property>
    <property name="toolTip">
-    <string>Remove pre-merged files after they are merged together</string>
+    <string>Remove pre-merged files after merging.</string>
+   </property>
+   <property name="statusTip">
+    <string>Remove pre-merged files after merging.</string>
    </property>
   </action>
   <action name="actionExport_As_PEM">
@@ -2031,7 +2120,10 @@ Warnings</string>
     <string>PEM</string>
    </property>
    <property name="toolTip">
-    <string>Export all PEM files to a selected directory</string>
+    <string>Export all PEM files to a selected directory.</string>
+   </property>
+   <property name="statusTip">
+    <string>Export all PEM files to a selected directory.</string>
    </property>
   </action>
   <action name="action_XYZ">
@@ -2044,7 +2136,10 @@ Warnings</string>
     <string>Processed PEM</string>
    </property>
    <property name="toolTip">
-    <string>Averages, splits, and de-rotates (if applicable) and saves as a legacy PEM format</string>
+    <string>Averages, splits, and de-rotates (if applicable) and saves as a legacy PEM format.</string>
+   </property>
+   <property name="statusTip">
+    <string>Averages, splits, and de-rotates (if applicable) and saves as a legacy PEM format.</string>
    </property>
    <property name="shortcut">
     <string>F9</string>
@@ -2059,7 +2154,10 @@ Warnings</string>
     <string>Google Earth</string>
    </property>
    <property name="toolTip">
-    <string>View the GPS in Google Earth</string>
+    <string>View the GPS in the PEM files with Google Earth.</string>
+   </property>
+   <property name="statusTip">
+    <string>View the GPS in the PEM files with Google Earth.</string>
    </property>
   </action>
   <action name="actionExport_Legacy_PEM">
@@ -2067,7 +2165,10 @@ Warnings</string>
     <string>Legacy PEM</string>
    </property>
    <property name="toolTip">
-    <string>Export as legacy PEM format that is compatible with Step</string>
+    <string>Export as legacy PEM format that is compatible with Step.</string>
+   </property>
+   <property name="statusTip">
+    <string>Export as legacy PEM format that is compatible with Step.</string>
    </property>
   </action>
   <action name="actionView_Logs">
@@ -2079,7 +2180,10 @@ Warnings</string>
     <string>View Logs</string>
    </property>
    <property name="toolTip">
-    <string>View the program logs</string>
+    <string>View the program logs.</string>
+   </property>
+   <property name="statusTip">
+    <string>View the program logs.</string>
    </property>
   </action>
   <action name="actionTile_Map">
@@ -2091,7 +2195,10 @@ Warnings</string>
     <string>Tile Map</string>
    </property>
    <property name="toolTip">
-    <string>Interactive map with real-world basemaps (Requires internet connection)</string>
+    <string>Interactive map with real-world basemaps (Requires internet connection).</string>
+   </property>
+   <property name="statusTip">
+    <string>Interactive map with real-world basemaps (Requires internet connection).</string>
    </property>
   </action>
   <action name="actionQuick_Map">
@@ -2103,7 +2210,10 @@ Warnings</string>
     <string>Quick Map</string>
    </property>
    <property name="toolTip">
-    <string>Simple plan map</string>
+    <string>Simple plan map.</string>
+   </property>
+   <property name="statusTip">
+    <string>Simple plan map.</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+M</string>
@@ -2117,20 +2227,44 @@ Warnings</string>
    <property name="text">
     <string>Loop Current Calculator</string>
    </property>
+   <property name="toolTip">
+    <string>Calculate theoretical loop current limits.</string>
+   </property>
+   <property name="statusTip">
+    <string>Calculate theoretical loop current limits.</string>
+   </property>
   </action>
   <action name="actionStation_Order">
    <property name="text">
     <string>Station Order</string>
+   </property>
+   <property name="toolTip">
+    <string>Reverse the station numbers of all files, so the last station becomes the first station.</string>
+   </property>
+   <property name="statusTip">
+    <string>Reverse the station numbers of all files, so the last station becomes the first station.</string>
    </property>
   </action>
   <action name="actionMake_DXF">
    <property name="text">
     <string>Make DXF</string>
    </property>
+   <property name="toolTip">
+    <string>Create a DXF file from the GPS in the PEM files.</string>
+   </property>
+   <property name="statusTip">
+    <string>Create a DXF file from the GPS in the PEM files.</string>
+   </property>
   </action>
   <action name="actionHeader_CSV">
    <property name="text">
     <string>Header CSV</string>
+   </property>
+   <property name="toolTip">
+    <string>Export all header information fromthe PEM files to a single CSV file.</string>
+   </property>
+   <property name="statusTip">
+    <string>Export all header information fromthe PEM files to a single CSV file.</string>
    </property>
   </action>
   <action name="actionDark_Theme">
@@ -2140,6 +2274,12 @@ Warnings</string>
    <property name="text">
     <string>Dark Theme</string>
    </property>
+   <property name="toolTip">
+    <string>Use a dark themed appearance.</string>
+   </property>
+   <property name="statusTip">
+    <string>Use a dark themed appearance.</string>
+   </property>
   </action>
   <action name="actionReset_Settings">
    <property name="icon">
@@ -2148,6 +2288,12 @@ Warnings</string>
    </property>
    <property name="text">
     <string>Reset Settings</string>
+   </property>
+   <property name="toolTip">
+    <string>Reset the PEMPro settings to their default values.</string>
+   </property>
+   <property name="statusTip">
+    <string>Reset the PEMPro settings to their default values.</string>
    </property>
   </action>
   <action name="actionRename_Merged_Files">
@@ -2160,6 +2306,12 @@ Warnings</string>
    <property name="text">
     <string>Rename Merged Files</string>
    </property>
+   <property name="toolTip">
+    <string>Automatically rename pre-merged PEM files after merging.</string>
+   </property>
+   <property name="statusTip">
+    <string>Automatically rename pre-merged PEM files after merging.</string>
+   </property>
   </action>
   <action name="actionAlt_Click_Plotting">
    <property name="checkable">
@@ -2171,13 +2323,22 @@ Warnings</string>
    <property name="text">
     <string>Alt-Click Plotting</string>
    </property>
+   <property name="toolTip">
+    <string>Open the Plot Editor by Alt+Clicking a row.</string>
+   </property>
+   <property name="statusTip">
+    <string>Open the Plot Editor by Alt+Clicking a row.</string>
+   </property>
   </action>
   <action name="actionAdd_Mapbox_Token">
    <property name="text">
     <string>Add Mapbox Token</string>
    </property>
    <property name="toolTip">
-    <string>Mapbox tokens are used in by Tools &gt; Tilemap.</string>
+    <string>Add a new Mapbox token. Mapbox tokens are used in by Tools &gt; Tilemap.</string>
+   </property>
+   <property name="statusTip">
+    <string>Add a new Mapbox token. Mapbox tokens are used in by Tools &gt; Tilemap.</string>
    </property>
   </action>
   <action name="actionRe_Open_Last_Files">
@@ -2199,6 +2360,12 @@ Warnings</string>
    <property name="text">
     <string>Save Settings</string>
    </property>
+   <property name="toolTip">
+    <string>Save the current PEMPro settings.</string>
+   </property>
+   <property name="statusTip">
+    <string>Save the current PEMPro settings.</string>
+   </property>
   </action>
   <action name="actionNRCan_Declination_Calculator">
    <property name="icon">
@@ -2208,14 +2375,26 @@ Warnings</string>
    <property name="text">
     <string>NRCan Declination Calculator</string>
    </property>
+   <property name="toolTip">
+    <string>Open the webpage for NRCan's magnetic declination calculator.</string>
+   </property>
+   <property name="statusTip">
+    <string>Open the webpage for NRCan's magnetic declination calculator.</string>
+   </property>
   </action>
-  <action name="actionGPX_Extractor">
+  <action name="actionGPS_Extractor">
    <property name="icon">
     <iconset>
-     <normaloff>icons/garmin_file.png</normaloff>icons/garmin_file.png</iconset>
+     <normaloff>icons/gps_extractor.png</normaloff>icons/gps_extractor.png</iconset>
    </property>
    <property name="text">
-    <string>GPX Extractor</string>
+    <string>GPS Extractor</string>
+   </property>
+   <property name="toolTip">
+    <string>Extract GPS information from GPX or KMZ files.</string>
+   </property>
+   <property name="statusTip">
+    <string>Extract GPS information from GPX or KMZ files.</string>
    </property>
   </action>
   <action name="actionKMZ_to_CSV">

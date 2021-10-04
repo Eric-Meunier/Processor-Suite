@@ -22,7 +22,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib import patheffects, patches, ticker, text, transforms, lines
 from scipy import stats
 
-from src.qt_py import CustomProgressDialog
+from src.qt_py import CustomProgressDialog, set_ax_size
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 from src.pem import convert_station
 from src.pem.pem_file import PEMParser
@@ -1048,39 +1048,39 @@ class MapPlotter:
                 fontsize=7,
                 zorder=9)
 
-    @staticmethod
-    def set_size(ax, figure):
-        """
-        Re-size the extents to make the axes 11" by 8.5"
-        :param ax: Matplotlib Axes object
-        :param figure: Matplotlib Figure object
-        """
-        bbox = ax.get_window_extent().transformed(figure.dpi_scale_trans.inverted())
-        xmin, xmax = ax.get_xlim()
-        ymin, ymax = ax.get_ylim()
-        # xmin, xmax, ymin, ymax = ax.get_extent()
-        map_width, map_height = xmax - xmin, ymax - ymin
-
-        current_ratio = map_width / map_height
-
-        if current_ratio < (bbox.width / bbox.height):
-            new_height = map_height
-            # Set the new width to be the correct ratio larger than height
-            new_width = new_height * (bbox.width / bbox.height)
-        else:
-            new_width = map_width
-            new_height = new_width * (bbox.height / bbox.width)
-
-        x_offset = 0
-        y_offset = 0.06 * new_height
-        new_xmin = (xmin - x_offset) - ((new_width - map_width) / 2)
-        new_xmax = (xmax - x_offset) + ((new_width - map_width) / 2)
-        new_ymin = (ymin + y_offset) - ((new_height - map_height) / 2)
-        new_ymax = (ymax + y_offset) + ((new_height - map_height) / 2)
-
-        ax.set_xlim(new_xmin, new_xmax)
-        ax.set_ylim(new_ymin, new_ymax)
-        # ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=crs)
+    # @staticmethod
+    # def set_size(ax, figure):
+    #     """
+    #     Re-size the extents to make the axes 11" by 8.5"
+    #     :param ax: Matplotlib Axes object
+    #     :param figure: Matplotlib Figure object
+    #     """
+    #     bbox = ax.get_window_extent().transformed(figure.dpi_scale_trans.inverted())
+    #     xmin, xmax = ax.get_xlim()
+    #     ymin, ymax = ax.get_ylim()
+    #     # xmin, xmax, ymin, ymax = ax.get_extent()
+    #     map_width, map_height = xmax - xmin, ymax - ymin
+    #
+    #     current_ratio = map_width / map_height
+    #
+    #     if current_ratio < (bbox.width / bbox.height):
+    #         new_height = map_height
+    #         # Set the new width to be the correct ratio larger than height
+    #         new_width = new_height * (bbox.width / bbox.height)
+    #     else:
+    #         new_width = map_width
+    #         new_height = new_width * (bbox.height / bbox.width)
+    #
+    #     x_offset = 0
+    #     y_offset = 0.06 * new_height
+    #     new_xmin = (xmin - x_offset) - ((new_width - map_width) / 2)
+    #     new_xmax = (xmax - x_offset) + ((new_width - map_width) / 2)
+    #     new_ymin = (ymin + y_offset) - ((new_height - map_height) / 2)
+    #     new_ymax = (ymax + y_offset) + ((new_height - map_height) / 2)
+    #
+    #     ax.set_xlim(new_xmin, new_xmax)
+    #     ax.set_ylim(new_ymin, new_ymax)
+    #     # ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=crs)
 
     @staticmethod
     def set_scale(ax, figure):
@@ -1436,7 +1436,7 @@ class PlanMap(MapPlotter):
         self.figure.subplots_adjust(left=0.03, bottom=0.03, right=0.97, top=0.95)
 
         # Resize the figure to be 11" x 8.5"
-        self.set_size(self.ax, self.figure)
+        set_ax_size(self.ax, self.figure)
 
         # Calculate and set the scale of the map
         self.map_scale = self.set_scale(self.ax, self.figure)

@@ -41,7 +41,7 @@ from src.qt_py import (icons_path, get_extension_icon, get_icon, CustomProgressD
                        dark_palette, get_line_color)
 from src.qt_py.db_plot import DBPlotter
 from src.qt_py.derotator import Derotator
-from src.qt_py.gps_tools import GPXCreator, GPSConversionWidget
+from src.qt_py.gps_tools import GPXCreator, GPSConversionWidget, GPSExtractor
 from src.qt_py.loop_calculator import LoopCalculator
 from src.qt_py.map_widgets import Map3DViewer, ContourMapViewer, TileMapViewer, GPSViewer
 from src.qt_py.pem_geometry import PEMGeometry
@@ -58,13 +58,12 @@ from src.ui.plan_map_options import Ui_PlanMapOptions
 logger = logging.getLogger(__name__)
 
 # TODO Add quick view to unpacker? Or separate EXE entirely?
-# TODO Look into slowness when changing station number and such in pem plot editor
 # TODO Move progress dialog or error box when there's an error.
 # TODO create large PDF with summary of file, including 3d map.
 # TODO Hybrid PEMGeometry selection
 # TODO Plot some profile channels on plan map
 # TODO Log recently opened files.
-# TODO Add GPS errors to table
+# TODO Add GPS errors to table.
 # TODO Redo GPX parsing to use Geopandas. Might also want to revamp converting GPS.
 
 # Keep a list of widgets so they don't get garbage collected
@@ -123,6 +122,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.actionNRCan_Declination_Calculator.setIcon(get_icon("canada.png"))
             self.actionConvert_Timebase_Frequency.setIcon(get_icon("freq_timebase_calc.png"))
             self.actionGPX_Creator.setIcon(get_icon("garmin_file.png"))
+            self.actionGPS_Extractor.setIcon(get_icon("gps_extractor.png"))
 
             self.actionSave_Settings.setIcon(get_icon("save.png"))
             self.actionReset_Settings.setIcon(get_icon("undo.png"))
@@ -659,6 +659,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.actionDamping_Box_Plotter.triggered.connect(self.open_db_plot)
             self.actionUnpacker.triggered.connect(self.open_unpacker)
             self.actionGPX_Creator.triggered.connect(self.open_gpx_creator)
+            self.actionGPS_Extractor.triggered.connect(self.open_gps_extractor)
 
             # Settings menu
             self.actionSave_Settings.triggered.connect(self.save_settings)
@@ -1460,7 +1461,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
     def add_dmp_files(self, dmp_files):
         """
-        Convert and open a .DMP or .DMP2 file
+        Convert and open a .DMP or .DMP2 file.
         :param dmp_files: list of str, filepaths of .DMP or .DMP2 files
         """
         if not dmp_files:
@@ -1795,12 +1796,16 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
     def open_file_dialog(self):
         """
-        Open files through the file dialog
+        Open PEM or DMP files through the file dialog.
         """
-        files = QFileDialog().getOpenFileNames(self, 'Open PEM Files', self.project_dir_edit.text(),
-                                               filter='PEM files (*.pem)')[0]
+        files = QFileDialog().getOpenFileNames(self, 'Open PEM/DMP Files', self.project_dir_edit.text(),
+                                               filter='PEM Files (*.PEM);;DMP Files (*.DMP);;DMP2 Files(*.DMP2)')[0]
         if files:
-            self.add_pem_files(files)
+            suffix = Path(files[0]).suffix.lower()
+            if suffix == ".pem":
+                self.add_pem_files(files)
+            else:
+                self.add_dmp_files(files)
 
     def open_pem_plot_editor(self):
         """
@@ -2350,6 +2355,11 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         gpx_creator = GPXCreator(parent=self)
         refs.append(gpx_creator)
         gpx_creator.show()
+
+    def open_gps_extractor(self):
+        gps_extractor = GPSExtractor(parent=self, darkmode=self.darkmode)
+        refs.append(gps_extractor)
+        gps_extractor.show()
 
     def open_contour_map(self):
         if not self.pem_files:

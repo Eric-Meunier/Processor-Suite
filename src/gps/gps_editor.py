@@ -209,7 +209,6 @@ def read_kmz(file):
     # KMZs are just zipped KML, so extract the KMZ and the KML is the only object in there, so extract that.
     kmz = ZipFile(file, 'r')
     kmz.extract(kmz.filelist[0], app_temp_dir)
-    print(kmz.filelist)
 
     df = gpd.read_file(app_temp_dir.joinpath('doc.kml'), driver="KML")
     crs = df.estimate_utm_crs()
@@ -237,7 +236,7 @@ def read_kmz(file):
         linestring_df = pd.DataFrame(linestring_geometry, columns=["geometry"])
         linestring_df["Type"] = ["Linestring"]  * len(linestring_geometry)
         linestring_df["Name"] = linestring.Name * len(linestring_geometry)
-        linestring_df["Description"] = linestring.Description  # Ignore Multiline descriptions, they are gibberish.
+        linestring_df["Description"] = linestring.Description
 
         utm_df = pd.concat([utm_df, linestring_df])
 
@@ -250,7 +249,6 @@ def read_kmz(file):
 
         utm_df = pd.concat([utm_df, polygon_df])
 
-    # point_df = points.rename(columns={"geometry": "Geometry"})
     point_df = points.copy()
     point_df["Type"] = ["Point"] * len(point_df)
     utm_df = pd.concat([utm_df, point_df])
@@ -259,7 +257,7 @@ def read_kmz(file):
     utm_df["Northing"] = utm_df.geometry.map(lambda p: p.y).round(decimals=2)
     # Re-arrange the columns and get rid of Geometry column
     utm_df = utm_df[["Easting", "Northing", "Type", "Name", "Description", "geometry"]]
-    print(utm_df)
+    # print(utm_df)
     return utm_df, df, crs
 
 
@@ -283,8 +281,10 @@ def read_gpx(file):
 
 
 class BaseGPS:
-
     def __init__(self):
+        """
+        A basic GPS object (Transmitter loop, survey line, etc...).
+        """
         self.pem_file = None
         self.df = gpd.GeoDataFrame()
         self.units = None
@@ -304,14 +304,6 @@ class BaseGPS:
     def get_units(self):
         return self.units
 
-        # units = self.df['Unit'].unique()
-        # if units == '0' or '2':
-        #     return 'm'
-        # elif units == '1':
-        #     return 'ft'
-        # else:
-        #     raise ValueError(f"'{units}'' is not a valid unit code. Must either be '0', '1', or '2'.")
-
     def get_units_code(self):
         if self.units == "m":
             return "0"
@@ -325,6 +317,26 @@ class BaseGPS:
     def get_errors(self):
         return self.errors
 
+    def get_gdf(self):
+        """
+        Convert the Dataframe to a GeoDataframe. Must have a valid CRS.
+        :return: GeoDataframe object.
+        """
+        df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
+        if not self.crs:
+            logger.info('No CRS.')
+            self.df = df
+            return None
+        elif self.df.empty:
+            logger.info('GPS pd.DataFrame is empty.')
+            self.df = df
+            return None
+
+        # Create point objects for each coordinate
+        mpoints = asMultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
+        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs)
+        return gdf
+
     def to_string(self, header=False):
         return self.df.to_string(index=False, header=header)
 
@@ -336,23 +348,12 @@ class BaseGPS:
         Convert the data frame coordinates to Lat Lon in decimal format
         :return: GPS object
         """
-        df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
-        if not self.crs:
-            logger.info('No CRS')
-            self.df = df
-            return self
-        elif self.df.empty:
-            logger.info('GPS pd.DataFrame is empty.')
-            self.df = df
-            return self
-
-        # Create point objects for each coordinate
-        mpoints = asMultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
-        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs)
+        gdf = self.get_gdf()
+        if gdf is None:
+            return
 
         # Convert the point objects to WGS 1984 Lat/Lon
         epsg_code = f'4326'  # Geographic
-
         converted_gdf = gdf.to_crs(f"EPSG:{epsg_code}")
 
         # Assign the converted UTM columns to the data frame
@@ -366,19 +367,9 @@ class BaseGPS:
         Convert the data frame coordinates to NAD 1927.
         :return: GPS object
         """
-        df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
-        if not self.crs:
-            logger.infoinfoinfoinfo('No CRS')
-            self.df = df
-            return self
-        elif self.df.empty:
-            logger.info('GPS pd.DataFrame is empty.')
-            self.df = df
-            return self
-
-        # Create point objects for each coordinate
-        mpoints = asMultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
-        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs)
+        gdf = self.get_gdf()
+        if gdf is None:
+            return
 
         # Convert the point objects to NAD 1927
         if self.crs.utm_zone:
@@ -400,19 +391,9 @@ class BaseGPS:
         Convert the data frame coordinates to NAD 1983.
         :return: GPS object
         """
-        df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
-        if not self.crs:
-            logger.infoinfoinfo('No CRS.')
-            self.df = df
-            return self
-        elif self.df.empty:
-            logger.info('GPS pd.DataFrame is empty.')
-            self.df = df
-            return self
-
-        # Create point objects for each coordinate
-        mpoints = asMultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
-        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs)
+        gdf = self.get_gdf()
+        if gdf is None:
+            return
 
         # Convert the point objects to NAD 1983
         if self.crs.utm_zone:
@@ -434,19 +415,9 @@ class BaseGPS:
         Convert the data frame coordinates to WGS 1984.
         :return: GPS object
         """
-        df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
-        if not self.crs:
-            logger.infoinfo('No CRS.')
-            self.df = df
-            return self
-        elif self.df.empty:
-            logger.info('GPS pd.DataFrame is empty.')
-            self.df = df
-            return self
-
-        # Create point objects for each coordinate
-        mpoints = asMultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
-        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs)
+        gdf = self.get_gdf()
+        if gdf is None:
+            return
 
         # Convert the point objects to WGS 1984
         if self.crs.utm_zone:
@@ -474,19 +445,9 @@ class BaseGPS:
         :param epsg_code: int, EPSG code to convert to.
         :return: GPS object
         """
-        df = self.df.copy().iloc[0:0]  # Copy and clear the data frame
-        if not self.crs:
-            logger.info('No CRS.')
-            self.df = df
-            return self
-        elif self.df.empty:
-            logger.info('GPS pd.DataFrame is empty.')
-            self.df = df
-            return self
-
-        # Create point objects for each coordinate
-        mpoints = asMultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
-        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs)
+        gdf = self.get_gdf()
+        if gdf is None:
+            return
 
         try:
             converted_gdf = gdf.to_crs(f"EPSG:{epsg_code}")
