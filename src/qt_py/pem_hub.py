@@ -35,7 +35,7 @@ from pyproj import CRS
 from src import __version__, app_data_dir
 from src.dxf.pem_dxf import PEMDXFDrawing
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
-from src.pem.pem_file import PEMFile, PEMParser, DMPParser
+from src.pem.pem_file import PEMFile, PEMParser, DMPParser, PEMGetter
 from src.pem.pem_plotter import PEMPrinter
 from src.qt_py import (icons_path, get_extension_icon, get_icon, CustomProgressDialog, read_file, light_palette,
                        dark_palette, get_line_color)
@@ -65,6 +65,7 @@ logger = logging.getLogger(__name__)
 # TODO Log recently opened files.
 # TODO Add GPS errors to table.
 # TODO Redo GPX parsing to use Geopandas. Might also want to revamp converting GPS.
+# TODO Improve un-rotation
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
@@ -5381,7 +5382,6 @@ class MagDeclinationCalculator(QMainWindow):
 
 
 def main():
-    from src.pem.pem_getter import PEMGetter
     app = QApplication(sys.argv)
     mw = PEMHub(app)
     # mw.actionDark_Theme.trigger()

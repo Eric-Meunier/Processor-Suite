@@ -1340,7 +1340,8 @@ class Ruler(pg.LineSegmentROI):
 
 if __name__ == '__main__':
     from src.qt_py import dark_palette
-    from src.pem.pem_getter import PEMGetter
+    from src.pem.pem_file import PEMGetter
+
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     darkmode = True

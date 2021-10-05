@@ -666,8 +666,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
 
 
 if __name__ == '__main__':
-    from src.pem.pem_getter import PEMGetter
-    from src.pem.pem_file import PEMParser
+    from src.pem.pem_file import PEMParser, PEMGetter
     from src.qt_py import dark_palette
     app = QApplication(sys.argv)
     app.setStyle("Fusion")

@@ -25,7 +25,7 @@ from scipy import stats
 from src.qt_py import CustomProgressDialog, set_ax_size
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 from src.pem import convert_station
-from src.pem.pem_file import PEMParser
+from src.pem.pem_file import PEMParser, PEMGetter
 from src.qt_py.ri_importer import RIFile
 
 logger = logging.getLogger(__name__)
@@ -3259,7 +3259,6 @@ class PEMPrinter:
 
 if __name__ == '__main__':
     from PySide2.QtWidgets import QApplication
-    from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser
 
     app = QApplication(sys.argv)

@@ -84,6 +84,11 @@ class InteractiveSpline:
         canvas.mpl_connect('motion_notify_event', self.motion_notify_callback)
         self.canvas = canvas
 
+    def set_data(self, x, y):
+        self.line.set_data(x, y)
+        self.spline.set_data(x, y)
+        # self.poly.set_data(x, y)
+
     def change_alpha(self, alpha):
         self.line.set_alpha(alpha)
         self.spline.set_alpha(alpha)
@@ -143,7 +148,7 @@ class InteractiveSpline:
         d = np.hypot(xt - event.x, yt - event.y)
         indseq, = np.nonzero(d == d.min())
         ind = indseq[0]
-        print(f"Index clicked: {ind} ({self.poly.xy[ind]})")
+        # print(f"Index clicked: {ind} ({self.poly.xy[ind]})")
         if d[ind] >= self.epsilon:
             ind = None
 
@@ -153,7 +158,6 @@ class InteractiveSpline:
         """
         whenever a mouse button is pressed
         """
-
         if not self.showverts:
             return
         if event.inaxes is None:
@@ -164,7 +168,7 @@ class InteractiveSpline:
 
         # Add a knot if the point clicked is close enough to the spline
         if keyboard.is_pressed('left ctrl'):
-            print(f"Mouse button clicked with left ctrl held.")
+            # print(f"Mouse button clicked with left ctrl held.")
             xys = self.poly.get_transform().transform(self.poly.xy)
             p = event.x, event.y  # display coords
 
@@ -176,11 +180,11 @@ class InteractiveSpline:
             if self.vp:
                 poly_ys = np.sort(xys[:, 1])
                 i = np.where(poly_ys >= p[1])[0][0]
-                print(f"Poly segment index: {i}")
+                # print(f"Poly segment index: {i}")
             else:
                 poly_xs = np.sort(xys[:, 0])
                 i = np.where(poly_xs >= p[0])[0][0]
-                print(f"Poly segment index: {i}")
+                # print(f"Poly segment index: {i}")
 
             if distance <= self.epsilon * 2:
                 self.poly.xy = np.insert(
@@ -195,14 +199,11 @@ class InteractiveSpline:
 
         # Remove a knot
         elif keyboard.is_pressed('alt'):
-        # elif event.button == Qt.RightButton:
             ind = self.get_ind_under_point(event)
 
             if all([ind is not None, ind != 0, ind != len(self.poly.xy), len(self.poly.xy) > 4]):
-                print(f"Deleting index {ind} ({self.poly.xy[ind]})")
-                print(f"Poly XY before delete: \n{self.poly.xy}")
+                # print(f"Deleting index {ind} ({self.poly.xy[ind]})")
                 self.poly.xy = np.delete(self.poly.xy, ind, axis=0)
-                print(f"Poly XY after delete: \n{self.poly.xy}")
 
                 self.line.set_data(zip(*self.poly.xy))
 
@@ -218,7 +219,6 @@ class InteractiveSpline:
         """
         whenever a mouse button is released
         """
-
         if not self.showverts:
             return
         if event.button != 1:
@@ -229,7 +229,6 @@ class InteractiveSpline:
         """
         whenever a key is pressed
         """
-
         if not event.inaxes:
             return
 
@@ -246,7 +245,6 @@ class InteractiveSpline:
         """
         on mouse movement
         """
-
         if not self.showverts:
             return
         if self._ind is None:
@@ -258,15 +256,14 @@ class InteractiveSpline:
 
         x, y = event.xdata, event.ydata
 
-        # Lock the x component movement if it's the first or last knot
-        if self._ind == 0 or self._ind == len(self.poly.xy) - 1:
-            self.poly.xy[self._ind] = x, self.poly.xy[self._ind][1]
-        else:
-            self.poly.xy[self._ind] = x, y
-
-        # if self.vp:
-        #     self.line.set_data(zip(*np.flip(self.poly.xy, axis=1)))
+        # Disable this, since adding geometry from a file might change depth information
+        # # Lock the x component movement if it's the first or last knot
+        # if self._ind == 0 or self._ind == len(self.poly.xy) - 1:
+        #     self.poly.xy[self._ind] = x, self.poly.xy[self._ind][1]
         # else:
+        #     self.poly.xy[self._ind] = x, y
+        self.poly.xy[self._ind] = x, y
+
         self.line.set_data(zip(*self.poly.xy))
 
         xi, yi = self.interpolate(self.method)

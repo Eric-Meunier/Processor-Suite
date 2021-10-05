@@ -7,6 +7,7 @@ from pathlib import Path
 
 import geopandas as gpd
 import gpxpy
+import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import matplotlib.ticker as ticker
@@ -14,11 +15,11 @@ import numpy as np
 import plotly.graph_objects as go
 import simplekml
 from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QPointF, QSettings, QSize
-from PySide2.QtGui import QIntValidator, QKeySequence, QTransform
+from PySide2.QtGui import QIntValidator, QKeySequence, QTransform, QColor, QCursor
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QFileDialog, QLabel, QApplication,
-                               QFrame, QHBoxLayout, QLineEdit,
+                               QFrame, QHBoxLayout, QLineEdit, QVBoxLayout, QTabWidget, QMenu, QAction,
                                QHeaderView, QInputDialog, QTableWidgetItem, QGroupBox, QFormLayout, QTableWidget,
-                               QShortcut, QPushButton, QCheckBox, QDoubleSpinBox, QProgressDialog, QRadioButton,
+                               QShortcut, QPushButton, QCheckBox, QDoubleSpinBox, QSizePolicy, QRadioButton,
                                QItemDelegate, QSpinBox)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -3016,7 +3017,7 @@ class PolyLoop(pg.PolyLineROI):
         seg.setZValue(self.zValue() + 1)
         for h in seg.handles:
             h['item'].setDeletable(True)
-            h['item'].setAcceptedMouseButtons(h['item'].acceptedMouseButtons() | Qt.LeftButton)  ## have these handles take left clicks too, so that handles cannot be added on top of other handles
+            h['item'].setAcceptedMouseButtons(h['item'].acceptedMouseButtons() | Qt.LeftButton)
 
     def addHandle(self, info, index=None):
 
@@ -3178,6 +3179,224 @@ class RectLoop(pg.RectROI):
         # self.sigHandleAdded.emit(h)
         return h
 
+
+class HoleImporter(QWidget):
+    accept_sig = Signal(object)
+
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent = parent
+        self.setWindowTitle("Hole Importer")
+        self.setWindowIcon(get_icon("loop_planner.png"))
+        self.setLayout(QVBoxLayout())
+        self.message = QMessageBox()
+
+        self.holes = []
+        self.selection_count = 0
+        self.selected_ranges = []
+        self.selection_color = QColor(get_line_color("single_blue", "mpl", True))
+        # self.selection_color = QColor('#50C878')
+
+        self.tables = []
+        self.tabs = QTabWidget()
+        self.layout().addWidget(QLabel(
+            "Sequentially double-click the top cell of the Depth, Azimuth, and Dip cell ranges."))
+        self.layout().addWidget(self.tabs)
+
+        label_frame = QFrame()
+        label_frame.setLayout(QHBoxLayout())
+        label_frame.layout().setContentsMargins(3, 3, 3, 3)
+        label_frame.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+        self.selection_labels = [QLabel("Name"),
+                                 QLabel("Easting"),
+                                 QLabel("Northing"),
+                                 QLabel("Azimuth"),
+                                 QLabel("Dip"),
+                                 QLabel("Length")]
+        self.selection_labels[0].setStyleSheet("color: green")
+        # self.selection_text.setWordWrap(False)
+        for label in self.selection_labels:
+            label_frame.layout().addWidget(label)
+
+        self.layout().addWidget(label_frame)
+
+        self.accept_btn = QPushButton("Accept")
+        self.reset_btn = QPushButton("Reset")
+        self.close_btn = QPushButton("Close")
+        btn_frame = QFrame()
+        btn_frame.setLayout(QHBoxLayout())
+        btn_frame.layout().addWidget(self.accept_btn)
+        btn_frame.layout().addWidget(self.reset_btn)
+        btn_frame.layout().addWidget(self.close_btn)
+        self.layout().addWidget(btn_frame)
+
+        self.reset_shortcut = QShortcut(QKeySequence("Escape"), self, self.reset)
+        self.accept_btn.clicked.connect(self.accept)
+        self.reset_btn.clicked.connect(self.reset)
+        self.close_btn.clicked.connect(self.close)
+
+    # def eventFilter(self, source, event):
+    #     if event.type() == QEvent.MouseButtonRelease:
+    #         table = self.tables[self.tabs.currentIndex()]
+    #         selected_items = table.selectedItems()
+    #
+    #         # Remove the 3rd last selected range
+    #         if len(self.selected_ranges) == 3:
+    #             for item in self.selected_ranges[0]:
+    #                 item.setBackground(empty_background)
+    #             self.selected_ranges.pop(0)
+    #
+    #         values = []
+    #         for item in selected_items:
+    #             item.setBackground(self.selection_color)
+    #             values.append(item.text())
+    #
+    #         if self.selection_count == 3:
+    #             self.selection_count = 0
+    #
+    #         if self.selection_count == 0:
+    #             self.depths = values
+    #         elif self.selection_count == 1:
+    #             self.azimuths = values
+    #         else:
+    #             self.dips = values
+    #
+    #         self.selection_text.setText(f"Depth: {self.depths or ''}\nAzimuth: {self.azimuths or ''}\n"
+    #                                     f"Dip: {self.dips or ''}")
+    #         self.selection_count += 1
+    #         self.selected_ranges.append(selected_items)
+    #
+    #     # return QObject.eventFilter(source, event)
+    #     return QWidget.eventFilter(self, source, event)
+
+    def reset(self):
+        for range in self.selected_ranges:
+            for item in range:
+                item.setBackground(QColor(255, 255, 255, 0))
+
+        for table in self.tables:
+            table.clearSelection()
+
+        self.holes = []
+        self.selected_ranges = []
+        self.selection_count = 0
+        # self.selection_text.setText("Depth: \nAzimuth: \nDip: ")
+
+    def accept(self):
+        df = pd.DataFrame(self.holes, dtype=float)
+        if not all([d == float for d in df.dtypes]):
+            logger.error(f'Data selected are not all numerical values.')
+            self.message.information(self, 'Error', f'The data selected are not all numerical values.')
+        else:
+            self.accept_sig.emit(df)
+            self.close()
+
+    def cell_double_clicked(self, row, col):
+        """
+        Signal slot, range-select all cells below the clicked cell. Stops at the first empty cell.
+        :return: None
+        """
+        table = self.tables[self.tabs.currentIndex()]
+
+        # Remove the 3rd last selected range
+        if len(self.selected_ranges) == 6:
+            for item in self.selected_ranges[0]:
+                item.setBackground(empty_background)
+            self.selected_ranges.pop(0)
+
+        values = []
+        selected_range = []
+        for selected_row in range(row, table.rowCount()):
+            item = table.item(selected_row, col)
+            if item is None or not item.text():
+                break
+
+            item.setBackground(self.selection_color)
+            selected_range.append(item)
+            values.append(item.text())
+
+        if self.selection_count == 6:
+            self.selection_count = 0
+
+        if self.selection_count == 0:
+            self.depths = values
+        elif self.selection_count == 1:
+            self.azimuths = values
+        else:
+            self.dips = values
+
+        # self.selection_text.setText(f"Depth: {self.depths or ''}\nAzimuth: {self.azimuths or ''}\n"
+        #                             f"Dip: {self.dips or ''}")
+        self.selection_count += 1
+        self.selected_ranges.append(selected_range)
+
+    def table_context_menu(self, event):
+        """
+        Right-click context menu for tables, in order to add an empty row to the table.
+        :param event: QEvent object
+        :return:None
+        """
+        def add_row(y_coord, direction):
+            table = self.tabs.currentWidget()
+            row = table.rowAt(y_coord)
+            if direction == "up":
+                print(f"Inserting row at {row}.")
+                table.insertRow(row)
+            else:
+                print(f"Inserting row at {row + 1}.")
+                table.insertRow(row + 1)
+
+        y_coord = event.pos().y()
+        menu = QMenu(self)
+        add_row_above_action = QAction('Add Row Above', self)
+        add_row_above_action.triggered.connect(lambda: add_row(y_coord, direction="up"))
+        add_row_below_action = QAction('Add Row Below', self)
+        add_row_below_action.triggered.connect(lambda: add_row(y_coord, direction="down"))
+        menu.addAction(add_row_above_action)
+        menu.addAction(add_row_below_action)
+        menu.popup(QCursor.pos())
+
+    def open(self, filepath):
+        """
+        :param filepath: str or Path, can be an Excel file, CSV, or txt file.
+        :return: None
+        """
+        filepath = Path(filepath)
+
+        if filepath.suffix == '.xlsx' or filepath.suffix == '.xls':
+            content = pd.read_excel(filepath,
+                                    header=None,
+                                    sheet_name=None)
+
+            for i, (sheet, info) in enumerate(content.items()):
+                table = pg.TableWidget()
+                table.setData(info.replace(np.nan, '', regex=True).to_numpy())
+                self.tables.append(table)
+                self.tabs.addTab(table, str(sheet))
+        else:
+            if filepath.suffix == '.txt' or filepath.suffix == '.dad':
+                content = pd.read_csv(filepath,
+                                      delim_whitespace=True,
+                                      header=None)
+            else:
+                content = pd.read_csv(filepath,
+                                      header=None)
+
+            table = pg.TableWidget()
+            table.setData(content.replace(np.nan, '', regex=True).to_numpy())
+            self.tables.append(table)
+            self.tabs.addTab(table, filepath.name)
+
+        for table in self.tables:
+            table.setStyleSheet(f"selection-background-color: {self.selection_color};")
+            table.cellDoubleClicked.connect(self.cell_double_clicked)
+            table.contextMenuEvent = self.table_context_menu
+            table.setMouseTracking(True)
+            table.viewport().installEventFilter(self)
+
+        self.show()
+
+
 def main():
     from src.qt_py import dark_palette
     app = QApplication(sys.argv)
@@ -3192,8 +3411,12 @@ def main():
 
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
     # planner = LoopPlanner(darkmode=darkmode)
-    planner = GridPlanner(darkmode=darkmode)
+    # planner = GridPlanner(darkmode=darkmode)
+    hole_importer = HoleImporter()
 
+    hole_data = r"C:\_Data\2021\Eastern\Taylor Brook\_Planning\Taylor Brook DH Plan 27 Sep 2021.xlsx"
+    hole_importer.open(hole_data)
+    hole_importer.show()
     # hole_data = read_excel(r"C:\_Data\2021\Canadian Palladium\_Planning\Crone_BHEM_Collars.xlsx").dropna()
     # for ind, hole in hole_data.iterrows():
     #     planner.add_hole(name=hole["HOLE-ID"],
@@ -3203,7 +3426,7 @@ def main():
     #                      azimuth=hole.AZIMUTH,
     #                      dip=hole.DIP
     #                      )
-    planner.show()
+    # planner.show()
     # planner.save_project()
     # planner.open_project(filepath=r"C:\_Data\2021\TMC\Galloway Project\_Planning\GA mk2.LPF")
     # planner.gps_system_cbox.setCurrentIndex(2)

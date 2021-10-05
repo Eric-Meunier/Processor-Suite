@@ -51,6 +51,7 @@ def smooth_azimuth(azimuth):
         smooth_az = smooth_az + 360
     return smooth_az
 
+
 def dad_to_seg(df, units='m'):
     """
     Create a segment data frame from a DAD data frame. DAD data is split into 1m intervals.
@@ -102,6 +103,7 @@ def dad_to_seg(df, units='m'):
     seg = seg.round(2)
 
     return BoreholeSegments(seg)
+
 
 def dad_to_seg2(df, units='m'):
     """
@@ -175,6 +177,7 @@ def dad_to_seg2(df, units='m'):
     # seg = seg.round(2)
     #
     # return BoreholeSegments(seg)
+
 
 class PEMGeometry(QMainWindow, Ui_PEMGeometry):
     accepted_sig = Signal(object)
@@ -469,115 +472,6 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         """
         Plot the pem file tool values and segment information. One of the two must be present.
         """
-        def add_az_spline(az, depth):
-            """
-            Add the azimuth spline line
-            """
-            spline_stations = np.linspace(0, depth.iloc[-1], 6)
-            spline_az = np.interp(spline_stations, depth, smooth_azimuth(az + self.mag_dec_sbox.value()))
-            self.az_spline = InteractiveSpline(self.az_ax, zip(spline_stations, spline_az),
-                                               line_color=self.azimuth_color,
-                                               method="cubic")
-
-            self.toggle_az_spline()
-            self.az_output_combo.addItem('Spline')
-            self.az_spline_cbox.setEnabled(True)
-
-        def add_dip_spline(dip, depth):
-            """
-            Add the dip spline line
-            """
-            spline_stations = np.linspace(0, depth.iloc[-1], 6)
-            spline_dip = np.interp(spline_stations, depth, dip)
-
-            self.dip_spline = InteractiveSpline(self.dip_ax, zip(spline_stations, spline_dip),
-                                                line_color=self.dip_color,
-                                                method="cubic")
-
-            self.toggle_dip_spline()
-            self.dip_output_combo.addItem('Spline')
-            self.dip_spline_cbox.setEnabled(True)
-
-        def add_collar_az(az, depth):
-            """
-            Add the fixed azimuth line
-            :param az: list, azimuths from either the tool values or seg file to use as a starting point
-            :param depth: list, corresponding depths of the az
-            """
-            if self.collar_az_line is None:
-                global collar_az, collar_depths
-                avg_az = int(np.average(smooth_azimuth(az)))
-                self.collar_az_sbox.blockSignals(True)
-                self.collar_az_sbox.setValue(avg_az)
-                self.collar_az_sbox.blockSignals(False)
-
-                collar_depths = np.array([0, depth.iloc[-1]])
-                collar_az = np.array([avg_az] * 2)
-
-                # Plot the lines
-                self.collar_az_line, = self.az_ax.plot(collar_az, collar_depths,
-                                                       color=self.azimuth_color,
-                                                       linestyle=(0, (5, 10)),
-                                                       label='Fixed Azimuth',
-                                                       lw=0.8,
-                                                       zorder=1)
-
-                # Plot the line in the polar plot
-                self.collar_az_line_p, = self.polar_ax.plot([radians(az) for az in collar_az], collar_depths,
-                                                            color=self.azimuth_color,
-                                                            linestyle=(0, (5, 10)),
-                                                            label='Fixed Azimuth',
-                                                            lw=0.8,
-                                                            zorder=1)
-
-                # Add the lines to the legend
-                self.az_lines.append(self.collar_az_line)
-                self.polar_lines.append(self.collar_az_line_p)
-                self.az_output_combo.addItem('Fixed')
-
-                # Ensure the visibility of the lines are correct
-                self.toggle_collar_az()
-
-        def add_collar_dip(dip, depth):
-            """
-            Add the fixed dip line
-            :param dip: list, dips from either the tool values or seg file to use as a starting point
-            :param depth: list, corresponding depths of the dip
-            """
-            if self.collar_dip_line is None:
-                global collar_dip, collar_depths
-                avg_dip = int(np.average(dip))
-                self.collar_dip_sbox.blockSignals(True)
-                self.collar_dip_sbox.setValue(avg_dip)
-                self.collar_dip_sbox.blockSignals(False)
-
-                collar_depths = np.array([0, depth.iloc[-1]])
-                collar_dip = np.array([avg_dip] * 2)
-
-                # Plot the lines
-                self.collar_dip_line, = self.dip_ax.plot(collar_dip, collar_depths,
-                                                         color=self.dip_color,
-                                                         linestyle=(0, (5, 10)),
-                                                         label='Fixed Dip',
-                                                         lw=0.8,
-                                                         zorder=1)
-
-                # Plot in the polar plot
-                self.collar_dip_line_p, = self.polar_ax.plot([-radians(dip) for dip in collar_dip], collar_depths,
-                                                             color=self.dip_color,
-                                                             linestyle=(0, (5, 10)),
-                                                             label='Fixed Dip',
-                                                             lw=0.8,
-                                                             zorder=1)
-
-                # Add the lines to the legend
-                self.dip_lines.append(self.collar_dip_line)
-                self.polar_lines.append(self.collar_dip_line_p)
-                self.dip_output_combo.addItem('Fixed')
-
-                # Ensure the visibility of the lines are correct
-                self.toggle_collar_dip()
-
         def plot_seg_values():
             """
             Plot the azimuth and dip from the P tags section of the pem_file
@@ -637,7 +531,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 
         def set_cursor():
             """
-            Create the mplcursor object and set some custom properties
+            Mouse-click annotations
             """
             def show_annotation(sel):
                 """
@@ -670,9 +564,9 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 
             c = mplcursors.cursor(multiple=False,
                                   hover=False,
-                                  bindings={'select': 1, 'deselect': 3},
-                                  annotation_kwargs=dict(bbox = bbox,
-                                                         arrowprops = arrow)
+                                  bindings={'select': 3, 'deselect': 1},
+                                  annotation_kwargs=dict(bbox=bbox,
+                                                         arrowprops=arrow)
                                   )
             c.connect('add', show_annotation)
             # c.enabled = False
@@ -704,11 +598,11 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
                 az, dip, depth = seg_az, seg_dip, seg_depth
 
         if az.any() and depth.any():
-            add_az_spline(az, depth)
-            add_dip_spline(dip, depth)
+            self.add_az_spline(az, depth)
+            self.add_dip_spline(dip, depth)
 
-            add_collar_az(az, depth)
-            add_collar_dip(dip, depth)
+            self.add_collar_az(az, depth)
+            self.add_collar_dip(dip, depth)
 
         # Adds the annotations when a point on a line is clicked
         set_cursor()
@@ -812,7 +706,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         if df.empty:
             return
 
-        depths = df.Depth
+        depth = df.Depth
         az = smooth_azimuth(df.Azimuth)
         dip = df.Dip
         # Flip the dip if it's coming from a .seg file
@@ -823,7 +717,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             # Enable the check box
             self.show_imported_geom_cbox.setEnabled(True)
             # Plot the lines
-            self.imported_az_line, = self.az_ax.plot(az, depths,
+            self.imported_az_line, = self.az_ax.plot(az, depth,
                                                      color=self.azimuth_color,
                                                      # color='crimson',
                                                      ls='dashed',
@@ -831,7 +725,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
                                                      lw=0.8,
                                                      zorder=1)
 
-            self.imported_dip_line, = self.dip_ax.plot(dip, depths,
+            self.imported_dip_line, = self.dip_ax.plot(dip, depth,
                                                        color=self.dip_color,
                                                        # color='dodgerblue',
                                                        ls='dashed',
@@ -840,7 +734,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
                                                        zorder=1)
 
             # Add the lines to the polar plot
-            self.imported_az_line_p, = self.polar_ax.plot([radians(z) for z in az], depths,
+            self.imported_az_line_p, = self.polar_ax.plot([radians(z) for z in az], depth,
                                                           color=self.azimuth_color,
                                                           # color='crimson',
                                                           ls='dashed',
@@ -848,8 +742,8 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
                                                           lw=0.8,
                                                           zorder=1)
 
-            self.imported_dip_line_p, = self.polar_ax.plot([-radians(z) for z in dip], depths,
-                                                          color=self.dip_color,
+            self.imported_dip_line_p, = self.polar_ax.plot([-radians(z) for z in dip], depth,
+                                                           color=self.dip_color,
                                                            # color='dodgerblue',
                                                            ls='dashed',
                                                            label='Imported Dip',
@@ -865,24 +759,131 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             self.dip_output_combo.addItem('Imported')
         else:
             # Update the data
-            self.imported_az_line.set_data(az, depths)
-            self.imported_dip_line.set_data(dip, depths)
-            self.imported_az_line_p.set_data([radians(z) for z in az], depths)
-            self.imported_dip_line_p.set_data([-radians(z) for z in dip], depths)
+            self.imported_az_line.set_data(az, depth)
+            self.imported_dip_line.set_data(dip, depth)
+            self.imported_az_line_p.set_data([radians(z) for z in az], depth)
+            self.imported_dip_line_p.set_data([-radians(z) for z in dip], depth)
 
         self.toggle_imported_geom()
         self.update_plots()
 
+    def add_az_spline(self, az, depth):
+        """
+        Add the azimuth spline line
+        """
+        spline_stations = np.linspace(0, depth.iloc[-1], 6)
+        spline_az = np.interp(spline_stations, depth, smooth_azimuth(az + self.mag_dec_sbox.value()))
+        self.az_spline = InteractiveSpline(self.az_ax, zip(spline_stations, spline_az),
+                                           line_color=self.azimuth_color,
+                                           method="cubic")
+
+        self.toggle_az_spline()
+        self.az_output_combo.addItem('Spline')
+        self.az_spline_cbox.setEnabled(True)
+
+    def add_dip_spline(self, dip, depth):
+        """
+        Add the dip spline line
+        """
+        spline_stations = np.linspace(0, depth.iloc[-1], 6)
+        spline_dip = np.interp(spline_stations, depth, dip)
+
+        self.dip_spline = InteractiveSpline(self.dip_ax, zip(spline_stations, spline_dip),
+                                            line_color=self.dip_color,
+                                            method="cubic")
+
+        self.toggle_dip_spline()
+        self.dip_output_combo.addItem('Spline')
+        self.dip_spline_cbox.setEnabled(True)
+
+    def add_collar_az(self, az, depth):
+        """
+        Add the fixed azimuth line
+        :param az: list, azimuths from either the tool values or seg file to use as a starting point
+        :param depth: list, corresponding depths of the az
+        """
+        global collar_depths
+        avg_az = int(np.average(smooth_azimuth(az)))
+        self.collar_az_sbox.blockSignals(True)
+        self.collar_az_sbox.setValue(avg_az)
+        self.collar_az_sbox.blockSignals(False)
+
+        collar_depths = np.array([0, depth.iloc[-1]])
+        collar_az = np.array([avg_az] * 2)
+
+        # Plot the lines
+        self.collar_az_line, = self.az_ax.plot(collar_az, collar_depths,
+                                               color=self.azimuth_color,
+                                               linestyle=(0, (5, 10)),
+                                               label='Fixed Azimuth',
+                                               lw=0.8,
+                                               zorder=1)
+
+        # Plot the line in the polar plot
+        self.collar_az_line_p, = self.polar_ax.plot([radians(az) for az in collar_az], collar_depths,
+                                                    color=self.azimuth_color,
+                                                    linestyle=(0, (5, 10)),
+                                                    label='Fixed Azimuth',
+                                                    lw=0.8,
+                                                    zorder=1)
+
+        # Add the lines to the legend
+        self.az_lines.append(self.collar_az_line)
+        self.polar_lines.append(self.collar_az_line_p)
+        self.az_output_combo.addItem('Fixed')
+
+        # Ensure the visibility of the lines are correct
+        self.toggle_collar_az()
+
+    def add_collar_dip(self, dip, depth):
+        """
+        Add the fixed dip line
+        :param dip: list, dips from either the tool values or seg file to use as a starting point
+        :param depth: list, corresponding depths of the dip
+        """
+        global collar_depths
+        avg_dip = int(np.average(dip))
+        self.collar_dip_sbox.blockSignals(True)
+        self.collar_dip_sbox.setValue(avg_dip)
+        self.collar_dip_sbox.blockSignals(False)
+
+        collar_depths = np.array([0, depth.iloc[-1]])
+        collar_dip = np.array([avg_dip] * 2)
+
+        # Plot the lines
+        self.collar_dip_line, = self.dip_ax.plot(collar_dip, collar_depths,
+                                                 color=self.dip_color,
+                                                 linestyle=(0, (5, 10)),
+                                                 label='Fixed Dip',
+                                                 lw=0.8,
+                                                 zorder=1)
+
+        # Plot in the polar plot
+        self.collar_dip_line_p, = self.polar_ax.plot([-radians(dip) for dip in collar_dip], collar_depths,
+                                                     color=self.dip_color,
+                                                     linestyle=(0, (5, 10)),
+                                                     label='Fixed Dip',
+                                                     lw=0.8,
+                                                     zorder=1)
+
+        # Add the lines to the legend
+        self.dip_lines.append(self.collar_dip_line)
+        self.polar_lines.append(self.collar_dip_line_p)
+        self.dip_output_combo.addItem('Fixed')
+
+        # Ensure the visibility of the lines are correct
+        self.toggle_collar_dip()
+            
     def open_seg_file(self, filepath):
         """
         Import and plot a .seg file
         :param filepath: str, filepath of the file to plot
         """
         df = pd.read_csv(filepath,
-                      delim_whitespace=True,
-                      usecols=[1, 2, 5],
-                      names=['Azimuth', 'Dip', 'Depth'],
-                      dtype=float)
+                         delim_whitespace=True,
+                         usecols=[1, 2, 5],
+                         names=['Azimuth', 'Dip', 'Depth'],
+                         dtype=float)
         self.plot_df(df, source='seg')
 
     def open_dad_file(self, filepath):
@@ -1273,8 +1274,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
 
 
 if __name__ == '__main__':
-    from src.pem.pem_getter import PEMGetter
-    from src.pem.pem_file import PEMParser
+    from src.pem.pem_file import PEMGetter
     from src.qt_py import dark_palette
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
@@ -1284,25 +1284,27 @@ if __name__ == '__main__':
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     pg = PEMGetter()
-    parser = PEMParser()
+    pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\SAN-0264C-21\RAW\xy_1002.PEM")
     # files = pg.get_pems(folder='PEM Rotation', file='_PU-340 XY.PEM')
     # files = pg.get_pems(folder='Raw Boreholes', number=1, random=True, incl='xy')
     # files = pg.get_pems(file=r"Raw Boreholes\HOLE STE-21-02\RAW\ste-21-02 xy.pem")
-    pem_file = pg.get_pems(folder='Segments', file=r'_BX-081 XY.PEM')[0]
+    # pem_file = pg.get_pems(folder='Segments', file=r'_BX-081 XY.PEM')[0]
     # files = pg.get_pems(client='Minera', subfolder='CPA-5057', file='XY.PEM')
 
-    # win = PEMGeometry(darkmode=darkmode)
-    # win.open(files)
+    win = PEMGeometry(darkmode=darkmode)
+    win.open(pem_file)
 
     # dad = samples_folder.joinpath(r"Raw Boreholes\GEN-21-06\RAW\gyro.csv")
-    dad = samples_folder.joinpath(r"Segments\test dad.csv")
-    # win.open_dad_file(dad)
+    # dad = samples_folder.joinpath(r"Segments\test dad.csv")
+    # dad = samples_folder.joinpath(r"Segments\BHEM-Belvais-2021-07-22.xlsx")
+    dad = r"C:\_Data\2021\Trevali Peru\Borehole\SAN-0264C-21\GPS\SAN-0264C-21.xlsx"
+    win.open_dad_file(dad)
 
-    df = pd.read_csv(dad,
-                      usecols=[0, 1, 2],
-                      names=['Depth', 'Azimuth', 'Dip'],
-                      dtype=float)
-    seg = dad_to_seg(df)
+    # df = pd.read_csv(dad,
+    #                   usecols=[0, 1, 2],
+    #                   names=['Depth', 'Azimuth', 'Dip'],
+    #                   dtype=float)
+    # seg = dad_to_seg(df)
     # seg2 = dad_to_seg2(df)
     # print(seg.df)
     # print(seg2.df)

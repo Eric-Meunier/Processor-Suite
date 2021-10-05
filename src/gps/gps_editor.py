@@ -210,17 +210,18 @@ def read_kmz(file):
     kmz = ZipFile(file, 'r')
     kmz.extract(kmz.filelist[0], app_temp_dir)
 
-    df = gpd.read_file(app_temp_dir.joinpath('doc.kml'), driver="KML")
-    crs = df.estimate_utm_crs()
-    df = df.to_crs(crs)
+    gdf = gpd.read_file(app_temp_dir.joinpath('doc.kml'), driver="KML")
+    crs = gdf.estimate_utm_crs()
+    logger.info(f"Reading KMZ file {Path(file).name}. Estimated CRS: {crs.name}.")
+    gdf = gdf.to_crs(crs)
 
     utm_df = pd.DataFrame(columns=["geometry", "Type", "Name", "Description"])
 
     # For multilines, ignore the last coordinate as it is a repeat of the first to close the shape.
-    multilines = df.iloc[0:-1][df.iloc[0:-1].geometry.apply(lambda x: isinstance(x, MultiLineString))]
-    linestrings = df[df.geometry.apply(lambda x: isinstance(x, LineString))]
-    points = df[df.geometry.apply(lambda x: isinstance(x, Point))]
-    polygons = df[df.geometry.apply(lambda x: isinstance(x, Polygon))]
+    multilines = gdf.iloc[0:-1][gdf.iloc[0:-1].geometry.apply(lambda x: isinstance(x, MultiLineString))]
+    linestrings = gdf[gdf.geometry.apply(lambda x: isinstance(x, LineString))]
+    points = gdf[gdf.geometry.apply(lambda x: isinstance(x, Point))]
+    polygons = gdf[gdf.geometry.apply(lambda x: isinstance(x, Polygon))]
 
     for name, multiline in multilines.iterrows():
         multiline_geometry = [Point(x) for x in [line.coords for line in multiline.geometry.geoms]]
@@ -257,27 +258,39 @@ def read_kmz(file):
     utm_df["Northing"] = utm_df.geometry.map(lambda p: p.y).round(decimals=2)
     # Re-arrange the columns and get rid of Geometry column
     utm_df = utm_df[["Easting", "Northing", "Type", "Name", "Description", "geometry"]]
-    # print(utm_df)
-    return utm_df, df, crs
+    return utm_df, gdf, crs
 
 
-def read_gpx(file):
+def read_gpx(file, for_pemfile=False):
     """
     Parse a GPX file, and create a DataFrame with the coordinates in UTM. Only keeps coordinates and name and description.
     :param file: str
+    :param for_pemfile: Bool, automatically rename invalid station names and elevation values for PEM files.
     :return: DataFrame
     """
-    geo_df = gpd.read_file(file)
-    crs = geo_df.estimate_utm_crs()
-    geo_df = geo_df.to_crs(crs)
+    def rename_station(name):
+        """
+        Rename a name so it is a valid station name. i.e. numbers only except for the cardinal suffix.
+        :param name: str
+        :return: str
+        """
+        station_name = re.sub(r'\W', '', name)
+        station_name = re.sub(r"[^nsewNSEW\d]", "", station_name)
+        return station_name
+
+    gdf = gpd.read_file(file)
+    crs = gdf.estimate_utm_crs()
+    logger.info(f"Reading GPX file {Path(file).name}. Estimated CRS: {crs.name}.")
+    gdf = gdf.to_crs(crs)
+    
     utm_df = pd.DataFrame()
-    utm_df["Easting"] = geo_df.geometry.map(lambda p: p.x).round(decimals=2)
-    utm_df["Northing"] = geo_df.geometry.map(lambda p: p.y).round(decimals=2)
-    utm_df["Elevation"] = geo_df.ele
-    utm_df["Name"] = geo_df.name
-    utm_df["Description"] = geo_df.desc
-    utm_df["geometry"] = geo_df.geometry
-    return utm_df, geo_df, crs
+    utm_df["Easting"] = gdf.geometry.map(lambda p: p.x).round(decimals=2)
+    utm_df["Northing"] = gdf.geometry.map(lambda p: p.y).round(decimals=2)
+    utm_df["Elevation"] = gdf.ele
+    utm_df["Name"] = gdf.name
+    utm_df["Description"] = gdf.desc
+    utm_df["geometry"] = gdf.geometry
+    return utm_df, gdf, crs
 
 
 class BaseGPS:
@@ -940,7 +953,6 @@ class GPXParser:
         gps = []
         errors = []
 
-        # Use Route points if no waypoints exist
         if gpx.waypoints:
             for waypoint in gpx.waypoints:
                 # name = re.sub(r'\s', '_', waypoint.name)  # Not used
@@ -953,7 +965,7 @@ class GPXParser:
                 gps.append([waypoint.latitude, waypoint.longitude, waypoint.elevation, '0', name])
             if len(gpx.waypoints) != len(gps):
                 logger.warning(f"{len(gpx.waypoints)} waypoints found in GPX file but {len(gps)} points parsed.")
-        elif gpx.routes:
+        elif gpx.routes:  # Use Route points if no waypoints exist
             route = gpx.routes[0]
             for point in route.points:
                 # name = re.sub(r'\s', '_', point.name)
@@ -1032,9 +1044,6 @@ class GPXParser:
             logger.debug(f"Project CRS: {crs.name}")
             return crs
 
-    def save_gpx(self, coordinates):
-        pass
-
 
 if __name__ == '__main__':
     # from src.pem.pem_getter import PEMGetter
@@ -1045,14 +1054,15 @@ if __name__ == '__main__':
     # gps_parser = GPSParser()
     gpx_editor = GPXParser()
     # crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 1983'})
-    gpx_file = r'C:\_Data\2021\Eastern\L5N.gpx'
+    # gpx_file = r'C:\_Data\2021\Eastern\L5N.gpx'
     # gpx_file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
-    # gpx_file = samples_folder.joinpath(r'GPX files\2000E_0524.gpx')
+    gpx_file = samples_folder.joinpath(r'GPX files\Loop-32.gpx')
 
     # kml_file = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\KML Files\BHP Arizona OCLT-1801D.kmz"
-    kml_file = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\KML Files\CAPA_A_stations.kmz"
-    read_kmz(kml_file)
-    # read_gpx(gpx_file)
+    # kml_file = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\KML Files\CAPA_A_stations.kmz"
+    # read_kmz(kml_file)
+    utm_df, gdf, crs = read_gpx(gpx_file, for_pemfile=True)
+    print(utm_df)
     # utm_gps, zone, hemisphere, crs, errors = gpx_editor.get_utm(gpx_file)
     # df = pd.DataFrame(utm_gps)
     # df.to_csv(r"C:\_Data\2021\Eastern\L5N.CSV")

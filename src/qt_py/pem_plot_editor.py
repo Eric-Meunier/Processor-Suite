@@ -17,7 +17,7 @@ from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QLabel, QA
 from scipy import spatial, signal
 
 from src.pem import convert_station
-from src.pem.pem_file import PEMParser
+from src.pem.pem_file import PEMParser, PEMGetter
 from src.qt_py import get_icon, get_line_color
 from src.ui.pem_plot_editor import Ui_PEMPlotEditor
 # from src.logger import Log
@@ -2192,7 +2192,6 @@ class ProfileViewBox(pg.ViewBox):
 
 
 if __name__ == '__main__':
-    from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import parse_file
     from pathlib import Path
     from src.qt_py import dark_palette

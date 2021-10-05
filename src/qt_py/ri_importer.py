@@ -186,7 +186,8 @@ class BatchRIImporter(QWidget):
 
 
 if __name__ == '__main__':
-    from src.pem.pem_getter import PEMGetter
+    from src.pem.pem_file import PEMGetter
+
     app = QApplication(sys.argv)
     pg = PEMGetter()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')

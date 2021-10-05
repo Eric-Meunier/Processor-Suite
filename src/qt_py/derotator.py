@@ -11,7 +11,7 @@ from PySide2.QtCore import Signal, QEvent
 from PySide2.QtGui import QKeySequence
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QApplication, QShortcut)
 
-from src.pem.pem_file import PEMFile
+from src.pem.pem_file import PEMFile, PEMGetter
 from src.qt_py import NonScientific, get_icon, get_line_color
 from src.ui.derotator import Ui_Derotator
 
@@ -773,7 +773,6 @@ class Derotator(QMainWindow, Ui_Derotator):
 
 
 def main():
-    from src.pem.pem_getter import PEMGetter
     from src.pem.pem_file import PEMParser
     from src.qt_py import dark_palette
     app = QApplication(sys.argv)

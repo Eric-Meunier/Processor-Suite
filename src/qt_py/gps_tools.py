@@ -1,31 +1,30 @@
 import csv
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 
 import geopandas as gpd
 import gpxpy
-import pandas as pd
-import numpy as np
-import pyqtgraph as pg
 import matplotlib.pyplot as plt
-from matplotlib import ticker
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas, \
-    NavigationToolbar2QT as NavigationToolbar
-from PySide2.QtCore import Qt, Signal, QEvent
-from PySide2.QtGui import QColor, QKeySequence, QIntValidator
+import numpy as np
+import pandas as pd
+import pyqtgraph as pg
+from PySide2.QtCore import Qt, Signal
+from PySide2.QtGui import QColor, QKeySequence, QIntValidator, QCursor
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QWidget, QFileDialog, QVBoxLayout, QLabel, QApplication,
                                QFrame, QHBoxLayout, QHeaderView, QInputDialog, QPushButton, QTabWidget, QAction,
-                               QTableWidgetItem, QShortcut, QMenu, QSizePolicy, QTableWidget, QItemDelegate,
-                               QErrorMessage, QSplitter)
+                               QTableWidgetItem, QShortcut, QMenu, QSizePolicy, QTableWidget, QErrorMessage, QSplitter)
+from matplotlib import ticker
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from pyproj import CRS
 from shapely.geometry import asMultiPoint
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser, read_gpx, read_kmz
 from src.logger import logger
-from src.qt_py import (get_icon, NonScientific, read_file, table_to_df, df_to_table, get_line_color, FloatDelegate,
-                       clear_table, MapToolbar, set_ax_size)
+from src.qt_py import (get_icon, NonScientific, read_file, table_to_df, df_to_table, get_line_color, clear_table,
+                       MapToolbar, set_ax_size)
 from src.ui.gps_conversion import Ui_GPSConversion
 from src.ui.gpx_creator import Ui_GPXCreator
 from src.ui.line_adder import Ui_LineAdder
@@ -1217,7 +1216,7 @@ class DADSelector(QWidget):
         self.layout().addWidget(self.tabs)
 
         self.selection_text = QLabel("Depth: \nAzimuth: \nDip: ")
-        self.selection_text.setWordWrap(True)
+        self.selection_text.setWordWrap(False)
         self.layout().addWidget(self.selection_text)
 
         self.accept_btn = QPushButton("Accept")
@@ -1235,39 +1234,39 @@ class DADSelector(QWidget):
         self.reset_btn.clicked.connect(self.reset)
         self.close_btn.clicked.connect(self.close)
 
-    def eventFilter(self, source, event):
-        if event.type() == QEvent.MouseButtonRelease:
-            table = self.tables[self.tabs.currentIndex()]
-            selected_items = table.selectedItems()
-
-            # Remove the 3rd last selected range
-            if len(self.selected_ranges) == 3:
-                for item in self.selected_ranges[0]:
-                    item.setBackground(empty_background)
-                self.selected_ranges.pop(0)
-
-            values = []
-            for item in selected_items:
-                item.setBackground(self.selection_color)
-                values.append(item.text())
-
-            if self.selection_count == 3:
-                self.selection_count = 0
-
-            if self.selection_count == 0:
-                self.depths = values
-            elif self.selection_count == 1:
-                self.azimuths = values
-            else:
-                self.dips = values
-
-            self.selection_text.setText(f"Depth: {self.depths or ''}\nAzimuth: {self.azimuths or ''}\n"
-                                        f"Dip: {self.dips or ''}")
-            self.selection_count += 1
-            self.selected_ranges.append(selected_items)
-
-        # return QObject.eventFilter(source, event)
-        return QWidget.eventFilter(self, source, event)
+    # def eventFilter(self, source, event):
+    #     if event.type() == QEvent.MouseButtonRelease:
+    #         table = self.tables[self.tabs.currentIndex()]
+    #         selected_items = table.selectedItems()
+    #
+    #         # Remove the 3rd last selected range
+    #         if len(self.selected_ranges) == 3:
+    #             for item in self.selected_ranges[0]:
+    #                 item.setBackground(empty_background)
+    #             self.selected_ranges.pop(0)
+    #
+    #         values = []
+    #         for item in selected_items:
+    #             item.setBackground(self.selection_color)
+    #             values.append(item.text())
+    #
+    #         if self.selection_count == 3:
+    #             self.selection_count = 0
+    #
+    #         if self.selection_count == 0:
+    #             self.depths = values
+    #         elif self.selection_count == 1:
+    #             self.azimuths = values
+    #         else:
+    #             self.dips = values
+    #
+    #         self.selection_text.setText(f"Depth: {self.depths or ''}\nAzimuth: {self.azimuths or ''}\n"
+    #                                     f"Dip: {self.dips or ''}")
+    #         self.selection_count += 1
+    #         self.selected_ranges.append(selected_items)
+    #
+    #     # return QObject.eventFilter(source, event)
+    #     return QWidget.eventFilter(self, source, event)
 
     def reset(self):
         for range in self.selected_ranges:
@@ -1296,8 +1295,7 @@ class DADSelector(QWidget):
 
     def cell_double_clicked(self, row, col):
         """
-        Signal slot, range-select all cells below the clicked cell.
-        Doesn't work with the selection method, so it is not used. Could be a toggle though.
+        Signal slot, range-select all cells below the clicked cell. Stops at the first empty cell.
         :return: None
         """
         table = self.tables[self.tabs.currentIndex()]
@@ -1310,8 +1308,11 @@ class DADSelector(QWidget):
 
         values = []
         selected_range = []
-        for s_row in range(row, table.rowCount()):
-            item = table.item(s_row, col)
+        for selected_row in range(row, table.rowCount()):
+            item = table.item(selected_row, col)
+            if item is None or not item.text():
+                break
+
             item.setBackground(self.selection_color)
             selected_range.append(item)
             values.append(item.text())
@@ -1330,6 +1331,32 @@ class DADSelector(QWidget):
                                     f"Dip: {self.dips or ''}")
         self.selection_count += 1
         self.selected_ranges.append(selected_range)
+
+    def table_context_menu(self, event):
+        """
+        Right-click context menu for tables, in order to add an empty row to the table.
+        :param event: QEvent object
+        :return:None
+        """
+        def add_row(y_coord, direction):
+            table = self.tabs.currentWidget()
+            row = table.rowAt(y_coord)
+            if direction == "up":
+                print(f"Inserting row at {row}.")
+                table.insertRow(row)
+            else:
+                print(f"Inserting row at {row + 1}.")
+                table.insertRow(row + 1)
+
+        y_coord = event.pos().y()
+        menu = QMenu(self)
+        add_row_above_action = QAction('Add Row Above', self)
+        add_row_above_action.triggered.connect(lambda: add_row(y_coord, direction="up"))
+        add_row_below_action = QAction('Add Row Below', self)
+        add_row_below_action.triggered.connect(lambda: add_row(y_coord, direction="down"))
+        menu.addAction(add_row_above_action)
+        menu.addAction(add_row_below_action)
+        menu.popup(QCursor.pos())
 
     def open(self, filepath):
         """
@@ -1364,7 +1391,8 @@ class DADSelector(QWidget):
 
         for table in self.tables:
             table.setStyleSheet(f"selection-background-color: {self.selection_color};")
-            # table.cellDoubleClicked.connect(self.cell_double_clicked)
+            table.cellDoubleClicked.connect(self.cell_double_clicked)
+            table.contextMenuEvent = self.table_context_menu
             table.setMouseTracking(True)
             table.viewport().installEventFilter(self)
 

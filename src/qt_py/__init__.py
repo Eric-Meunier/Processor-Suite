@@ -6,9 +6,9 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from PySide2 import QtWidgets
-from PySide2.QtCore import Qt, QSizeF, QPointF
+from PySide2.QtCore import Qt, QSizeF, QPointF, Signal
 from PySide2.QtGui import QPixmap, QIcon, QPalette, QColor
-from PySide2.QtWidgets import QTableWidgetItem, QItemDelegate
+from PySide2.QtWidgets import QTableWidgetItem, QItemDelegate, QTableWidget
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from src.logger import logger
 
@@ -447,3 +447,48 @@ class MapToolbar(NavigationToolbar):
     # only display the buttons we need
     toolitems = [t for t in NavigationToolbar.toolitems if
                  t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom')]
+
+
+class SelectorTable(QTableWidget):
+
+    def __init__(self):
+        super().__init__()
+
+    def cell_double_clicked(self, row, col):
+        """
+        Signal slot, range-select all cells below the clicked cell. Stops at the first empty cell.
+        :return: None
+        """
+        table = self.tables[self.tabs.currentIndex()]
+
+        # Remove the 3rd last selected range
+        if len(self.selected_ranges) == 3:
+            for item in self.selected_ranges[0]:
+                item.setBackground(empty_background)
+            self.selected_ranges.pop(0)
+
+        values = []
+        selected_range = []
+        for selected_row in range(row, table.rowCount()):
+            item = table.item(selected_row, col)
+            if item is None or not item.text():
+                break
+
+            item.setBackground(self.selection_color)
+            selected_range.append(item)
+            values.append(item.text())
+
+        if self.selection_count == 3:
+            self.selection_count = 0
+
+        if self.selection_count == 0:
+            self.depths = values
+        elif self.selection_count == 1:
+            self.azimuths = values
+        else:
+            self.dips = values
+
+        self.selection_text.setText(f"Depth: {self.depths or ''}\nAzimuth: {self.azimuths or ''}\n"
+                                    f"Dip: {self.dips or ''}")
+        self.selection_count += 1
+        self.selected_ranges.append(selected_range)
