@@ -1,15 +1,17 @@
 import sys
-import chardet
 from pathlib import Path
 
+import chardet
 import numpy as np
 import pandas as pd
 import pyqtgraph as pg
-from PySide2 import QtWidgets
-from PySide2.QtCore import Qt, QSizeF, QPointF, Signal
-from PySide2.QtGui import QPixmap, QIcon, QPalette, QColor
-from PySide2.QtWidgets import QTableWidgetItem, QItemDelegate, QTableWidget
+from PySide2.QtCore import QSizeF, Qt, Signal, QPointF
+from PySide2.QtGui import QKeySequence, QColor, QCursor, QPixmap, QIcon, QPalette, QIntValidator
+from PySide2.QtWidgets import (QMessageBox, QWidget, QLabel, QFrame, QHBoxLayout, QVBoxLayout, QTabWidget, QMenu,
+                               QAction, QComboBox, QLineEdit, QGroupBox, QGridLayout, QRadioButton,
+                               QTableWidgetItem, QShortcut, QPushButton, QSizePolicy, QItemDelegate)
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
+from pyproj import CRS
 from src.logger import logger
 
 # Modify the paths for when the script is being run in a frozen state (i.e. as an EXE)
@@ -68,62 +70,62 @@ def get_line_color(color, style, darkmode, alpha=255):
     gray_color = [178, 178, 178, alpha] if darkmode else [128, 128, 128, alpha]
 
     if color == "pink":
-        if style == "mpl":
+        if style == "mpl" or style == "hex":
             return rgb2hex(*pink_color[:-1])
         else:
             return pink_color
     elif color == "teal":
-        if style == "mpl":
+        if style == "mpl" or style == "hex":
             return rgb2hex(*teal_color[:-1])
         else:
             return teal_color
     elif color == "yellow":
-        if style == "mpl":
+        if style == "mpl" or style == "hex":
             return rgb2hex(*yellow_color[:-1])
         else:
             return yellow_color
     elif color == "blue":
-        if style == "mpl":
+        if style == "mpl" or style == "hex":
             return rgb2hex(*blue_color[:-1])
         else:
             return blue_color
     elif color == "single_blue":
-        if style == "mpl":
+        if style == "mpl" or style == "hex":
             return rgb2hex(*single_blue_color[:-1])
         else:
             return single_blue_color
     elif color == "red":
-        if style == "mpl":
+        if style == "mpl" or style == "hex":
             return rgb2hex(*red_color[:-1])
         else:
             return red_color
     elif color == "purple":
-        if style == "mpl":
+        if style == "mpl" or style == "hex":
             return rgb2hex(*purple_color[:-1])
         else:
             return purple_color
     elif color == "aquamarine":
-        if style == "mpl":
+        if style == "mpl" or style == "hex":
             return rgb2hex(*aquamarine_color[:-1])
         else:
             return aquamarine_color
     elif color == "green":
-        if style == "mpl":
+        if style == "mpl" or style == "hex":
             return rgb2hex(*green_color[:-1])
         else:
             return green_color
     elif color == "foreground":
-        if style == "mpl":
+        if style == "mpl" or style == "hex":
             return rgb2hex(*foreground_color[:-1])
         else:
             return foreground_color
     elif color == "background":
-        if style == "mpl":
+        if style == "mpl" or style == "hex":
             return rgb2hex(*background_color[:-1])
         else:
             return background_color
     elif color == "gray":
-        if style == "mpl":
+        if style == "mpl" or style == "hex":
             return rgb2hex(*gray_color[:-1])
         else:
             return gray_color
@@ -436,7 +438,7 @@ class FloatDelegate(QItemDelegate):
         try:
             number = float(value)
             painter.drawText(option.rect, Qt.AlignLeft, "{:.{}f}".format(number, self.nDecimals))
-        except :
+        except Exception:
             QItemDelegate.paint(self, painter, option, index)
 
 
@@ -449,10 +451,91 @@ class MapToolbar(NavigationToolbar):
                  t[0] in ('Home', 'Back', 'Forward', 'Pan', 'Zoom')]
 
 
-class SelectorTable(QTableWidget):
+class TableSelector(QWidget):
+    """
+    Window to help facilitate selecting information from Excel or CSV files.
+    Information is plotted into tables, and the table cells can be double-clicked to select all information below it,
+    until the next empty cell.
+    """
+    accept_sig = Signal(object)
 
-    def __init__(self):
+    def __init__(self, selection_labels, parent=None, darkmode=False):
         super().__init__()
+        self.parent = parent
+        self.darkmode = darkmode
+        self.setWindowIcon(get_icon("table.png"))
+        self.setLayout(QVBoxLayout())
+        self.message = QMessageBox()
+
+        self.foreground_color = get_line_color("foreground", "mpl", True)
+        self.selection_color = get_line_color("single_blue", "mpl", True)
+        self.empty_background = QColor(255, 255, 255, 0)
+
+        self.selection_labels = []
+        self.selection_label_names = selection_labels
+        self.selection_limit = len(selection_labels)  # Maximum number of selected columns before resetting
+        self.selection_count = 0
+        self.selection_values = {}
+        self.selected_ranges = []
+        self.instruction_label = QLabel()
+
+        self.tables = []
+        self.tabs = QTabWidget()
+        self.layout().addWidget(self.instruction_label)
+        self.layout().addWidget(self.tabs)
+
+        self.selection_label_frame = QFrame()
+        self.selection_label_frame.setLayout(QHBoxLayout())
+        self.selection_label_frame.layout().setContentsMargins(3, 3, 3, 3)
+        self.selection_label_frame.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+        for name in self.selection_label_names:
+            label = QLabel(name)
+            self.selection_labels.append(label)
+            self.selection_label_frame.layout().addWidget(label)
+        self.highlight_label(0)
+        self.layout().addWidget(self.selection_label_frame)
+
+        self.accept_btn = QPushButton("Accept")
+        self.reset_btn = QPushButton("Reset")
+        self.close_btn = QPushButton("Close")
+        btn_frame = QFrame()
+        btn_frame.setLayout(QHBoxLayout())
+        btn_frame.layout().addWidget(self.accept_btn)
+        btn_frame.layout().addWidget(self.reset_btn)
+        btn_frame.layout().addWidget(self.close_btn)
+        self.layout().addWidget(btn_frame)
+
+        self.reset_shortcut = QShortcut(QKeySequence("Escape"), self, self.reset)
+        self.accept_btn.clicked.connect(self.accept)
+        self.reset_btn.clicked.connect(self.reset)
+        self.close_btn.clicked.connect(self.close)
+
+    def reset(self):
+        for range in self.selected_ranges:
+            for item in range:
+                item.setBackground(self.empty_background)
+
+        for table in self.tables:
+            table.clearSelection()
+
+        self.selected_ranges = []
+        self.selection_count = 0
+        self.highlight_label(0)
+
+    def accept(self):
+        # df = pd.DataFrame(self.holes, dtype=float)
+        # if not all([d == float for d in df.dtypes]):
+        #     logger.error(f'Data selected are not all numerical values.')
+        #     self.message.information(self, 'Error', f'The data selected are not all numerical values.')
+        # else:
+        num_values = [len(values) for keys, values in self.selection_values.items()]
+        if not all([v == num_values[0] for v in num_values]):
+            logger.error(f"All selected information must have the same number of entries.\nNumber sele")
+            raise ValueError(f"All selected information must have the same number of entries.\nNumber sele")
+
+        df = pd.DataFrame(self.selection_values)
+        self.accept_sig.emit(df)
+        self.close()
 
     def cell_double_clicked(self, row, col):
         """
@@ -461,10 +544,10 @@ class SelectorTable(QTableWidget):
         """
         table = self.tables[self.tabs.currentIndex()]
 
-        # Remove the 3rd last selected range
-        if len(self.selected_ranges) == 3:
+        # Remove the last selection range when going over the limit
+        if len(self.selected_ranges) == 6:
             for item in self.selected_ranges[0]:
-                item.setBackground(empty_background)
+                item.setBackground(self.empty_background)
             self.selected_ranges.pop(0)
 
         values = []
@@ -474,21 +557,309 @@ class SelectorTable(QTableWidget):
             if item is None or not item.text():
                 break
 
-            item.setBackground(self.selection_color)
+            item.setBackground(QColor(self.selection_color))
             selected_range.append(item)
             values.append(item.text())
 
-        if self.selection_count == 3:
+        if self.selection_count == self.selection_limit:
             self.selection_count = 0
 
-        if self.selection_count == 0:
-            self.depths = values
-        elif self.selection_count == 1:
-            self.azimuths = values
-        else:
-            self.dips = values
+        self.selection_values[self.selection_label_names[self.selection_count]] = values
 
-        self.selection_text.setText(f"Depth: {self.depths or ''}\nAzimuth: {self.azimuths or ''}\n"
-                                    f"Dip: {self.dips or ''}")
         self.selection_count += 1
+        self.highlight_label(self.selection_count)
         self.selected_ranges.append(selected_range)
+
+    def highlight_label(self, ind):
+        """
+        Highlight the text of the selected index and un-highlight the rest.
+        :param ind: int
+        :return: None
+        """
+        for i, label in enumerate(self.selection_labels):
+            if i < ind:
+                label.setStyleSheet(f"color: {get_line_color('gray', 'hex', self.darkmode)}")
+            elif i == ind:
+                label.setStyleSheet(f"color: {self.selection_color}")
+            else:
+                label.setStyleSheet(f"color: {self.foreground_color}")
+
+    def table_context_menu(self, event):
+        """
+        Right-click context menu for tables, in order to add an empty row to the table.
+        :param event: QEvent object
+        :return:None
+        """
+        def add_row(y_coord, direction):
+            table = self.tabs.currentWidget()
+            row = table.rowAt(y_coord)
+            if direction == "up":
+                print(f"Inserting row at {row}.")
+                table.insertRow(row)
+            else:
+                print(f"Inserting row at {row + 1}.")
+                table.insertRow(row + 1)
+
+        y_coord = event.pos().y()
+        menu = QMenu(self)
+        add_row_above_action = QAction('Add Row Above', self)
+        add_row_above_action.triggered.connect(lambda: add_row(y_coord, direction="up"))
+        add_row_below_action = QAction('Add Row Below', self)
+        add_row_below_action.triggered.connect(lambda: add_row(y_coord, direction="down"))
+        menu.addAction(add_row_above_action)
+        menu.addAction(add_row_below_action)
+        menu.popup(QCursor.pos())
+
+    def open(self, filepath):
+        """
+        :param filepath: str or Path, can be an Excel file, CSV, or txt file.
+        :return: None
+        """
+        filepath = Path(filepath)
+
+        if filepath.suffix == '.xlsx' or filepath.suffix == '.xls':
+            content = pd.read_excel(filepath,
+                                    header=None,
+                                    sheet_name=None)
+
+            for i, (sheet, info) in enumerate(content.items()):
+                table = pg.TableWidget()
+                table.setData(info.replace(np.nan, '', regex=True).to_numpy())
+                self.tables.append(table)
+                self.tabs.addTab(table, str(sheet))
+        else:
+            if filepath.suffix == '.txt' or filepath.suffix == '.dad':
+                content = pd.read_csv(filepath,
+                                      delim_whitespace=True,
+                                      header=None)
+            else:
+                content = pd.read_csv(filepath,
+                                      header=None)
+
+            table = pg.TableWidget()
+            table.setData(content.replace(np.nan, '', regex=True).to_numpy())
+            self.tables.append(table)
+            self.tabs.addTab(table, filepath.name)
+
+        for table in self.tables:
+            table.setStyleSheet(f"selection-background-color: #{self.selection_color};")
+            table.cellDoubleClicked.connect(self.cell_double_clicked)
+            table.contextMenuEvent = self.table_context_menu
+            table.setMouseTracking(True)
+            table.viewport().installEventFilter(self)
+
+        self.show()
+
+
+class SeparatorLine(QFrame):
+    def __init__(self):
+        super().__init__()
+        self.setFrameShape(QFrame.HLine)
+        self.setFrameShadow(QFrame.Plain)
+
+
+class CRSSelector(QGroupBox):
+    def __init__(self, title=""):
+        """
+        Group box with combo boxes with the commonly used GPS systems, datums and UTM zones, along with a EPSG line.
+        """
+        super().__init__()
+        self.setLayout(QGridLayout())
+        self.setTitle(title)
+
+        self.message = QMessageBox()
+        self.epsg_label = QLabel()
+        self.epsg_label.setIndent(5)
+
+        self.crs_rbtn = QRadioButton()
+        self.epsg_rbtn = QRadioButton()
+
+        self.gps_system_cbox = QComboBox()
+        self.gps_datum_cbox = QComboBox()
+        self.gps_zone_cbox = QComboBox()
+        separator_line = SeparatorLine()
+        self.epsg_edit = QLineEdit()
+        self.epsg_edit.setValidator(QIntValidator())
+
+        gps_systems = ['', 'Lat/Lon', 'UTM']
+        for system in gps_systems:
+            self.gps_system_cbox.addItem(system)
+
+        datums = ['', 'WGS 1984', 'NAD 1927', 'NAD 1983']
+        for datum in datums:
+            self.gps_datum_cbox.addItem(datum)
+
+        self.layout().addWidget(self.crs_rbtn, 0, 0, 3, 1)
+        self.layout().addWidget(self.epsg_rbtn, 4, 0, 1, 1)
+
+        self.layout().addWidget(self.gps_system_cbox, 0, 1, 1, 1)
+        self.layout().addWidget(self.gps_datum_cbox, 1, 1, 1, 1)
+        self.layout().addWidget(self.gps_zone_cbox, 2, 1, 1, 1)
+        self.layout().addWidget(separator_line, 3, 0, 1, 2)
+        self.layout().addWidget(self.epsg_edit, 4, 1, 1, 1)
+
+        # Signals
+        self.gps_system_cbox.currentIndexChanged.connect(self.toggle_gps_system)
+        self.gps_system_cbox.currentIndexChanged.connect(self.set_epsg_label)
+        self.gps_datum_cbox.currentIndexChanged.connect(self.toggle_gps_system)
+        self.gps_datum_cbox.currentIndexChanged.connect(self.set_epsg_label)
+        self.gps_zone_cbox.currentIndexChanged.connect(self.set_epsg_label)
+        self.crs_rbtn.clicked.connect(self.toggle_crs_rbtn)
+        self.crs_rbtn.clicked.connect(self.set_epsg_label)
+        self.epsg_rbtn.clicked.connect(self.toggle_crs_rbtn)
+        self.epsg_rbtn.clicked.connect(self.set_epsg_label)
+        self.epsg_edit.editingFinished.connect(self.check_epsg)
+
+        # self.gps_system_cbox.setCurrentIndex(2)
+        # self.gps_datum_cbox.setCurrentIndex(1)
+        # self.gps_zone_cbox.setCurrentIndex(17)
+
+        self.crs_rbtn.click()
+
+    def toggle_gps_system(self):
+        """
+        Toggle the datum and zone combo boxes and change their options based on the selected CRS system.
+        """
+        current_zone = self.gps_zone_cbox.currentText()
+        datum = self.gps_datum_cbox.currentText()
+        system = self.gps_system_cbox.currentText()
+
+        if system == '':
+            self.gps_zone_cbox.setEnabled(False)
+            self.gps_datum_cbox.setEnabled(False)
+
+        elif system == 'Lat/Lon':
+            self.gps_datum_cbox.setCurrentText('WGS 1984')
+            self.gps_zone_cbox.setCurrentText('')
+            self.gps_datum_cbox.setEnabled(False)
+            self.gps_zone_cbox.setEnabled(False)
+
+        elif system == 'UTM':
+            self.gps_datum_cbox.setEnabled(True)
+
+            if datum == '':
+                self.gps_zone_cbox.setEnabled(False)
+                return
+            else:
+                self.gps_zone_cbox.clear()
+                self.gps_zone_cbox.setEnabled(True)
+
+            # NAD 27 and 83 only have zones from 1N to 22N/23N
+            if datum == 'NAD 1927':
+                zones = [''] + [f"{num} North" for num in range(1, 23)] + ['59 North', '60 North']
+            elif datum == 'NAD 1983':
+                zones = [''] + [f"{num} North" for num in range(1, 24)] + ['59 North', '60 North']
+            # WGS 84 has zones from 1N and 1S to 60N and 60S
+            else:
+                zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
+
+            for zone in zones:
+                self.gps_zone_cbox.addItem(zone)
+
+            # Keep the same zone number if possible
+            self.gps_zone_cbox.setCurrentText(current_zone)
+
+    def toggle_crs_rbtn(self):
+        """
+        Toggle the radio buttons for the project CRS box, switching between the CRS drop boxes and the EPSG edit.
+        """
+        if self.crs_rbtn.isChecked():
+            # Enable the CRS drop boxes and disable the EPSG line edit
+            self.gps_system_cbox.setEnabled(True)
+            self.toggle_gps_system()
+
+            self.epsg_edit.setEnabled(False)
+        else:
+            # Disable the CRS drop boxes and enable the EPSG line edit
+            self.gps_system_cbox.setEnabled(False)
+            self.gps_datum_cbox.setEnabled(False)
+            self.gps_zone_cbox.setEnabled(False)
+
+            self.epsg_edit.setEnabled(True)
+
+    def reset(self):
+        self.gps_system_cbox.setCurrentText('')
+        self.gps_zone_cbox.setCurrentText('')
+        self.gps_datum_cbox.setCurrentText('')
+        self.epsg_label.setText("")
+        self.epsg_edit.setText("")
+
+    def check_epsg(self):
+        """
+        Try to convert the EPSG code to a Proj CRS object, reject the input if it doesn't work.
+        """
+        epsg_code = self.epsg_edit.text()
+        self.epsg_edit.blockSignals(True)
+
+        if epsg_code:
+            try:
+                CRS.from_epsg(epsg_code)
+            except Exception as e:
+                logger.error(f"Invalid EPSG code: {epsg_code}.")
+                self.message.critical(self, 'Invalid EPSG Code', f"{epsg_code} is not a valid EPSG code.")
+                self.epsg_edit.setText('')
+            finally:
+                self.set_epsg_label()
+
+        self.epsg_edit.blockSignals(False)
+
+    def to_epsg(self):
+        """
+        Convert and return the EPSG code of the project CRS combo boxes
+        :return: str
+        """
+        system = self.gps_system_cbox.currentText()
+        zone = self.gps_zone_cbox.currentText()
+        datum = self.gps_datum_cbox.currentText()
+
+        if system == '':
+            return None
+
+        elif system == 'Lat/Lon':
+            return '4326'
+
+        else:
+            if not zone or not datum:
+                return None
+
+            s = zone.split()
+            zone_number = int(s[0])
+            north = True if s[1] == 'North' else False
+
+            if datum == 'WGS 1984':
+                if north:
+                    epsg_code = f'326{zone_number:02d}'
+                else:
+                    epsg_code = f'327{zone_number:02d}'
+            elif datum == 'NAD 1927':
+                epsg_code = f'267{zone_number:02d}'
+            elif datum == 'NAD 1983':
+                epsg_code = f'269{zone_number:02d}'
+            else:
+                logger.info(f"CRS string not implemented.")
+                return None
+
+            return epsg_code
+
+    def set_epsg_label(self):
+        """
+        Convert the current project CRS combo box values into the EPSG code and set the status bar label.
+        """
+        epsg_code = self.get_epsg()
+        if epsg_code:
+            crs = CRS.from_epsg(epsg_code)
+            self.epsg_label.setText(f"{crs.name} ({crs.type_name})")
+        else:
+            self.epsg_label.setText('')
+
+    def get_epsg(self):
+        """
+        Return the EPSG code currently selected. Will convert the drop boxes to EPSG code.
+        :return: str, EPSG code
+        """
+        if self.epsg_rbtn.isChecked():
+            epsg_code = self.epsg_edit.text()
+        else:
+            epsg_code = self.to_epsg()
+
+        return epsg_code

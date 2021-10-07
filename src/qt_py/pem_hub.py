@@ -38,7 +38,7 @@ from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, Bor
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, PEMGetter
 from src.pem.pem_plotter import PEMPrinter
 from src.qt_py import (icons_path, get_extension_icon, get_icon, CustomProgressDialog, read_file, light_palette,
-                       dark_palette, get_line_color)
+                       dark_palette, get_line_color, CRSSelector)
 from src.qt_py.db_plot import DBPlotter
 from src.qt_py.derotator import Derotator
 from src.qt_py.gps_tools import GPXCreator, GPSConversionWidget, GPSExtractor
@@ -66,13 +66,14 @@ logger = logging.getLogger(__name__)
 # TODO Add GPS errors to table.
 # TODO Redo GPX parsing to use Geopandas. Might also want to revamp converting GPS.
 # TODO Improve un-rotation
+# TODO Could add std plot to the right of decay plots
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
 
 pg.setConfigOptions(antialias=True)
 pg.setConfigOption('crashWarning', True)
-warnings.filterwarnings("ignore",category=matplotlib.cbook.mplDeprecation)  # Ignore MatplotlibDeprecationWarning
+warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)  # Ignore MatplotlibDeprecationWarning
 
 
 class PEMHub(QMainWindow, Ui_PEMHub):
@@ -90,6 +91,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.setWindowTitle("PEMPro  v" + str(__version__))
             self.setWindowIcon(get_icon('conder.png'))
 
+            self.frame_4.layout().addWidget(self.crs_selector)
             self.table.horizontalHeader().hide()
 
             # Set icons
@@ -360,7 +362,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 :param row: int
                 :param col: int
                 """
-
                 pem_file = self.pem_files[row]
 
                 def accept_change(data):
@@ -444,13 +445,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 else:
                     self.add_gps_btn.setEnabled(False)
                     self.remove_gps_btn.setEnabled(False)
-
-            def open_project_file(item):
-                """
-                Signal slot, open the file that was double clicked in the project tree.
-                :param item: QListWidget item
-                """
-                os.startfile(str(self.get_current_project_path()))
 
             def open_list_file(item):
                 """
@@ -557,6 +551,19 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     token_file.close()
                     self.statusBar().showMessage("Mapbox token updated.", 1500)
 
+            def update_pem_files_crs():
+                """ Update the CRS in all opened PEMFiles """
+                crs = self.get_crs()
+                if crs:
+                    for pem_file in self.pem_files:
+                        pem_file.set_crs(crs)
+
+            # CRS
+            self.gps_system_cbox.currentIndexChanged.connect(update_pem_files_crs)
+            self.gps_datum_cbox.currentIndexChanged.connect(update_pem_files_crs)
+            self.gps_zone_cbox.currentIndexChanged.connect(update_pem_files_crs)
+            self.epsg_edit.editingFinished.connect(update_pem_files_crs)
+
             # Widgets
             self.pem_list_filter.accept_sig.connect(self.fill_pem_list)
             self.gps_list_filter.accept_sig.connect(self.fill_gps_list)
@@ -581,7 +588,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             # Project Tree
             self.project_dir_edit.returnPressed.connect(self.set_project_dir)
             self.project_tree.clicked.connect(self.project_dir_changed)
-            self.project_tree.doubleClicked.connect(open_project_file)
+            self.project_tree.doubleClicked.connect(lambda: os.startfile(str(self.get_current_project_path())))
 
             self.refresh_pem_list_btn.clicked.connect(self.fill_pem_list)
             self.refresh_gps_list_btn.clicked.connect(self.fill_gps_list)
@@ -673,155 +680,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.actionView_Logs.triggered.connect(open_logs)
             self.enable_menus(False)
 
-        def init_crs():
-            """
-            Populate the CRS drop boxes and connect all their signals
-            """
-            if splash_screen:
-                splash_screen.showMessage("Initializing CRS")
-
-            def toggle_gps_system(set_warning=True):
-                """
-                Toggle the datum and zone combo boxes and change their options based on the selected CRS system.
-                """
-                current_zone = self.gps_zone_cbox.currentText()
-                datum = self.gps_datum_cbox.currentText()
-                system = self.gps_system_cbox.currentText()
-
-                if system == '':
-                    self.gps_zone_cbox.setEnabled(False)
-                    self.gps_datum_cbox.setEnabled(False)
-
-                elif system == 'Lat/Lon':
-                    self.gps_datum_cbox.setCurrentText('WGS 1984')
-                    self.gps_zone_cbox.setCurrentText('')
-                    self.gps_datum_cbox.setEnabled(False)
-                    self.gps_zone_cbox.setEnabled(False)
-
-                    if set_warning:
-                        self.message.warning(self, 'Geographic CRS',
-                                             "Some features such as maps don't work with a geographic CRS.")
-
-                elif system == 'UTM':
-                    self.gps_datum_cbox.setEnabled(True)
-
-                    if datum == '':
-                        self.gps_zone_cbox.setEnabled(False)
-                        return
-                    else:
-                        self.gps_zone_cbox.clear()
-                        self.gps_zone_cbox.setEnabled(True)
-
-                    # NAD 27 and 83 only have zones from 1N to 22N/23N
-                    if datum == 'NAD 1927':
-                        zones = [''] + [f"{num} North" for num in range(1, 23)] + ['59 North', '60 North']
-                    elif datum == 'NAD 1983':
-                        zones = [''] + [f"{num} North" for num in range(1, 24)] + ['59 North', '60 North']
-                    # WGS 84 has zones from 1N and 1S to 60N and 60S
-                    else:
-                        zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in
-                                                                                   range(1, 61)]
-
-                    for zone in zones:
-                        self.gps_zone_cbox.addItem(zone)
-
-                    # Keep the same zone number if possible
-                    self.gps_zone_cbox.setCurrentText(current_zone)
-
-            def toggle_crs_rbtn():
-                """
-                Toggle the radio buttons for the project CRS box, switching between the CRS drop boxes and the EPSG edit.
-                """
-                if self.crs_rbtn.isChecked():
-                    # Enable the CRS drop boxes and disable the EPSG line edit
-                    self.gps_system_cbox.setEnabled(True)
-                    toggle_gps_system(set_warning=False)
-
-                    self.epsg_edit.setEnabled(False)
-                else:
-                    # Disable the CRS drop boxes and enable the EPSG line edit
-                    self.gps_system_cbox.setEnabled(False)
-                    self.gps_datum_cbox.setEnabled(False)
-                    self.gps_zone_cbox.setEnabled(False)
-
-                    self.epsg_edit.setEnabled(True)
-
-                update_pem_files_crs()
-
-            def check_epsg():
-                """
-                Try to convert the EPSG code to a Proj CRS object, reject the input if it doesn't work.
-                """
-                epsg_code = self.epsg_edit.text()
-                self.epsg_edit.blockSignals(True)
-
-                if epsg_code:
-                    try:
-                        crs = CRS.from_epsg(epsg_code)
-                    except Exception as e:
-                        logger.critical(f"{epsg_code} is not a valid EPSG code.")
-                        self.message.critical(self, 'Invalid EPSG Code', f"{epsg_code} is not a valid EPSG code.")
-                        self.epsg_edit.setText('')
-                    else:
-                        if crs.is_geographic:
-                            logger.warning(f"Geographics CRS selected.")
-                            self.message.warning(self, 'Geographic CRS',
-                                                 "Some features such as maps don't work with a geographic CRS.")
-                    finally:
-                        set_epsg_label()
-
-                self.epsg_edit.blockSignals(False)
-
-            def set_epsg_label():
-                """
-                Convert the current project CRS combo box values into the EPSG code and set the status bar label.
-                """
-                epsg_code = self.get_epsg()
-                if epsg_code:
-                    crs = CRS.from_epsg(epsg_code)
-                    self.epsg_label.setText(f"Project CRS: {crs.name} - EPSG:{epsg_code} ({crs.type_name})")
-                else:
-                    self.epsg_label.setText('')
-
-            def update_pem_files_crs():
-                """
-                Update the CRS in all opened PEMFiles
-                """
-                crs = self.get_crs()
-                if crs:
-                    for pem_file in self.pem_files:
-                        pem_file.set_crs(crs)
-
-            # Add the GPS system and datum drop box options
-            gps_systems = ['', 'Lat/Lon', 'UTM']
-            for system in gps_systems:
-                self.gps_system_cbox.addItem(system)
-
-            datums = ['', 'WGS 1984', 'NAD 1927', 'NAD 1983']
-            for datum in datums:
-                self.gps_datum_cbox.addItem(datum)
-
-            # Signals
-            # Combo boxes
-            self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
-            self.gps_system_cbox.currentIndexChanged.connect(set_epsg_label)
-            self.gps_system_cbox.currentIndexChanged.connect(update_pem_files_crs)
-            self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_system)
-            self.gps_datum_cbox.currentIndexChanged.connect(set_epsg_label)
-            self.gps_datum_cbox.currentIndexChanged.connect(update_pem_files_crs)
-            self.gps_zone_cbox.currentIndexChanged.connect(set_epsg_label)
-            self.gps_zone_cbox.currentIndexChanged.connect(update_pem_files_crs)
-
-            # Radio buttons
-            self.crs_rbtn.clicked.connect(toggle_crs_rbtn)
-            self.crs_rbtn.clicked.connect(set_epsg_label)
-            self.epsg_rbtn.clicked.connect(toggle_crs_rbtn)
-            self.epsg_rbtn.clicked.connect(set_epsg_label)
-
-            # Line edit
-            self.epsg_edit.editingFinished.connect(check_epsg)
-            self.epsg_edit.editingFinished.connect(update_pem_files_crs)
-
         def init_project_directory():
             if splash_screen:
                 splash_screen.showMessage("Initializing directory")
@@ -895,6 +753,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.error = QErrorMessage()
         self.calender = QCalendarWidget()
         self.calender.setWindowTitle('Select Date')
+        self.crs_selector = CRSSelector(title="Project CRS")
         self.pem_list_filter = PathFilter('PEM', parent=self)
         self.gps_list_filter = PathFilter('GPS', parent=self)
         self.unpacker = Unpacker(parent=self)
@@ -1734,13 +1593,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         :param rows: list: Table rows of the PEM files.
         :return: None
         """
-
-        def reset_crs():
-            self.gps_system_cbox.setCurrentText('')
-            self.gps_zone_cbox.setCurrentText('')
-            self.gps_datum_cbox.setCurrentText('')
-            self.epsg_edit.setText("")
-
         if not rows:
             pem_files, rows = self.get_pem_files(selected=True)
 
@@ -1760,7 +1612,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.client_edit.setText('')
             self.grid_edit.setText('')
             self.loop_edit.setText('')
-            reset_crs()
+            self.crs_selector.reset_crs()
             self.enable_menus(False)
         else:
             # Only color the number columns if there are PEM files left
@@ -2193,7 +2045,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.set_crs(crs)
 
         crs = self.get_crs()
-
         if not crs:
             logger.error(f"No CRS.")
             self.message.critical(self, 'Invalid CRS', 'Project CRS is invalid.')
@@ -2203,6 +2054,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         refs.append(converter)
         converter.open(crs)
         converter.accept_signal.connect(convert_gps)
+        converter.show()
 
     def open_gps_share(self, gps_object, source_widget):
         """

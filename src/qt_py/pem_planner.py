@@ -7,36 +7,35 @@ from pathlib import Path
 
 import geopandas as gpd
 import gpxpy
-import pandas as pd
-import matplotlib.pyplot as plt
 import matplotlib as mpl
+import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 import plotly.graph_objects as go
+import pyqtgraph as pg
 import simplekml
 from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QPointF, QSettings, QSize
-from PySide2.QtGui import QIntValidator, QKeySequence, QTransform, QColor, QCursor
+from PySide2.QtGui import QIntValidator, QKeySequence, QTransform
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QFileDialog, QLabel, QApplication,
-                               QFrame, QHBoxLayout, QLineEdit, QVBoxLayout, QTabWidget, QMenu, QAction,
-                               QHeaderView, QInputDialog, QTableWidgetItem, QGroupBox, QFormLayout, QTableWidget,
-                               QShortcut, QPushButton, QCheckBox, QDoubleSpinBox, QSizePolicy, QRadioButton,
+                               QFrame, QHBoxLayout, QLineEdit, QErrorMessage, QHeaderView, QInputDialog,
+                               QTableWidgetItem, QGroupBox, QFormLayout, QTableWidget,
+                               QShortcut, QPushButton, QCheckBox, QDoubleSpinBox, QRadioButton,
                                QItemDelegate, QSpinBox)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from pandas import DataFrame, read_excel, read_csv, read_table
 from pyproj import CRS
-import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ROI import Handle
 from scipy import spatial
 from shapely.geometry import asMultiPoint
 
 from src import app_data_dir
-from src.qt_py import get_icon, get_line_color, NonScientific, PlanMapAxis
-from src.qt_py.map_widgets import TileMapViewer
-from src.qt_py.pem_geometry import dad_to_seg
 # from src.logger import Log
 from src.gps.gps_editor import BoreholeCollar, BoreholeGeometry
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
+from src.qt_py import get_icon, get_line_color, NonScientific, PlanMapAxis, TableSelector, CRSSelector
+from src.qt_py.map_widgets import TileMapViewer
+from src.qt_py.pem_geometry import dad_to_seg
 from src.ui.grid_planner import Ui_GridPlanner
 from src.ui.loop_planner import Ui_LoopPlanner
 
@@ -55,69 +54,17 @@ class SurveyPlanner(QMainWindow):
         self.setGeometry(200, 200, 1400, 700)
         self.dialog = QFileDialog()
         self.message = QMessageBox()
+        self.error = QErrorMessage()
+        self.error.setWindowTitle("Error")
+        self.crs_selector = CRSSelector(title="Input CRS")
 
         self.save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
         self.copy_shortcut = QShortcut(QKeySequence("Ctrl+C"), self)
         self.save_shortcut.activated.connect(self.save_project)
         self.copy_shortcut.activated.connect(self.copy_img)
 
-        # Status bar
-        self.spacer_label = QLabel()
-        self.epsg_label = QLabel()
-        self.epsg_label.setIndent(5)
-
         # Map viewer
         self.map_viewer = TileMapViewer(parent=self)
-
-    def get_epsg(self):
-        """
-        Return the EPSG code currently selected. Will convert the drop boxes to EPSG code.
-        :return: str, EPSG code
-        """
-        def convert_to_epsg():
-            """
-            Convert and return the EPSG code of the project CRS combo boxes
-            :return: str
-            """
-            system = self.gps_system_cbox.currentText()
-            zone = self.gps_zone_cbox.currentText()
-            datum = self.gps_datum_cbox.currentText()
-
-            if system == '':
-                return None
-
-            elif system == 'Lat/Lon':
-                return '4326'
-
-            else:
-                if not zone or not datum:
-                    return None
-
-                s = zone.split()
-                zone_number = int(s[0])
-                north = True if s[1] == 'North' else False
-
-                if datum == 'WGS 1984':
-                    if north:
-                        epsg_code = f'326{zone_number:02d}'
-                    else:
-                        epsg_code = f'327{zone_number:02d}'
-                elif datum == 'NAD 1927':
-                    epsg_code = f'267{zone_number:02d}'
-                elif datum == 'NAD 1983':
-                    epsg_code = f'269{zone_number:02d}'
-                else:
-                    print(f"CRS string not implemented.")
-                    return None
-
-                return epsg_code
-
-        if self.epsg_rbtn.isChecked():
-            epsg_code = self.epsg_edit.text()
-        else:
-            epsg_code = convert_to_epsg()
-
-        return epsg_code
 
     def save_img(self):
         save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image',
@@ -707,7 +654,7 @@ class LoopWidget(QWidget):
             self.coords_table.cellChanged.connect(self.update_loop_corners)
             self.show_cbox.toggled.connect(toggle_visibility)
             self.remove_btn.clicked.connect(self.remove_sig.emit)
-            self.loop_angle_sbox.valueChanged.connect(self.update_loop_roi)
+            self.loop_angle_sbox.valueChanged.connect(self.update_loop_roi_angle)
 
             self.loop_name_edit.textChanged.connect(self.name_changed_sig.emit)
             self.loop_name_edit.textChanged.connect(lambda: self.loop_name.setText(self.loop_name_edit.text()))
@@ -732,11 +679,12 @@ class LoopWidget(QWidget):
                              c2.y() + h * (math.sin(math.radians(90 - angle))))
                 c4 = QPointF(c3.x() + w * (math.cos(math.radians(180 - angle))),
                              c3.y() - w * (math.sin(math.radians(180 - angle))))
-                corners = [(c1.x(), c1.y()),
-                           (c2.x(), c2.y()),
-                           (c3.x(), c3.y()),
-                           (c4.x(), c4.y()),
-                           ]
+                corners = [
+                    (c1.x(), c1.y()),
+                    (c2.x(), c2.y()),
+                    (c3.x(), c3.y()),
+                    (c4.x(), c4.y()),
+                ]
             else:
                 corners = coords
             
@@ -772,7 +720,10 @@ class LoopWidget(QWidget):
                                  scaleSnap=True,
                                  snapSize=5,
                                  closed=True,
+                                 # angle=int(angle),
                                  pen=pg.mkPen(self.selection_color, width=1.))
+        # self.loop_roi.state["angle"] = angle
+        # self.loop_roi.setAngle(angle, center=self.get_loop_center())
         self.loop_roi.hoverPen = pg.mkPen(self.selection_color, width=2.)
         self.loop_roi.setZValue(15)
         self.update_loop_values()
@@ -877,15 +828,15 @@ class LoopWidget(QWidget):
         """Return a dictionary of loop properties"""
         return {
             'name': self.loop_name_edit.text(),
-            'coordinates': self.get_loop_coords(),
-            # 'center': self.get_loop_center(),
+            'angle': self.get_angle(),
+            'coordinates': self.get_loop_coords()
         }
 
     def plot_loop_name(self):
         center = self.get_loop_center()
         self.loop_name.setPos(center.x(), center.y())
 
-    def update_loop_roi(self):
+    def update_loop_roi_angle(self, old_angle):
         """
         Signal slot, change the loop ROI object based on the user input values.
         """
@@ -907,7 +858,6 @@ class LoopWidget(QWidget):
         Signal slot: Updates the values of the loop angle and table values when the loop ROI is changed, then
         replots the section plot.
         """
-
         def series_to_items(x):
             x = round(x, 0)
             item = QTableWidgetItem()
@@ -1003,12 +953,18 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             self.resize(1500, 800)
             self.status_bar.show()
 
+            self.hole_frame.layout().insertWidget(2, self.crs_selector)
+            self.crs_selector.gps_system_cbox.setCurrentIndex(2)
+            self.crs_selector.gps_datum_cbox.setCurrentIndex(1)
+            self.crs_selector.gps_zone_cbox.setCurrentIndex(17)
+
             # Status bar
-            self.status_bar.addPermanentWidget(self.epsg_label, 0)
+            self.status_bar.addPermanentWidget(self.crs_selector.epsg_label, 0)
             self.plan_view.setMenuEnabled(False)
 
             # Icons
             self.actionOpen_Project.setIcon(get_icon("open.png"))
+            self.actionImport_Holes.setIcon(get_icon("import.png"))
             self.actionSave_Project.setIcon(get_icon("save.png"))
             self.actionSave_As.setIcon(get_icon("save_as.png"))
             self.actionSave_as_KMZ.setIcon(get_icon("google_earth.png"))
@@ -1051,87 +1007,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                         for label in loop.segment_labels:
                             label.hide()
 
-            def toggle_gps_system():
-                """
-                Toggle the datum and zone combo boxes and change their options based on the selected CRS system.
-                """
-                current_zone = self.gps_zone_cbox.currentText()
-                datum = self.gps_datum_cbox.currentText()
-                system = self.gps_system_cbox.currentText()
-
-                if system == '':
-                    self.gps_zone_cbox.setEnabled(False)
-                    self.gps_datum_cbox.setEnabled(False)
-
-                elif system == 'Lat/Lon':
-                    self.gps_datum_cbox.setCurrentText('WGS 1984')
-                    self.gps_zone_cbox.setCurrentText('')
-                    self.gps_datum_cbox.setEnabled(False)
-                    self.gps_zone_cbox.setEnabled(False)
-
-                elif system == 'UTM':
-                    self.gps_datum_cbox.setEnabled(True)
-
-                    if datum == '':
-                        self.gps_zone_cbox.setEnabled(False)
-                        return
-                    else:
-                        self.gps_zone_cbox.clear()
-                        self.gps_zone_cbox.setEnabled(True)
-
-                    # NAD 27 and 83 only have zones from 1N to 22N/23N
-                    if datum == 'NAD 1927':
-                        zones = [''] + [f"{num} North" for num in range(1, 23)] + ['59 North', '60 North']
-                    elif datum == 'NAD 1983':
-                        zones = [''] + [f"{num} North" for num in range(1, 24)] + ['59 North', '60 North']
-                    # WGS 84 has zones from 1N and 1S to 60N and 60S
-                    else:
-                        zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in
-                                                                                   range(1, 61)]
-
-                    for zone in zones:
-                        self.gps_zone_cbox.addItem(zone)
-
-                    # Keep the same zone number if possible
-                    self.gps_zone_cbox.setCurrentText(current_zone)
-
-            def toggle_crs_rbtn():
-                """
-                Toggle the radio buttons for the project CRS box, switching between the CRS drop boxes and the EPSG edit.
-                """
-                if self.crs_rbtn.isChecked():
-                    # Enable the CRS drop boxes and disable the EPSG line edit
-                    self.gps_system_cbox.setEnabled(True)
-                    toggle_gps_system()
-
-                    self.epsg_edit.setEnabled(False)
-                else:
-                    # Disable the CRS drop boxes and enable the EPSG line edit
-                    self.gps_system_cbox.setEnabled(False)
-                    self.gps_datum_cbox.setEnabled(False)
-                    self.gps_zone_cbox.setEnabled(False)
-
-                    self.epsg_edit.setEnabled(True)
-
-            def check_epsg():
-                """
-                Try to convert the EPSG code to a Proj CRS object, reject the input if it doesn't work.
-                """
-                epsg_code = self.epsg_edit.text()
-                self.epsg_edit.blockSignals(True)
-
-                if epsg_code:
-                    try:
-                        crs = CRS.from_epsg(epsg_code)
-                    except Exception as e:
-                        logger.error(f"Invalid EPSG code: {epsg_code}.")
-                        self.message.critical(self, 'Invalid EPSG Code', f"{epsg_code} is not a valid EPSG code.")
-                        self.epsg_edit.setText('')
-                    finally:
-                        set_epsg_label()
-
-                self.epsg_edit.blockSignals(False)
-
             def set_epsg_label():
                 """
                 Convert the current project CRS combo box values into the EPSG code and set the status bar label.
@@ -1148,6 +1023,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
             # Menu
             self.actionOpen_Project.triggered.connect(lambda: self.open_project(filepath=None))
+            self.actionImport_Holes.triggered.connect(self.open_hole_importer)
             self.actionSave_Project.triggered.connect(lambda: self.save_project(save_as=False))
             self.actionSave_As.triggered.connect(lambda: self.save_project(save_as=True))
             self.actionSave_as_KMZ.triggered.connect(self.save_kmz)
@@ -1164,38 +1040,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             # Buttons
             self.add_hole_btn.clicked.connect(self.add_hole)
             self.add_loop_btn.clicked.connect(self.add_loop)
-
-            # CRS
-            self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
-            self.gps_system_cbox.currentIndexChanged.connect(set_epsg_label)
-            self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_system)
-            self.gps_datum_cbox.currentIndexChanged.connect(set_epsg_label)
-            self.gps_zone_cbox.currentIndexChanged.connect(set_epsg_label)
-            self.crs_rbtn.clicked.connect(toggle_crs_rbtn)
-            self.crs_rbtn.clicked.connect(set_epsg_label)
-            self.epsg_rbtn.clicked.connect(toggle_crs_rbtn)
-            self.epsg_rbtn.clicked.connect(set_epsg_label)
-            self.epsg_edit.editingFinished.connect(check_epsg)
-
-        def init_crs():
-            """
-            Populate the CRS drop boxes and connect all their signals
-            """
-            # Add the GPS system and datum drop box options
-            gps_systems = ['', 'Lat/Lon', 'UTM']
-            for system in gps_systems:
-                self.gps_system_cbox.addItem(system)
-
-            datums = ['', 'WGS 1984', 'NAD 1927', 'NAD 1983']
-            for datum in datums:
-                self.gps_datum_cbox.addItem(datum)
-
-            int_valid = QIntValidator()
-            self.epsg_edit.setValidator(int_valid)
-
-            self.gps_system_cbox.setCurrentIndex(2)
-            self.gps_datum_cbox.setCurrentIndex(1)
-            self.gps_zone_cbox.setCurrentIndex(17)
 
         def init_plan_view():
             """
@@ -1243,6 +1087,10 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         super().__init__()
         self.setupUi(self)
         self.parent = parent
+        if parent:
+            self.project_dir = self.parent.project_dir
+        else:
+            self.project_dir = None
         self.darkmode = darkmode
 
         self.background_color = get_line_color("background", "mpl", self.darkmode)
@@ -1267,12 +1115,11 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.section_view_layout.addWidget(self.section_canvas)
 
         self.add_hole('Hole')
-        self.add_loop('Loop')
+        # self.add_loop('Loop')
         self.loop_tab_widget.hide()
 
         init_ui()
         init_signals()
-        init_crs()
         init_plan_view()
         init_section_view()
 
@@ -1311,6 +1158,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         # Project
         settings.setValue("last_opened_project", self.save_name)
+        settings.setValue("project_dir", self.project_dir)
 
         settings.endGroup()
 
@@ -1323,6 +1171,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.move(settings.value("pos", QPoint(100, 50)))
 
         # Project
+        project_file: str
         project_file = settings.value("last_opened_project")
         if project_file:
             if Path(project_file).is_file():
@@ -1330,6 +1179,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                                                  self.message.Yes, self.message.No)
                 if response == self.message.Yes:
                     self.open_project(project_file)
+        self.project_dir = settings.value("project_dir")
 
         settings.endGroup()
 
@@ -1448,12 +1298,13 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             if self.hole_tab_widget.count() == 1:
                 self.select_hole(0)
 
-    def add_loop(self, name=None, coords=None):
+    def add_loop(self, name=None, coords=None, angle=None):
         """
-        Create tab for a new loop
-        :param name: str, name of the loop
+        Create tab for a new loop.
+        :param name: str, name of the loop.
+        :param coords: list, coordinates of each corner.
+        :param angle: str or float, angle of the loop.
         """
-
         def name_changed(widget):
             """
             Rename the tab name when the loop name is changed.
@@ -1491,17 +1342,18 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         if name != '':
             self.loop_tab_widget.show()
 
-            # Copy the information from the currently selected hole widget to be used in the new widget
-            if self.loop_widgets:
-                angle = self.loop_widgets[self.loop_tab_widget.currentIndex()].get_angle()
-            else:
-                angle = 0
+            if angle is None:
+                # Copy the information from the currently selected loop widget to be used in the new widget
+                if self.loop_widgets:
+                    angle = self.loop_widgets[self.loop_tab_widget.currentIndex()].get_angle()
+                else:
+                    angle = 0
 
             if coords is None:
                 # Create the loop widget for the tab
                 coords = [self.plan_view.viewRect().center()]
 
-            loop_widget = LoopWidget(coords, self.plan_view, name=name, angle=int(angle), darkmode=self.darkmode)
+            loop_widget = LoopWidget(coords, self.plan_view, name=name, angle=float(angle), darkmode=self.darkmode)
             self.loop_widgets.append(loop_widget)
 
             # Connect signals
@@ -1720,7 +1572,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
     def get_crs(self):
         try:
-            crs = CRS.from_epsg(self.get_epsg())
+            crs = CRS.from_epsg(self.crs_selector.get_epsg())
         except Exception as e:
             self.message.critical(self, 'Error', f"Error creating CRS: {e}.")
             return
@@ -1842,6 +1694,26 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         self.add_loop(name=file.name, coords=coords)
 
+    def open_hole_importer(self):
+        def open_holes(hole_values):
+            """"
+            Signal slot, create a hole for each value pass
+            :param hole_values: Dataframe, hole information.
+            """
+            for ind, row in hole_values.iterrows():
+                self.add_hole(**row.to_dict())
+
+        filepath, ext = QFileDialog.getOpenFileName(self, "Open File",
+                                                    dir=self.project_dir,
+                                                    filter="Excel Files (*.xlsx);;CSV Files (*.csv")
+        if not filepath:
+            return
+
+        hole_importer = HoleImporter(parent=self, darkmode=self.darkmode)
+        hole_importer.accept_sig.connect(open_holes)
+        hole_importer.open(filepath)
+        hole_importer.show()
+
     def open_project(self, filepath=None):
         """
         Parse a .LFP file and add the holes and loops in the file to the project
@@ -1870,38 +1742,44 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             epsg = re.search("EPSG: (\d+)", file).group(1)
             holes = re.findall(
                 r">> Hole\n(name:.*\neasting:.*\nnorthing:.*\nelevation:.*\nazimuth:.*\ndip:.*\nlength:.*\n)<<", file)
-            loops = re.findall(r">> Loop\n(name:.*\n(?:c.*\n)+)<<", file)
+            loops = re.findall(r">> Loop\n(name:.*\nangle:.*\n(?:c.*\n)+)<<", file)
 
-            self.epsg_edit.setText(epsg)
-            self.epsg_rbtn.click()
+            self.crs_selector.epsg_edit.setText(epsg)
+            self.crs_selector.epsg_rbtn.click()
 
             with pg.ProgressDialog("Opening Project...", 0, len(holes) + len(loops)) as dlg:
-                for hole in holes:
-                    if dlg.wasCanceled():
-                        break
+                dlg.setWindowTitle("Loop Planner")
+                dlg.setWindowIcon(get_icon("loop_planner.png"))
+                try:
+                    for hole in holes:
+                        if dlg.wasCanceled():
+                            break
 
-                    properties = dict()
-                    for line in hole.split():
-                        key, value = line.split(":")
-                        if key != "name":
-                            value = float(value)
-                        properties[key] = value
+                        properties = dict()
+                        for line in hole.split():
+                            key, value = line.split(":")
+                            if key != "name":
+                                value = float(value)
+                            properties[key] = value
 
-                    self.add_hole(**properties)
+                        self.add_hole(**properties)
 
-                    dlg += 1
+                        dlg += 1
 
-                for loop in loops:
-                    if dlg.wasCanceled():
-                        break
+                    for loop in loops:
+                        if dlg.wasCanceled():
+                            break
 
-                    name = re.search("name:(.*)\n", loop).group(1)
-                    coord_str = [re.sub("c\d+:", "", line).split(",") for line in loop.split("\n")[1:-1]]
-                    coords = [QPointF(float(c[0].strip()), float(c[1].strip())) for c in coord_str]
+                        name = re.search(r"name:(.*)\n", loop).group(1)
+                        angle = re.search(r"angle:(.*)\n", loop).group(1)
+                        coord_str = [re.sub(r"c\d+:", "", line).split(",") for line in loop.split("\n")[2:-1]]
+                        coords = [QPointF(float(c[0].strip()), float(c[1].strip())) for c in coord_str]
 
-                    self.add_loop(name=name, coords=coords)
+                        self.add_loop(name=name, coords=coords, angle=angle)
 
-                    dlg += 1
+                        dlg += 1
+                except Exception as e:
+                    self.error.showMessage(str(e))
 
             self.plan_view.autoRange()
 
@@ -3180,221 +3058,229 @@ class RectLoop(pg.RectROI):
         return h
 
 
-class HoleImporter(QWidget):
-    accept_sig = Signal(object)
+# class HoleImporter(QWidget):
+#     accept_sig = Signal(object)
+#
+#     def __init__(self, parent=None):
+#         super().__init__()
+#         self.parent = parent
+#         self.setWindowTitle("Hole Importer")
+#         self.setWindowIcon(get_icon("loop_planner.png"))
+#         self.setLayout(QVBoxLayout())
+#         self.message = QMessageBox()
+#
+#         self.holes = []
+#         self.selection_limit = 3  # Maximum number of selected columns before resetting
+#         self.selection_count = 0
+#         self.selected_ranges = []
+#         self.selection_color = QColor(get_line_color("single_blue", "mpl", True))
+#         self.empty_background = QColor(255, 255, 255, 0)
+#         self.instruction_label = QLabel()
+#
+#         self.tables = []
+#         self.tabs = QTabWidget()
+#         self.layout().addWidget(self.instruction_label)
+#         self.layout().addWidget(self.tabs)
+#
+#         label_frame = QFrame()
+#         label_frame.setLayout(QHBoxLayout())
+#         label_frame.layout().setContentsMargins(3, 3, 3, 3)
+#         label_frame.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
+#         self.selection_labels = [QLabel("Name"),
+#                                  QLabel("Easting"),
+#                                  QLabel("Northing"),
+#                                  QLabel("Azimuth"),
+#                                  QLabel("Dip"),
+#                                  QLabel("Length")]
+#         self.selection_labels[0].setStyleSheet("color: green")
+#         # self.selection_text.setWordWrap(False)
+#         for label in self.selection_labels:
+#             label_frame.layout().addWidget(label)
+#
+#         self.layout().addWidget(label_frame)
+#
+#         self.accept_btn = QPushButton("Accept")
+#         self.reset_btn = QPushButton("Reset")
+#         self.close_btn = QPushButton("Close")
+#         btn_frame = QFrame()
+#         btn_frame.setLayout(QHBoxLayout())
+#         btn_frame.layout().addWidget(self.accept_btn)
+#         btn_frame.layout().addWidget(self.reset_btn)
+#         btn_frame.layout().addWidget(self.close_btn)
+#         self.layout().addWidget(btn_frame)
+#
+#         self.reset_shortcut = QShortcut(QKeySequence("Escape"), self, self.reset)
+#         self.accept_btn.clicked.connect(self.accept)
+#         self.reset_btn.clicked.connect(self.reset)
+#         self.close_btn.clicked.connect(self.close)
+#
+#     # def eventFilter(self, source, event):
+#     #     if event.type() == QEvent.MouseButtonRelease:
+#     #         table = self.tables[self.tabs.currentIndex()]
+#     #         selected_items = table.selectedItems()
+#     #
+#     #         # Remove the 3rd last selected range
+#     #         if len(self.selected_ranges) == 3:
+#     #             for item in self.selected_ranges[0]:
+#     #                 item.setBackground(empty_background)
+#     #             self.selected_ranges.pop(0)
+#     #
+#     #         values = []
+#     #         for item in selected_items:
+#     #             item.setBackground(self.selection_color)
+#     #             values.append(item.text())
+#     #
+#     #         if self.selection_count == 3:
+#     #             self.selection_count = 0
+#     #
+#     #         if self.selection_count == 0:
+#     #             self.depths = values
+#     #         elif self.selection_count == 1:
+#     #             self.azimuths = values
+#     #         else:
+#     #             self.dips = values
+#     #
+#     #         self.selection_text.setText(f"Depth: {self.depths or ''}\nAzimuth: {self.azimuths or ''}\n"
+#     #                                     f"Dip: {self.dips or ''}")
+#     #         self.selection_count += 1
+#     #         self.selected_ranges.append(selected_items)
+#     #
+#     #     # return QObject.eventFilter(source, event)
+#     #     return QWidget.eventFilter(self, source, event)
+#
+#     def reset(self):
+#         for range in self.selected_ranges:
+#             for item in range:
+#                 item.setBackground(QColor(255, 255, 255, 0))
+#
+#         for table in self.tables:
+#             table.clearSelection()
+#
+#         self.holes = []
+#         self.selected_ranges = []
+#         self.selection_count = 0
+#         # self.selection_text.setText("Depth: \nAzimuth: \nDip: ")
+#
+#     def accept(self):
+#         df = pd.DataFrame(self.holes, dtype=float)
+#         if not all([d == float for d in df.dtypes]):
+#             logger.error(f'Data selected are not all numerical values.')
+#             self.message.information(self, 'Error', f'The data selected are not all numerical values.')
+#         else:
+#             self.accept_sig.emit(df)
+#             self.close()
+#
+#     def cell_double_clicked(self, row, col):
+#         """
+#         Signal slot, range-select all cells below the clicked cell. Stops at the first empty cell.
+#         :return: None
+#         """
+#         table = self.tables[self.tabs.currentIndex()]
+#
+#         # Remove the 3rd last selected range
+#         if len(self.selected_ranges) == 6:
+#             for item in self.selected_ranges[0]:
+#                 item.setBackground(self.empty_background)
+#             self.selected_ranges.pop(0)
+#
+#         values = []
+#         selected_range = []
+#         for selected_row in range(row, table.rowCount()):
+#             item = table.item(selected_row, col)
+#             if item is None or not item.text():
+#                 break
+#
+#             item.setBackground(self.selection_color)
+#             selected_range.append(item)
+#             values.append(item.text())
+#
+#         if self.selection_count == 6:
+#             self.selection_count = 0
+#
+#         if self.selection_count == 0:
+#             self.depths = values
+#         elif self.selection_count == 1:
+#             self.azimuths = values
+#         else:
+#             self.dips = values
+#
+#         # self.selection_text.setText(f"Depth: {self.depths or ''}\nAzimuth: {self.azimuths or ''}\n"
+#         #                             f"Dip: {self.dips or ''}")
+#         self.selection_count += 1
+#         self.selected_ranges.append(selected_range)
+#
+#     def table_context_menu(self, event):
+#         """
+#         Right-click context menu for tables, in order to add an empty row to the table.
+#         :param event: QEvent object
+#         :return:None
+#         """
+#         def add_row(y_coord, direction):
+#             table = self.tabs.currentWidget()
+#             row = table.rowAt(y_coord)
+#             if direction == "up":
+#                 print(f"Inserting row at {row}.")
+#                 table.insertRow(row)
+#             else:
+#                 print(f"Inserting row at {row + 1}.")
+#                 table.insertRow(row + 1)
+#
+#         y_coord = event.pos().y()
+#         menu = QMenu(self)
+#         add_row_above_action = QAction('Add Row Above', self)
+#         add_row_above_action.triggered.connect(lambda: add_row(y_coord, direction="up"))
+#         add_row_below_action = QAction('Add Row Below', self)
+#         add_row_below_action.triggered.connect(lambda: add_row(y_coord, direction="down"))
+#         menu.addAction(add_row_above_action)
+#         menu.addAction(add_row_below_action)
+#         menu.popup(QCursor.pos())
+#
+#     def open(self, filepath):
+#         """
+#         :param filepath: str or Path, can be an Excel file, CSV, or txt file.
+#         :return: None
+#         """
+#         filepath = Path(filepath)
+#
+#         if filepath.suffix == '.xlsx' or filepath.suffix == '.xls':
+#             content = pd.read_excel(filepath,
+#                                     header=None,
+#                                     sheet_name=None)
+#
+#             for i, (sheet, info) in enumerate(content.items()):
+#                 table = pg.TableWidget()
+#                 table.setData(info.replace(np.nan, '', regex=True).to_numpy())
+#                 self.tables.append(table)
+#                 self.tabs.addTab(table, str(sheet))
+#         else:
+#             if filepath.suffix == '.txt' or filepath.suffix == '.dad':
+#                 content = pd.read_csv(filepath,
+#                                       delim_whitespace=True,
+#                                       header=None)
+#             else:
+#                 content = pd.read_csv(filepath,
+#                                       header=None)
+#
+#             table = pg.TableWidget()
+#             table.setData(content.replace(np.nan, '', regex=True).to_numpy())
+#             self.tables.append(table)
+#             self.tabs.addTab(table, filepath.name)
+#
+#         for table in self.tables:
+#             table.setStyleSheet(f"selection-background-color: {self.selection_color};")
+#             table.cellDoubleClicked.connect(self.cell_double_clicked)
+#             table.contextMenuEvent = self.table_context_menu
+#             table.setMouseTracking(True)
+#             table.viewport().installEventFilter(self)
+#
+#         self.show()
 
-    def __init__(self, parent=None):
-        super().__init__()
-        self.parent = parent
+
+class HoleImporter(TableSelector):
+    def __init__(self, parent=None, darkmode=False):
+        super().__init__(["name", "easting", "northing", "azimuth", "dip", "length"], parent=parent, darkmode=darkmode)
         self.setWindowTitle("Hole Importer")
-        self.setWindowIcon(get_icon("loop_planner.png"))
-        self.setLayout(QVBoxLayout())
-        self.message = QMessageBox()
-
-        self.holes = []
-        self.selection_count = 0
-        self.selected_ranges = []
-        self.selection_color = QColor(get_line_color("single_blue", "mpl", True))
-        # self.selection_color = QColor('#50C878')
-
-        self.tables = []
-        self.tabs = QTabWidget()
-        self.layout().addWidget(QLabel(
-            "Sequentially double-click the top cell of the Depth, Azimuth, and Dip cell ranges."))
-        self.layout().addWidget(self.tabs)
-
-        label_frame = QFrame()
-        label_frame.setLayout(QHBoxLayout())
-        label_frame.layout().setContentsMargins(3, 3, 3, 3)
-        label_frame.setSizePolicy(QSizePolicy.Maximum, QSizePolicy.Preferred)
-        self.selection_labels = [QLabel("Name"),
-                                 QLabel("Easting"),
-                                 QLabel("Northing"),
-                                 QLabel("Azimuth"),
-                                 QLabel("Dip"),
-                                 QLabel("Length")]
-        self.selection_labels[0].setStyleSheet("color: green")
-        # self.selection_text.setWordWrap(False)
-        for label in self.selection_labels:
-            label_frame.layout().addWidget(label)
-
-        self.layout().addWidget(label_frame)
-
-        self.accept_btn = QPushButton("Accept")
-        self.reset_btn = QPushButton("Reset")
-        self.close_btn = QPushButton("Close")
-        btn_frame = QFrame()
-        btn_frame.setLayout(QHBoxLayout())
-        btn_frame.layout().addWidget(self.accept_btn)
-        btn_frame.layout().addWidget(self.reset_btn)
-        btn_frame.layout().addWidget(self.close_btn)
-        self.layout().addWidget(btn_frame)
-
-        self.reset_shortcut = QShortcut(QKeySequence("Escape"), self, self.reset)
-        self.accept_btn.clicked.connect(self.accept)
-        self.reset_btn.clicked.connect(self.reset)
-        self.close_btn.clicked.connect(self.close)
-
-    # def eventFilter(self, source, event):
-    #     if event.type() == QEvent.MouseButtonRelease:
-    #         table = self.tables[self.tabs.currentIndex()]
-    #         selected_items = table.selectedItems()
-    #
-    #         # Remove the 3rd last selected range
-    #         if len(self.selected_ranges) == 3:
-    #             for item in self.selected_ranges[0]:
-    #                 item.setBackground(empty_background)
-    #             self.selected_ranges.pop(0)
-    #
-    #         values = []
-    #         for item in selected_items:
-    #             item.setBackground(self.selection_color)
-    #             values.append(item.text())
-    #
-    #         if self.selection_count == 3:
-    #             self.selection_count = 0
-    #
-    #         if self.selection_count == 0:
-    #             self.depths = values
-    #         elif self.selection_count == 1:
-    #             self.azimuths = values
-    #         else:
-    #             self.dips = values
-    #
-    #         self.selection_text.setText(f"Depth: {self.depths or ''}\nAzimuth: {self.azimuths or ''}\n"
-    #                                     f"Dip: {self.dips or ''}")
-    #         self.selection_count += 1
-    #         self.selected_ranges.append(selected_items)
-    #
-    #     # return QObject.eventFilter(source, event)
-    #     return QWidget.eventFilter(self, source, event)
-
-    def reset(self):
-        for range in self.selected_ranges:
-            for item in range:
-                item.setBackground(QColor(255, 255, 255, 0))
-
-        for table in self.tables:
-            table.clearSelection()
-
-        self.holes = []
-        self.selected_ranges = []
-        self.selection_count = 0
-        # self.selection_text.setText("Depth: \nAzimuth: \nDip: ")
-
-    def accept(self):
-        df = pd.DataFrame(self.holes, dtype=float)
-        if not all([d == float for d in df.dtypes]):
-            logger.error(f'Data selected are not all numerical values.')
-            self.message.information(self, 'Error', f'The data selected are not all numerical values.')
-        else:
-            self.accept_sig.emit(df)
-            self.close()
-
-    def cell_double_clicked(self, row, col):
-        """
-        Signal slot, range-select all cells below the clicked cell. Stops at the first empty cell.
-        :return: None
-        """
-        table = self.tables[self.tabs.currentIndex()]
-
-        # Remove the 3rd last selected range
-        if len(self.selected_ranges) == 6:
-            for item in self.selected_ranges[0]:
-                item.setBackground(empty_background)
-            self.selected_ranges.pop(0)
-
-        values = []
-        selected_range = []
-        for selected_row in range(row, table.rowCount()):
-            item = table.item(selected_row, col)
-            if item is None or not item.text():
-                break
-
-            item.setBackground(self.selection_color)
-            selected_range.append(item)
-            values.append(item.text())
-
-        if self.selection_count == 6:
-            self.selection_count = 0
-
-        if self.selection_count == 0:
-            self.depths = values
-        elif self.selection_count == 1:
-            self.azimuths = values
-        else:
-            self.dips = values
-
-        # self.selection_text.setText(f"Depth: {self.depths or ''}\nAzimuth: {self.azimuths or ''}\n"
-        #                             f"Dip: {self.dips or ''}")
-        self.selection_count += 1
-        self.selected_ranges.append(selected_range)
-
-    def table_context_menu(self, event):
-        """
-        Right-click context menu for tables, in order to add an empty row to the table.
-        :param event: QEvent object
-        :return:None
-        """
-        def add_row(y_coord, direction):
-            table = self.tabs.currentWidget()
-            row = table.rowAt(y_coord)
-            if direction == "up":
-                print(f"Inserting row at {row}.")
-                table.insertRow(row)
-            else:
-                print(f"Inserting row at {row + 1}.")
-                table.insertRow(row + 1)
-
-        y_coord = event.pos().y()
-        menu = QMenu(self)
-        add_row_above_action = QAction('Add Row Above', self)
-        add_row_above_action.triggered.connect(lambda: add_row(y_coord, direction="up"))
-        add_row_below_action = QAction('Add Row Below', self)
-        add_row_below_action.triggered.connect(lambda: add_row(y_coord, direction="down"))
-        menu.addAction(add_row_above_action)
-        menu.addAction(add_row_below_action)
-        menu.popup(QCursor.pos())
-
-    def open(self, filepath):
-        """
-        :param filepath: str or Path, can be an Excel file, CSV, or txt file.
-        :return: None
-        """
-        filepath = Path(filepath)
-
-        if filepath.suffix == '.xlsx' or filepath.suffix == '.xls':
-            content = pd.read_excel(filepath,
-                                    header=None,
-                                    sheet_name=None)
-
-            for i, (sheet, info) in enumerate(content.items()):
-                table = pg.TableWidget()
-                table.setData(info.replace(np.nan, '', regex=True).to_numpy())
-                self.tables.append(table)
-                self.tabs.addTab(table, str(sheet))
-        else:
-            if filepath.suffix == '.txt' or filepath.suffix == '.dad':
-                content = pd.read_csv(filepath,
-                                      delim_whitespace=True,
-                                      header=None)
-            else:
-                content = pd.read_csv(filepath,
-                                      header=None)
-
-            table = pg.TableWidget()
-            table.setData(content.replace(np.nan, '', regex=True).to_numpy())
-            self.tables.append(table)
-            self.tabs.addTab(table, filepath.name)
-
-        for table in self.tables:
-            table.setStyleSheet(f"selection-background-color: {self.selection_color};")
-            table.cellDoubleClicked.connect(self.cell_double_clicked)
-            table.contextMenuEvent = self.table_context_menu
-            table.setMouseTracking(True)
-            table.viewport().installEventFilter(self)
-
-        self.show()
+        self.instruction_label.setText("Sequentially double-click the top value for the column name highlighted below.")
 
 
 def main():
@@ -3410,13 +3296,16 @@ def main():
     pg.setConfigOption('foreground', "w" if darkmode else (53, 53, 53))
 
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
-    # planner = LoopPlanner(darkmode=darkmode)
+    planner = LoopPlanner(darkmode=darkmode)
     # planner = GridPlanner(darkmode=darkmode)
-    hole_importer = HoleImporter()
+    planner.show()
+    # hole_importer = HoleImporter(darkmode=darkmode)
 
-    hole_data = r"C:\_Data\2021\Eastern\Taylor Brook\_Planning\Taylor Brook DH Plan 27 Sep 2021.xlsx"
-    hole_importer.open(hole_data)
-    hole_importer.show()
+    # hole_data = r"C:\_Data\2021\Eastern\Taylor Brook\_Planning\Taylor Brook DH Plan 27 Sep 2021.xlsx"
+    # planner.open_hole_importer()
+
+    # hole_importer.open(hole_data)
+    # hole_importer.show()
     # hole_data = read_excel(r"C:\_Data\2021\Canadian Palladium\_Planning\Crone_BHEM_Collars.xlsx").dropna()
     # for ind, hole in hole_data.iterrows():
     #     planner.add_hole(name=hole["HOLE-ID"],

@@ -15,7 +15,7 @@ import pyqtgraph as pg
 from pyqtgraph.graphicsItems.ROI import Handle
 import plotly
 import plotly.graph_objects as go
-from PySide2.QtCore import Qt, QTimer, QPointF
+from PySide2.QtCore import Qt, QTimer, QPointF, QRect
 from PySide2.QtGui import QFont
 from PySide2.QtWebEngineWidgets import QWebEngineView
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QAction, QErrorMessage,
@@ -111,10 +111,21 @@ class MapboxViewer(QMainWindow):
                 self.grab().save(save_name)
 
     def copy_img(self):
-        QApplication.clipboard().setPixmap(self.grab())
-        # self.status_bar.show()
+        screenshot_area = self.get_screenshot_area()
+        QApplication.clipboard().setPixmap(self.grab(screenshot_area))
         self.status_bar.showMessage('Image copied to clipboard.', 1000)
-        # QTimer.singleShot(1000, lambda: self.status_bar.hide())
+
+    def get_screenshot_area(self):
+        """
+        Return the QRect that encompasses the main area of the window. i.e. excludes the status bar and menu bar.
+        :return: QRect
+        """
+        menu_height = self.file_menu.rect().size().height()
+        status_bar_height = self.status_bar.rect().size().height()
+        screenshot_area = self.rect()
+        screenshot_area.setHeight(screenshot_area.height() - status_bar_height - menu_height)
+        screenshot_area.moveTop(menu_height)
+        return screenshot_area
 
 
 class TileMapViewer(MapboxViewer):
@@ -298,6 +309,9 @@ class TileMapViewer(MapboxViewer):
 
         # Add the plot HTML to be shown in the plot widget
         self.load_page()
+
+    def save_img(self):
+        pass
 
 
 class Map3DViewer(QMainWindow):
@@ -1358,11 +1372,12 @@ if __name__ == '__main__':
     files = getter.get_pems(folder=r'Final folders\PX20002-W01\Final', file='XY.PEM')
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
-    # m = TileMapViewer()
-    m = GPSViewer(darkmode=darkmode)
+    m = TileMapViewer()
+    # m = GPSViewer(darkmode=darkmode)
     # m = Map3DViewer(darkmode=darkmode)
     m.open(files)
     m.show()
+    # m.save_img()
 
     # cmap = ContourMapViewer(darkmode=darkmode)
     # cmap.show()

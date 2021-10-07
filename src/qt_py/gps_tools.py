@@ -10,11 +10,14 @@ import gpxpy
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import keyboard
 import pyqtgraph as pg
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QColor, QKeySequence, QIntValidator, QCursor
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QWidget, QFileDialog, QVBoxLayout, QLabel, QApplication,
+                               QButtonGroup,
                                QFrame, QHBoxLayout, QHeaderView, QInputDialog, QPushButton, QTabWidget, QAction,
+                               QGridLayout,
                                QTableWidgetItem, QShortcut, QMenu, QSizePolicy, QTableWidget, QErrorMessage, QSplitter)
 from matplotlib import ticker
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -24,8 +27,7 @@ from shapely.geometry import asMultiPoint
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser, read_gpx, read_kmz
 from src.logger import logger
 from src.qt_py import (get_icon, NonScientific, read_file, table_to_df, df_to_table, get_line_color, clear_table,
-                       MapToolbar, set_ax_size)
-from src.ui.gps_conversion import Ui_GPSConversion
+                       MapToolbar, set_ax_size, CRSSelector)
 from src.ui.gpx_creator import Ui_GPXCreator
 from src.ui.line_adder import Ui_LineAdder
 from src.ui.loop_adder import Ui_LoopAdder
@@ -1217,6 +1219,7 @@ class DADSelector(QWidget):
 
         self.selection_text = QLabel("Depth: \nAzimuth: \nDip: ")
         self.selection_text.setWordWrap(False)
+        self.selection_text.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
         self.layout().addWidget(self.selection_text)
 
         self.accept_btn = QPushButton("Accept")
@@ -1367,8 +1370,8 @@ class DADSelector(QWidget):
 
         if filepath.suffix == '.xlsx' or filepath.suffix == '.xls':
             content = pd.read_excel(filepath,
-                                 header=None,
-                                 sheet_name=None)
+                                    header=None,
+                                    sheet_name=None)
 
             for i, (sheet, info) in enumerate(content.items()):
                 table = pg.TableWidget()
@@ -1378,11 +1381,11 @@ class DADSelector(QWidget):
         else:
             if filepath.suffix == '.txt' or filepath.suffix == '.dad':
                 content = pd.read_csv(filepath,
-                                   delim_whitespace=True,
-                                   header=None)
+                                      delim_whitespace=True,
+                                      header=None)
             else:
                 content = pd.read_csv(filepath,
-                                   header=None)
+                                      header=None)
 
             table = pg.TableWidget()
             table.setData(content.replace(np.nan, '', regex=True).to_numpy())
@@ -1399,143 +1402,42 @@ class DADSelector(QWidget):
         self.show()
 
 
-class GPSConversionWidget(QWidget, Ui_GPSConversion):
+class GPSConversionWidget(QWidget):
     accept_signal = Signal(int)
 
     def __init__(self, parent=None):
         """
-        Window for selecting a new CRS (either by drop-down or by EPSG code).
+        Window for selecting a new CRS (either by drop-down or by EPSG code). Only used to retrieve CRS, doesn't do
+        the actual converting.
         """
         super().__init__()
-        self.setupUi(self)
-        self.setWindowIcon(get_icon("gpx_creator.png"))
+        self.setWindowIcon(get_icon("convert_gps.png"))
+        self.setWindowTitle("GPS Conversion")
         self.parent = parent
+        self.resize(300, 200)
         self.message = QMessageBox()
 
-        self.convert_to_label.setText('')
-        self.current_crs_label.setText('')
+        self.crs_selector = CRSSelector("")
+        self.current_crs_label = QLabel()
+        self.convert_to_label = self.crs_selector.epsg_label
+        self.accept_btn = QPushButton("Accept")
+        self.close_btn = QPushButton("Close")
 
-        self.init_signals()
+        button_frame = QFrame()
+        button_frame.setLayout(QHBoxLayout())
+        button_frame.layout().addWidget(self.accept_btn)
+        button_frame.layout().addWidget(self.close_btn)
 
-    def init_signals(self):
-        def toggle_gps_system():
-            """
-            Toggle the datum and zone combo boxes and change their options based on the selected CRS system.
-            """
-            current_zone = self.gps_zone_cbox.currentText()
-            datum = self.gps_datum_cbox.currentText()
-            system = self.gps_system_cbox.currentText()
+        self.setLayout(QGridLayout())
+        self.layout().addWidget(QLabel("Current CRS:"), 0, 0)
+        self.layout().addWidget(self.current_crs_label, 0, 1)
+        self.layout().addWidget(QLabel("Convert to:"), 1, 0)
+        self.layout().addWidget(self.convert_to_label, 1, 1)
+        self.layout().addWidget(self.crs_selector, 2, 0, 1, 2)
+        self.layout().addWidget(button_frame, 3, 0, 1, 2)
 
-            if system == '':
-                self.gps_zone_cbox.setEnabled(False)
-                self.gps_datum_cbox.setEnabled(False)
-
-            elif system == 'Lat/Lon':
-                self.gps_datum_cbox.setCurrentText('WGS 1984')
-                self.gps_zone_cbox.setCurrentText('')
-                self.gps_datum_cbox.setEnabled(False)
-                self.gps_zone_cbox.setEnabled(False)
-
-            elif system == 'UTM':
-                self.gps_datum_cbox.setEnabled(True)
-
-                if datum == '':
-                    self.gps_zone_cbox.setEnabled(False)
-                    return
-                else:
-                    self.gps_zone_cbox.clear()
-                    self.gps_zone_cbox.setEnabled(True)
-
-                # NAD 27 and 83 only have zones from 1N to 22N/23N
-                if datum == 'NAD 1927':
-                    zones = [''] + [f"{num} North" for num in range(1, 23)] + ['59 North', '60 North']
-                elif datum == 'NAD 1983':
-                    zones = [''] + [f"{num} North" for num in range(1, 24)] + ['59 North', '60 North']
-                # WGS 84 has zones from 1N and 1S to 60N and 60S
-                else:
-                    zones = [''] + [f"{num} North" for num in range(1, 61)] + [f"{num} South" for num in range(1, 61)]
-
-                for zone in zones:
-                    self.gps_zone_cbox.addItem(zone)
-
-                # Keep the same zone number if possible
-                self.gps_zone_cbox.setCurrentText(current_zone)
-
-        def toggle_crs_rbtn():
-            """
-            Toggle the radio buttons for the project CRS box, switching between the CRS drop boxes and the EPSG edit.
-            """
-            if self.crs_rbtn.isChecked():
-                # Enable the CRS drop boxes and disable the EPSG line edit
-                self.gps_system_cbox.setEnabled(True)
-                toggle_gps_system()
-
-                self.epsg_edit.setEnabled(False)
-            else:
-                # Disable the CRS drop boxes and enable the EPSG line edit
-                self.gps_system_cbox.setEnabled(False)
-                self.gps_datum_cbox.setEnabled(False)
-                self.gps_zone_cbox.setEnabled(False)
-
-                self.epsg_edit.setEnabled(True)
-
-        def check_epsg():
-            """
-            Try to convert the EPSG code to a Proj CRS object, reject the input if it doesn't work.
-            """
-            epsg_code = self.epsg_edit.text()
-            self.epsg_edit.blockSignals(True)
-
-            if epsg_code:
-                try:
-                    crs = CRS.from_epsg(epsg_code)
-                except Exception as e:
-                    logger.critical(str(e))
-                    self.message.critical(self, 'Invalid EPSG Code', f"{epsg_code} is not a valid EPSG code.")
-                    self.epsg_edit.setText('')
-                finally:
-                    set_epsg_label()
-
-            self.epsg_edit.blockSignals(False)
-
-        def set_epsg_label():
-            """
-            Convert the current project CRS combo box values into the EPSG code and set the status bar label.
-            """
-            epsg_code = self.get_epsg()
-            if epsg_code:
-                crs = CRS.from_epsg(epsg_code)
-                self.convert_to_label.setText(f"{crs.name} ({crs.type_name})")
-            else:
-                self.convert_to_label.setText('')
-
-        # Add the GPS system and datum drop box options
-        gps_systems = ['', 'Lat/Lon', 'UTM']
-        for system in gps_systems:
-            self.gps_system_cbox.addItem(system)
-
-        datums = ['', 'WGS 1984', 'NAD 1927', 'NAD 1983']
-        for datum in datums:
-            self.gps_datum_cbox.addItem(datum)
-
-        int_valid = QIntValidator()
-        self.epsg_edit.setValidator(int_valid)
-
-        self.gps_system_cbox.currentIndexChanged.connect(toggle_gps_system)
-        self.gps_system_cbox.currentIndexChanged.connect(set_epsg_label)
-        self.gps_datum_cbox.currentIndexChanged.connect(toggle_gps_system)
-        self.gps_datum_cbox.currentIndexChanged.connect(set_epsg_label)
-        self.gps_zone_cbox.currentIndexChanged.connect(set_epsg_label)
-
-        self.crs_rbtn.clicked.connect(toggle_crs_rbtn)
-        self.crs_rbtn.clicked.connect(set_epsg_label)
-        self.epsg_rbtn.clicked.connect(toggle_crs_rbtn)
-        self.epsg_rbtn.clicked.connect(set_epsg_label)
-
-        self.epsg_edit.editingFinished.connect(check_epsg)
-
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.close)
+        self.accept_btn.clicked.connect(self.accept)
+        self.close_btn.clicked.connect(self.close)
 
     def closeEvent(self, e):
         self.deleteLater()
@@ -1546,7 +1448,7 @@ class GPSConversionWidget(QWidget, Ui_GPSConversion):
         Signal slot, emit the EPSG code.
         :return: int
         """
-        epsg_code = self.get_epsg()
+        epsg_code = self.crs_selector.get_epsg()
         if epsg_code:
             self.accept_signal.emit(int(epsg_code))
             self.close()
@@ -1556,58 +1458,6 @@ class GPSConversionWidget(QWidget, Ui_GPSConversion):
 
     def open(self, current_crs):
         self.current_crs_label.setText(f"{current_crs.name} ({current_crs.type_name})")
-        self.show()
-
-    def get_epsg(self):
-        """
-        Return the EPSG code currently selected. Will convert the drop boxes to EPSG code.
-        :return: str, EPSG code
-        """
-
-        def convert_to_epsg():
-            """
-            Convert and return the EPSG code of the project CRS combo boxes
-            :return: str
-            """
-            system = self.gps_system_cbox.currentText()
-            zone = self.gps_zone_cbox.currentText()
-            datum = self.gps_datum_cbox.currentText()
-
-            if system == '':
-                return None
-
-            elif system == 'Lat/Lon':
-                return '4326'
-
-            else:
-                if not zone or not datum:
-                    return None
-
-                s = zone.split()
-                zone_number = int(s[0])
-                north = True if s[1] == 'North' else False
-
-                if datum == 'WGS 1984':
-                    if north:
-                        epsg_code = f'326{zone_number:02d}'
-                    else:
-                        epsg_code = f'327{zone_number:02d}'
-                elif datum == 'NAD 1927':
-                    epsg_code = f'267{zone_number:02d}'
-                elif datum == 'NAD 1983':
-                    epsg_code = f'269{zone_number:02d}'
-                else:
-                    logger.error(f"{datum} to EPSG code has not been implemented.")
-                    return None
-
-                return epsg_code
-
-        if self.epsg_rbtn.isChecked():
-            epsg_code = self.epsg_edit.text()
-        else:
-            epsg_code = convert_to_epsg()
-
-        return epsg_code
 
 
 class GPXCreator(QMainWindow, Ui_GPXCreator):
@@ -2187,16 +2037,16 @@ if __name__ == '__main__':
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     """ GPS Extractor """
-    mw = GPSExtractor(darkmode=darkmode)
+    # mw = GPSExtractor(darkmode=darkmode)
     # mw.open_file(samples_folder.joinpath(r"KML Files\BHP Arizona OCLT-1801D.kmz"))
     # mw.open_file(samples_folder.joinpath(r"KML Files\BHP Ocelot 2018.kmz"))
     # mw.open_file(samples_folder.joinpath(r"KML Files\Bonita_Property.kmz"))
-    mw.open_file(samples_folder.joinpath(r"KML Files\Prelim Loops from Michel\LOOP_B06.kmz"))
-    mw.show()
+    # mw.open_file(samples_folder.joinpath(r"KML Files\Prelim Loops from Michel\LOOP_B06.kmz"))
+    # mw.show()
 
     """GPS Conversion"""
-    # mw = GPSConversionWidget()
-    # mw.show()
+    mw = GPSConversionWidget()
+    mw.show()
 
     """GPX Creator"""
     # gpx_creator = GPXCreator()
