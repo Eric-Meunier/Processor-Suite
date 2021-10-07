@@ -15,7 +15,6 @@ import pyqtgraph as pg
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QColor, QKeySequence, QIntValidator, QCursor
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QWidget, QFileDialog, QVBoxLayout, QLabel, QApplication,
-                               QButtonGroup,
                                QFrame, QHBoxLayout, QHeaderView, QInputDialog, QPushButton, QTabWidget, QAction,
                                QGridLayout,
                                QTableWidgetItem, QShortcut, QMenu, QSizePolicy, QTableWidget, QErrorMessage, QSplitter)
@@ -27,7 +26,7 @@ from shapely.geometry import asMultiPoint
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser, read_gpx, read_kmz
 from src.logger import logger
 from src.qt_py import (get_icon, NonScientific, read_file, table_to_df, df_to_table, get_line_color, clear_table,
-                       MapToolbar, set_ax_size, CRSSelector)
+                       MapToolbar, set_ax_size, CRSSelector, CustomProgressDialog)
 from src.ui.gpx_creator import Ui_GPXCreator
 from src.ui.line_adder import Ui_LineAdder
 from src.ui.loop_adder import Ui_LoopAdder
@@ -1413,10 +1412,12 @@ class GPSConversionWidget(QWidget):
         super().__init__()
         self.setWindowIcon(get_icon("convert_gps.png"))
         self.setWindowTitle("GPS Conversion")
-        self.parent = parent
         self.resize(300, 200)
-        self.message = QMessageBox()
 
+        self.parent = parent
+        self.input_crs = None
+
+        self.message = QMessageBox()
         self.crs_selector = CRSSelector("")
         self.current_crs_label = QLabel()
         self.convert_to_label = self.crs_selector.epsg_label
@@ -1456,8 +1457,50 @@ class GPSConversionWidget(QWidget):
             logger.error(f"{epsg_code} is not a valid EPSG code.")
             self.message.information(self, 'Invalid CRS', 'The selected CRS is invalid.')
 
-    def open(self, current_crs):
-        self.current_crs_label.setText(f"{current_crs.name} ({current_crs.type_name})")
+    def convert_gps(self, epsg_code):
+        """
+        Convert the GPS of all GPS objects to the new EPSG code.
+        :param epsg_code: int
+        """
+        logger.info(f"Converting all GPS to EPSG:{epsg_code} ({CRS(epsg_code).name})")
+
+        with CustomProgressDialog("Converting DMP Files...", 0, len(self.pem_files), parent=self) as dlg:
+            # Convert all GPS of each PEMFile
+            for pem_file in self.pem_files:
+                if dlg.wasCanceled():
+                    break
+
+                pem_file.set_crs(self.input_crs)  # Ensure the current CRS is set
+                dlg.setLabelText(f"Converting GPS of {pem_file.filepath.name}")
+                logger.info(f"Converting GPS of {pem_file.filepath.name}")
+
+                if not pem_file.loop.df.empty:
+                    pem_file.loop = pem_file.loop.to_epsg(epsg_code)
+
+                if pem_file.is_borehole():
+                    if not pem_file.collar.df.empty:
+                        pem_file.collar = pem_file.collar.to_epsg(epsg_code)
+
+                else:
+                    if not pem_file.line.df.empty:
+                        pem_file.line = pem_file.line.to_epsg(epsg_code)
+
+                self.refresh_pem(pem_file)
+                dlg += 1
+
+            # Set the EPSG text in the status bar and click the EPSG radio button after conversion is complete,
+            # or else changing the text in the epsg_edit will trigger signals and change the pem_file's CRS.
+            self.epsg_edit.setText(str(epsg_code))
+            self.epsg_edit.editingFinished.emit()
+            self.epsg_rbtn.click()
+
+            self.status_bar.showMessage(f"Process complete. GPS converted to {crs.name}.", 2000)
+
+        self.set_crs(self.input_crs)
+
+    def open(self, input_crs):
+        self.input_crs = input_crs
+        self.current_crs_label.setText(f"{input_crs.name} ({input_crs.type_name})")
 
 
 class GPXCreator(QMainWindow, Ui_GPXCreator):

@@ -33,7 +33,8 @@ from src import app_data_dir
 # from src.logger import Log
 from src.gps.gps_editor import BoreholeCollar, BoreholeGeometry
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
-from src.qt_py import get_icon, get_line_color, NonScientific, PlanMapAxis, TableSelector, CRSSelector
+from src.qt_py import (get_icon, get_line_color, NonScientific, PlanMapAxis, TableSelector, CRSSelector,
+                       CustomProgressDialog)
 from src.qt_py.map_widgets import TileMapViewer
 from src.qt_py.pem_geometry import dad_to_seg
 from src.ui.grid_planner import Ui_GridPlanner
@@ -598,14 +599,9 @@ class LoopWidget(QWidget):
         """
         def init_ui():
             self.setLayout(QFormLayout())
-            
             self.show_cbox.setChecked(True)
-            self.layout().addRow(self.show_cbox)
-            
-            self.loop_angle_sbox.setRange(-360, 360)
-            self.loop_angle_sbox.setValue(int(angle))
+
             self.loop_name_edit.setPlaceholderText('(Optional)')
-            self.layout().addRow('Angle', self.loop_angle_sbox)
 
             self.coords_table.setColumnCount(2)
             self.coords_table.setHorizontalHeaderLabels(["Easting", "Northing"])
@@ -613,13 +609,6 @@ class LoopWidget(QWidget):
             float_delegate = QItemDelegate()
             self.coords_table.setItemDelegateForColumn(0, float_delegate)
             self.coords_table.setItemDelegateForColumn(1, float_delegate)
-            self.layout().addRow(self.coords_table)
-
-            h_line = QFrame()
-            h_line.setFrameShape(QFrame().HLine)
-            h_line.setFrameShadow(QFrame().Sunken)
-            self.layout().addRow(h_line)
-            self.layout().addRow(self.copy_loop_btn)
 
             name_frame = QFrame()
             name_frame.setLayout(QHBoxLayout())
@@ -632,6 +621,11 @@ class LoopWidget(QWidget):
             name_frame.layout().addWidget(QLabel("Name"))
             name_frame.layout().addWidget(self.loop_name_edit)
             name_frame.layout().addWidget(self.remove_btn)
+
+            self.layout().addRow(self.show_cbox)
+            self.layout().addRow(self.coords_table)
+            self.layout().addRow(self.duplicate_btn)
+            self.layout().addRow(self.copy_loop_btn)
             self.layout().addRow(name_frame)
 
         def init_signals():
@@ -654,7 +648,6 @@ class LoopWidget(QWidget):
             self.coords_table.cellChanged.connect(self.update_loop_corners)
             self.show_cbox.toggled.connect(toggle_visibility)
             self.remove_btn.clicked.connect(self.remove_sig.emit)
-            self.loop_angle_sbox.valueChanged.connect(self.update_loop_roi_angle)
 
             self.loop_name_edit.textChanged.connect(self.name_changed_sig.emit)
             self.loop_name_edit.textChanged.connect(lambda: self.loop_name.setText(self.loop_name_edit.text()))
@@ -671,7 +664,6 @@ class LoopWidget(QWidget):
                 # Set the position of the loop by the center (and not the bottom-left corner)
                 h, w = 500, 500
                 pos = QPointF(center.x() - (w / 2), center.y() - (h / 2))  # Adjusted position for the center
-                # angle = 0
 
                 c1 = QPointF(pos)
                 c2 = QPointF(c1.x() + w * (math.cos(math.radians(angle))), c1.y() + w * (math.sin(math.radians(angle))))
@@ -706,9 +698,9 @@ class LoopWidget(QWidget):
 
         # Create all the inner widget items
         self.show_cbox = QCheckBox("Show in plan map")
-        self.loop_angle_sbox = QSpinBox()
         self.loop_name_edit = QLineEdit(name)
         self.coords_table = QTableWidget()
+        self.duplicate_btn = QPushButton(get_icon('share_gps.png'), "Duplicate")
         self.copy_loop_btn = QPushButton(get_icon('copy.png'), "Copy Corners")
         self.loop_name_edit = QLineEdit(name)
         self.remove_btn = QPushButton(get_icon("remove2.png"), "")
@@ -720,10 +712,7 @@ class LoopWidget(QWidget):
                                  scaleSnap=True,
                                  snapSize=5,
                                  closed=True,
-                                 # angle=int(angle),
                                  pen=pg.mkPen(self.selection_color, width=1.))
-        # self.loop_roi.state["angle"] = angle
-        # self.loop_roi.setAngle(angle, center=self.get_loop_center())
         self.loop_roi.hoverPen = pg.mkPen(self.selection_color, width=2.)
         self.loop_roi.setZValue(15)
         self.update_loop_values()
@@ -777,6 +766,9 @@ class LoopWidget(QWidget):
             self.plan_view.removeItem(label)
         self.deleteLater()
 
+    def get_name(self):
+        return self.loop_name_edit.text()
+
     def get_loop_coords(self):
         """
         Return the coordinates of the corners (handles) of the loop.
@@ -821,37 +813,16 @@ class LoopWidget(QWidget):
         center = QPointF(xs.mean(), ys.mean())
         return center
 
-    def get_angle(self):
-        return self.loop_angle_sbox.text()
-
     def get_properties(self):
         """Return a dictionary of loop properties"""
         return {
             'name': self.loop_name_edit.text(),
-            'angle': self.get_angle(),
             'coordinates': self.get_loop_coords()
         }
 
     def plot_loop_name(self):
         center = self.get_loop_center()
         self.loop_name.setPos(center.x(), center.y())
-
-    def update_loop_roi_angle(self, old_angle):
-        """
-        Signal slot, change the loop ROI object based on the user input values.
-        """
-        print(f"updating loop roi")
-        self.loop_roi.blockSignals(True)
-
-        angle = int(self.loop_angle_sbox.text())
-        self.loop_roi.setAngle(angle, center=self.get_loop_center())
-        self.plot_loop_name()
-        self.label_loop_corners()
-
-        self.loop_roi.blockSignals(False)
-
-        # Update the section plot
-        self.plot_hole_sig.emit()
 
     def update_loop_values(self):
         """
@@ -865,7 +836,7 @@ class LoopWidget(QWidget):
             return item
 
         self.coords_table.blockSignals(True)
-        self.loop_angle_sbox.blockSignals(True)
+        # self.loop_angle_sbox.blockSignals(True)
 
         while self.coords_table.rowCount() > 0:
             self.coords_table.removeRow(0)
@@ -882,11 +853,7 @@ class LoopWidget(QWidget):
                 item.setTextAlignment(Qt.AlignCenter)
                 self.coords_table.setItem(row_pos, m, item)
 
-        angle = self.loop_roi.getState().get("angle")
-        self.loop_angle_sbox.setValue(int(angle))
-
         self.coords_table.blockSignals(False)
-        self.loop_angle_sbox.blockSignals(False)
         self.label_loop_corners()
 
     def update_loop_corners(self):
@@ -910,7 +877,6 @@ class LoopWidget(QWidget):
         """
         Label the loop corners and segment lengths
         """
-
         # Remove previous labels
         for label in self.corner_labels:
             self.plan_view.removeItem(label)
@@ -1133,8 +1099,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         if all([file.suffix.lower() == ".tx" for file in urls]):
             for file in urls:
-                # print(f"Opening loop {file.name}")
-                # self.add_loop(file.name)
                 self.open_tx_file(file)
 
     def event(self, e):
@@ -1298,7 +1262,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             if self.hole_tab_widget.count() == 1:
                 self.select_hole(0)
 
-    def add_loop(self, name=None, coords=None, angle=None):
+    def add_loop(self, name=None, coords=None):
         """
         Create tab for a new loop.
         :param name: str, name of the loop.
@@ -1342,18 +1306,11 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         if name != '':
             self.loop_tab_widget.show()
 
-            if angle is None:
-                # Copy the information from the currently selected loop widget to be used in the new widget
-                if self.loop_widgets:
-                    angle = self.loop_widgets[self.loop_tab_widget.currentIndex()].get_angle()
-                else:
-                    angle = 0
-
             if coords is None:
                 # Create the loop widget for the tab
                 coords = [self.plan_view.viewRect().center()]
 
-            loop_widget = LoopWidget(coords, self.plan_view, name=name, angle=float(angle), darkmode=self.darkmode)
+            loop_widget = LoopWidget(coords, self.plan_view, name=name, darkmode=self.darkmode)
             self.loop_widgets.append(loop_widget)
 
             # Connect signals
@@ -1361,6 +1318,8 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             loop_widget.plot_hole_sig.connect(self.plot_hole)
             loop_widget.loop_roi.sigClicked.connect(lambda: loop_clicked(loop_widget))
             loop_widget.loop_roi.sigRegionChangeStarted.connect(lambda: loop_clicked(loop_widget))
+            loop_widget.duplicate_btn.clicked.connect(lambda: self.add_loop(name=loop_widget.get_name() + " (copy)",
+                                                                            coords=loop_widget.get_loop_coords()))
             loop_widget.copy_loop_btn.clicked.connect(lambda: self.copy_loop_coords(loop_widget))
             loop_widget.remove_sig.connect(lambda: remove_loop(loop_widget))
 
@@ -1682,7 +1641,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         """
         if not isinstance(file, Path):
             file = Path(file)
-        print(f"Opening {file.name}.")
+        logger.info(f"Opening {file.name}.")
         content = read_table(file, header=None, delim_whitespace=True)
         if content.empty:
             logger.warning(f"No coordinates found in {file.name}.")
@@ -1747,9 +1706,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             self.crs_selector.epsg_edit.setText(epsg)
             self.crs_selector.epsg_rbtn.click()
 
-            with pg.ProgressDialog("Opening Project...", 0, len(holes) + len(loops)) as dlg:
-                dlg.setWindowTitle("Loop Planner")
-                dlg.setWindowIcon(get_icon("loop_planner.png"))
+            with CustomProgressDialog("Opening Project...", 0, len(holes) + len(loops), parent=self) as dlg:
                 try:
                     for hole in holes:
                         if dlg.wasCanceled():
@@ -1771,11 +1728,11 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                             break
 
                         name = re.search(r"name:(.*)\n", loop).group(1)
-                        angle = re.search(r"angle:(.*)\n", loop).group(1)
+                        # angle = re.search(r"angle:(.*)\n", loop).group(1)
                         coord_str = [re.sub(r"c\d+:", "", line).split(",") for line in loop.split("\n")[2:-1]]
                         coords = [QPointF(float(c[0].strip()), float(c[1].strip())) for c in coord_str]
 
-                        self.add_loop(name=name, coords=coords, angle=angle)
+                        self.add_loop(name=name, coords=coords)
 
                         dlg += 1
                 except Exception as e:
@@ -2832,7 +2789,8 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
 
 class PolyLoop(pg.PolyLineROI):
     """
-    Custom ROI for transmitter loops. Created in order to change the color of the ROI lines when highlighted.
+    Custom ROI for transmitter loops in LoopPlanner.
+    Created in order to change the color of the ROI lines when highlighted.
     """
     sigHandleAdded = Signal(object)
     sigHandleRemoved = Signal(object)
@@ -2844,7 +2802,6 @@ class PolyLoop(pg.PolyLineROI):
     def _makePen(self):
         # Generate the pen color for this ROI based on its current state.
         if self.mouseHovering:
-            # print(f"Mouse hovering")
             return pg.mkPen(self.pen.color(), width=self.pen.width() + 0.5)
         else:
             return self.pen
@@ -3002,7 +2959,8 @@ class PolyLoop(pg.PolyLineROI):
 
 class RectLoop(pg.RectROI):
     """
-    Custom ROI for transmitter loops. Created in order to change the color of the ROI lines when highlighted.
+    Custom ROI for transmitter loops in GridPlanner.
+    Created in order to change the color of the ROI lines when highlighted.
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

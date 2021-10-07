@@ -320,6 +320,11 @@ class CustomProgressDialog(pg.ProgressDialog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.setWindowFlags(Qt.CustomizeWindowHint | Qt.WindowStaysOnTopHint)
+
+        parent = kwargs.get("parent")
+        if parent:
+            self.setWindowTitle(parent.windowTitle())
+            self.setWindowIcon(parent.windowIcon())
         # self.setStyleSheet("background-color: rgb(255, 255, 255);")
 
 
