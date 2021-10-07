@@ -91,7 +91,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.setWindowTitle("PEMPro  v" + str(__version__))
             self.setWindowIcon(get_icon('conder.png'))
 
-            self.frame_4.layout().addWidget(self.crs_selector)
+            self.frame_4.layout().insertWidget(1, self.crs_selector)
             self.table.horizontalHeader().hide()
 
             # Set icons
@@ -559,10 +559,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         pem_file.set_crs(crs)
 
             # CRS
-            self.gps_system_cbox.currentIndexChanged.connect(update_pem_files_crs)
-            self.gps_datum_cbox.currentIndexChanged.connect(update_pem_files_crs)
-            self.gps_zone_cbox.currentIndexChanged.connect(update_pem_files_crs)
-            self.epsg_edit.editingFinished.connect(update_pem_files_crs)
+            self.crs_selector.gps_system_cbox.currentIndexChanged.connect(update_pem_files_crs)
+            self.crs_selector.gps_datum_cbox.currentIndexChanged.connect(update_pem_files_crs)
+            self.crs_selector.gps_zone_cbox.currentIndexChanged.connect(update_pem_files_crs)
+            self.crs_selector.epsg_edit.editingFinished.connect(update_pem_files_crs)
 
             # Widgets
             self.pem_list_filter.accept_sig.connect(self.fill_pem_list)
@@ -725,7 +725,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.addPermanentWidget(self.selection_survey_label, 0)
             self.status_bar.addPermanentWidget(self.selection_derotation_label, 0)
             # self.status_bar.addPermanentWidget(QLabel(), 0)  # Spacer
-            self.status_bar.addPermanentWidget(self.epsg_label, 0)
+            self.status_bar.addPermanentWidget(self.crs_selector.epsg_label, 0)
             self.status_bar.addPermanentWidget(self.dir_frame, 0)
 
         self.app = app
@@ -763,9 +763,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.selection_survey_label = QLabel()
         self.selection_derotation_label = QLabel()
         self.epsg_label = QLabel()
-
         init_ui()
-        init_crs()
 
         # Menus
         self.menu = QMenu(self.table)  # Main right-click menu
@@ -1335,7 +1333,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         dmp_parser = DMPParser()
         pem_files = []
 
-        with CustomProgressDialog("Converting DMP Files...", 0, len(dmp_files)) as dlg:
+        with CustomProgressDialog("Converting DMP Files...", 0, len(dmp_files), parent=self) as dlg:
             for file in dmp_files:
                 if dlg.wasCanceled():
                     break
@@ -1451,7 +1449,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.table.setUpdatesEnabled(False)  # Suspends the animation of the table getting populated
         current_crs = self.get_crs()
 
-        with CustomProgressDialog("Opening PEMs Files...", 0, len(pem_files)) as dlg:
+        with CustomProgressDialog("Opening PEMs Files...", 0, len(pem_files), parent=self) as dlg:
             for pem_file in pem_files:
                 if dlg.wasCanceled():
                     break
@@ -1612,7 +1610,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.client_edit.setText('')
             self.grid_edit.setText('')
             self.loop_edit.setText('')
-            self.crs_selector.reset_crs()
+            self.crs_selector.reset()
             self.enable_menus(False)
         else:
             # Only color the number columns if there are PEM files left
@@ -2002,48 +2000,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         Open the GPS conversion widget.
         """
-        def convert_gps(epsg_code):
-            """
-            Convert the GPS of all GPS objects to the new EPSG code.
-            :param epsg_code: int
-            """
-            logger.info(f"Converting all GPS to EPSG:{epsg_code} ({CRS(epsg_code).name})")
-
-            with CustomProgressDialog("Converting DMP Files...", 0, len(self.pem_files)) as dlg:
-
-                # Convert all GPS of each PEMFile
-                for pem_file in self.pem_files:
-                    if dlg.wasCanceled():
-                        break
-
-                    pem_file.set_crs(crs)  # Ensure the current CRS is set
-                    dlg.setLabelText(f"Converting GPS of {pem_file.filepath.name}")
-                    logger.info(f"Converting GPS of {pem_file.filepath.name}")
-
-                    if not pem_file.loop.df.empty:
-                        pem_file.loop = pem_file.loop.to_epsg(epsg_code)
-
-                    if pem_file.is_borehole():
-                        if not pem_file.collar.df.empty:
-                            pem_file.collar = pem_file.collar.to_epsg(epsg_code)
-
-                    else:
-                        if not pem_file.line.df.empty:
-                            pem_file.line = pem_file.line.to_epsg(epsg_code)
-
-                    self.refresh_pem(pem_file)
-                    dlg += 1
-
-                # Set the EPSG text in the status bar and click the EPSG radio button after conversion is complete,
-                # or else changing the text in the epsg_edit will trigger signals and change the pem_file's CRS.
-                self.epsg_edit.setText(str(epsg_code))
-                self.epsg_edit.editingFinished.emit()
-                self.epsg_rbtn.click()
-
-                self.status_bar.showMessage(f"Process complete. GPS converted to {crs.name}.", 2000)
-
-            self.set_crs(crs)
-
         crs = self.get_crs()
         if not crs:
             logger.error(f"No CRS.")
@@ -2052,8 +2008,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         converter = GPSConversionWidget()
         refs.append(converter)
-        converter.open(crs)
-        converter.accept_signal.connect(convert_gps)
+        converter.open(self.pem_files, crs)
+        converter.accept_signal.connect(self.refresh_pems)
         converter.show()
 
     def open_gps_share(self, gps_object, source_widget):
@@ -2069,7 +2025,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             """
             pem_info_widgets = np.array(piws)[mask]  # Filtered PIWs
 
-            with CustomProgressDialog('Sharing GPS...', 0, len(pem_info_widgets)) as dlg:
+            with CustomProgressDialog('Sharing GPS...', 0, len(pem_info_widgets), parent=self) as dlg:
 
                 # Share each GPS object
                 if gps_object == 'all':
@@ -2600,21 +2556,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.pem_list.addItem(QListWidgetItem(get_extension_icon(file),
                                                       f"{str(file.relative_to(self.project_dir))}"))
 
-    def parse_crs(self, filepath):
-        """
-        Read and extract CRs information from a .inf or .log file output by pathfinder.
-        :param filepath: str
-        :return: dict with crs system, zone, and datum
-        """
-        file = read_file(filepath)
-        crs_dict = dict()
-        crs_dict['System'] = re.search(r'Coordinate System:\W+(?P<System>.*)', file).group(1)
-        crs_dict['Zone'] = re.search(r'Coordinate Zone:\W+(?P<Zone>.*)', file).group(1)
-        crs_dict['Datum'] = re.search(r'Datum:\W+(?P<Datum>.*)', file).group(1).split(' (')[0]
-        logger.info(f"Parsing INF file {Path(filepath).name}:\n"
-                    f"System: {crs_dict['System']}. Zone: {crs_dict['Zone']}. Datum: {crs_dict['Datum']}")
-        return crs_dict
-
     def save_pem_files(self, selected=False):
         """
         Save PEM files.
@@ -2623,7 +2564,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         pem_files, rows = self.get_pem_files(selected=selected)
         crs = self.get_crs()
 
-        with CustomProgressDialog('Saving PEM Files...', 0, len(pem_files)) as dlg:
+        with CustomProgressDialog('Saving PEM Files...', 0, len(pem_files), parent=self) as dlg:
             for pem_file in pem_files:
                 if dlg.wasCanceled():
                     break
@@ -3059,7 +3000,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         export_folder = self.file_dialog.getExistingDirectory(self, 'Select Destination Folder', default_path)
 
         if export_folder:
-            with CustomProgressDialog("Exporting GPS...", 0, len(pem_files)) as dlg:
+            with CustomProgressDialog("Exporting GPS...", 0, len(pem_files), parent=self) as dlg:
                 for loop, pem_files in groupby(pem_files, key=lambda x: x.loop_name):
                     if dlg.wasCanceled():
                         break
@@ -3147,7 +3088,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage('Cancelled.', 2000)
             return
 
-        with CustomProgressDialog("Exporting PEM Files...", 0, len(pem_files)) as dlg:
+        with CustomProgressDialog("Exporting PEM Files...", 0, len(pem_files), parent=self) as dlg:
             for pem_file, row in zip(pem_files, rows):
                 if dlg.wasCanceled():
                     break
@@ -3297,40 +3238,40 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     else:
                         self.table.item(row, date_column).setForeground(default_color)
 
-        def color_changes():
-            """
-            Bolden table cells where the value in the cell is different then what is the PEM file memory.
-            """
-            bold_font, normal_font = QFont(), QFont()
-            bold_font.setBold(True)
-            normal_font.setBold(False)
-
-            # Get the original information in the PEM file
-            row_info = [
-                pem_file.filepath.name,
-                pem_file.date,
-                pem_file.client,
-                pem_file.grid,
-                pem_file.line_name,
-                pem_file.loop_name,
-                pem_file.current,
-                pem_file.coil_area,
-                pem_file.get_stations(converted=True).min(),
-                pem_file.get_stations(converted=True).max(),
-                pem_file.is_averaged(),
-                pem_file.is_split(),
-                str(len(pem_file.get_suffix_warnings())),
-                str(len(pem_file.get_repeats()))
-            ]
-
-            # If the value in the table is different then in the PEM file, make the value bold.
-            for column in range(self.table.columnCount()):
-                if self.table.item(row, column):
-                    original_value = str(row_info[column])
-                    if self.table.item(row, column).text() != original_value:
-                        self.table.item(row, column).setFont(bold_font)
-                    else:
-                        self.table.item(row, column).setFont(normal_font)
+        # def color_changes():
+        #     """
+        #     Bolden table cells where the value in the cell is different then what is the PEM file memory.
+        #     """
+        #     bold_font, normal_font = QFont(), QFont()
+        #     bold_font.setBold(True)
+        #     normal_font.setBold(False)
+        #
+        #     # Get the original information in the PEM file
+        #     row_info = [
+        #         pem_file.filepath.name,
+        #         pem_file.date,
+        #         pem_file.client,
+        #         pem_file.grid,
+        #         pem_file.line_name,
+        #         pem_file.loop_name,
+        #         pem_file.current,
+        #         pem_file.coil_area,
+        #         pem_file.get_stations(converted=True).min(),
+        #         pem_file.get_stations(converted=True).max(),
+        #         pem_file.is_averaged(),
+        #         pem_file.is_split(),
+        #         str(len(pem_file.get_suffix_warnings())),
+        #         str(len(pem_file.get_repeats()))
+        #     ]
+        #
+        #     # If the value in the table is different then in the PEM file, make the value bold.
+        #     for column in range(self.table.columnCount()):
+        #         if self.table.item(row, column):
+        #             original_value = str(row_info[column])
+        #             if self.table.item(row, column).text() != original_value:
+        #                 self.table.item(row, column).setFont(bold_font)
+        #             else:
+        #                 self.table.item(row, column).setFont(normal_font)
 
         self.table.blockSignals(True)
 
@@ -3407,9 +3348,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                 # Color the background based on the value
                 color = QColor(colors[row][0] * 255,
-                                     colors[row][1] * 255,
-                                     colors[row][2] * 255,
-                                     alpha)
+                               colors[row][1] * 255,
+                               colors[row][2] * 255,
+                               alpha)
                 item.setBackground(color)
 
                 count += 1
@@ -3439,9 +3380,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                 # Color the background based on the value
                 color = QColor(colors[row][0] * 255,
-                                     colors[row][1] * 255,
-                                     colors[row][2] * 255,
-                                     alpha)
+                               colors[row][1] * 255,
+                               colors[row][2] * 255,
+                               alpha)
                 item.setBackground(color)
 
                 count += 1
@@ -3450,7 +3391,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             end_col = self.table_columns.index("Last\nStation")
 
             station_ends = np.array([self.table.item(row, end_col).text() for row in range(self.table.rowCount())],
-                                      dtype=float)
+                                    dtype=float)
 
             # Normalize column values for color mapping
             mn, mx, count = station_ends.min(), station_ends.max(), len(station_ends)
@@ -3471,9 +3412,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                 # Color the background based on the value
                 color = QColor(colors[row][0] * 255,
-                                     colors[row][1] * 255,
-                                     colors[row][2] * 255,
-                                     alpha)
+                               colors[row][1] * 255,
+                               colors[row][2] * 255,
+                               alpha)
                 item.setBackground(color)
 
                 count += 1
@@ -3532,6 +3473,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         for row in range(self.table.rowCount()):
             self.format_row(row)
         self.color_table_by_values()
+
+    def refresh_pems(self):
+        for pem_file in self.pem_file:
+            self.refresh_pem(pem_file)
 
     def refresh_pem(self, pem_file):
         """
@@ -3597,135 +3542,52 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         Return the EPSG code currently selected. Will convert the drop boxes to EPSG code.
         :return: str, EPSG code
         """
-
-        def convert_to_epsg():
-            """
-            Convert and return the EPSG code of the project CRS combo boxes
-            :return: str
-            """
-            system = self.gps_system_cbox.currentText()
-            zone = self.gps_zone_cbox.currentText()
-            datum = self.gps_datum_cbox.currentText()
-
-            if system == '':
-                return None
-
-            elif system == 'Lat/Lon':
-                return '4326'
-
-            else:
-                if not zone or not datum:
-                    return None
-
-                s = zone.split()
-                zone_number = int(s[0])
-                north = True if s[1] == 'North' else False
-
-                if datum == 'WGS 1984':
-                    if north:
-                        epsg_code = f'326{zone_number:02d}'
-                    else:
-                        epsg_code = f'327{zone_number:02d}'
-                elif datum == 'NAD 1927':
-                    epsg_code = f'267{zone_number:02d}'
-                elif datum == 'NAD 1983':
-                    epsg_code = f'269{zone_number:02d}'
-                else:
-                    logger.warning(f"CRS string not implemented.")
-                    print(f"CRS string not implemented.")
-                    return None
-
-                return epsg_code
-
-        if self.epsg_rbtn.isChecked():
-            epsg_code = self.epsg_edit.text()
-        else:
-            epsg_code = convert_to_epsg()
-
-        return epsg_code
+        return self.crs_selector.get_epsg()
 
     def get_crs(self):
         """
         Return a CRS object based on the CRS information in the PEM Editor window
         :return: CRS object
         """
-        epsg_code = self.get_epsg()
-        if epsg_code:
-            try:
-                crs = CRS.from_epsg(epsg_code)
-            except Exception as e:
-                logger.error(f"{e}.")
-                self.error.showMessage(f"Invalid EPSG code: {str(e)}")
-            else:
-                logger.debug(f"Project CRS: {crs.name}")
-                return crs
-        else:
-            return None
+        return self.crs_selector.get_crs()
 
     def read_inf_file(self, inf_file):
         """
         Parses a .INF file to extract the CRS information in ti and set the CRS drop-down values.
         :param inf_file: str, .INF filepath
         """
-        crs_dict = self.parse_crs(inf_file)
+        def parse_crs(filepath):
+            """
+            Read and extract CRs information from a .inf or .log file output by pathfinder.
+            :param filepath: str
+            :return: dict with crs system, zone, and datum
+            """
+            file = read_file(filepath)
+            crs_dict = dict()
+            crs_dict['System'] = re.search(r'Coordinate System:\W+(?P<System>.*)', file).group(1)
+            crs_dict['Zone'] = re.search(r'Coordinate Zone:\W+(?P<Zone>.*)', file).group(1)
+            crs_dict['Datum'] = re.search(r'Datum:\W+(?P<Datum>.*)', file).group(1).split(' (')[0]
+            logger.info(f"Parsing INF file {Path(filepath).name}:\n"
+                        f"System: {crs_dict['System']}. Zone: {crs_dict['Zone']}. Datum: {crs_dict['Datum']}")
+            return crs_dict
+
+        crs_dict = parse_crs(inf_file)
         coord_sys = crs_dict.get('System').strip()
         coord_zone = crs_dict.get('Zone').strip()
         datum = crs_dict.get('Datum').strip()
         logger.info(f"Reading INF file {Path(inf_file).name}.\nSystem: {coord_sys}, Datum: {datum}, Zone: {coord_zone}")
-        if all([coord_sys in [self.gps_system_cbox.itemText(i) for i in range(self.gps_system_cbox.count())],
-                # coord_zone in [self.gps_zone_cbox.itemText(i) for i in range(self.gps_zone_cbox.count())],  # Isn't populated until later
-                datum in [self.gps_datum_cbox.itemText(i) for i in range(self.gps_datum_cbox.count())]]):
-            self.gps_system_cbox.setCurrentText(coord_sys)
-            self.gps_datum_cbox.setCurrentText(datum)
-            self.gps_zone_cbox.setCurrentText(coord_zone)
+        if all([coord_sys in [self.crs_selector.gps_system_cbox.itemText(i) for i in range(self.crs_selector.gps_system_cbox.count())],
+                datum in [self.crs_selector.gps_datum_cbox.itemText(i) for i in range(self.crs_selector.gps_datum_cbox.count())]]):
+            self.crs_selector.gps_system_cbox.setCurrentText(coord_sys)
+            self.crs_selector.gps_datum_cbox.setCurrentText(datum)
+            self.crs_selector.gps_zone_cbox.setCurrentText(coord_zone)
 
     def set_crs(self, crs):
         """
         Set the project's CRS
         :param crs: pyproj CRS object
         """
-        if crs:
-            name = crs.name
-            logger.debug(F"Setting project CRS to {name} (EPSG {crs.to_epsg()}).")
-            self.epsg_edit.setText(str(crs.to_epsg()))
-
-            if name == 'WGS 84':
-                datum = 'WGS 1984'
-                system = 'Lat/Lon'
-                zone = None
-
-            elif 'UTM' in name:
-                system = 'UTM'
-                sc = name.split(' / ')
-                datum = re.sub(r'\s+', '', sc[0])  # Remove any spaces
-                if datum == 'WGS84':
-                    datum = 'WGS 1984'
-                elif datum == 'NAD83':
-                    datum = 'NAD 1983'
-                elif datum == 'NAD27':
-                    datum = 'NAD 1927'
-                else:
-                    self.epsg_rbtn.click()
-                    return
-
-                zone = sc[1].split(' ')[-1]
-                zone_number = zone[:-1]
-                north = 'North' if zone[-1] == 'N' else 'South'
-                zone = f'{zone_number} {north}'
-            else:
-                logger.info(f"{name} parsing is not currently implemented.")
-                return
-
-            self.gps_system_cbox.setCurrentText(system)
-            self.gps_datum_cbox.setCurrentText(datum)
-            if zone:
-                self.gps_zone_cbox.setCurrentText(zone)
-
-            if self.epsg_rbtn.isChecked():
-                self.gps_system_cbox.setEnabled(False)
-                self.gps_datum_cbox.setEnabled(False)
-                self.gps_zone_cbox.setEnabled(False)
-
+        self.crs_selector.set_crs(crs)
         self.status_bar.showMessage(f"CRS information changed to {crs.name}.", 2000)
 
     def set_dark_mode(self):
@@ -3781,7 +3643,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(f"No un-averaged PEM files opened.", 2000)
             return
 
-        with CustomProgressDialog('Averaging PEM Files...', 0, len(pem_files)) as dlg:
+        with CustomProgressDialog('Averaging PEM Files...', 0, len(pem_files), parent=self) as dlg:
             for pem_file in pem_files:
                 if dlg.wasCanceled():
                     break
@@ -3829,7 +3691,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(f"No un-split PEM files opened.", 2000)
             return
 
-        with CustomProgressDialog('Splitting PEM Files...', 0, len(filt_list)) as dlg:
+        with CustomProgressDialog('Splitting PEM Files...', 0, len(filt_list), parent=self) as dlg:
             for pem_file in filt_list:
                 if dlg.wasCanceled():
                     break
@@ -3861,12 +3723,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         if not coil_area:
             default = pem_files[0].coil_area
             coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", value=default)
-            # coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", QLineEdit.Normal, default)
-            # coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", default, -1e6, 1e6, 50)
             if not ok_pressed:
                 return
 
-        with CustomProgressDialog('Scaling PEM File Coil Area...', 0, len(pem_files)) as dlg:
+        with CustomProgressDialog('Scaling PEM File Coil Area...', 0, len(pem_files), parent=self) as dlg:
             for pem_file, row in zip(pem_files, rows):
                 if dlg.wasCanceled():
                     break
@@ -3894,7 +3754,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         default = pem_files[0].current
         current, ok_pressed = QInputDialog.getDouble(self, "Scale Current", "Current:", default)
         if ok_pressed:
-            with CustomProgressDialog('Scaling PEM File Current...', 0, len(pem_files)) as dlg:
+            with CustomProgressDialog('Scaling PEM File Current...', 0, len(pem_files), parent=self) as dlg:
                 for pem_file, row in zip(pem_files, rows):
                     dlg.setLabelText(f"Scaling current of {pem_file.filepath.name}")
 
@@ -3916,7 +3776,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        with CustomProgressDialog(f'Mag offsetting to last channel...', 0, len(pem_files)) as dlg:
+        with CustomProgressDialog(f'Mag offsetting to last channel...', 0, len(pem_files), parent=self) as dlg:
             for pem_file, row in zip(pem_files, rows):
                 dlg.setLabelText(f"Mag offsetting data of {pem_file.filepath.name}")
                 pem_file: PEMFile
@@ -3940,7 +3800,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        with CustomProgressDialog(f'Reversing {comp} Component Polarity...', 0, len(pem_files)) as dlg:
+        with CustomProgressDialog(f'Reversing {comp} Component Polarity...', 0, len(pem_files), parent=self) as dlg:
             for pem_file, row in zip(pem_files, rows):
                 dlg.setLabelText(f"Reversing {comp} component data of {pem_file.filepath.name}")
                 pem_file = pem_file.reverse_component(comp)
@@ -3958,7 +3818,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        with CustomProgressDialog('Reversing Station Order...', 0, len(pem_files)) as dlg:
+        with CustomProgressDialog('Reversing Station Order...', 0, len(pem_files), parent=self) as dlg:
             for pem_file, row in zip(pem_files, rows):
                 dlg.setLabelText(f"Reversing station order of {pem_file.filepath.name}")
                 pem_file = pem_file.reverse_station_order()
@@ -5254,7 +5114,8 @@ def main():
     # pem_files = pem_getter.get_pems(folder="Raw Surface", subfolder=r"Loop 4\Final", number=3)
     # pem_files = pem_getter.get_pems(folder='Iscaycruz', subfolder='Loop 1', number=4)
     # pem_files = pem_getter.get_pems(folder="Raw Boreholes\EB-21-68\RAW", number=1)
-    pem_files = pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0823.PEM")
+    # pem_files = pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0823.PEM")
+    pem_files = pem_getter.parse(r"C:\_Data\2021\Managem\Surface\Khwadra\Final\800n.PEM")
     # pem_files.extend(pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0824.PEM"))
     # pem_files.extend(pem_getter.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_getter.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
@@ -5269,8 +5130,8 @@ def main():
 
     # mw.open_3d_map()
     # mw.add_dmp_files(dmp_files)
-    mw.table.selectRow(0)
-    mw.scale_pem_coil_area(selected=True)
+    # mw.table.selectRow(0)
+    # mw.scale_pem_coil_area(selected=True)
     # mw.table.selectAll()
     # mw.open_pem_merger()
     # mw.open_pem_geometry()

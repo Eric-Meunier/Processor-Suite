@@ -58,6 +58,9 @@ class SurveyPlanner(QMainWindow):
         self.error = QErrorMessage()
         self.error.setWindowTitle("Error")
         self.crs_selector = CRSSelector(title="Input CRS")
+        self.crs_selector.gps_system_cbox.setCurrentIndex(2)
+        self.crs_selector.gps_datum_cbox.setCurrentIndex(1)
+        self.crs_selector.gps_zone_cbox.setCurrentIndex(17)
 
         self.save_shortcut = QShortcut(QKeySequence("Ctrl+S"), self)
         self.copy_shortcut = QShortcut(QKeySequence("Ctrl+C"), self)

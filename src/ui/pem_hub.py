@@ -358,101 +358,6 @@ class Ui_PEMHub(object):
 
         self.verticalLayout.addWidget(self.groupBox_6)
 
-        self.project_crs_box = QGroupBox(self.frame_4)
-        self.project_crs_box.setObjectName(u"project_crs_box")
-        sizePolicy2.setHeightForWidth(self.project_crs_box.sizePolicy().hasHeightForWidth())
-        self.project_crs_box.setSizePolicy(sizePolicy2)
-        self.project_crs_box.setMinimumSize(QSize(0, 100))
-        self.project_crs_box.setMaximumSize(QSize(16777215, 16777215))
-        self.project_crs_box.setLayoutDirection(Qt.LeftToRight)
-        self.project_crs_box.setAlignment(Qt.AlignCenter)
-        self.project_crs_box.setFlat(False)
-        self.project_crs_box.setCheckable(False)
-        self.gridLayout = QGridLayout(self.project_crs_box)
-        self.gridLayout.setObjectName(u"gridLayout")
-        self.label_2 = QLabel(self.project_crs_box)
-        self.label_2.setObjectName(u"label_2")
-
-        self.gridLayout.addWidget(self.label_2, 2, 1, 1, 1)
-
-        self.gps_system_cbox = QComboBox(self.project_crs_box)
-        self.gps_system_cbox.setObjectName(u"gps_system_cbox")
-        sizePolicy3.setHeightForWidth(self.gps_system_cbox.sizePolicy().hasHeightForWidth())
-        self.gps_system_cbox.setSizePolicy(sizePolicy3)
-        self.gps_system_cbox.setMinimumSize(QSize(0, 20))
-        self.gps_system_cbox.setMaximumSize(QSize(16777215, 16777215))
-        self.gps_system_cbox.setLayoutDirection(Qt.LeftToRight)
-
-        self.gridLayout.addWidget(self.gps_system_cbox, 1, 2, 1, 1)
-
-        self.gps_zone_cbox = QComboBox(self.project_crs_box)
-        self.gps_zone_cbox.setObjectName(u"gps_zone_cbox")
-        self.gps_zone_cbox.setEnabled(False)
-        sizePolicy3.setHeightForWidth(self.gps_zone_cbox.sizePolicy().hasHeightForWidth())
-        self.gps_zone_cbox.setSizePolicy(sizePolicy3)
-        self.gps_zone_cbox.setMinimumSize(QSize(0, 20))
-        self.gps_zone_cbox.setMaximumSize(QSize(16777215, 16777215))
-        self.gps_zone_cbox.setLayoutDirection(Qt.LeftToRight)
-
-        self.gridLayout.addWidget(self.gps_zone_cbox, 2, 2, 1, 1)
-
-        self.gps_datum_cbox = QComboBox(self.project_crs_box)
-        self.gps_datum_cbox.setObjectName(u"gps_datum_cbox")
-        self.gps_datum_cbox.setEnabled(False)
-        sizePolicy3.setHeightForWidth(self.gps_datum_cbox.sizePolicy().hasHeightForWidth())
-        self.gps_datum_cbox.setSizePolicy(sizePolicy3)
-        self.gps_datum_cbox.setMinimumSize(QSize(0, 20))
-        self.gps_datum_cbox.setMaximumSize(QSize(16777215, 16777215))
-        self.gps_datum_cbox.setLayoutDirection(Qt.LeftToRight)
-
-        self.gridLayout.addWidget(self.gps_datum_cbox, 3, 2, 1, 1)
-
-        self.crs_rbtn = QRadioButton(self.project_crs_box)
-        self.crs_rbtn.setObjectName(u"crs_rbtn")
-        self.crs_rbtn.setChecked(True)
-
-        self.gridLayout.addWidget(self.crs_rbtn, 2, 0, 1, 1)
-
-        self.label_3 = QLabel(self.project_crs_box)
-        self.label_3.setObjectName(u"label_3")
-
-        self.gridLayout.addWidget(self.label_3, 3, 1, 1, 1)
-
-        self.label = QLabel(self.project_crs_box)
-        self.label.setObjectName(u"label")
-        sizePolicy4.setHeightForWidth(self.label.sizePolicy().hasHeightForWidth())
-        self.label.setSizePolicy(sizePolicy4)
-
-        self.gridLayout.addWidget(self.label, 1, 1, 1, 1)
-
-        self.epsg_rbtn = QRadioButton(self.project_crs_box)
-        self.epsg_rbtn.setObjectName(u"epsg_rbtn")
-
-        self.gridLayout.addWidget(self.epsg_rbtn, 5, 0, 1, 1)
-
-        self.epsg_edit = QLineEdit(self.project_crs_box)
-        self.epsg_edit.setObjectName(u"epsg_edit")
-        self.epsg_edit.setEnabled(False)
-
-        self.gridLayout.addWidget(self.epsg_edit, 5, 2, 1, 1)
-
-        self.label_4 = QLabel(self.project_crs_box)
-        self.label_4.setObjectName(u"label_4")
-
-        self.gridLayout.addWidget(self.label_4, 5, 1, 1, 1)
-
-        self.line = QFrame(self.project_crs_box)
-        self.line.setObjectName(u"line")
-        self.line.setFrameShadow(QFrame.Plain)
-        self.line.setLineWidth(1)
-        self.line.setMidLineWidth(0)
-        self.line.setFrameShape(QFrame.HLine)
-
-        self.gridLayout.addWidget(self.line, 4, 0, 1, 3)
-
-
-        self.verticalLayout.addWidget(self.project_crs_box)
-
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
         self.verticalLayout.addItem(self.verticalSpacer)
@@ -858,13 +763,7 @@ class Ui_PEMHub(object):
         QWidget.setTabOrder(self.apply_shared_header_btn, self.share_client_cbox)
         QWidget.setTabOrder(self.share_client_cbox, self.share_grid_cbox)
         QWidget.setTabOrder(self.share_grid_cbox, self.share_loop_cbox)
-        QWidget.setTabOrder(self.share_loop_cbox, self.gps_system_cbox)
-        QWidget.setTabOrder(self.gps_system_cbox, self.gps_zone_cbox)
-        QWidget.setTabOrder(self.gps_zone_cbox, self.gps_datum_cbox)
-        QWidget.setTabOrder(self.gps_datum_cbox, self.crs_rbtn)
-        QWidget.setTabOrder(self.crs_rbtn, self.epsg_edit)
-        QWidget.setTabOrder(self.epsg_edit, self.epsg_rbtn)
-        QWidget.setTabOrder(self.epsg_rbtn, self.frame_4)
+        QWidget.setTabOrder(self.share_loop_cbox, self.frame_4)
         QWidget.setTabOrder(self.frame_4, self.table)
         QWidget.setTabOrder(self.table, self.project_tree)
         QWidget.setTabOrder(self.project_tree, self.remove_pem_btn)
@@ -1372,13 +1271,6 @@ class Ui_PEMHub(object):
         self.share_client_cbox.setText(QCoreApplication.translate("PEMHub", u"Client", None))
         self.share_loop_cbox.setText(QCoreApplication.translate("PEMHub", u"Loop", None))
         self.apply_shared_header_btn.setText(QCoreApplication.translate("PEMHub", u"Apply", None))
-        self.project_crs_box.setTitle(QCoreApplication.translate("PEMHub", u"Project CRS", None))
-        self.label_2.setText(QCoreApplication.translate("PEMHub", u"Zone:", None))
-        self.crs_rbtn.setText("")
-        self.label_3.setText(QCoreApplication.translate("PEMHub", u"Datum:", None))
-        self.label.setText(QCoreApplication.translate("PEMHub", u"System:", None))
-        self.epsg_rbtn.setText("")
-        self.label_4.setText(QCoreApplication.translate("PEMHub", u"EPSG:", None))
         ___qtablewidgetitem = self.table.horizontalHeaderItem(0)
         ___qtablewidgetitem.setText(QCoreApplication.translate("PEMHub", u"File", None));
         ___qtablewidgetitem1 = self.table.horizontalHeaderItem(1)

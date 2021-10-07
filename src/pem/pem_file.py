@@ -1331,6 +1331,21 @@ class PEMFile:
         if self.crs is not None:
             self.notes.append(f"<GEN>/<CRS> {crs.name} (EPSG:{crs.to_epsg()})")
 
+    def convert_crs(self, crs):
+        if crs is not None:
+            logger.log(f"Converting GPS of {self.filepath.name} to {crs.name}.")
+            epsg_code = crs.to_epsg()
+            if not self.loop.df.empty:
+                self.loop = self.loop.to_epsg(epsg_code)
+
+            if self.is_borehole():
+                if not self.collar.df.empty:
+                    self.collar = self.collar.to_epsg(epsg_code)
+
+            else:
+                if not self.line.df.empty:
+                    self.line = self.line.to_epsg(epsg_code)
+
     def to_string(self, legacy=False):
         """
         Return the text format of the PEM file
