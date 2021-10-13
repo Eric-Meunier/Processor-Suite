@@ -74,19 +74,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.line_table_columns = ['Easting', 'Northing', 'Elevation', 'Station']
         self.loop_table_columns = ['Easting', 'Northing', 'Elevation']
 
-        float_delegate = QItemDelegate()  # Must keep this reference or else it is garbage collected
-        self.line_table.setItemDelegateForColumn(0, float_delegate)
-        self.line_table.setItemDelegateForColumn(1, float_delegate)
-        self.line_table.setItemDelegateForColumn(2, float_delegate)
-
-        self.collar_table.setItemDelegateForColumn(0, float_delegate)
-        self.collar_table.setItemDelegateForColumn(1, float_delegate)
-        self.collar_table.setItemDelegateForColumn(2, float_delegate)
-
-        self.loop_table.setItemDelegateForColumn(0, float_delegate)
-        self.loop_table.setItemDelegateForColumn(1, float_delegate)
-        self.loop_table.setItemDelegateForColumn(2, float_delegate)
-
         self.init_actions()
         self.init_signals()
 
@@ -182,14 +169,27 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Adds the columns and formats each table.
         :return: None
         """
+        float_delegate = QItemDelegate()  # Must keep this reference or else it is garbage collected
+        self.loop_table.setItemDelegateForColumn(0, float_delegate)
+        self.loop_table.setItemDelegateForColumn(1, float_delegate)
+        self.loop_table.setItemDelegateForColumn(2, float_delegate)
+
         if not self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.geometry_tab))
             self.line_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+            self.line_table.setItemDelegateForColumn(0, float_delegate)
+            self.line_table.setItemDelegateForColumn(1, float_delegate)
+            self.line_table.setItemDelegateForColumn(2, float_delegate)
 
         elif self.pem_file.is_borehole():
             self.tabs.removeTab(self.tabs.indexOf(self.station_gps_tab))
             self.segments_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
             self.collar_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+
+            self.collar_table.setItemDelegateForColumn(0, float_delegate)
+            self.collar_table.setItemDelegateForColumn(1, float_delegate)
+            self.collar_table.setItemDelegateForColumn(2, float_delegate)
 
         self.loop_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
@@ -604,14 +604,16 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             # Format each item of the table to be centered
             for m, item in enumerate(items):
                 item.setTextAlignment(Qt.AlignCenter)
-                if m == 3:
-                    # Disable editing the Units column
-                    item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+                # if m == 3:
+                #     # Disable editing the Units column
+                #     item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
                 table.setItem(row_pos, m, item)
 
         # data = deepcopy(data)
         if data.empty:
             return
+
+        data.loc[:, ["Easting", "Northing", "Elevation"]] = data.loc[:, ["Easting", "Northing", "Elevation"]].round(2)
 
         # Store vertical scroll bar position to be restored after
         slider_position = table.verticalScrollBar().sliderPosition()
@@ -619,15 +621,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         # data.reset_index(inplace=True)
         clear_table(table)
         table.blockSignals(True)
+        table.verticalHeader().show()
 
         if table == self.loop_table:
             self.edit_loop_btn.setEnabled(True)
-            table.verticalHeader().show()
         elif table == self.line_table:
             self.edit_line_btn.setEnabled(True)
-            table.verticalHeader().show()
-        elif table == self.segments_table:
-            table.verticalHeader().show()
 
         data.apply(lambda x: write_row(x, table), axis=1)
 

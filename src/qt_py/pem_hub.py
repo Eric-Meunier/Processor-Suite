@@ -65,11 +65,9 @@ logger = logging.getLogger(__name__)
 # TODO Log recently opened files.
 # TODO Add GPS errors to table.
 # TODO Redo GPX parsing to use Geopandas. Might also want to revamp converting GPS.
-# TODO Improve un-rotation
+# TODO Improve un-rotation. One-click?
 # TODO Could add std plot to the right of decay plots
 # TODO remember size of splitters in PEMPro
-# TODO Fix opening GPS with missing station values.
-# TODO Merged files aren't being renamed
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []

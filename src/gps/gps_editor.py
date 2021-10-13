@@ -184,13 +184,16 @@ def parse_gps(file, gps_object):
         return gps, units, gps, error_msg
 
     gps.columns = range(gps.shape[1])  # Reset the columns
-    gps.rename(columns=cols, inplace=True) # Add the column names to the two data frames
+    gps.rename(columns=cols, inplace=True)  # Add the column names to the two data frames
     error_gps.rename(columns=cols, inplace=True)
 
     # Remove the NaNs from the good data frame
     gps = gps.dropna(axis=0).drop_duplicates()
+
     gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
     if survey_line:
+        # Replace empty station numbers with 0
+        gps["Station"].replace("None", "0", inplace=True)
         gps['Station'] = gps['Station'].map(convert_station)
 
     return gps, units, error_gps, error_msg
@@ -580,7 +583,6 @@ class SurveyLine(BaseGPS):
         :param file: Union (str filepath, pd.DataFrame, list), raw GPS data
         :return: pd.DataFrame of the GPS.
         """
-
         if isinstance(file, SurveyLine):
             logger.info(f"SurveyLine passed.")
             return file.df, file.units, file.errors, ''
