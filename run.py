@@ -74,6 +74,14 @@ class SplashScreen(QWidget, Ui_SplashScreen):
 app = QApplication(sys.argv)
 app.setStyle("Fusion")
 
+# # Handle high resolution displays:
+# if hasattr(Qt, 'AA_EnableHighDpiScaling'):
+#     print(f"Using High DPI scaling.")
+#     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+# if hasattr(Qt, 'AA_UseHighDpiPixmaps'):
+#     print(f"Using High DPI Pixmaps.")
+#     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
+
 splash = SplashScreen(__version__)
 app.processEvents()
 

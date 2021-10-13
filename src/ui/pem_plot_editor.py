@@ -351,7 +351,7 @@ class Ui_PEMPlotEditor(object):
         self.auto_clean_std_sbox.setObjectName(u"auto_clean_std_sbox")
         self.auto_clean_std_sbox.setDecimals(1)
         self.auto_clean_std_sbox.setMinimum(0.100000000000000)
-        self.auto_clean_std_sbox.setSingleStep(0.100000000000000)
+        self.auto_clean_std_sbox.setSingleStep(1.000000000000000)
 
         self.verticalLayout_12.addWidget(self.auto_clean_std_sbox)
 

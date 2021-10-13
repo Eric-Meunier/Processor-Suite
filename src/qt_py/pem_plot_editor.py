@@ -423,7 +423,10 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Set the units of the decay plots
         self.units = self.pem_file.units
         if self.units == 'pT':
-            self.auto_clean_std_sbox.setValue(20)
+            if "SQUID" in self.pem_file.get_survey_type():
+                self.auto_clean_std_sbox.setValue(7)
+            else:
+                self.auto_clean_std_sbox.setValue(20)
         else:
             if self.pem_file.is_borehole():
                 self.auto_clean_std_sbox.setValue(2)

@@ -322,10 +322,11 @@ class CustomProgressDialog(pg.ProgressDialog):
         super().__init__(*args, **kwargs)
         self.setWindowFlags(Qt.CustomizeWindowHint | Qt.WindowStaysOnTopHint)
 
-        parent = kwargs.get("parent")
-        if parent:
-            self.setWindowTitle(parent.windowTitle())
-            self.setWindowIcon(parent.windowIcon())
+        # parent = kwargs.get("parent")
+        # if parent:
+        #     self.setWindowTitle(parent.windowTitle())
+        #     self.setWindowIcon(parent.windowIcon())
+
         # self.setStyleSheet("background-color: rgb(255, 255, 255);")
 
 
@@ -723,6 +724,7 @@ class CRSSelector(QGroupBox):
         self.gps_datum_cbox.setCurrentText('')
         self.epsg_label.setText("")
         self.epsg_edit.setText("")
+        self.set_crs(None)
 
     def combo_boxes_changed(self):
         self.populate_combo_boxes()

@@ -23,112 +23,6 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
     accept_sig = Signal(str)
 
     def __init__(self, parent=None, darkmode=False):
-        def init_signals():
-
-            def toggle_symbols():
-                self.plot_profiles(self.pf1, components='all')
-                self.plot_profiles(self.pf2, components='all')
-
-            def coil_area_1_changed(coil_area):
-                self.pf1 = self.pf1.scale_coil_area(coil_area)
-                self.plot_profiles(self.pf1, components='all')
-
-            def coil_area_2_changed(coil_area):
-                self.pf2 = self.pf2.scale_coil_area(coil_area)
-                self.plot_profiles(self.pf2, components='all')
-
-            def current_1_changed(current):
-                self.pf1 = self.pf1.scale_current(current)
-                self.plot_profiles(self.pf1, components='all')
-
-            def current_2_changed(current):
-                self.pf2 = self.pf2.scale_current(current)
-                self.plot_profiles(self.pf2, components='all')
-
-            def factor_1_changed(factor):
-                scale_factor = factor - self.last_scale_factor_1
-
-                self.pf1 = self.pf1.scale_by_factor(scale_factor)
-                self.plot_profiles(self.pf1, components='all')
-
-                self.last_scale_factor_1 = factor
-
-            def factor_2_changed(factor):
-                scale_factor = factor - self.last_scale_factor_2
-
-                self.pf2 = self.pf2.scale_by_factor(scale_factor)
-                self.plot_profiles(self.pf2, components='all')
-
-                self.last_scale_factor_2 = factor
-
-            def soa_1_changed(soa):
-                soa_delta = soa - self.last_soa_1
-
-                self.pf1 = self.pf1.rotate(method=None, soa=soa_delta)
-                self.plot_profiles(self.pf1, components='all')
-
-                self.last_soa_1 = soa
-
-            def soa_2_changed(soa):
-                soa_delta = soa - self.last_soa_2
-
-                self.pf2 = self.pf2.rotate(method=None, soa=soa_delta)
-                self.plot_profiles(self.pf2, components='all')
-
-                self.last_soa_2 = soa
-
-            def flip_component(pem_file):
-                ind = self.profile_tab_widget.currentIndex()
-                if ind == 0:
-                    component = 'X'
-                elif ind == 1:
-                    component = 'Y'
-                else:
-                    component = 'Z'
-
-                pem_file.reverse_component(component)
-                self.plot_profiles(pem_file, component)
-
-            def accept_merge():
-                merged_pem = self.get_merged_pem()
-                save_path = Path(self.save_path_edit.text())
-
-                merged_pem.filepath = save_path
-                merged_pem.save()
-                self.status_bar.showMessage(f"File saved.", 1000)
-                self.accept_sig.emit(str(save_path))
-                self.close()
-
-            # Menu
-            self.actionSave_As.triggered.connect(self.save_pem_file)
-            self.actionSave_Screenshot.triggered.connect(self.save_img)
-            self.actionCopy_Screenshot.triggered.connect(self.copy_img)
-
-            self.actionSymbols.triggered.connect(toggle_symbols)
-
-            self.view_x_action.triggered.connect(lambda: self.profile_tab_widget.setCurrentIndex(0))
-            self.view_y_action.triggered.connect(lambda: self.profile_tab_widget.setCurrentIndex(1))
-            self.view_z_action.triggered.connect(lambda: self.profile_tab_widget.setCurrentIndex(2))
-
-            # Spin boxes
-            self.coil_area_sbox_1.valueChanged.connect(coil_area_1_changed)
-            self.coil_area_sbox_2.valueChanged.connect(coil_area_2_changed)
-
-            self.current_sbox_1.valueChanged.connect(current_1_changed)
-            self.current_sbox_2.valueChanged.connect(current_2_changed)
-
-            self.factor_sbox_1.valueChanged.connect(factor_1_changed)
-            self.factor_sbox_2.valueChanged.connect(factor_2_changed)
-
-            self.soa_sbox_1.valueChanged.connect(soa_1_changed)
-            self.soa_sbox_2.valueChanged.connect(soa_2_changed)
-
-            # Buttons
-            self.flip_data_btn_1.clicked.connect(lambda: flip_component(self.pf1))
-            self.flip_data_btn_2.clicked.connect(lambda: flip_component(self.pf2))
-
-            self.accept_btn.clicked.connect(accept_merge)
-
         super().__init__()
         self.parent = parent
         self.setupUi(self)
@@ -228,7 +122,102 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
             ax.getAxis('left').setWidth(60)
             ax.getAxis('left').enableAutoSIPrefix(enable=False)
 
-        init_signals()
+        self.init_signals()
+
+    def init_signals(self):
+        def toggle_symbols():
+            self.plot_profiles(self.pf1, components='all')
+            self.plot_profiles(self.pf2, components='all')
+
+        def coil_area_1_changed(coil_area):
+            self.pf1 = self.pf1.scale_coil_area(coil_area)
+            self.plot_profiles(self.pf1, components='all')
+
+        def coil_area_2_changed(coil_area):
+            self.pf2 = self.pf2.scale_coil_area(coil_area)
+            self.plot_profiles(self.pf2, components='all')
+
+        def current_1_changed(current):
+            self.pf1 = self.pf1.scale_current(current)
+            self.plot_profiles(self.pf1, components='all')
+
+        def current_2_changed(current):
+            self.pf2 = self.pf2.scale_current(current)
+            self.plot_profiles(self.pf2, components='all')
+
+        def factor_1_changed(factor):
+            scale_factor = factor - self.last_scale_factor_1
+
+            self.pf1 = self.pf1.scale_by_factor(scale_factor)
+            self.plot_profiles(self.pf1, components='all')
+
+            self.last_scale_factor_1 = factor
+
+        def factor_2_changed(factor):
+            scale_factor = factor - self.last_scale_factor_2
+
+            self.pf2 = self.pf2.scale_by_factor(scale_factor)
+            self.plot_profiles(self.pf2, components='all')
+
+            self.last_scale_factor_2 = factor
+
+        def soa_1_changed(soa):
+            soa_delta = soa - self.last_soa_1
+
+            self.pf1 = self.pf1.rotate(method=None, soa=soa_delta)
+            self.plot_profiles(self.pf1, components='all')
+
+            self.last_soa_1 = soa
+
+        def soa_2_changed(soa):
+            soa_delta = soa - self.last_soa_2
+
+            self.pf2 = self.pf2.rotate(method=None, soa=soa_delta)
+            self.plot_profiles(self.pf2, components='all')
+
+            self.last_soa_2 = soa
+
+        def flip_component(pem_file):
+            ind = self.profile_tab_widget.currentIndex()
+            if ind == 0:
+                component = 'X'
+            elif ind == 1:
+                component = 'Y'
+            else:
+                component = 'Z'
+
+            pem_file.reverse_component(component)
+            self.plot_profiles(pem_file, component)
+
+        # Menu
+        self.actionSave_As.triggered.connect(self.save_pem_file)
+        self.actionSave_Screenshot.triggered.connect(self.save_img)
+        self.actionCopy_Screenshot.triggered.connect(self.copy_img)
+
+        self.actionSymbols.triggered.connect(toggle_symbols)
+
+        self.view_x_action.triggered.connect(lambda: self.profile_tab_widget.setCurrentIndex(0))
+        self.view_y_action.triggered.connect(lambda: self.profile_tab_widget.setCurrentIndex(1))
+        self.view_z_action.triggered.connect(lambda: self.profile_tab_widget.setCurrentIndex(2))
+
+        # Spin boxes
+        self.coil_area_sbox_1.valueChanged.connect(coil_area_1_changed)
+        self.coil_area_sbox_2.valueChanged.connect(coil_area_2_changed)
+
+        self.current_sbox_1.valueChanged.connect(current_1_changed)
+        self.current_sbox_2.valueChanged.connect(current_2_changed)
+
+        self.factor_sbox_1.valueChanged.connect(factor_1_changed)
+        self.factor_sbox_2.valueChanged.connect(factor_2_changed)
+
+        self.soa_sbox_1.valueChanged.connect(soa_1_changed)
+        self.soa_sbox_2.valueChanged.connect(soa_2_changed)
+
+        # Buttons
+        self.flip_data_btn_1.clicked.connect(lambda: flip_component(self.pf1))
+        self.flip_data_btn_2.clicked.connect(lambda: flip_component(self.pf2))
+
+        self.accept_btn.clicked.connect(self.accept_merge)
 
     def keyPressEvent(self, event):
         # Delete a decay when the delete key is pressed
@@ -245,6 +234,16 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
     def reset_range(self):
         for ax in self.profile_axes:
             ax.autoRange()
+
+    def accept_merge(self):
+        merged_pem = self.get_merged_pem()
+        save_path = Path(self.save_path_edit.text())
+
+        merged_pem.filepath = save_path
+        merged_pem.save()
+        self.status_bar.showMessage(f"File saved.", 1000)
+        self.accept_sig.emit(str(save_path))
+        self.close()
 
     def open(self, pem_files):
         """
