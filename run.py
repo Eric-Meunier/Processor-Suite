@@ -32,7 +32,7 @@ def handle_exception(exc_type, exc_value, exc_traceback):
     error_box.setWindowTitle('Error')
     error_box.showMessage(open(app_data_dir.joinpath(r'logs.txt'), "w+").read())
 
-    # sys.exit(1)
+    sys.exit(1)
 
 
 sys.excepthook = handle_exception

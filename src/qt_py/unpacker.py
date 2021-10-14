@@ -452,10 +452,13 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         make_move('Geometry', self.geometry_table)
         make_move('Other', self.other_table)
 
-        # Create a "Final" folder
+        # Create a "Final" folder and "GPS" folder
         final_folder = self.get_current_path().parent.joinpath('Final')
         if not final_folder.is_dir():
             final_folder.mkdir(parents=True)
+        gps_folder = self.get_current_path().parent.joinpath('GPS')
+        if not gps_folder.is_dir():
+            gps_folder.mkdir(parents=True)
 
         # Delete the input folder
         if self.input_path.resolve() != new_folder.resolve() and delete_old_folder is True:

@@ -613,7 +613,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if data.empty:
             return
 
-        data.loc[:, ["Easting", "Northing", "Elevation"]] = data.loc[:, ["Easting", "Northing", "Elevation"]].round(2)
+        if table in [self.line_table, self.loop_table, self.collar_table]:
+            data.loc[:, ["Easting", "Northing", "Elevation"]] = data.loc[:, ["Easting", "Northing", "Elevation"]].round(2)
 
         # Store vertical scroll bar position to be restored after
         slider_position = table.verticalScrollBar().sliderPosition()
@@ -1034,9 +1035,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         :return: BoreholeCollar object
         """
         gps = []
-        global get_collar_called
-        get_collar_called += 1
-        print(f"Get collar called: {get_collar_called}")
         for row in range(self.collar_table.rowCount()):
             gps_row = list()
             for col in range(self.collar_table.columnCount()):

@@ -43,6 +43,7 @@ def parse_file(filepath):
 
     return pem_file
 
+
 def sort_data(data):
     # Sort the data frame
     df = data.reindex(index=natsort.order_by_index(
@@ -125,6 +126,7 @@ class PEMFile:
     """
     PEM file class
     """
+
     def __init__(self):
         self.format = None
         self.units = None
@@ -631,7 +633,8 @@ class PEMFile:
         :return: DataFrame
         :param average: Bool, return the average per each station
         """
-        assert all([self.has_xy(), self.is_borehole()]), f"Can only get dip data from borehole surveys with XY components."
+        assert all(
+            [self.has_xy(), self.is_borehole()]), f"Can only get dip data from borehole surveys with XY components."
 
         df = self.data.drop_duplicates(subset="RAD_ID").loc[:, ["Station", "RAD_tool"]]
         df.Station = df.Station.astype(float)
@@ -918,7 +921,7 @@ class PEMFile:
             survey_type = 'Borehole Fluxgate'
 
         elif any(['s-squid' in file_survey_type,
-                'sf_squid_3c' in file_survey_type]):
+                  'sf_squid_3c' in file_survey_type]):
             survey_type = 'SQUID'
 
         else:
@@ -990,7 +993,7 @@ class PEMFile:
         """
         def filter_data(group):
             """
-            Flag the readings to be removed if the group doesn't have a X and Y pair.
+            Flag the readings to be removed if the group doesn't have an X and Y pair.
             :param group: DataFrame, readings of the same station and same RAD tool ID
             :return: DataFrame
             """
@@ -1014,7 +1017,7 @@ class PEMFile:
 
         eligible_data = xy_data[~xy_data.Remove.astype(bool)].drop(['Remove'], axis=1)
         ineligible_stations = xy_data[xy_data.Remove].drop(['Remove'], axis=1)
-        logger.info(f"Data ineligible for de-rotation: "
+        logger.info(f"Data ineligible for de-rotation:\n"
                     f"{ineligible_stations.loc[:, ['Station', 'Reading_number', 'Reading_index']]}")
         return eligible_data, ineligible_stations
 
@@ -1023,45 +1026,47 @@ class PEMFile:
         Copies the information of the PEMFile to the clipboard for the purposes of filling out the geophysicssheet.
         """
         stations = self.get_stations(converted=True)
-        info = [self.operator,                                              # Operator
-                self.date,                                                  # Date
-                self.client,                                                # Client
-                '',                                                         # Helpers
-                '',                                                         # Type of day
-                '',                                                         # Per diem
-                '',                                                         # Total hours worked
-                self.grid,                                                  # Grid
-                self.loop_name,                                             # Loop name
-                self.line_name,                                             # Line/Hole name
-                stations.min(),                                             # Start
-                stations.max(),                                             # End
-                '',                                                         # Complete?
-                self.get_survey_type(),                                     # Survey type
-                '',                                                         # Start time on drill
-                '',                                                         # Time leaving drill
+        info = [self.operator,  # Operator
+                self.date,  # Date
+                self.client,  # Client
+                '',  # Helpers
+                '',  # Type of day
+                '',  # Per diem
+                '',  # Total hours worked
+                self.grid,  # Grid
+                self.loop_name,  # Loop name
+                self.line_name,  # Line/Hole name
+                stations.min(),  # Start
+                stations.max(),  # End
+                '',  # Complete?
+                self.get_survey_type(),  # Survey type
+                '',  # Start time on drill
+                '',  # Time leaving drill
                 ', '.join(self.data.ZTS.astype(int).astype(str).unique()),  # ZTS
-                self.timebase,                                              # Timebase
-                '',                                                         # Channel config.
-                self.ramp,                                                  # Ramp
-                self.current,                                               # Current
-                '',                                                         # Damping box setting
-                '',                                                         # Tx config.
-                self.rx_number,                                             # Receiver
-                '',                                                         # Clock
-                self.probes["XY probe number"] if self.is_z() else '',      # Z probe
-                self.probes["XY probe number"] if self.is_xy() else '',     # XY probe
-                self.probes["Tool number"] if self.is_xy() else '',         # RAD tool
-                '',                                                         # RAD battery pack
+                self.timebase,  # Timebase
+                '',  # Channel config.
+                self.ramp,  # Ramp
+                self.current,  # Current
+                '',  # Damping box setting
+                '',  # Tx config.
+                self.rx_number,  # Receiver
+                '',  # Clock
+                self.probes["XY probe number"] if self.is_z() else '',  # Z probe
+                self.probes["XY probe number"] if self.is_xy() else '',  # XY probe
+                self.probes["Tool number"] if self.is_xy() else '',  # RAD tool
+                '',  # RAD battery pack
                 self.probes["XY probe number"] if self.is_fluxgate() and self.is_borehole() else '',  # Fluxgate probe
-                '',                                                         # Fluxgate battery pack
-                '',                                                         # Borehole cable
-                self.probes["XY probe number"] if not self.is_borehole() and not self.is_fluxgate() else '',  # Surface coil
-                self.probes["XY probe number"] if not self.is_borehole() and self.is_fluxgate() else '',  # Surface fluxgate
+                '',  # Fluxgate battery pack
+                '',  # Borehole cable
+                self.probes["XY probe number"] if not self.is_borehole() and not self.is_fluxgate() else '',
+                # Surface coil
+                self.probes["XY probe number"] if not self.is_borehole() and self.is_fluxgate() else '',
+                # Surface fluxgate
                 self.probes["XY probe number"] if "squid" in self.survey_type.lower() else '',
-                '',                                                         # Slip ring
-                '',                                                         # Transmitter
-                '',                                                         # VRs
-                '',                                                         # Damping boxes
+                '',  # Slip ring
+                '',  # Transmitter
+                '',  # VRs
+                '',  # Damping boxes
                 ]
 
         return info
@@ -1385,6 +1390,7 @@ class PEMFile:
         Create a str in XYZ format of the pem file's data
         :return: str
         """
+
         def get_station_gps(row):
             """
             Add the GPS information for each station
@@ -1835,7 +1841,8 @@ class PEMFile:
 
             if len(x_rows) == len(y_rows):
                 # print(f"Length of X and Y are the same, using indexed pairing.")
-                for i, (x_data, y_data) in enumerate(zip(x_rows.itertuples(index=False), y_rows.itertuples(index=False))):
+                for i, (x_data, y_data) in enumerate(
+                        zip(x_rows.itertuples(index=False), y_rows.itertuples(index=False))):
                     x = [x * math.cos(roll) - y * math.sin(roll) for (x, y) in zip(x_data.Reading, y_data.Reading)]
                     y = [x * math.sin(roll) + y * math.cos(roll) for (x, y) in zip(x_data.Reading, y_data.Reading)]
                     rotated_x.append(np.array(x))
@@ -1868,7 +1875,7 @@ class PEMFile:
 
         # Create a filter for X and Y data only
         xy_filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
-        xy_data = self.data[xy_filt]  # Data should have already been filtered by prep_rotation.
+        xy_data = self.data[xy_filt]
 
         if xy_data.empty:
             raise Exception(f"{self.filepath.name} has no eligible XY data for de-rotation.")
@@ -1878,7 +1885,8 @@ class PEMFile:
                                        group_keys=False,
                                        as_index=False).apply(lambda l: rotate_group(l, method, soa))
 
-        self.data[xy_filt] = rotated_data
+        self.data.update(rotated_data)  # Fixes KeyError "... value not in index"
+
         print(list(self.data[xy_filt].groupby(["Station", "RAD_ID"]))[0][1])
         # Remove the rows that were filtered out in filtered_data
         if method == "unrotate":
@@ -1910,7 +1918,6 @@ class PEMFile:
         Prepare the PEM file for probe de-rotation by updating the RAD tool objects with all calculations needed for
         any eligible de-rotation method.
         :return: tuple, updated PEMFile object and data frame of ineligible stations.
-        :param allow_negative_angles: Bool, allow PP roll angles to be negative.
         """
         assert self.is_borehole(), f"{self.filepath.name} is not a borehole file."
         logger.info(f"Preparing for XY de-rotation for {self.filepath.name}.")
@@ -1977,11 +1984,13 @@ class PEMFile:
             reading from X and Y components, and the RAD tool values for all readings must all be the same.
             :return: pandas DataFrame: group with the RAD_tool objects updated and ready for rotation.
             """
+
             def calculate_angles(rad):
                 """
                 Calculate the roll angle for each available method and add it to the RAD tool object.
                 :param rad: RADTool object
                 """
+
                 def calculate_pp_angles():
                     def get_cleaned_pp(row):
                         """
@@ -2177,7 +2186,7 @@ class PEMFile:
                                              as_index=False).apply(lambda l: prepare_rad(l))
 
         xy_filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
-        self.data[xy_filt] = prepped_data
+        self.data[xy_filt] = prepped_data  # Using .update doesn't work here, because prepped_data is a copy().
         # Remove the rows that were filtered out in filtered_data
         self.data.dropna(subset=['Station'], inplace=True)
         self.prepped_for_rotation = True
@@ -2279,7 +2288,6 @@ class PEMParser:
             :param text: str, raw header string from the PEM file
             :return: dictionary of the header items
             """
-
             assert text, f'Error parsing the tags. No matches were found in {self.filepath.name}.'
 
             text = text.strip().split('\n')
@@ -2578,6 +2586,7 @@ class DMPParser:
         :param filepath: str, filepath of the .DMP file
         :return: PEMFile object
         """
+
         def parse_header(text, old_dmp=False):
             """
             Create the header dictionary that is found in PEM files from the contents of the .DMP file.
@@ -2641,6 +2650,7 @@ class DMPParser:
             :param units: str, 'nT/s' or 'pT'
             :return: DataFrame
             """
+
             def channel_table(channel_times, units, ramp):
                 """
                 Channel times table data frame with channel start, end, center, width, and whether the channel is
@@ -2650,6 +2660,7 @@ class DMPParser:
                 :param ramp: float, used for fluxgate survey's on-time channel selection.
                 :return: pandas DataFrame
                 """
+
                 def find_last_off_time():
                     """
                     Find where the next channel width is less than half the previous channel width, which indicates
@@ -2705,7 +2716,7 @@ class DMPParser:
                 global ind_of_0  # global index since the 0 value must be inserted into the decays
                 ind_of_0 = list(times[:, 0]).index(1)
                 # Add the gap channel
-                times = np.insert(times, ind_of_0, [0., times[ind_of_0-1][2], 0.], axis=0)
+                times = np.insert(times, ind_of_0, [0., times[ind_of_0 - 1][2], 0.], axis=0)
 
             # Remove the channel number column
             times = np.delete(times, 0, axis=1)
@@ -2736,6 +2747,7 @@ class DMPParser:
             :param header: dict, the parsed header section of the .DMP file
             :return: DataFrame
             """
+
             def format_data(reading):
                 """
                 Format the data row so it is ready to be added to the data frame
@@ -2876,12 +2888,14 @@ class DMPParser:
         :param filepath: str, filepath of the .DMP2 file
         :return: PEMFile object
         """
+
         def parse_channel_times(units, ramp):
             """
             Convert the channel table in the .DMP file to a PEM channel times table DataFrame
             :param units: str, 'nT/s' or 'pT'
             :return: DataFrame
             """
+
             def channel_table(channel_times):
                 """
                 Channel times table data frame with channel start, end, center, width, and whether the channel is
@@ -2889,6 +2903,7 @@ class DMPParser:
                 :param channel_times: pandas Series, float of each channel time read from a PEM file header.
                 :return: pandas DataFrame
                 """
+
                 def find_last_off_time():
                     """
                     Find where the next channel width is less than half the previous channel width, which indicates
@@ -2941,7 +2956,8 @@ class DMPParser:
             header_content = header_content.split('\n')
             # Remove blank lines
             [header_content.remove(h) for h in reversed(header_content) if h == '']
-            ind, val = [h.split(':')[0].strip() for h in header_content], [h.split(':')[1].strip() for h in header_content]
+            ind, val = [h.split(':')[0].strip() for h in header_content], [h.split(':')[1].strip() for h in
+                                                                           header_content]
 
             # Create a Series object
             s = pd.Series(val, index=ind)
@@ -2952,7 +2968,8 @@ class DMPParser:
             # Create the header dictionary
             header = dict()
             header['Format'] = '210'
-            header['Units'] = 'pT' if 'flux' in s['Survey_Type'].lower() or 'squid' in s['Survey_Type'].lower() else 'nT/s'
+            header['Units'] = 'pT' if 'flux' in s['Survey_Type'].lower() or 'squid' in s[
+                'Survey_Type'].lower() else 'nT/s'
             header['Operator'] = s['Operator_Name'].title()
             header['Probes'] = {'XY probe number': s['Sensor_Number'],
                                 'SOA': '0',
@@ -3188,6 +3205,7 @@ class PEMSerializer:
     """
     Class for serializing PEM files to be saved
     """
+
     def __init__(self):
         self.pem_file = None
 
@@ -3340,7 +3358,7 @@ class PEMSerializer:
         channel_times = [f'{time:9.6f}' for time in times]
 
         for i in range(0, len(channel_times), times_per_line):
-            line_times = channel_times[i:i+times_per_line]
+            line_times = channel_times[i:i + times_per_line]
             result += ' '.join([str(time) for time in line_times]) + '\n'
             cnt += 1
 
@@ -3353,6 +3371,7 @@ class PEMSerializer:
         :param legacy: bool, will remove the timestamp and deleted status if True.
         :return: string
         """
+
         def serialize_reading(reading):
             reading_header = [reading['Station'],
                               reading['Component'] + 'R' + f"{reading['Reading_index']:g}",
@@ -3384,7 +3403,7 @@ class PEMSerializer:
 
             for i in range(0, len(channel_readings), readings_per_line):
                 readings = channel_readings[i:i + readings_per_line]
-                result += ' '.join([str(r) + max(0, reading_spacing - len(r))*' ' for r in readings]) + '\n'
+                result += ' '.join([str(r) + max(0, reading_spacing - len(r)) * ' ' for r in readings]) + '\n'
                 count += 1
 
             return result + '\n'
@@ -3424,6 +3443,7 @@ class RADTool:
     """
     Class that represents the RAD Tool reading in a PEM survey
     """
+
     def __init__(self):
         self.D = None
         self.Hx = None
@@ -3627,7 +3647,8 @@ class RADTool:
 
         g = math.sqrt(sum([self.gx ** 2, self.gy ** 2, self.gz ** 2]))
         numer = ((self.Hz * self.gy) - (self.Hy * self.gz)) * g
-        denumer = self.Hx * (self.gy ** 2 + self.gz ** 2) - (self.Hy * self.gx * self.gy) - (self.Hz * self.gx * self.gz)
+        denumer = self.Hx * (self.gy ** 2 + self.gz ** 2) - (self.Hy * self.gx * self.gy) - (
+                    self.Hz * self.gx * self.gz)
 
         azimuth = math.degrees(math.atan2(numer, denumer))
         if not allow_negative:
@@ -3828,10 +3849,11 @@ class PEMGetter:
     """
     Class to get a list of PEM files from a testing directory. Used for testing.
     """
+
     def __init__(self):
         self.pem_parser = PEMParser()
 
-    def get_pems(self, folder=None, number=None, selection=None,  file=None, random=False,
+    def get_pems(self, folder=None, number=None, selection=None, file=None, random=False,
                  incl=None):
         """
         Retrieve a list of PEMFiles
@@ -3843,6 +3865,7 @@ class PEMGetter:
         :param incl: str, text to include in the file name.
         :return: list of PEMFile objects.
         """
+
         def add_pem(filepath):
             """
             Parse and add the PEMFile to the list of pem_files.
@@ -3923,13 +3946,14 @@ class PEMGetter:
 if __name__ == '__main__':
     import time
     import timeit
+
     sample_folder = Path(__file__).parents[2].joinpath("sample_files")
 
     pg = PEMGetter()
 
     # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
     # file = r"C:\_Data\2021\TMC\Laurentia\STE-21-50-W3\RAW\ste-21-50w3xy_0819.dmp2"
-    pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-264-21\RAW\xy-0210_1002.dmp2")
+    pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0261-21\RAW\xy1310_1013.dmp2")
     # pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-264-21\RAW\xy_1002.PEM")
     # file = r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW\l35eb2_0.PEM817.dmp2"
     # pem_file, errors = dmpparser.parse(file)
@@ -3956,7 +3980,7 @@ if __name__ == '__main__':
     pem_file, _ = pem_file.prep_rotation()
     # pem_file.mag_offset()
     pem_file = pem_file.rotate(method='acc', soa=10)
-    pem_file = pem_file.rotate(method='unrotate', soa=10)
+    # pem_file = pem_file.rotate(method='unrotate', soa=10)
     # pem_file = pem_file.rotate(method="pp", soa=1)
     # rotated_pem = prep_pem.rotate('pp')
 
