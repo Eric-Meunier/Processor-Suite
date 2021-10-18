@@ -183,70 +183,6 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
     accepted_sig = Signal(object)
 
     def __init__(self, parent=None, darkmode=False):
-        def format_plots():
-            self.figure.subplots_adjust(left=0.07, bottom=0.08, right=0.94, top=0.92)
-
-            self.az_ax.set_zorder(1)
-            self.mag_ax.set_zorder(1)
-            self.dip_ax.set_zorder(0)
-            self.roll_ax.set_zorder(0)
-
-            self.az_ax.set_xlabel('Azimuth (°)', color=self.azimuth_color)
-            self.dip_ax.set_xlabel('Dip (°)', color=self.dip_color)
-            self.mag_ax.set_xlabel('Magnetic Field Strength (nT)', color=self.mag_color)
-            self.roll_ax.set_xlabel('Roll Angle (°)', color=self.foreground_color)
-
-            tkw = dict(size=4, width=1.5)
-            self.az_ax.tick_params(axis='x', colors=self.azimuth_color, **tkw)
-            self.dip_ax.tick_params(axis='x', colors=self.dip_color, **tkw)
-            self.dip_ax.tick_params(axis='y', which='major', right=True, direction='out')
-            self.mag_ax.tick_params(axis='x', colors=self.mag_color, **tkw)
-            self.roll_ax.yaxis.set_label_position('right')
-            self.roll_ax.yaxis.set_ticks_position('right')
-
-            self.polar_figure.subplots_adjust(left=0.03, bottom=0.08, right=0.82, top=0.92)
-            self.polar_ax.set_theta_zero_location("N")
-            self.polar_ax.set_theta_direction(-1)
-            self.polar_ax.set_rlabel_position(0)
-            self.polar_ax.grid(linestyle='dashed', linewidth=0.5)
-            self.polar_ax.grid(True, linestyle='-', linewidth=1, which='minor')
-            self.polar_ax.set_xticks(np.pi / 180. * np.linspace(0, 360, 24, endpoint=False))
-
-        def init_signals():
-            self.actionOpen_Geometry_File.triggered.connect(self.open_file_dialog)
-            self.actionOpen_Geometry_File.setIcon(get_icon("open.png"))
-            self.actionAllow_Negative_Azimuth.triggered.connect(lambda: self.plot_tool_values(update=True))
-
-            self.actionSave_Screenshot.setShortcut("Ctrl+S")
-            self.actionSave_Screenshot.triggered.connect(self.save_img)
-            self.actionSave_Screenshot.setIcon(get_icon("save_as.png"))
-            self.actionCopy_Screenshot.setShortcut("Ctrl+C")
-            self.actionCopy_Screenshot.triggered.connect(self.copy_img)
-            self.actionCopy_Screenshot.setIcon(get_icon("copy.png"))
-
-            self.reset_range_shortcut = QShortcut(QKeySequence(' '), self)
-            self.reset_range_shortcut.activated.connect(self.update_plots)
-
-            self.mag_dec_sbox.valueChanged.connect(self.redraw_az_line)
-            self.collar_az_sbox.valueChanged.connect(self.redraw_collar_az_line)
-            self.collar_dip_sbox.valueChanged.connect(self.redraw_collar_dip_line)
-
-            self.az_spline_cbox.toggled.connect(self.toggle_az_spline)
-            self.dip_spline_cbox.toggled.connect(self.toggle_dip_spline)
-            self.show_tool_geom_cbox.toggled.connect(self.toggle_tool_geom)
-            self.show_existing_geom_cbox.toggled.connect(self.toggle_existing_geom)
-            self.show_imported_geom_cbox.toggled.connect(self.toggle_imported_geom)
-            self.collar_az_cbox.toggled.connect(self.toggle_collar_az)
-            self.collar_dip_cbox.toggled.connect(self.toggle_collar_dip)
-            self.show_mag_cbox.toggled.connect(self.toggle_mag)
-
-            self.az_output_combo.currentTextChanged.connect(self.az_combo_changed)
-            self.az_output_combo.currentTextChanged.connect(self.toggle_accept)
-            self.dip_output_combo.currentTextChanged.connect(self.dip_combo_changed)
-            self.dip_output_combo.currentTextChanged.connect(self.toggle_accept)
-            self.accept_btn.clicked.connect(self.accept)
-            self.cancel_btn.clicked.connect(self.close)
-
         super().__init__(parent)
         self.setupUi(self)
 
@@ -346,8 +282,73 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         self.roll_zoom = self.zp.zoom_factory(self.roll_ax)
         self.roll_pan = self.zp.pan_factory(self.roll_ax)
 
-        format_plots()
-        init_signals()
+        self.reset_range_shortcut = QShortcut(QKeySequence(' '), self)
+
+        self.format_plots()
+        self.init_signals()
+
+    def init_signals(self):
+        self.actionOpen_Geometry_File.triggered.connect(self.open_file_dialog)
+        self.actionOpen_Geometry_File.setIcon(get_icon("open.png"))
+        self.actionAllow_Negative_Azimuth.triggered.connect(lambda: self.plot_tool_values(update=True))
+
+        self.actionSave_Screenshot.setShortcut("Ctrl+S")
+        self.actionSave_Screenshot.triggered.connect(self.save_img)
+        self.actionSave_Screenshot.setIcon(get_icon("save_as.png"))
+        self.actionCopy_Screenshot.setShortcut("Ctrl+C")
+        self.actionCopy_Screenshot.triggered.connect(self.copy_img)
+        self.actionCopy_Screenshot.setIcon(get_icon("copy.png"))
+
+        self.reset_range_shortcut.activated.connect(self.update_plots)
+
+        self.mag_dec_sbox.valueChanged.connect(self.redraw_az_line)
+        self.collar_az_sbox.valueChanged.connect(self.redraw_collar_az_line)
+        self.collar_dip_sbox.valueChanged.connect(self.redraw_collar_dip_line)
+
+        self.az_spline_cbox.toggled.connect(self.toggle_az_spline)
+        self.dip_spline_cbox.toggled.connect(self.toggle_dip_spline)
+        self.show_tool_geom_cbox.toggled.connect(self.toggle_tool_geom)
+        self.show_existing_geom_cbox.toggled.connect(self.toggle_existing_geom)
+        self.show_imported_geom_cbox.toggled.connect(self.toggle_imported_geom)
+        self.collar_az_cbox.toggled.connect(self.toggle_collar_az)
+        self.collar_dip_cbox.toggled.connect(self.toggle_collar_dip)
+        self.show_mag_cbox.toggled.connect(self.toggle_mag)
+
+        self.az_output_combo.currentTextChanged.connect(self.az_combo_changed)
+        self.az_output_combo.currentTextChanged.connect(self.toggle_accept)
+        self.dip_output_combo.currentTextChanged.connect(self.dip_combo_changed)
+        self.dip_output_combo.currentTextChanged.connect(self.toggle_accept)
+        self.accept_btn.clicked.connect(self.accept)
+        self.cancel_btn.clicked.connect(self.close)
+
+    def format_plots(self):
+        self.figure.subplots_adjust(left=0.07, bottom=0.08, right=0.94, top=0.92)
+
+        self.az_ax.set_zorder(1)
+        self.mag_ax.set_zorder(1)
+        self.dip_ax.set_zorder(0)
+        self.roll_ax.set_zorder(0)
+
+        self.az_ax.set_xlabel('Azimuth (°)', color=self.azimuth_color)
+        self.dip_ax.set_xlabel('Dip (°)', color=self.dip_color)
+        self.mag_ax.set_xlabel('Magnetic Field Strength (nT)', color=self.mag_color)
+        self.roll_ax.set_xlabel('Roll Angle (°)', color=self.foreground_color)
+
+        tkw = dict(size=4, width=1.5)
+        self.az_ax.tick_params(axis='x', colors=self.azimuth_color, **tkw)
+        self.dip_ax.tick_params(axis='x', colors=self.dip_color, **tkw)
+        self.dip_ax.tick_params(axis='y', which='major', right=True, direction='out')
+        self.mag_ax.tick_params(axis='x', colors=self.mag_color, **tkw)
+        self.roll_ax.yaxis.set_label_position('right')
+        self.roll_ax.yaxis.set_ticks_position('right')
+
+        self.polar_figure.subplots_adjust(left=0.03, bottom=0.08, right=0.82, top=0.92)
+        self.polar_ax.set_theta_zero_location("N")
+        self.polar_ax.set_theta_direction(-1)
+        self.polar_ax.set_rlabel_position(0)
+        self.polar_ax.grid(linestyle='dashed', linewidth=0.5)
+        self.polar_ax.grid(True, linestyle='-', linewidth=1, which='minor')
+        self.polar_ax.set_xticks(np.pi / 180. * np.linspace(0, 360, 24, endpoint=False))
 
     def dragEnterEvent(self, e):
         urls = [url.toLocalFile() for url in e.mimeData().urls()]
@@ -893,12 +894,13 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         """
         def accept_file(data_df):
             try:
+                data_df = data_df.apply(pd.to_numeric)
                 self.plot_df(data_df, source='dad')
             except Exception as e:
                 logger.error(f'Error plotting {filepath.name}. {str(e)}.')
                 self.message.critical(self, 'Error',
-                                         f'The following error occurred attempting to plot {filepath.name}: '
-                                         f'\n{str(e)}.')
+                                      f'The following error occurred attempting to plot {filepath.name}: '
+                                      f'\n{str(e)}.')
 
         filepath = Path(filepath)
         global selector
@@ -1284,7 +1286,7 @@ if __name__ == '__main__':
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     pg = PEMGetter()
-    pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\SAN-0264C-21\RAW\xy_1002.PEM")
+    pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0261-21\RAW\xy1310_1013.PEM")
     # files = pg.get_pems(folder='PEM Rotation', file='_PU-340 XY.PEM')
     # files = pg.get_pems(folder='Raw Boreholes', number=1, random=True, incl='xy')
     # files = pg.get_pems(file=r"Raw Boreholes\HOLE STE-21-02\RAW\ste-21-02 xy.pem")
@@ -1297,7 +1299,7 @@ if __name__ == '__main__':
     # dad = samples_folder.joinpath(r"Raw Boreholes\GEN-21-06\RAW\gyro.csv")
     # dad = samples_folder.joinpath(r"Segments\test dad.csv")
     # dad = samples_folder.joinpath(r"Segments\BHEM-Belvais-2021-07-22.xlsx")
-    dad = r"C:\_Data\2021\Trevali Peru\Borehole\SAN-0264C-21\GPS\SAN-0264C-21.xlsx"
+    dad = r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0261-21\GPS\SAN261.xlsx"
     win.open_dad_file(dad)
 
     # df = pd.read_csv(dad,

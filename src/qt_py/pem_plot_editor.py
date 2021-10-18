@@ -1969,7 +1969,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             cleaned_data = cleaned_data.append(group)
 
         # Update the data
-        self.pem_file.data[~self.pem_file.data.Deleted.astype(bool)] = cleaned_data
+        self.pem_file.data.update(cleaned_data)
+        # self.pem_file.data[~self.pem_file.data.Deleted.astype(bool)] = cleaned_data
 
         # Plot the new data
         self.plot_profiles(components='all')

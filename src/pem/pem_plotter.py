@@ -1434,6 +1434,7 @@ class PlanMap(MapPlotter):
                          transform=self.ax.transAxes)
 
         self.figure.subplots_adjust(left=0.03, bottom=0.03, right=0.97, top=0.95)
+        self.ax.set_aspect("equal")
 
         # Resize the figure to be 11" x 8.5"
         set_ax_size(self.ax, self.figure)
@@ -3266,29 +3267,29 @@ if __name__ == '__main__':
     # pem_files = pem_getter.get_pems(folder='RI files', subfolder=r"PEMPro RI and Suffix Error Files/KBNorth", file="2200EAv KBNorth.PEM")
     # pem_files = [PEMParser().parse(r"C:\_Data\2021\TMC\131-21-38\Final\131-21-38 XYT.PEM")]
     # pem_files = pem_getter.get_pems(folder="Raw Surface", subfolder=r"Loop L\Final", file="100E.PEM")
-    pem_files = pem_getter.get_pems(folder="Raw Surface\Barraute B\Final", file="3400E.PEM")
+    pem_files = pem_getter.get_pems(folder=r"Raw Surface\Nantou Loop 5\Final", number=10)
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
     # planner = LoopPlanner()
 
-    # map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
-    # # map_plot = PlanMap(pem_files, map_fig, CRS.from_epsg(32644)).plot()
-    # map_plot = PlanMap(pem_files, map_fig, pem_files[0].get_crs()).plot()
-    # plt.show()
+    map_fig = plt.figure(figsize=(11, 8.5), num=2, clear=True)
+    # map_plot = PlanMap(pem_files, map_fig, CRS.from_epsg(32644)).plot()
+    map_plot = PlanMap(pem_files, map_fig, pem_files[0].get_crs()).plot()
+    plt.show()
 
     # fig = plt.figure(figsize=(8.5, 11), dpi=100)
     # sp = SectionPlot()
     # sp.plot(pem_files[0], figure=fig)
     # plt.show()
 
-    lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
-    ax6 = ax5.twiny()
-    ax6.get_shared_x_axes().join(ax5, ax6)
-    # pem = r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.PEM'
-    lin_plot = LINPlotter(pem_files[0], lin_fig)
-    lin_plot.plot('X')
-    lin_plot.plot('Y')
-    plt.show()
+    # lin_fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, num=1, sharex=True, clear=True, figsize=(8.5, 11))
+    # ax6 = ax5.twiny()
+    # ax6.get_shared_x_axes().join(ax5, ax6)
+    # # pem = r'C:\_Data\2021\Eastern\Maritime Resources\Final\0E.PEM'
+    # lin_plot = LINPlotter(pem_files[0], lin_fig)
+    # lin_plot.plot('X')
+    # lin_plot.plot('Y')
+    # plt.show()
 
     # log_fig, ax = plt.subplots(1, 1, num=1, clear=True, figsize=(8.5, 11))
     # ax2 = ax.twiny()

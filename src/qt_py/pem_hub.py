@@ -898,7 +898,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         settings.setValue("project_dir", self.project_dir)
 
         # Files
-        settings.setValue("last_opened_files", self.pem_files)
+        settings.setValue("last_opened_files", [f.filepath for f in self.pem_files])
 
         # File filters
         settings.setValue("PEM_filter", self.pem_list_filter.get_settings())
@@ -2290,7 +2290,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                                                            text=self.project_dir.name)
             if ok_pressed and folder_name:
                 path = self.get_current_project_path()
-                path.rename(path.with_name(folder_name))
+                try:
+                    path.rename(path.with_name(folder_name))
+                except PermissionError:
+                    self.message.critical(self, "Access Denied", "Access was defined.")
 
         menu = QMenu()
         menu.addAction('Run Step', open_step)
@@ -2303,6 +2306,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         Changes the directory tree to show the dir_path. Will find the nearest folder upward if dir_path is a file
         :param dir_path: Path object or str, directory path of the desired directory
+        :param start_up: Bool, if PEMPro is starting up (a longer delay will be used so the tree correctly moves)
         :return: None
         """
         if not dir_path:
