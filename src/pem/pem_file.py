@@ -1051,18 +1051,18 @@ class PEMFile:
                 '',  # Tx config.
                 self.rx_number,  # Receiver
                 '',  # Clock
-                self.probes["XY probe number"] if self.is_z() else '',  # Z probe
-                self.probes["XY probe number"] if self.is_xy() else '',  # XY probe
+                self.probes["Probe number"] if self.is_z() else '',  # Z probe
+                self.probes["Probe number"] if self.is_xy() else '',  # XY probe
                 self.probes["Tool number"] if self.is_xy() else '',  # RAD tool
                 '',  # RAD battery pack
-                self.probes["XY probe number"] if self.is_fluxgate() and self.is_borehole() else '',  # Fluxgate probe
+                self.probes["Probe number"] if self.is_fluxgate() and self.is_borehole() else '',  # Fluxgate probe
                 '',  # Fluxgate battery pack
                 '',  # Borehole cable
-                self.probes["XY probe number"] if not self.is_borehole() and not self.is_fluxgate() else '',
+                self.probes["Probe number"] if not self.is_borehole() and not self.is_fluxgate() else '',
                 # Surface coil
-                self.probes["XY probe number"] if not self.is_borehole() and self.is_fluxgate() else '',
+                self.probes["Probe number"] if not self.is_borehole() and self.is_fluxgate() else '',
                 # Surface fluxgate
-                self.probes["XY probe number"] if "squid" in self.survey_type.lower() else '',
+                self.probes["Probe number"] if "squid" in self.survey_type.lower() else '',
                 '',  # Slip ring
                 '',  # Transmitter
                 '',  # VRs
@@ -2239,7 +2239,7 @@ class PEMParser:
                 tags['Operator'] = tags['Operator'].split('~')[0].strip()
 
             # Format the probe numbers
-            probe_cols = ['XY probe number', 'SOA', 'Tool number', 'Tool ID']
+            probe_cols = ['Probe number', 'SOA', 'Tool number', 'Tool ID']
             tags['Probes'] = dict(zip(probe_cols, tags['Probes'].split()))
 
             return tags
@@ -2614,7 +2614,7 @@ class DMPParser:
             header['Format'] = str(210)
             header['Units'] = 'pT' if 'flux' in text[6].lower() or 'squid' in text[6].lower() else 'nT/s'
             header['Operator'] = text[11]
-            header['Probes'] = {'XY probe number': '0', 'SOA': '0', 'Tool number': '0', 'Tool ID': '0'}
+            header['Probes'] = {'Probe number': '0', 'SOA': '0', 'Tool number': '0', 'Tool ID': '0'}
             header['Current'] = float(text[12])
             header['Loop dimensions'] = ' '.join(re.split(r'\D', text[13])) + ' 0'
 
@@ -2971,7 +2971,7 @@ class DMPParser:
             header['Units'] = 'pT' if 'flux' in s['Survey_Type'].lower() or 'squid' in s[
                 'Survey_Type'].lower() else 'nT/s'
             header['Operator'] = s['Operator_Name'].title()
-            header['Probes'] = {'XY probe number': s['Sensor_Number'],
+            header['Probes'] = {'Probe number': s['Sensor_Number'],
                                 'SOA': '0',
                                 'Tool number': s['Tool_Number'],
                                 'Tool ID': '0'}
@@ -3022,7 +3022,6 @@ class DMPParser:
             :param units: str, 'nT/s' or 'pT'
             :return: DataFrame
             """
-
             def str_to_datetime(date_string):
                 """
                 Convert the timestamp string to a datetime object
@@ -3051,35 +3050,41 @@ class DMPParser:
             assert data_content, f'No data found in {self.filepath.name}.'
 
             data_section = data_content.strip()
-            sdata = data_section.split('\n\n')
+            split_data = data_section.split('\n\n')
 
             # Create a data frame out of the readings
             df_data = []
-            for reading in sdata:
+            for i, reading in enumerate(split_data):
+                if i == 462:
+                    print(f"Stopping here")
                 split_reading = reading.split('\n')
 
-                # Take the array that doesn't change per reading
+                # Header information
                 arr = [re.split(r':\s?', d, maxsplit=1) for d in split_reading if
                        not d.lower().startswith('data') and
                        not d.lower().startswith('overload') and
                        not d.lower().startswith('deleted')]
 
                 # Separate the decay reading, overload and deleted status that should be their own readings
-                datas = [x for x in split_reading if x.startswith('data')]
+                decays = [x for x in split_reading if x.startswith('data')]
                 overloads = [x for x in split_reading if x.lower().startswith('overload')]
                 deletes = list(filter(lambda x: x.startswith('Deleted'), split_reading))[0].split(': ')[1].split(',')
 
-                # Iterate over each actual decay reading and create their own dictionary to be added to the df
-                for data, overload, deleted in zip(datas, overloads, deletes):
+                # Iterate over each actual decay readings and create their own dictionary to be added to the df
+                for decay, overload, deleted in zip(decays, overloads, deletes):
                     entry = dict(arr)  # The base information that is true for each reading
-                    entry['Component'] = data[4].upper()  # The component is the 4th character in the 'data' title
-                    entry['data'] = data.split(': ')[1]
+                    decay_values = decay.split(': ')[1]
+                    if not decay_values:
+                        logger.warning(f"Empty decay found for {entry['name']}, reading number {entry['Reading_Number']}")
+                        continue
+                    entry['data'] = decay_values
+                    entry['Component'] = decay[4].upper()  # The component is the 4th character in the 'data' title
+
                     entry['Overload'] = overload.split(': ')[1]
                     entry['Deleted'] = deleted.strip()
 
                     df_data.append(entry)
 
-            # Create a data frame from the DMP file
             df = pd.DataFrame(df_data)
             df.drop_duplicates(subset="data", inplace=True)
             # Convert the columns to the correct data type
@@ -3091,7 +3096,7 @@ class DMPParser:
                                      'Reading_Number',
                                      'ZTS_Offset']].astype(int)
 
-            # Convert the decays from Teslas to either nT or pT
+            # Convert the decays from Teslas to either nT or pT, depending on the survey type
             factor = 10 ** 12 if units == 'pT' else 10 ** 9
             df['data'] = df['data'].map(lambda x: np.array(x.split(), dtype=float) * factor)
             if 'RAD' in df.columns.values:
@@ -3100,7 +3105,6 @@ class DMPParser:
                 logger.warning(f"No RAD tool data found in {self.filepath.name}. Creating 0s instead.")
                 df['RAD'] = RADTool().from_dmp('0. 0. 0. 0. 0. 0. 0.')
 
-            # Create the PEM file data frame
             pem_df = pd.DataFrame(columns=self.data_columns)
             pem_df['Station'] = df['name'].map(lambda x: x.split(',')[0])
             pem_df['Component'] = df['Component']
@@ -3118,7 +3122,7 @@ class DMPParser:
             pem_df['Deleted'] = df['Deleted'].map(lambda x: False if x.strip() == 'F' else True)
             pem_df['Overload'] = df['Overload'].map(lambda x: False if x.strip() == 'F' else True)
 
-            # Find the overload readings and set them to be deleted
+            # Set the overload readings to be deleted
             overload_filt = pem_df.loc[:, 'Overload']
             pem_df.loc[overload_filt, 'Deleted'] = True
 
@@ -3211,7 +3215,7 @@ class PEMSerializer:
 
     def serialize_tags(self):
         result = ""
-        xyp = ' '.join([self.pem_file.probes.get('XY probe number'),
+        xyp = ' '.join([self.pem_file.probes.get('Probe number'),
                         self.pem_file.probes.get('SOA'),
                         self.pem_file.probes.get('Tool number'),
                         self.pem_file.probes.get('Tool ID')])
@@ -3953,7 +3957,7 @@ if __name__ == '__main__':
 
     # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
     # file = r"C:\_Data\2021\TMC\Laurentia\STE-21-50-W3\RAW\ste-21-50w3xy_0819.dmp2"
-    pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0261-21\RAW\xy1310_1013.dmp2")
+    pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0251-21\RAW\xy1910_1019.dmp2")
     # pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-264-21\RAW\xy_1002.PEM")
     # file = r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW\l35eb2_0.PEM817.dmp2"
     # pem_file, errors = dmpparser.parse(file)
@@ -3979,7 +3983,7 @@ if __name__ == '__main__':
     # pem_file.to_xyz()
     pem_file, _ = pem_file.prep_rotation()
     # pem_file.mag_offset()
-    pem_file = pem_file.rotate(method='acc', soa=10)
+    pem_file = pem_file.rotate(method='acc', soa=0)
     # pem_file = pem_file.rotate(method='unrotate', soa=10)
     # pem_file = pem_file.rotate(method="pp", soa=1)
     # rotated_pem = prep_pem.rotate('pp')

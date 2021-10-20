@@ -275,7 +275,7 @@ def table_to_df(table, dtypes=None):
     return df
 
 
-def set_ax_size(ax, figure):
+def auto_size_ax(ax, figure):
     """
     Change the limits of the axes so the axes fills the full size of the figure.
     :param ax: Matplotlib Axes object

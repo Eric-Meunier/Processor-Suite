@@ -22,10 +22,10 @@ from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib import patheffects, patches, ticker, text, transforms, lines
 from scipy import stats
 
-from src.qt_py import CustomProgressDialog, set_ax_size
+from src.qt_py import CustomProgressDialog, auto_size_ax
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 from src.pem import convert_station
-from src.pem.pem_file import PEMParser, PEMGetter
+from src.pem.pem_file import PEMGetter
 from src.qt_py.ri_importer import RIFile
 
 logger = logging.getLogger(__name__)
@@ -40,6 +40,530 @@ mpl.rcParams['font.size'] = 9
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 line_color = 'black'
+
+
+def plot_loop(pem_file, figure, annotate=True, label=True, color='black', buffer_color="white", zorder=6,
+              is_mmr=False):
+    """
+    Plot the loop GPS of a pem_file.
+    :param pem_file: PEMFile object
+    :param figure: Matplotlib Figure object to plot on
+    :param annotate: bool, add L-tag annotations
+    :param label: bool, add loop label
+    :param color: str, line color
+    :param zorder: int, order in which to draw the object (higher number draws it on top of lower numbers)
+    :param is_mmr: bool, whether or not to join the first and last points of the loop coordinates
+    :return: loop_handle for legend
+    """
+    def get_label_pos(collar, loop):
+        """
+        Find the best quadrant to place the loop label to avoid the hole labels.
+        :param collar: CollarGPS object
+        :param loop: TransmitterLoop object
+        :return: tuple, x-y coordinates of where the label should be plotted
+        """
+        def find_quadrant(x, y):
+            """
+            Return which quadrant coordinates to place the loop label in.
+            :param x: float: collar easting
+            :param y: float: collar northing
+            :return: tuple: x and y coordinate to plot the loop label
+            """
+            q1 = (xmax - xcenter) * 0.2 + xcenter, (ymax - ycenter) * 0.2 + ycenter
+            q2 = (xcenter - xmin) * 0.8 + xmin, (ymax - ycenter) * 0.2 + ycenter
+            q3 = (xcenter - xmin) * 0.8 + xmin, (ycenter - ymin) * 0.8 + ymin
+            q4 = (xmax - xcenter) * 0.2 + xcenter, (ycenter - ymin) * 0.8 + ymin
+
+            if x > xcenter and y > ycenter:
+                return q3
+            elif x > xcenter and y < ycenter:
+                return q2
+            elif x < xcenter and y > ycenter:
+                return q4
+            else:
+                return q1
+
+        # Loop extents
+        xmin, xmax, ymin, ymax, zmin, zmax = loop.get_extents()
+        # Loop center
+        xcenter, ycenter, zcenter = loop.get_center()
+
+        loop_label_quandrant = find_quadrant(collar.df.iloc[0]['Easting'], collar.df.iloc[0]['Northing'])
+        return loop_label_quandrant
+
+    label_buffer = [patheffects.Stroke(linewidth=1.5, foreground=buffer_color), patheffects.Normal()]
+    ax = figure.axes[0]
+    loop = pem_file.loop
+    if not loop.df.empty:
+        loop_gps = loop.get_loop(sorted=False, closed=(not is_mmr))
+        eastings, northings = loop_gps.Easting.to_numpy(), loop_gps.Northing.to_numpy()
+
+        # Plot the loop
+        loop_handle, = ax.plot(eastings, northings,
+                               color=color,
+                               lw=1,
+                               label='Transmitter Loop',
+                               antialiased=True,
+                               zorder=2)
+
+        # Label the loop
+        if label:
+            if pem_file.is_borehole():
+                collar = pem_file.collar
+                if not collar.df.empty:
+                    # Find a more optimal location to plot the label
+                    label_x, label_y = get_label_pos(collar, loop)
+                else:
+                    # Plot the label in the center
+                    label_x, label_y, _ = loop.get_center()
+            else:
+                # Plot the label in the center
+                label_x, label_y, _ = loop.get_center()
+
+            loop_label = ax.text(label_x, label_y,
+                                 f"Tx Loop {pem_file.loop_name}",
+                                 ha='center',
+                                 color=color,
+                                 zorder=zorder,
+                                 path_effects=label_buffer
+                                 )
+
+        # Add the loop L-tag annotations
+        if annotate:
+            for i, (x, y) in enumerate(list(zip(eastings, northings))):
+                plt.annotate(i, xy=(x, y),
+                             va='center',
+                             ha='center',
+                             fontsize=7,
+                             path_effects=label_buffer,
+                             zorder=3,
+                             color=color,
+                             transform=ax.transData)
+
+        return loop_handle
+
+
+def plot_line(pem_file, figure, annotate=True, label=True, plot_ticks=True, color='black',
+              buffer_color="white", zorder=2):
+    """
+    Plot the line GPS of a pem_file.
+    :param pem_file: PEMFile object
+    :param figure: Matplotlib Figure object to plot on
+    :param annotate: bool, add L-tag annotations
+    :param label: bool, add loop label
+    :param plot_ticks: bool, add the tick marks at each station
+    :param color: str, line color
+    :param zorder: int, order in which to draw the object (higher number draws it on top of lower numbers)
+    :return: loop_handle for legend
+    """
+    lines = []
+    line_labels = []
+    station_labels = []
+
+    label_buffer = [patheffects.Stroke(linewidth=1.5, foreground=buffer_color), patheffects.Normal()]
+    ax = figure.axes[0]
+    line = pem_file.line
+    # Plotting the line and adding the line label
+    if not line.df.empty:
+        lines.append(line)
+        eastings, northings = line.df['Easting'].to_numpy(), line.df['Northing'].to_numpy()
+
+        # Plot the line
+        marker = '-o' if plot_ticks is True else '-'
+        station_handle, = ax.plot(eastings, northings,
+                                  marker,
+                                  lw=1,
+                                  antialiased=True,
+                                  markersize=3,
+                                  color=color,
+                                  markerfacecolor=buffer_color,
+                                  markeredgewidth=0.3,
+                                  label='Surface Line',
+                                  zorder=zorder)
+
+        # Add the line label
+        if label:
+            angle = math.degrees(math.atan2(northings[-1] - northings[0], eastings[-1] - eastings[0]))
+            if abs(angle) > 90:
+                x, y = eastings[-1], northings[-1]
+                # Flip the label if it's upside-down
+                angle = angle - 180
+            else:
+                x, y = eastings[0], northings[0]
+
+            line_label = ax.text(x, y,
+                                 f" {pem_file.line_name} ",
+                                 rotation=angle,
+                                 rotation_mode='anchor',
+                                 ha='right',
+                                 va='center',
+                                 zorder=zorder + 1,
+                                 color=color,
+                                 path_effects=label_buffer,
+                                 clip_on=True)
+            line_labels.append(line_label)
+
+        if annotate:
+            for row in line.df.itertuples():
+                station_label = ax.text(row.Easting, row.Northing, row.Station,
+                                        fontsize=7,
+                                        path_effects=label_buffer,
+                                        ha='center',
+                                        va='bottom',
+                                        color=color,
+                                        clip_on=True)
+                station_labels.append(station_label)
+
+        return station_handle
+
+
+def plot_hole(pem_file, figure, label=True, label_depth=True, plot_ticks=True, plot_trace=True, color='black',
+              buffer_color="white", zorder=6):
+    """
+    Plot a borehole collar and hole trace.
+    :param pem_file: PEMFile object
+    :param figure: matplotlib Figure object
+    :param label: bool, label the hole name at the hole collar.
+    :param label_depth: bool, label the depth of the hole at the end of the hole trace.
+    :param plot_ticks: bool, plot ticks going down the hole.
+    :param plot_trace: bool, plot the hole trace.
+    :param color: str, color of the collar and trace.
+    :param zorder: int
+    """
+    label_buffer = [patheffects.Stroke(linewidth=1.5, foreground=buffer_color), patheffects.Normal()]
+    ax = figure.axes[0]
+    geometry = pem_file.get_geometry()
+    projection = geometry.get_projection(num_segments=1000)
+
+    if not geometry.collar.df.empty:
+        collar_x, collar_y = geometry.collar.df.loc[0, ['Easting', 'Northing']].to_numpy()
+        marker_style = dict(marker='o',
+                            color=buffer_color,
+                            markeredgecolor=color,
+                            markersize=8)
+
+        # Plot the collar
+        collar_handle, = ax.plot(collar_x, collar_y,
+                                 fillstyle='full',
+                                 label='Borehole Collar',
+                                 zorder=4,
+                                 **marker_style)
+        # Add the hole label at the collar
+        if label:
+            if pem_file.has_geometry():
+                azimuth = pem_file.get_segments().iloc[0].Azimuth
+            else:
+                azimuth = 0
+
+            vo = 0  # Vertical offset for when the label is placed beneath the collar
+            ho = 0  # Horizontal offset
+            if 0 <= azimuth < 45:
+                ha = 'center'
+                va = 'top'
+            elif 45 <= azimuth < 135:
+                ha = 'right'
+                ho = -6
+                va = 'center'
+            elif 135 <= azimuth < 225:
+                ha = 'center'
+                va = 'bottom'
+            elif 225 < azimuth < 315:
+                ha = 'left'
+                ho = 6
+                va = 'center'
+            else:
+                ha = 'center'
+                va = 'top'
+                vo = -6
+
+            if 45 < azimuth < 225:
+               pass
+
+            collar_label = ax.annotate(f"{pem_file.line_name}", (collar_x, collar_y),
+                                       xytext=(ho, vo),
+                                       textcoords='offset points',
+                                       ha=ha,
+                                       va=va,
+                                       color=color,
+                                       zorder=5,
+                                       path_effects=label_buffer)
+
+        if not projection.empty and plot_trace:
+            seg_x, seg_y = projection['Easting'].to_numpy(), projection['Northing'].to_numpy()
+            seg_dist = projection['Relative_depth'].to_numpy()
+
+            # Calculating tick indexes. Ticks are placed at evenly spaced depths.
+            # Spaced every 50m, starting from the top
+            depths = np.arange(seg_dist.min(), seg_dist.max() + 51, 50)
+
+            # Find the index of the seg_z depth nearest each depths value.
+            indexes = [min(range(len(seg_dist)), key=lambda i: abs(seg_dist[i] - depth)) for depth in depths]
+
+            # Hole trace is plotted using marker positions so that they match perfectly.
+            index_x = projection.iloc[indexes]['Easting'].to_numpy()
+            index_y = projection.iloc[indexes]['Northing'].to_numpy()
+
+            # Plotting the hole trace
+            trace_handle, = ax.plot(index_x, index_y, '--', color=color)
+
+            if plot_ticks:
+                # Plotting the markers
+                for index in indexes[1:]:
+                    if index != indexes[-1]:
+                        angle = math.degrees(
+                            math.atan2(seg_y[index + 1] - seg_y[index], seg_x[index + 1] - seg_x[index]))
+                        ax.plot(seg_x[index], seg_y[index],
+                                markersize=5,
+                                marker=(2, 0, angle),
+                                mew=.5,
+                                color=color)
+
+                # Add the end tick for the borehole trace and the label
+                angle = math.degrees(math.atan2(seg_y[-1] - seg_y[-2], seg_x[-1] - seg_x[-2]))
+
+                ax.plot(seg_x[-1], seg_y[-1],
+                        markersize=9,
+                        marker=(2, 0, angle),
+                        mew=.5,
+                        color=color)
+
+            if label_depth:
+                # Label the depth at the bottom of the hole
+                bh_depth = ax.text(seg_x[-1], seg_y[-1], f"  {projection.iloc[-1]['Relative_depth']:.0f} m",
+                                   rotation=angle + 90,
+                                   fontsize=8,
+                                   color=color,
+                                   path_effects=label_buffer,
+                                   zorder=3,
+                                   rotation_mode='anchor')
+                # labels.append(bh_depth)
+
+        return collar_handle
+
+
+def add_scale_bar(ax, x_pos=0.5, y_pos=0.05, scale_factor=1., units='m', buffer_color="white"):
+    """
+    Adds scale bar to the axes.
+    Gets the width of the map in meters, find the best bar length number, and converts the bar length to
+    equivalent axes percentage, then plots using axes transform so it is static on the axes.
+    :return: None
+    """
+    def add_rectangles(left_bar_pos, bar_center, right_bar_pos, y):
+        rect_height = 0.005
+        line_width = 0.4
+        sm_rect_width = (bar_center - left_bar_pos) / 5
+        sm_rect_xs = np.arange(left_bar_pos, bar_center, sm_rect_width)
+        big_rect_x = bar_center
+        big_rect_width = right_bar_pos - bar_center
+
+        # Adding the small rectangles
+        for i, rect_x in enumerate(sm_rect_xs):  # Top set of small rectangles
+            fill = 'w' if i % 2 == 0 else 'k'
+            patch = patches.Rectangle((rect_x, y), sm_rect_width, rect_height,
+                                      ec='k',
+                                      linewidth=line_width,
+                                      facecolor=fill,
+                                      transform=ax.transAxes,
+                                      zorder=9)
+            ax.add_patch(patch)
+        for i, rect_x in enumerate(sm_rect_xs):  # Bottom set of small rectangles
+            fill = 'k' if i % 2 == 0 else 'w'
+            patch = patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height,
+                                      ec='k',
+                                      zorder=9,
+                                      linewidth=line_width,
+                                      facecolor=fill,
+                                      transform=ax.transAxes)
+            ax.add_patch(patch)
+
+        # Adding the big rectangles
+        patch1 = patches.Rectangle((big_rect_x, y), big_rect_width, rect_height,
+                                   ec='k',
+                                   facecolor='k',
+                                   linewidth=line_width,
+                                   transform=ax.transAxes,
+                                   zorder=9)
+        patch2 = patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height,
+                                   ec='k',
+                                   facecolor='w',
+                                   linewidth=line_width,
+                                   transform=ax.transAxes,
+                                   zorder=9)
+        ax.add_patch(patch1)
+        ax.add_patch(patch2)
+
+    label_buffer = [patheffects.Stroke(linewidth=1, foreground=buffer_color), patheffects.Normal()]
+
+    map_width = ax.get_xlim()[1] - ax.get_xlim()[0]
+    # map_width = ax.get_extent()[1] - ax.get_extent()[0]
+    num_digit = int(np.floor(np.log10(map_width)))  # number of digits in number
+    base = 0.5 * 10 ** num_digit
+    bar_map_length = round(map_width, -num_digit)  # round to 1sf
+    bar_map_length = base * math.ceil(bar_map_length / 8 / base)  # Rounds to the nearest 1,2,5...
+    # Multiply by scale factor for Section Plot
+    bar_map_length = bar_map_length * scale_factor
+    if units == 'm':
+        if bar_map_length > 10000:
+            units = 'kilometers'
+            bar_map_length = bar_map_length / 1000
+        else:
+            units = 'meters'
+    else:
+        units = 'feet'
+
+    bar_ax_length = bar_map_length / map_width
+    left_pos = x_pos - (bar_ax_length / 2)
+    right_pos = x_pos + (bar_ax_length / 2)
+
+    add_rectangles(left_pos, x_pos, right_pos, y_pos)
+    ax.text(left_pos, y_pos + .009, f"{bar_map_length / 2:.0f}",
+            ha='center',
+            transform=ax.transAxes,
+            path_effects=label_buffer,
+            fontsize=7,
+            zorder=9)
+    ax.text(x_pos, y_pos + .009, f"0",
+            ha='center',
+            transform=ax.transAxes,
+            path_effects=label_buffer,
+            fontsize=7,
+            zorder=9)
+    ax.text(right_pos, y_pos + .009, f"{bar_map_length / 2:.0f}",
+            ha='center',
+            transform=ax.transAxes,
+            path_effects=label_buffer,
+            fontsize=7,
+            zorder=9)
+    ax.text(x_pos, y_pos - .018, f"({units})",
+            ha='center',
+            transform=ax.transAxes,
+            path_effects=label_buffer,
+            fontsize=7,
+            zorder=9)
+
+# @staticmethod
+# def set_size(ax, figure):
+#     """
+#     Re-size the extents to make the axes 11" by 8.5"
+#     :param ax: Matplotlib Axes object
+#     :param figure: Matplotlib Figure object
+#     """
+#     bbox = ax.get_window_extent().transformed(figure.dpi_scale_trans.inverted())
+#     xmin, xmax = ax.get_xlim()
+#     ymin, ymax = ax.get_ylim()
+#     # xmin, xmax, ymin, ymax = ax.get_extent()
+#     map_width, map_height = xmax - xmin, ymax - ymin
+#
+#     current_ratio = map_width / map_height
+#
+#     if current_ratio < (bbox.width / bbox.height):
+#         new_height = map_height
+#         # Set the new width to be the correct ratio larger than height
+#         new_width = new_height * (bbox.width / bbox.height)
+#     else:
+#         new_width = map_width
+#         new_height = new_width * (bbox.height / bbox.width)
+#
+#     x_offset = 0
+#     y_offset = 0.06 * new_height
+#     new_xmin = (xmin - x_offset) - ((new_width - map_width) / 2)
+#     new_xmax = (xmax - x_offset) + ((new_width - map_width) / 2)
+#     new_ymin = (ymin + y_offset) - ((new_height - map_height) / 2)
+#     new_ymax = (ymax + y_offset) + ((new_height - map_height) / 2)
+#
+#     ax.set_xlim(new_xmin, new_xmax)
+#     ax.set_ylim(new_ymin, new_ymax)
+#     # ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=crs)
+
+
+def set_scale(ax, figure):
+    """
+    Changes the extent of the plot such that the scale is an acceptable value.
+    :param ax: Matplotlib Axes object
+    :param figure: Matplotlib Figure object
+    """
+    def get_scale_factor():
+        """Return an appropriate scale for the map."""
+        # num_digit = len(str(int(current_scale)))  # number of digits in number
+        num_digit = int(np.floor(np.log10(current_scale)))  # number of digits in number
+        scale_nums = [1., 1.25, 1.5, 2., 2.5, 5.]
+        possible_scales = [num * 10 ** num_digit for num in
+                           scale_nums + list(map(lambda x: x * 10, scale_nums))]
+
+        # Calculate the new scale using a 40 % buffer
+        new_scale = min(filter(lambda x: x > current_scale * 1.40, possible_scales),
+                        key=lambda x: x - current_scale * 1.40)
+        if new_scale == 1500:
+            new_scale = 2000
+
+        scale_factor = new_scale / current_scale
+        return scale_factor, new_scale
+
+    xmin, xmax = ax.get_xlim()
+    ymin, ymax = ax.get_ylim()
+    # xmin, xmax, ymin, ymax = ax.get_extent()
+    map_width, map_height = xmax - xmin, ymax - ymin
+    bbox = ax.get_window_extent().transformed(figure.dpi_scale_trans.inverted())
+    current_scale = map_width / (bbox.width * .0254)
+    scale_factor, new_map_scale = get_scale_factor()
+    new_map_height = map_height * scale_factor
+    new_map_width = map_width * scale_factor
+
+    new_xmin = xmin - ((new_map_width - map_width) / 2)
+    new_xmax = xmax + ((new_map_width - map_width) / 2)
+    new_ymin = ymin - ((new_map_height - map_height) / 2)
+    new_ymax = ymax + ((new_map_height - map_height) / 2)
+
+    ax.set_xlim(new_xmin, new_xmax)
+    ax.set_ylim(new_ymin, new_ymax)
+    # ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=crs)
+    return new_map_scale
+
+
+def add_north_arrow(ax, x_pos=0.94, y_pos=0.89, length=0.16, line_width=0.5):
+    """
+    Adds the north arrow to the plot. The arrow is manually drawn, and is always fixed in position and size.
+    :param ax: Matplotlib Axes object
+    :param x_pos: float, horizontal middle position of the arrow
+    :param y_pos: float, vertical middle position of the arrow
+    :param length: float, length of the arrow
+    :param line_width: float, width of the lines
+    :return: None
+    """
+    def ax_len(pixel_length):
+        """
+        Calculate the equivalent axes size for a given pixel length
+        :param pixel_length: float, length of the line in pixel values
+        """
+        return length * (pixel_length / 300)  # 267 is pixel length of old north arrow
+
+    bot = y_pos - (length / 2)
+    top = y_pos + (length / 2)
+
+    # Drawing full arrow polygon using ax.plot
+    xs = [x_pos, x_pos, x_pos + ax_len(11), x_pos, x_pos, x_pos - ax_len(6), x_pos - ax_len(6), x_pos]
+    ys = [top - ax_len(45) + ax_len(8), top, top - ax_len(45), top - ax_len(45) + ax_len(8), bot,
+          bot - ax_len(12), bot + ax_len((41 - 12)), bot + ax_len(41)]
+    ax.plot(xs, ys, color='k', lw=line_width, transform=ax.transAxes)
+
+    # Drawing the N
+    xs = [x_pos - ax_len(12), x_pos - ax_len(12), x_pos + ax_len(12), x_pos + ax_len(12)]  # First N
+    ys = [y_pos - ax_len(21), y_pos + ax_len(21), y_pos - ax_len(30) + ax_len(21), y_pos + ax_len(21)]  # First N
+    x2s = [x_pos - ax_len(12), x_pos + ax_len(12), x_pos + ax_len(12)]  # Second diagonal line
+    y2s = [y_pos + ax_len(30) - ax_len(21), y_pos - ax_len(21),
+           y_pos - ax_len(30) + ax_len(21)]  # Second diagonal line
+    ax.plot(xs, ys, color='k', lw=line_width, transform=ax.transAxes)
+    ax.plot(x2s, y2s, color='k', lw=line_width, transform=ax.transAxes)
+
+    # Drawing the two side-lines
+    x1 = [x_pos - ax_len(31) - ax_len(36), x_pos - ax_len(31)]
+    x2 = [x_pos + ax_len(31) + ax_len(36), x_pos + ax_len(31)]
+    y = [y_pos] * 2
+    tick_line1 = lines.Line2D(x1, y, color='k', lw=line_width, transform=ax.transAxes)
+    tick_line2 = lines.Line2D(x2, y, color='k', lw=line_width, transform=ax.transAxes)
+
+    ax.add_line(tick_line1)
+    ax.add_line(tick_line2)
 
 
 class ProfilePlotter:
@@ -61,6 +585,7 @@ class ProfilePlotter:
         if not pem_file.is_split():
             pem_file = pem_file.split()
 
+        plt.style.use('default')
         self.pem_file = pem_file
         self.figure = figure
 
@@ -78,12 +603,12 @@ class ProfilePlotter:
             Add the surrounding rectangle
             """
             rect = patches.Rectangle(xy=(0.02, 0.02),
-                                         width=0.96,
-                                         height=0.96,
-                                         linewidth=0.7,
-                                         edgecolor='black',
-                                         facecolor='none',
-                                         transform=self.figure.transFigure)
+                                     width=0.96,
+                                     height=0.96,
+                                     linewidth=0.7,
+                                     edgecolor='black',
+                                     facecolor='none',
+                                     transform=self.figure.transFigure)
             self.figure.patches.append(rect)
 
         def format_title(component):
@@ -644,536 +1169,7 @@ class RotnAnnotation(text.Annotation):
     _rotation = property(_get_rotation, _set_rotation)
 
 
-class MapPlotter:
-    """
-    Base class for plotting PEM file GPS on maps
-    """
-    def __init__(self):
-        pass
-
-    def plot_loop(self, pem_file, figure, annotate=True, label=True, color='black', buffer_color="white", zorder=6,
-                  is_mmr=False):
-        """
-        Plot the loop GPS of a pem_file.
-        :param pem_file: PEMFile object
-        :param figure: Matplotlib Figure object to plot on
-        :param annotate: bool, add L-tag annotations
-        :param label: bool, add loop label
-        :param color: str, line color
-        :param zorder: int, order in which to draw the object (higher number draws it on top of lower numbers)
-        :param is_mmr: bool, whether or not to join the first and last points of the loop coordinates
-        :return: loop_handle for legend
-        """
-        def get_label_pos(collar, loop):
-            """
-            Find the best quadrant to place the loop label to avoid the hole labels.
-            :param collar: CollarGPS object
-            :param loop: TransmitterLoop object
-            :return: tuple, x-y coordinates of where the label should be plotted
-            """
-            def find_quadrant(x, y):
-                """
-                Return which quadrant coordinates to place the loop label in.
-                :param x: float: collar easting
-                :param y: float: collar northing
-                :return: tuple: x and y coordinate to plot the loop label
-                """
-                q1 = (xmax - xcenter) * 0.2 + xcenter, (ymax - ycenter) * 0.2 + ycenter
-                q2 = (xcenter - xmin) * 0.8 + xmin, (ymax - ycenter) * 0.2 + ycenter
-                q3 = (xcenter - xmin) * 0.8 + xmin, (ycenter - ymin) * 0.8 + ymin
-                q4 = (xmax - xcenter) * 0.2 + xcenter, (ycenter - ymin) * 0.8 + ymin
-
-                if x > xcenter and y > ycenter:
-                    return q3
-                elif x > xcenter and y < ycenter:
-                    return q2
-                elif x < xcenter and y > ycenter:
-                    return q4
-                else:
-                    return q1
-
-            # Loop extents
-            xmin, xmax, ymin, ymax, zmin, zmax = loop.get_extents()
-            # Loop center
-            xcenter, ycenter, zcenter = loop.get_center()
-
-            loop_label_quandrant = find_quadrant(collar.df.iloc[0]['Easting'], collar.df.iloc[0]['Northing'])
-            return loop_label_quandrant
-
-        label_buffer = [patheffects.Stroke(linewidth=1.5, foreground=buffer_color), patheffects.Normal()]
-        ax = figure.axes[0]
-        loop = pem_file.loop
-        if not loop.df.empty:
-            loop_gps = loop.get_loop(sorted=False, closed=(not is_mmr))
-            eastings, northings = loop_gps.Easting.to_numpy(), loop_gps.Northing.to_numpy()
-
-            # Plot the loop
-            loop_handle, = ax.plot(eastings, northings,
-                                   color=color,
-                                   lw=1,
-                                   label='Transmitter Loop',
-                                   antialiased=True,
-                                   zorder=2)
-
-            # Label the loop
-            if label:
-                if pem_file.is_borehole():
-                    collar = pem_file.collar
-                    if not collar.df.empty:
-                        # Find a more optimal location to plot the label
-                        label_x, label_y = get_label_pos(collar, loop)
-                    else:
-                        # Plot the label in the center
-                        label_x, label_y, _ = loop.get_center()
-                else:
-                    # Plot the label in the center
-                    label_x, label_y, _ = loop.get_center()
-
-                loop_label = ax.text(label_x, label_y,
-                                     f"Tx Loop {pem_file.loop_name}",
-                                     ha='center',
-                                     color=color,
-                                     zorder=zorder,
-                                     path_effects=label_buffer
-                                     )
-
-            # Add the loop L-tag annotations
-            if annotate:
-                for i, (x, y) in enumerate(list(zip(eastings, northings))):
-                    plt.annotate(i, xy=(x, y),
-                                 va='center',
-                                 ha='center',
-                                 fontsize=7,
-                                 path_effects=label_buffer,
-                                 zorder=3,
-                                 color=color,
-                                 transform=ax.transData)
-
-            return loop_handle
-
-    def plot_line(self, pem_file, figure, annotate=True, label=True, plot_ticks=True, color='black',
-                  buffer_color="white", zorder=2):
-        """
-        Plot the line GPS of a pem_file.
-        :param pem_file: PEMFile object
-        :param figure: Matplotlib Figure object to plot on
-        :param annotate: bool, add L-tag annotations
-        :param label: bool, add loop label
-        :param plot_ticks: bool, add the tick marks at each station
-        :param color: str, line color
-        :param zorder: int, order in which to draw the object (higher number draws it on top of lower numbers)
-        :return: loop_handle for legend
-        """
-        lines = []
-        line_labels = []
-        station_labels = []
-
-        label_buffer = [patheffects.Stroke(linewidth=1.5, foreground=buffer_color), patheffects.Normal()]
-        ax = figure.axes[0]
-        line = pem_file.line
-        # Plotting the line and adding the line label
-        if not line.df.empty:
-            lines.append(line)
-            eastings, northings = line.df['Easting'].to_numpy(), line.df['Northing'].to_numpy()
-
-            # Plot the line
-            marker = '-o' if plot_ticks is True else '-'
-            station_handle, = ax.plot(eastings, northings,
-                                      marker,
-                                      lw=1,
-                                      antialiased=True,
-                                      markersize=3,
-                                      color=color,
-                                      markerfacecolor=buffer_color,
-                                      markeredgewidth=0.3,
-                                      label='Surface Line',
-                                      zorder=zorder)
-
-            # Add the line label
-            if label:
-                angle = math.degrees(math.atan2(northings[-1] - northings[0], eastings[-1] - eastings[0]))
-                if abs(angle) > 90:
-                    x, y = eastings[-1], northings[-1]
-                    # Flip the label if it's upside-down
-                    angle = angle - 180
-                else:
-                    x, y = eastings[0], northings[0]
-
-                line_label = ax.text(x, y,
-                                     f" {pem_file.line_name} ",
-                                     rotation=angle,
-                                     rotation_mode='anchor',
-                                     ha='right',
-                                     va='center',
-                                     zorder=zorder + 1,
-                                     color=color,
-                                     path_effects=label_buffer,
-                                     clip_on=True)
-                line_labels.append(line_label)
-
-            if annotate:
-                for row in line.df.itertuples():
-                    station_label = ax.text(row.Easting, row.Northing, row.Station,
-                                            fontsize=7,
-                                            path_effects=label_buffer,
-                                            ha='center',
-                                            va='bottom',
-                                            color=color,
-                                            clip_on=True)
-                    station_labels.append(station_label)
-
-            return station_handle
-
-    def plot_hole(self, pem_file, figure, label=True, label_depth=True, plot_ticks=True, plot_trace=True, color='black',
-                  buffer_color="white", zorder=6):
-        """
-        Plot a borehole collar and hole trace.
-        :param pem_file: PEMFile object
-        :param figure: matplotlib Figure object
-        :param label: bool, label the hole name at the hole collar.
-        :param label_depth: bool, label the depth of the hole at the end of the hole trace.
-        :param plot_ticks: bool, plot ticks going down the hole.
-        :param plot_trace: bool, plot the hole trace.
-        :param color: str, color of the collar and trace.
-        :param zorder: int
-        """
-        label_buffer = [patheffects.Stroke(linewidth=1.5, foreground=buffer_color), patheffects.Normal()]
-        ax = figure.axes[0]
-        geometry = pem_file.get_geometry()
-        projection = geometry.get_projection(num_segments=1000)
-
-        if not geometry.collar.df.empty:
-            collar_x, collar_y = geometry.collar.df.loc[0, ['Easting', 'Northing']].to_numpy()
-            marker_style = dict(marker='o',
-                                color=buffer_color,
-                                markeredgecolor=color,
-                                markersize=8)
-
-            # Plot the collar
-            collar_handle, = ax.plot(collar_x, collar_y,
-                                     fillstyle='full',
-                                     label='Borehole Collar',
-                                     zorder=4,
-                                     **marker_style)
-            # Add the hole label at the collar
-            if label:
-                if pem_file.has_geometry():
-                    azimuth = pem_file.get_segments().iloc[0].Azimuth
-                else:
-                    azimuth = 0
-
-                vo = 0  # Vertical offset for when the label is placed beneath the collar
-                ho = 0  # Horizontal offset
-                if 0 <= azimuth < 45:
-                    ha = 'center'
-                    va = 'top'
-                elif 45 <= azimuth < 135:
-                    ha = 'right'
-                    ho = -6
-                    va = 'center'
-                elif 135 <= azimuth < 225:
-                    ha = 'center'
-                    va = 'bottom'
-                elif 225 < azimuth < 315:
-                    ha = 'left'
-                    ho = 6
-                    va = 'center'
-                else:
-                    ha = 'center'
-                    va = 'top'
-                    vo = -6
-
-                if 45 < azimuth < 225:
-                   pass
-
-                collar_label = ax.annotate(f"{pem_file.line_name}", (collar_x, collar_y),
-                                           xytext=(ho, vo),
-                                           textcoords='offset points',
-                                           ha=ha,
-                                           va=va,
-                                           color=color,
-                                           zorder=5,
-                                           path_effects=label_buffer)
-
-            if not projection.empty and plot_trace:
-                seg_x, seg_y = projection['Easting'].to_numpy(), projection['Northing'].to_numpy()
-                seg_dist = projection['Relative_depth'].to_numpy()
-
-                # Calculating tick indexes. Ticks are placed at evenly spaced depths.
-                # Spaced every 50m, starting from the top
-                depths = np.arange(seg_dist.min(), seg_dist.max() + 51, 50)
-
-                # Find the index of the seg_z depth nearest each depths value.
-                indexes = [min(range(len(seg_dist)), key=lambda i: abs(seg_dist[i] - depth)) for depth in depths]
-
-                # Hole trace is plotted using marker positions so that they match perfectly.
-                index_x = projection.iloc[indexes]['Easting'].to_numpy()
-                index_y = projection.iloc[indexes]['Northing'].to_numpy()
-
-                # Plotting the hole trace
-                trace_handle, = ax.plot(index_x, index_y, '--', color=color)
-
-                if plot_ticks:
-                    # Plotting the markers
-                    for index in indexes[1:]:
-                        if index != indexes[-1]:
-                            angle = math.degrees(
-                                math.atan2(seg_y[index + 1] - seg_y[index], seg_x[index + 1] - seg_x[index]))
-                            ax.plot(seg_x[index], seg_y[index],
-                                    markersize=5,
-                                    marker=(2, 0, angle),
-                                    mew=.5,
-                                    color=color)
-
-                    # Add the end tick for the borehole trace and the label
-                    angle = math.degrees(math.atan2(seg_y[-1] - seg_y[-2], seg_x[-1] - seg_x[-2]))
-
-                    ax.plot(seg_x[-1], seg_y[-1],
-                            markersize=9,
-                            marker=(2, 0, angle),
-                            mew=.5,
-                            color=color)
-
-                if label_depth:
-                    # Label the depth at the bottom of the hole
-                    bh_depth = ax.text(seg_x[-1], seg_y[-1], f"  {projection.iloc[-1]['Relative_depth']:.0f} m",
-                                       rotation=angle + 90,
-                                       fontsize=8,
-                                       color=color,
-                                       path_effects=label_buffer,
-                                       zorder=3,
-                                       rotation_mode='anchor')
-                    # labels.append(bh_depth)
-
-            return collar_handle
-
-    @staticmethod
-    def add_scale_bar(ax, x_pos=0.5, y_pos=0.05, scale_factor=1., units='m', buffer_color="white"):
-        """
-        Adds scale bar to the axes.
-        Gets the width of the map in meters, find the best bar length number, and converts the bar length to
-        equivalent axes percentage, then plots using axes transform so it is static on the axes.
-        :return: None
-        """
-        def add_rectangles(left_bar_pos, bar_center, right_bar_pos, y):
-            rect_height = 0.005
-            line_width = 0.4
-            sm_rect_width = (bar_center - left_bar_pos) / 5
-            sm_rect_xs = np.arange(left_bar_pos, bar_center, sm_rect_width)
-            big_rect_x = bar_center
-            big_rect_width = right_bar_pos - bar_center
-
-            # Adding the small rectangles
-            for i, rect_x in enumerate(sm_rect_xs):  # Top set of small rectangles
-                fill = 'w' if i % 2 == 0 else 'k'
-                patch = patches.Rectangle((rect_x, y), sm_rect_width, rect_height,
-                                          ec='k',
-                                          linewidth=line_width,
-                                          facecolor=fill,
-                                          transform=ax.transAxes,
-                                          zorder=9)
-                ax.add_patch(patch)
-            for i, rect_x in enumerate(sm_rect_xs):  # Bottom set of small rectangles
-                fill = 'k' if i % 2 == 0 else 'w'
-                patch = patches.Rectangle((rect_x, y - rect_height), sm_rect_width, rect_height,
-                                          ec='k',
-                                          zorder=9,
-                                          linewidth=line_width,
-                                          facecolor=fill,
-                                          transform=ax.transAxes)
-                ax.add_patch(patch)
-
-            # Adding the big rectangles
-            patch1 = patches.Rectangle((big_rect_x, y), big_rect_width, rect_height,
-                                           ec='k',
-                                           facecolor='k',
-                                           linewidth=line_width,
-                                           transform=ax.transAxes,
-                                           zorder=9)
-            patch2 = patches.Rectangle((big_rect_x, y - rect_height), big_rect_width, rect_height,
-                                           ec='k',
-                                           facecolor='w',
-                                           linewidth=line_width,
-                                           transform=ax.transAxes,
-                                           zorder=9)
-            ax.add_patch(patch1)
-            ax.add_patch(patch2)
-
-        label_buffer = [patheffects.Stroke(linewidth=1, foreground=buffer_color), patheffects.Normal()]
-
-        map_width = ax.get_xlim()[1] - ax.get_xlim()[0]
-        # map_width = ax.get_extent()[1] - ax.get_extent()[0]
-        num_digit = int(np.floor(np.log10(map_width)))  # number of digits in number
-        base = 0.5 * 10 ** num_digit
-        bar_map_length = round(map_width, -num_digit)  # round to 1sf
-        bar_map_length = base * math.ceil(bar_map_length / 8 / base)  # Rounds to the nearest 1,2,5...
-        # Multiply by scale factor for Section Plot
-        bar_map_length = bar_map_length * scale_factor
-        if units == 'm':
-            if bar_map_length > 10000:
-                units = 'kilometers'
-                bar_map_length = bar_map_length / 1000
-            else:
-                units = 'meters'
-        else:
-            units = 'feet'
-
-        bar_ax_length = bar_map_length / map_width
-        left_pos = x_pos - (bar_ax_length / 2)
-        right_pos = x_pos + (bar_ax_length / 2)
-
-        add_rectangles(left_pos, x_pos, right_pos, y_pos)
-        ax.text(left_pos, y_pos + .009, f"{bar_map_length / 2:.0f}",
-                ha='center',
-                transform=ax.transAxes,
-                path_effects=label_buffer,
-                fontsize=7,
-                zorder=9)
-        ax.text(x_pos, y_pos + .009, f"0",
-                ha='center',
-                transform=ax.transAxes,
-                path_effects=label_buffer,
-                fontsize=7,
-                zorder=9)
-        ax.text(right_pos, y_pos + .009, f"{bar_map_length / 2:.0f}",
-                ha='center',
-                transform=ax.transAxes,
-                path_effects=label_buffer,
-                fontsize=7,
-                zorder=9)
-        ax.text(x_pos, y_pos - .018, f"({units})",
-                ha='center',
-                transform=ax.transAxes,
-                path_effects=label_buffer,
-                fontsize=7,
-                zorder=9)
-
-    # @staticmethod
-    # def set_size(ax, figure):
-    #     """
-    #     Re-size the extents to make the axes 11" by 8.5"
-    #     :param ax: Matplotlib Axes object
-    #     :param figure: Matplotlib Figure object
-    #     """
-    #     bbox = ax.get_window_extent().transformed(figure.dpi_scale_trans.inverted())
-    #     xmin, xmax = ax.get_xlim()
-    #     ymin, ymax = ax.get_ylim()
-    #     # xmin, xmax, ymin, ymax = ax.get_extent()
-    #     map_width, map_height = xmax - xmin, ymax - ymin
-    #
-    #     current_ratio = map_width / map_height
-    #
-    #     if current_ratio < (bbox.width / bbox.height):
-    #         new_height = map_height
-    #         # Set the new width to be the correct ratio larger than height
-    #         new_width = new_height * (bbox.width / bbox.height)
-    #     else:
-    #         new_width = map_width
-    #         new_height = new_width * (bbox.height / bbox.width)
-    #
-    #     x_offset = 0
-    #     y_offset = 0.06 * new_height
-    #     new_xmin = (xmin - x_offset) - ((new_width - map_width) / 2)
-    #     new_xmax = (xmax - x_offset) + ((new_width - map_width) / 2)
-    #     new_ymin = (ymin + y_offset) - ((new_height - map_height) / 2)
-    #     new_ymax = (ymax + y_offset) + ((new_height - map_height) / 2)
-    #
-    #     ax.set_xlim(new_xmin, new_xmax)
-    #     ax.set_ylim(new_ymin, new_ymax)
-    #     # ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=crs)
-
-    @staticmethod
-    def set_scale(ax, figure):
-        """
-        Changes the extent of the plot such that the scale is an acceptable value.
-        :param ax: Matplotlib Axes object
-        :param figure: Matplotlib Figure object
-        """
-        def get_scale_factor():
-            """Return an appropriate scale for the map."""
-            # num_digit = len(str(int(current_scale)))  # number of digits in number
-            num_digit = int(np.floor(np.log10(current_scale)))  # number of digits in number
-            scale_nums = [1., 1.25, 1.5, 2., 2.5, 5.]
-            possible_scales = [num * 10 ** num_digit for num in
-                               scale_nums + list(map(lambda x: x * 10, scale_nums))]
-
-            # Calculate the new scale using a 40 % buffer
-            new_scale = min(filter(lambda x: x > current_scale * 1.40, possible_scales),
-                            key=lambda x: x - current_scale * 1.40)
-            if new_scale == 1500:
-                new_scale = 2000
-
-            scale_factor = new_scale / current_scale
-            return scale_factor, new_scale
-
-        xmin, xmax = ax.get_xlim()
-        ymin, ymax = ax.get_ylim()
-        # xmin, xmax, ymin, ymax = ax.get_extent()
-        map_width, map_height = xmax - xmin, ymax - ymin
-        bbox = ax.get_window_extent().transformed(figure.dpi_scale_trans.inverted())
-        current_scale = map_width / (bbox.width * .0254)
-        scale_factor, new_map_scale = get_scale_factor()
-        new_map_height = map_height * scale_factor
-        new_map_width = map_width * scale_factor
-
-        new_xmin = xmin - ((new_map_width - map_width) / 2)
-        new_xmax = xmax + ((new_map_width - map_width) / 2)
-        new_ymin = ymin - ((new_map_height - map_height) / 2)
-        new_ymax = ymax + ((new_map_height - map_height) / 2)
-
-        ax.set_xlim(new_xmin, new_xmax)
-        ax.set_ylim(new_ymin, new_ymax)
-        # ax.set_extent((new_xmin, new_xmax, new_ymin, new_ymax), crs=crs)
-        return new_map_scale
-
-    @staticmethod
-    def add_north_arrow(ax, x_pos=0.94, y_pos=0.89, length=0.16, line_width=0.5):
-        """
-        Adds the north arrow to the plot. The arrow is manually drawn, and is always fixed in position and size.
-        :param ax: Matplotlib Axes object
-        :param x_pos: float, horizontal middle position of the arrow
-        :param y_pos: float, vertical middle position of the arrow
-        :param length: float, length of the arrow
-        :param line_width: float, width of the lines
-        :return: None
-        """
-        def ax_len(pixel_length):
-            """
-            Calculate the equivalent axes size for a given pixel length
-            :param pixel_length: float, length of the line in pixel values
-            """
-            return length * (pixel_length / 300)  # 267 is pixel length of old north arrow
-
-        bot = y_pos - (length / 2)
-        top = y_pos + (length / 2)
-
-        # Drawing full arrow polygon using ax.plot
-        xs = [x_pos, x_pos, x_pos + ax_len(11), x_pos, x_pos, x_pos - ax_len(6), x_pos - ax_len(6), x_pos]
-        ys = [top - ax_len(45) + ax_len(8), top, top - ax_len(45), top - ax_len(45) + ax_len(8), bot,
-              bot - ax_len(12), bot + ax_len((41 - 12)), bot + ax_len(41)]
-        ax.plot(xs, ys, color='k', lw=line_width, transform=ax.transAxes)
-
-        # Drawing the N
-        xs = [x_pos - ax_len(12), x_pos - ax_len(12), x_pos + ax_len(12), x_pos + ax_len(12)]  # First N
-        ys = [y_pos - ax_len(21), y_pos + ax_len(21), y_pos - ax_len(30) + ax_len(21), y_pos + ax_len(21)]  # First N
-        x2s = [x_pos - ax_len(12), x_pos + ax_len(12), x_pos + ax_len(12)]  # Second diagonal line
-        y2s = [y_pos + ax_len(30) - ax_len(21), y_pos - ax_len(21),
-               y_pos - ax_len(30) + ax_len(21)]  # Second diagonal line
-        ax.plot(xs, ys, color='k', lw=line_width, transform=ax.transAxes)
-        ax.plot(x2s, y2s, color='k', lw=line_width, transform=ax.transAxes)
-
-        # Drawing the two side-lines
-        x1 = [x_pos - ax_len(31) - ax_len(36), x_pos - ax_len(31)]
-        x2 = [x_pos + ax_len(31) + ax_len(36), x_pos + ax_len(31)]
-        y = [y_pos] * 2
-        tick_line1 = lines.Line2D(x1, y, color='k', lw=line_width, transform=ax.transAxes)
-        tick_line2 = lines.Line2D(x2, y, color='k', lw=line_width, transform=ax.transAxes)
-
-        ax.add_line(tick_line1)
-        ax.add_line(tick_line2)
-
-
-class PlanMap(MapPlotter):
+class PlanMap:
     """
     Draws a plan map on a given Matplotlib figure object. Only makes a plan map for one survey type and timebase.
     :param: pem_files: list of pem_files
@@ -1185,6 +1181,7 @@ class PlanMap(MapPlotter):
                  label_collars=True, label_hole_depth=True):
         super().__init__()
         self.figure = figure
+        plt.style.use('default')
 
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
@@ -1260,23 +1257,23 @@ class PlanMap(MapPlotter):
 
             # Plot the surface lines
             if not pem_file.is_borehole() and self.draw_lines is True and pem_file.has_station_gps():
-                self.station_handle = self.plot_line(pem_file, self.figure,
-                                                     annotate=False)
+                self.station_handle = plot_line(pem_file, self.figure,
+                                                annotate=False)
 
             # Plot the boreholes
             if pem_file.is_borehole() and self.draw_collars is True and pem_file.has_collar_gps():
-                self.plot_hole(pem_file, self.figure,
-                               label=self.label_collars,
-                               label_depth=self.label_hole_depth)
+                plot_hole(pem_file, self.figure,
+                          label=self.label_collars,
+                          label_depth=self.label_hole_depth)
 
             # Plot the loops
             if self.draw_loops is True and pem_file.has_loop_gps():
                 if pem_file.get_loop().to_string() not in self.loops:
                     self.loops.append(pem_file.get_loop().to_string())
-                    self.loop_handle = self.plot_loop(pem_file, self.figure,
-                                                      annotate=self.annotate_loop,
-                                                      label=self.label_loops,
-                                                      is_mmr=pem_file.is_mmr())
+                    self.loop_handle = plot_loop(pem_file, self.figure,
+                                                 annotate=self.annotate_loop,
+                                                 label=self.label_loops,
+                                                 is_mmr=pem_file.is_mmr())
 
         self.format_figure()
         return self.figure
@@ -1300,22 +1297,22 @@ class PlanMap(MapPlotter):
             def draw_box():
                 # Separating lines
                 line_1 = lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .045, top_pos - .045],
-                                       linewidth=1,
-                                       color='gray',
-                                       transform=self.ax.transAxes,
-                                       zorder=10)
+                                      linewidth=1,
+                                      color='gray',
+                                      transform=self.ax.transAxes,
+                                      zorder=10)
 
                 line_2 = lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .115, top_pos - .115],
-                                       linewidth=1,
-                                       color='gray',
-                                       transform=self.ax.transAxes,
-                                       zorder=10)
+                                      linewidth=1,
+                                      color='gray',
+                                      transform=self.ax.transAxes,
+                                      zorder=10)
 
                 line_3 = lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .160, top_pos - .160],
-                                       linewidth=.5,
-                                       color='gray',
-                                       transform=self.ax.transAxes,
-                                       zorder=10)
+                                      linewidth=.5,
+                                      color='gray',
+                                      transform=self.ax.transAxes,
+                                      zorder=10)
 
                 # Title box rectangle
                 rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin),
@@ -1433,34 +1430,29 @@ class PlanMap(MapPlotter):
                          zorder=10,
                          transform=self.ax.transAxes)
 
-        self.figure.subplots_adjust(left=0.03, bottom=0.03, right=0.97, top=0.95)
         self.ax.set_aspect("equal")
+        self.figure.subplots_adjust(left=0.03, bottom=0.03, right=0.97, top=0.95)
 
         # Resize the figure to be 11" x 8.5"
-        set_ax_size(self.ax, self.figure)
+        auto_size_ax(self.ax, self.figure)
 
         # Calculate and set the scale of the map
-        self.map_scale = self.set_scale(self.ax, self.figure)
+        self.map_scale = set_scale(self.ax, self.figure)
 
-        # Add the grid
         if self.draw_grid:
             self.ax.grid(True, linestyle='dotted', zorder=0)
         else:
             self.ax.grid(False)
 
-        # Add the scale bar
         if self.draw_scale_bar:
-            self.add_scale_bar(self.ax)
+            add_scale_bar(self.ax)
 
-        # Add the north arrow
         if self.draw_north_arrow:
-            self.add_north_arrow(self.ax)
+            add_north_arrow(self.ax)
 
-        # Add the title box
         if self.draw_title_box:
             add_title()
 
-        # Add the legend
         if self.draw_legend:
             legend_handles = [handle for handle in
                               [self.loop_handle, self.station_handle, self.collar_handle] if
@@ -1499,16 +1491,16 @@ class PlanMap(MapPlotter):
         plt.setp(self.ax.get_yticklabels(), fontname='Century Gothic', va='center')
 
 
-class SectionPlot(MapPlotter):
+class SectionPlot:
     """
     Plots the section plot (magnetic field vector plot) of a single borehole on a given figure object.
     By default the azimuth selected is the 80th percentile down the hole, but this is selected by the user.
     """
-
     def __init__(self):
         super().__init__()
         self.buffer = [patheffects.Stroke(linewidth=3, foreground='white'), patheffects.Normal()]
         self.color = 'black'
+        plt.style.use('default')
 
         self.figure = None
         self.ax = None
@@ -1528,7 +1520,6 @@ class SectionPlot(MapPlotter):
         :param hole_depth: int, depth of the hole
         :param label_ticks: bool, whether to label the ticks with the depth
         """
-
         def plot_mag(section_depth):
             """
             Plot the magnetic field lines
@@ -1700,15 +1691,14 @@ class SectionPlot(MapPlotter):
         :param plot_width: Physical width of the plot in meters.
         :return: tuple: XY coordinates of each corner of the section, the azimuth and the length of the section line.
         """
-
         def calc_scale_factor(p1, p2, plot_width):
             """
             Modifies the two cross-section points so they will create a map with an appropriate scale
             :param p1: xy tuple of one of the current extent points
             :param p2: xy tuple of the other extent point
+            :param plot_width: float, Section plot width in m (after subplot adjustment)
             :return: A factor by which to multiply the change in X and change in Y
             """
-
             def get_scale_factor():
                 # num_digit = len(str(int(current_scale)))  # number of digits in number
                 num_digit = int(np.floor(np.log10(current_scale)))  # number of digits in number
@@ -1771,7 +1761,6 @@ class SectionPlot(MapPlotter):
         return line_xy_1, line_xy_2, line_az
 
     def format_figure(self):
-
         def calc_scale():
             xmin, xmax = self.ax.get_xlim()
             map_width = xmax - xmin
@@ -1800,22 +1789,22 @@ class SectionPlot(MapPlotter):
 
             # Separating lines
             line_1 = lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .045, top_pos - .045],
-                                   linewidth=1,
-                                   color='gray',
-                                   transform=self.ax.transAxes,
-                                   zorder=10)
+                                  linewidth=1,
+                                  color='gray',
+                                  transform=self.ax.transAxes,
+                                  zorder=10)
 
             line_2 = lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .098, top_pos - .098],
-                                   linewidth=1,
-                                   color='gray',
-                                   transform=self.ax.transAxes,
-                                   zorder=10)
+                                  linewidth=1,
+                                  color='gray',
+                                  transform=self.ax.transAxes,
+                                  zorder=10)
 
             line_3 = lines.Line2D([b_xmin, b_xmin + b_width], [top_pos - .135, top_pos - .135],
-                                   linewidth=.5,
-                                   color='gray',
-                                   transform=self.ax.transAxes,
-                                   zorder=10)
+                                  linewidth=.5,
+                                  color='gray',
+                                  transform=self.ax.transAxes,
+                                  zorder=10)
 
             # Title box rectangle
             rect = patches.FancyBboxPatch(xy=(b_xmin, b_ymin),
@@ -1933,7 +1922,7 @@ class SectionPlot(MapPlotter):
 
         add_coord_labels()
         add_title()
-        self.add_scale_bar(self.ax, x_pos=0.205, y_pos=0.25, scale_factor=2, units=units)
+        add_scale_bar(self.ax, x_pos=0.205, y_pos=0.25, scale_factor=2, units=units)
 
 
 # class GeneralMap:
@@ -2910,8 +2899,9 @@ class PEMPrinter:
     def __init__(self, parent=None, **kwargs):
         super().__init__()
         self.parent = parent
-
+        plt.style.use('default')
         plt.close()  # Close any opened figures. Solves 'Internal C++ object (FigureCanvasQTAgg) already deleted.'
+
         self.portrait_fig = plt.figure(num=1, clear=True)
         self.portrait_fig.set_size_inches((8.5, 11))
         self.landscape_fig = plt.figure(num=2, clear=True)

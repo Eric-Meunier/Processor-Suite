@@ -28,14 +28,13 @@ from scipy import interpolate as interp
 
 from src.qt_py import get_icon, CustomProgressDialog, NonScientific, get_line_color, MapToolbar
 from src.gps.gps_editor import BoreholeGeometry
-from src.pem.pem_plotter import MapPlotter
+from src.pem.pem_plotter import plot_line, plot_loop
 from src.ui.contour_map import Ui_ContourMap
 
 logger = logging.getLogger(__name__)
 
 
 class MapboxViewer(QMainWindow):
-
     def __init__(self, parent=None):
         """
         Base widget to plot Plotly Mapbox maps in.
@@ -525,7 +524,6 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
 
         self.error = QErrorMessage()
         self.message = QMessageBox()
-        self.map_plotter = MapPlotter()
         self.parent = parent
         self.darkmode = darkmode
 
@@ -729,18 +727,18 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
                         self.plot_lines_cbox.isChecked(),
                         line not in lines]):
                     lines.append(line)
-                    self.map_plotter.plot_line(pem_file, figure,
-                                               annotate=bool(
-                                                   self.label_stations_cbox.isChecked() and
-                                                   self.label_stations_cbox.isEnabled()),
-                                               label=bool(
-                                                   self.label_lines_cbox.isChecked() and
-                                                   self.label_lines_cbox.isEnabled()),
-                                               plot_ticks=bool(
-                                                   self.plot_stations_cbox.isChecked() and
-                                                   self.plot_stations_cbox.isEnabled()),
-                                               color=self.foreground_color,
-                                               buffer_color=self.background_color)
+                    plot_line(pem_file, figure,
+                              annotate=bool(
+                                  self.label_stations_cbox.isChecked() and
+                                  self.label_stations_cbox.isEnabled()),
+                              label=bool(
+                                  self.label_lines_cbox.isChecked() and
+                                  self.label_lines_cbox.isEnabled()),
+                              plot_ticks=bool(
+                                  self.plot_stations_cbox.isChecked() and
+                                  self.plot_stations_cbox.isEnabled()),
+                              color=self.foreground_color,
+                              buffer_color=self.background_color)
 
                 # Plot the loop
                 loop = pem_file.loop
@@ -748,13 +746,13 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
                         self.plot_loops_cbox.isChecked(),
                         loop not in loops]):
                     loops.append(loop)
-                    self.map_plotter.plot_loop(pem_file, figure,
-                                               annotate=False,
-                                               label=bool(
-                                                   self.label_loops_cbox.isChecked() and
-                                                   self.label_loops_cbox.isEnabled()),
-                                               color=self.foreground_color,
-                                               buffer_color=self.background_color)
+                    plot_loop(pem_file, figure,
+                              annotate=False,
+                              label=bool(
+                                  self.label_loops_cbox.isChecked() and
+                                  self.label_loops_cbox.isEnabled()),
+                              color=self.foreground_color,
+                              buffer_color=self.background_color)
 
         def add_title():
             """
@@ -888,6 +886,7 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
         :return: None
         """
         if self.pem_files:
+            # plt.style.use('default')
             default_path = self.pem_files[0].filepath.parent.with_suffix(".PDF")
             path, ext = QFileDialog.getSaveFileName(self, 'Save Figure', str(default_path),
                                                     'PDF Files (*.PDF);;PNG Files (*.PNG);;JPG Files (*.JPG')
@@ -934,6 +933,7 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
                         pdf.savefig(save_fig, orientation='landscape')
 
                     plt.close(save_fig)
+                # plt.style.use('dark_background' if self.darkmode else 'default')
                 os.startfile(path)
 
 

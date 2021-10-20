@@ -19,6 +19,7 @@ import pandas as pd
 import pyqtgraph as pg
 import simplekml
 import stopit
+import cartopy
 from PySide2.QtCore import Qt, QDir, Signal, QEvent, QTimer, QSettings, QSize, QPoint
 from PySide2.QtGui import QIcon, QColor, QFont, QIntValidator, QCursor
 from PySide2.QtWebEngineWidgets import QWebEngineView
@@ -68,6 +69,8 @@ logger = logging.getLogger(__name__)
 # TODO Improve un-rotation. One-click?
 # TODO Could add std plot to the right of decay plots
 # TODO remember size of splitters in PEMPro
+# TODO Add a Recent projects list, below project GPS, which will be a history of recently clicked folders.
+# TODO remember PEMmerger settings
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
@@ -1791,14 +1794,13 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             :param filepath: str.
             """
             filepath = Path(filepath)
-            project_dir = self.project_dir_edit.text()
             removal_rows = []
             if self.actionRename_Merged_Files.isChecked():
                 for row in rows:
                     name = self.table.item(row, self.table_columns.index("File")).text()
                     if name != filepath.name:
                         removal_rows.append(row)
-                        if Path(project_dir).joinpath(name).is_file():
+                        if self.pem_files[row].filepath.is_file():
                             new_name = "[M]" + name
                             # Also triggers file re-name.
                             self.table.item(row, self.table_columns.index("File")).setText(new_name)
@@ -2225,14 +2227,15 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         refs.append(ss)
         ss.show()
 
-    def open_nrcan_calculator(self):
+    @staticmethod
+    def open_nrcan_calculator():
         """NRCan website for magnetic field values"""
         view = QWebEngineView()
         refs.append(view)
         view.setWindowIcon(get_icon("canada.png"))
         view.setWindowTitle("NRCan Magnetic Field Calculator")
         view.setContentsMargins(0, 0, 0, 0)
-        view.setUrl("https://geomag.nrcan.gc.ca/calc/mfcal-en.php")
+        view.setUrl(r"https://geomag.nrcan.gc.ca/calc/mfcal-en.php")
         view.show()
 
     def open_dir_tree_context_menu(self, position):
@@ -4220,7 +4223,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
         super().__init__()
         self.parent = parent
         self.darkmode = darkmode
-        plt.style.use('default')
+        # plt.style.use('default')
         self.setupUi(self)
         self.setWindowTitle("PDF Printing Options")
         self.setWindowIcon(get_icon('pdf.png'))
@@ -4340,6 +4343,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
 
         save_dir = self.save_path_edit.text()
         if save_dir:
+            plt.style.use('default')
             save_dir = os.path.splitext(save_dir)[0]
             printer = PEMPrinter(**plot_kwargs)
             printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))

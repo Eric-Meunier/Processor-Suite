@@ -5,7 +5,8 @@ from pathlib import Path
 
 from PySide2.QtCore import Qt, QTimer
 from PySide2.QtGui import (QColor, QIcon)
-from PySide2.QtWebEngineWidgets import QWebEngineView  # If loaded after QApplication, will break OpenGL, which breaks 3D map and Tile map.
+# Import QWebEngineView, otherwise if loaded after QApplication, will break OpenGL, which breaks 3D map and Tile map.
+from PySide2.QtWebEngineWidgets import QWebEngineView
 from PySide2.QtWidgets import (QWidget, QErrorMessage, QApplication, QGraphicsDropShadowEffect)
 
 from src import __version__, app_data_dir

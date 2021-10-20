@@ -26,7 +26,7 @@ from shapely.geometry import asMultiPoint
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser, read_gpx, read_kmz
 from src.logger import logger
 from src.qt_py import (get_icon, NonScientific, read_file, table_to_df, df_to_table, get_line_color, clear_table,
-                       MapToolbar, set_ax_size, CRSSelector, CustomProgressDialog, TableSelector)
+                       MapToolbar, auto_size_ax, CRSSelector, CustomProgressDialog, TableSelector)
 from src.ui.gpx_creator import Ui_GPXCreator
 from src.ui.line_adder import Ui_LineAdder
 from src.ui.loop_adder import Ui_LoopAdder
@@ -2064,7 +2064,7 @@ class GPSExtractor(QMainWindow):
         # geo_df.plot(column="Name", ax=self.ax, legend=True)
         geo_df:gpd.GeoDataFrame
         geo_df.plot(ax=self.ax, color=self.line_color)
-        set_ax_size(self.ax, self.figure)  # Resize the axes so it takes up the entire figure's space.
+        auto_size_ax(self.ax, self.figure)  # Resize the axes so it takes up the entire figure's space.
         # Move the legend outside the plot
         # self.ax.get_legend()._loc = 2  # upper left
         # self.ax.get_legend().set_bbox_to_anchor((1, 1))
