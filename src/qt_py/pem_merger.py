@@ -453,7 +453,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
                     self.menuView.addAction(self.view_z_action)
 
         assert len(pem_files) == 2, f"PEMMerger exclusively accepts two PEM files."
-        f1, f2 = pem_files[0], pem_files[1]
+        f1, f2 = pem_files[0].copy(), pem_files[1].copy()
         assert f1.is_borehole() == f2.is_borehole(), f"Cannot merge a borehole survey with a surface survey."
         assert f1.is_fluxgate() == f2.is_fluxgate(), f"Cannot merge a fluxgate survey with an induction survey."
         assert f1.timebase == f2.timebase, f"Both files must have the same timebase."
@@ -470,9 +470,13 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         if f1_min < f2_min:
             self.pf1 = f1
             self.pf2 = f2
+            self.last_soa_1 = f1.soa
+            self.last_soa_2 = f2.soa
         else:
             self.pf1 = f2
             self.pf2 = f1
+            self.last_soa_1 = f2.soa
+            self.last_soa_2 = f1.soa
 
         if self.pf1.is_fluxgate():
             self.units = 'pT'
@@ -665,7 +669,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
 
 
 if __name__ == '__main__':
-    from src.pem.pem_file import PEMParser, PEMGetter
+    from src.pem.pem_file import PEMGetter
     from src.qt_py import dark_palette
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
@@ -681,8 +685,8 @@ if __name__ == '__main__':
     # pem_files = pem_getter.get_pems(client='Minera', number=2)
     # pf1 = pem_getter.get_pems(folder='Raw Boreholes', file='em10-10xy_0403.PEM')[0]
     # pf2 = pem_getter.get_pems(folder='Raw Boreholes', file='em10-10-2xy_0403.PEM')[0]
-    pf1 = pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0823.PEM")[0]
-    pf2 = pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0824.PEM")[0]
+    pf1 = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-205\Final\EM21-205 XYT.PEM").split()
+    pf2 = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-205\RAW\xy.PEM").split()
     # pf1 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 XYT.PEM')[0]
     # pf2 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 ZAv.PEM')[0]
     # pf1 = pem_getter.get_pems(client='Iscaycruz', subfolder='PZ-19-05', file='CXY_02.PEM')[0]

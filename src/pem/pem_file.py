@@ -104,14 +104,12 @@ def process_angle(average_angle, angle):
     # print(f"Diff, diff_minus, diff_plus: {', '.join([str(round(diff, 2)), str(round(diff_minus, 2)), str(round(diff_plus, 2))])}.")
     if all(diff_minus < [diff, diff_plus]):
         if diff_minus > 300:
-            print(f"Minusing again")
             roll_minus = roll_minus - 360
         # print(f"Going with {diff_minus:.2f}")
         # print(F"Returning new angle {roll_minus:.2f}\n")
         return roll_minus
     elif all(diff_plus < [diff, diff_minus]):
         if diff_plus > 300:
-            print(f"Plusing again")
             roll_plus = roll_plus + 360
         # print(f"Going with {diff_plus:.2f}")
         # print(F"Returning new angle {roll_plus:.2f}\n")
@@ -190,6 +188,7 @@ class PEMFile:
         self.units = tags.get('Units')
         self.operator = tags.get('Operator')
         self.probes = tags.get('Probes')
+        self.soa = float(self.probes.get("SOA"))
         self.current = tags.get('Current')
         self.loop_dimensions = tags.get('Loop dimensions')
 
@@ -759,7 +758,7 @@ class PEMFile:
         Create a data frame which includes GPS position and columns for each channel.
         :return: DataFrame object
         """
-        print(F"Retrieving contour data for {self.filepath.name}.")
+        logger.debug(F"Retrieving contour data for {self.filepath.name}.")
 
         def add_gps(row):
             """Add the GPS for a given station"""
@@ -1709,9 +1708,9 @@ class PEMFile:
         """
         Rotate the XY data of the PEM file.
         Formula: X' = Xcos(roll) - Ysin(roll), Y' = Xsin(roll) + Ycos(roll)
-        :param method: str: Method of rotation, either 'acc' for accelerometer or 'mag' for magnetic, or 'unrotate' if
+        :param method: str, Method of rotation, either 'acc' for accelerometer or 'mag' for magnetic, or 'unrotate' if
         the file has been de-rotated.
-        :param soa: int: Sensor offset angle
+        :param soa: int, Sensor offset angle
         :return: PEM file object with rotated data
         """
         assert self.is_borehole(), f"{self.filepath.name} is not a borehole file."
@@ -1887,7 +1886,7 @@ class PEMFile:
 
         self.data.update(rotated_data)  # Fixes KeyError "... value not in index"
 
-        print(list(self.data[xy_filt].groupby(["Station", "RAD_ID"]))[0][1])
+        # print(list(self.data[xy_filt].groupby(["Station", "RAD_ID"]))[0][1])
         # Remove the rows that were filtered out in filtered_data
         if method == "unrotate":
             self.soa = 0
@@ -1896,7 +1895,6 @@ class PEMFile:
         # Remove any previous de-rotation notes
         for note in reversed(self.notes):
             if "<GEN> XY data" in note and "rotated" in note:
-                print(f"Removing note {note}")
                 self.notes.remove(note)
 
         # Add the rotation note
@@ -3054,9 +3052,7 @@ class DMPParser:
 
             # Create a data frame out of the readings
             df_data = []
-            for i, reading in enumerate(split_data):
-                if i == 462:
-                    print(f"Stopping here")
+            for reading in split_data:
                 split_reading = reading.split('\n')
 
                 # Header information
@@ -3943,6 +3939,9 @@ class PEMGetter:
         return pem_files
 
     def parse(self, filepath):
+        if not Path(filepath).is_file():
+            raise FileNotFoundError(f"{filepath} does not exist.")
+
         pem_file = parse_file(filepath)
         return pem_file
 
