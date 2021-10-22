@@ -84,7 +84,7 @@
          <property name="childrenCollapsible">
           <bool>false</bool>
          </property>
-         <widget class="QFrame" name="frame_4">
+         <widget class="QFrame" name="project_frame">
           <property name="sizePolicy">
            <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
             <horstretch>0</horstretch>
@@ -535,7 +535,7 @@ Warnings</string>
                  <property name="childrenCollapsible">
                   <bool>false</bool>
                  </property>
-                 <widget class="QFrame" name="frame_6">
+                 <widget class="QFrame" name="project_dir_frame">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                     <horstretch>1</horstretch>
@@ -616,7 +616,7 @@ Warnings</string>
                    </item>
                   </layout>
                  </widget>
-                 <widget class="QFrame" name="frame_3">
+                 <widget class="QFrame" name="available_pems_frame">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                     <horstretch>0</horstretch>
@@ -889,7 +889,7 @@ Warnings</string>
                    </item>
                   </layout>
                  </widget>
-                 <widget class="QFrame" name="frame_2">
+                 <widget class="QFrame" name="available_gps_frame">
                   <property name="sizePolicy">
                    <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                     <horstretch>0</horstretch>
@@ -2221,7 +2221,7 @@ Warnings</string>
   <tabstop>share_client_cbox</tabstop>
   <tabstop>share_grid_cbox</tabstop>
   <tabstop>share_loop_cbox</tabstop>
-  <tabstop>frame_4</tabstop>
+  <tabstop>project_frame</tabstop>
   <tabstop>table</tabstop>
   <tabstop>project_tree</tabstop>
   <tabstop>remove_pem_btn</tabstop>

@@ -79,8 +79,21 @@ class SurveyPlanner(QMainWindow):
             self.grab().save(save_name)
 
     def copy_img(self):
-        QApplication.clipboard().setPixmap(self.grab())
-        self.statusBar().showMessage(F"Image saved to clipboard.", 1500)
+        screenshot_area = self.get_screenshot_area()
+        QApplication.clipboard().setPixmap(self.grab(screenshot_area))
+        self.status_bar.showMessage('Image copied to clipboard.', 1000)
+
+    def get_screenshot_area(self):
+        """
+        Return the QRect that encompasses the main area of the window. i.e. excludes the status bar and menu bar.
+        :return: QRect
+        """
+        menu_height = self.menuFile.rect().size().height()
+        status_bar_height = self.statusBar().rect().size().height()
+        screenshot_area = self.rect()
+        screenshot_area.setHeight(screenshot_area.height() - status_bar_height - menu_height)
+        screenshot_area.moveTop(menu_height)
+        return screenshot_area
 
     def copy_loop_coords(self, widget):
         """
@@ -95,6 +108,7 @@ class SurveyPlanner(QMainWindow):
 
         # Create a string from the loop corners
         result = crs_str + '\n'
+        result += widget.loop_name_edit.text() + "\n"
         corners = widget.get_loop_coords()
         for point in corners:
             easting = f"{point.x():.0f} E"
@@ -600,67 +614,6 @@ class LoopWidget(QWidget):
         :param angle: angle of a previous loop to be used as a starting point.
         :param plot_widget: pyqtgraph plot widget to plot on.
         """
-        def init_ui():
-            self.setLayout(QFormLayout())
-            self.show_cbox.setChecked(True)
-
-            self.loop_name_edit.setPlaceholderText('(Optional)')
-
-            self.coords_table.setColumnCount(2)
-            self.coords_table.setHorizontalHeaderLabels(["Easting", "Northing"])
-            self.coords_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-            float_delegate = QItemDelegate()
-            self.coords_table.setItemDelegateForColumn(0, float_delegate)
-            self.coords_table.setItemDelegateForColumn(1, float_delegate)
-
-            name_frame = QFrame()
-            name_frame.setLayout(QHBoxLayout())
-            name_frame.layout().setContentsMargins(0, 0, 0, 0)
-            self.loop_name_edit.setPlaceholderText('(Optional)')
-
-            self.remove_btn.setFlat(True)
-            self.remove_btn.setToolTip("Remove")
-
-            name_frame.layout().addWidget(QLabel("Name"))
-            name_frame.layout().addWidget(self.loop_name_edit)
-            name_frame.layout().addWidget(self.remove_btn)
-
-            self.layout().addRow(self.show_cbox)
-            self.layout().addRow(self.coords_table)
-            self.layout().addRow(self.duplicate_btn)
-            self.layout().addRow(self.copy_loop_btn)
-            self.layout().addRow(name_frame)
-
-        def init_signals():
-            def toggle_visibility():
-                if self.show_cbox.isChecked():
-                    self.loop_roi.show()
-                    self.loop_name.show()
-                    if self.show_corners:
-                        for label in self.corner_labels:
-                            label.show()
-                    if self.show_segments:
-                        for label in self.segment_labels:
-                            label.show()
-                else:
-                    self.loop_roi.hide()
-                    self.loop_name.hide()
-                    for label in np.concatenate([self.corner_labels, self.segment_labels]):
-                        label.hide()
-
-            self.coords_table.cellChanged.connect(self.update_loop_corners)
-            self.show_cbox.toggled.connect(toggle_visibility)
-            self.remove_btn.clicked.connect(self.remove_sig.emit)
-
-            self.loop_name_edit.textChanged.connect(self.name_changed_sig.emit)
-            self.loop_name_edit.textChanged.connect(lambda: self.loop_name.setText(self.loop_name_edit.text()))
-            self.loop_roi.setAcceptedMouseButtons(Qt.LeftButton)
-            self.loop_roi.sigHandleAdded.connect(self.update_loop_values)
-            self.loop_roi.sigHandleAdded.connect(self.label_loop_corners)
-            self.loop_roi.sigRegionChanged.connect(self.update_loop_values)
-            self.loop_roi.sigRegionChanged.connect(self.plot_loop_name)
-            self.loop_roi.sigRegionChangeFinished.connect(lambda: self.plot_hole_sig.emit())
-
         def get_corners(coords):
             if len(coords) == 1:
                 center = coords[0]
@@ -707,7 +660,7 @@ class LoopWidget(QWidget):
         self.copy_loop_btn = QPushButton(get_icon('copy.png'), "Copy Corners")
         self.loop_name_edit = QLineEdit(name)
         self.remove_btn = QPushButton(get_icon("remove2.png"), "")
-        init_ui()
+        self.init_ui()
 
         # Plots
         corners = get_corners(coords)
@@ -720,7 +673,7 @@ class LoopWidget(QWidget):
         self.loop_roi.setZValue(15)
         self.update_loop_values()
 
-        self.loop_name = pg.TextItem(name, anchor=(0.5, 0.5), color=(0, 0, 0, 100))
+        self.loop_name = pg.TextItem(name, anchor=(0.5, 0.5), color=self.foreground_color)
         self.loop_name.setZValue(0)
 
         self.plan_view.addItem(self.loop_roi)
@@ -728,7 +681,69 @@ class LoopWidget(QWidget):
 
         self.plot_loop_name()
 
-        init_signals()
+        self.init_signals()
+
+    def init_ui(self):
+        self.setLayout(QFormLayout())
+        self.show_cbox.setChecked(True)
+
+        self.loop_name_edit.setPlaceholderText('(Optional)')
+
+        self.coords_table.setColumnCount(2)
+        self.coords_table.setHorizontalHeaderLabels(["Easting", "Northing"])
+        self.coords_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        float_delegate = QItemDelegate()
+        self.coords_table.setItemDelegateForColumn(0, float_delegate)
+        self.coords_table.setItemDelegateForColumn(1, float_delegate)
+
+        name_frame = QFrame()
+        name_frame.setLayout(QHBoxLayout())
+        name_frame.layout().setContentsMargins(0, 0, 0, 0)
+        self.loop_name_edit.setPlaceholderText('(Optional)')
+
+        self.remove_btn.setFlat(True)
+        self.remove_btn.setToolTip("Remove")
+
+        name_frame.layout().addWidget(QLabel("Name"))
+        name_frame.layout().addWidget(self.loop_name_edit)
+        name_frame.layout().addWidget(self.remove_btn)
+
+        self.layout().addRow(self.show_cbox)
+        self.layout().addRow(self.coords_table)
+        self.layout().addRow(self.duplicate_btn)
+        self.layout().addRow(self.copy_loop_btn)
+        self.layout().addRow(name_frame)
+
+    def init_signals(self):
+        def toggle_visibility():
+            if self.show_cbox.isChecked():
+                self.loop_roi.show()
+                self.loop_name.show()
+                if self.show_corners:
+                    for label in self.corner_labels:
+                        label.show()
+                if self.show_segments:
+                    for label in self.segment_labels:
+                        label.show()
+            else:
+                self.loop_roi.hide()
+                self.loop_name.hide()
+                for label in np.concatenate([self.corner_labels, self.segment_labels]):
+                    label.hide()
+
+        self.coords_table.cellChanged.connect(self.update_loop_corners)
+        self.show_cbox.toggled.connect(toggle_visibility)
+        self.remove_btn.clicked.connect(self.remove_sig.emit)
+
+        self.loop_name_edit.textChanged.connect(self.name_changed_sig.emit)
+        self.loop_name_edit.textChanged.connect(lambda: self.loop_name.setText(self.loop_name_edit.text()))
+        self.loop_roi.setAcceptedMouseButtons(Qt.LeftButton)
+        self.loop_roi.sigClicked.connect(self.plot_loop_name)
+        self.loop_roi.sigHandleAdded.connect(self.update_loop_values)
+        self.loop_roi.sigHandleAdded.connect(self.label_loop_corners)
+        self.loop_roi.sigRegionChanged.connect(self.update_loop_values)
+        self.loop_roi.sigRegionChanged.connect(self.plot_loop_name)
+        self.loop_roi.sigRegionChangeFinished.connect(lambda: self.plot_hole_sig.emit())
 
     def select(self):
         """When the loop is selected"""
@@ -1702,7 +1717,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             self.crs_selector.epsg_edit.setText(epsg)
             self.crs_selector.epsg_rbtn.click()
 
-            with CustomProgressDialog("Opening Project...", 0, len(holes) + len(loops), parent=self) as dlg:
+            with CustomProgressDialog("Opening Project...", 0, len(holes) + len(loops)) as dlg:
                 try:
                     for hole in holes:
                         if dlg.wasCanceled():

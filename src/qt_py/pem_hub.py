@@ -71,6 +71,7 @@ logger = logging.getLogger(__name__)
 # TODO remember size of splitters in PEMPro
 # TODO Add a Recent projects list, below project GPS, which will be a history of recently clicked folders.
 # TODO remember PEMmerger settings
+# TODO Fix Plan map margins
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
@@ -233,7 +234,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.error.setWindowTitle("Error")
         self.error.setWindowIcon(self.windowIcon())
 
-        self.frame_4.layout().insertWidget(1, self.crs_selector)
+        self.project_frame.layout().insertWidget(1, self.crs_selector)
         self.table.horizontalHeader().hide()
 
         # Set icons
@@ -885,9 +886,13 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         settings = QSettings("Crone Geophysics", "PEMPro")
         settings.beginGroup("MainWindow")
 
-        # Window geometry
-        settings.setValue("size", self.size())
-        settings.setValue("pos", self.pos())
+        # Geometry
+        settings.setValue("windowGeometry", self.saveGeometry())
+        settings.setValue("project_frame_size", self.project_frame.size())
+        settings.setValue("project_dir_frame_size", self.project_dir_frame.size())
+        settings.setValue("available_pems_frame_size", self.available_pems_frame.size())
+        settings.setValue("available_gps_frame_size", self.available_gps_frame.size())
+        settings.setValue("piw_frame_size", self.piw_frame.size())
 
         # Setting options
         settings.setValue("actionDark_Theme", self.darkmode)
@@ -911,16 +916,29 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         settings.beginGroup("Unpacker")
         settings.setValue("open_damp_files_cbox", self.unpacker.open_damp_files_cbox.isChecked())
-
         settings.endGroup()
 
     def load_settings(self):
         settings = QSettings("Crone Geophysics", "PEMPro")
         settings.beginGroup("MainWindow")
 
-        # Window geometry
-        self.resize(settings.value("size", QSize(1700, 900)))
-        self.move(settings.value("pos", QPoint(100, 50)))
+        # Geometry
+        if settings.value("windowGeometry"):
+            self.restoreGeometry(settings.value("windowGeometry"))
+
+        if settings.value("project_frame_size"):
+            self.project_frame.resize(settings.value("project_frame_size"))
+            self.project_dir_frame.resize(settings.value("project_dir_frame_size"))
+            self.available_pems_frame.resize(settings.value("available_pems_frame_size"))
+            self.available_gps_frame.resize(settings.value("available_gps_frame_size"))
+            self.piw_frame.resize(settings.value("piw_frame_size"))
+        else:
+            # Remember the default sizes for when settings are reset.
+            settings.setValue("project_frame_default_size", self.project_frame.size())
+            settings.setValue("project_dir_frame_default_size", self.project_dir_frame.size())
+            settings.setValue("available_pems_frame_default_size", self.available_pems_frame.size())
+            settings.setValue("available_gps_frame_default_size", self.available_gps_frame.size())
+            settings.setValue("piw_frame_default_size", self.piw_frame.size())
 
         # Setting options
         self.actionDark_Theme.setChecked(True if settings.value("actionDark_Theme") == "true" else False)
@@ -960,7 +978,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         settings.clear()
         self.resize(1700, 900)
         self.center()
-        if self.darkmode:
+        if not self.darkmode:
             self.actionDark_Theme.trigger()
         self.actionAlt_Click_Plotting.setChecked(True)
         self.auto_sort_files_cbox.setChecked(True)
@@ -968,8 +986,15 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.delete_merged_files_cbox.setChecked(True)
         self.actionRename_Merged_Files.setChecked(True)
 
-        self.project_dir = None
-        self.project_dir_edit.setText("")
+        if settings.value("project_frame_Size"):
+            self.project_frame.resize(settings.value("project_frame_default_size"))
+            self.project_dir_frame.resize(settings.value("project_dir_frame_default_size"))
+            self.available_pems_frame.resize(settings.value("available_pems_frame_default_size"))
+            self.available_gps_frame.resize(settings.value("available_gps_frame_default_size"))
+            self.piw_frame.resize(settings.value("piw_frame_default_size"))
+
+        # self.project_dir = None
+        # self.project_dir_edit.setText("")
 
         self.unpacker.open_damp_files_cbox.setChecked(True)
 
