@@ -14,7 +14,7 @@ from PySide2.QtWidgets import (QMessageBox, QWidget, QAction, QErrorMessage,
                                QFileDialog, QApplication, QHeaderView, QTableWidgetItem, QItemDelegate)
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
-    GPXParser
+    read_gpx, parse_gps
 from src.pem import convert_station
 from src.qt_py import clear_table, read_file, table_to_df, df_to_table, get_line_color
 from src.qt_py.gps_tools import LoopAdder, LineAdder, CollarPicker, ExcelTablePicker
@@ -320,8 +320,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         Open GPS files through the file dialog
         """
-        files = self.dialog.getOpenFileNames(self, 'Open GPS File', filter='TXT files (*.txt);; CSV files (*.csv);; '
-                                                                           'GPX files (*.gpx);; All files(*.*)')[0]
+        files = self.dialog.getOpenFileNames(self, 'Open GPS File(s)', filter='TXT files (*.txt);; CSV files (*.csv);; '
+                                                                              'GPX files (*.gpx);; All files(*.*)')[0]
         if not files:
             return
 
@@ -340,19 +340,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             :param collar: bool, if the files are for a collar, which will return a dict if an Excel file is passed.
             :return: str
             """
+            crs = None
             merged_file = []
-            gpx_editor = GPXParser()
             for file in files:
                 if file.suffix.lower() == '.gpx':
-                    # Convert the GPX file to string
-                    global crs, errors
-                    try:
-                        gps, zone, hemisphere, crs, errors = gpx_editor.get_utm(file, as_string=True)
-                    except Exception as e:
-                        errors.append(str(e))
-                        return
-                    else:
-                        contents = [c.strip().split() for c in gps]
+                    gps, gdf, crs = read_gpx(file, for_pemfile=True)
+                    contents = gps.to_numpy()
                 else:
                     if file.suffix.lower() == '.csv':
                         contents = pd.read_csv(file, delim_whitespace=False, header=None).to_numpy()
@@ -360,31 +353,21 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                     elif file.suffix.lower() in ['.xlsx', '.xls']:
                         contents = pd.read_excel(file, header=None, sheet_name=None, dtype=str)
                         if collar is True:
-                            return contents
+                            return contents, crs
 
                     else:
                         contents = read_file(file, as_list=True)
 
                 merged_file.extend(contents)
-            return merged_file
+            return merged_file, crs
 
         if not isinstance(files, list):
             files = [files]
 
         current_tab = self.tabs.currentWidget()
         files = [Path(f) for f in files]
-        global crs, errors
-        crs = None
-        errors = []
 
-        file_contents = merge_files(files, collar=bool(current_tab == self.geometry_tab))
-
-        if errors:
-            error_str = '\n'.join(errors)
-            self.message.warning(self, "Parsing Errors", f"The following errors occurred parsing the GPS file(s): "
-                                                         f"{error_str}")
-            if not file_contents:
-                return
+        file_contents, crs = merge_files(files, collar=bool(current_tab == self.geometry_tab))
 
         # Add survey line GPS
         if current_tab == self.station_gps_tab:
@@ -397,6 +380,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         # Add loop GPS
         elif current_tab == self.loop_gps_tab:
             self.add_loop(file_contents)
+
         else:
             pass
 
@@ -1096,7 +1080,20 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
 
 if __name__ == "__main__":
+    from src.pem.pem_file import PEMGetter
+    samples_folder = Path(__file__).parents[2].joinpath('sample_files')
     app = QApplication(sys.argv)
+
+    pem_file = PEMGetter().parse(samples_folder.joinpath(r"GPX files\Loop L\RAW\100E.PEM"))
+    # file1 = samples_folder.joinpath(r"GPX files\100E_0601.gpx")
+    # file2 = samples_folder.joinpath(r"GPX files\100E_0604.gpx")
+    file = r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0251-21\GPS\SAN-0251-21.xlsx"
+
+    win = PEMFileInfoWidget()
+    win.tabs.setCurrentIndex(3)
+    win.open_file(pem_file)
+    # win.open_gps_files([file1, file2])
+    win.open_gps_files(file)
     # cp = CollarPicker(None)
     # cp.show()
 

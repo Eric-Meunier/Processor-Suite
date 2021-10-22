@@ -23,7 +23,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from pyproj import CRS
 from shapely.geometry import asMultiPoint
 
-from src.gps.gps_editor import TransmitterLoop, SurveyLine, GPXParser, read_gpx, read_kmz
+from src.gps.gps_editor import TransmitterLoop, SurveyLine, read_gpx, read_kmz
 from src.logger import logger
 from src.qt_py import (get_icon, NonScientific, read_file, table_to_df, df_to_table, get_line_color, clear_table,
                        MapToolbar, auto_size_ax, CRSSelector, CustomProgressDialog, TableSelector)

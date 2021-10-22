@@ -31,6 +31,8 @@ from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, Q
                                QAbstractItemView, QCheckBox)
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
 from pyproj import CRS
 
 from src import __version__, app_data_dir
@@ -72,6 +74,7 @@ logger = logging.getLogger(__name__)
 # TODO Add a Recent projects list, below project GPS, which will be a history of recently clicked folders.
 # TODO remember PEMmerger settings
 # TODO Fix Plan map margins
+# TODO CollarPicker should use TableSelector
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
@@ -5052,7 +5055,6 @@ class MagDeclinationCalculator(QMainWindow):
     """
     Converts the first coordinates found into lat lon. Must have GPS information in order to convert to lat lon.
     """
-
     def __init__(self, parent=None):
         super().__init__()
         self.parent = parent
@@ -5099,7 +5101,7 @@ class MagDeclinationCalculator(QMainWindow):
         :param str_value: str
         :return None
         """
-        cb = QtGui.QtWidgets.QApplication.clipboard()
+        cb = QApplication.clipboard()
         cb.clear(mode=cb.Clipboard)
         cb.setText(str_value, mode=cb.Clipboard)
         self.status_bar.showMessage(f"{str_value} copied to clipboard", 1000)
@@ -5160,7 +5162,7 @@ def main():
     # pem_files = pem_getter.get_pems(folder='Iscaycruz', subfolder='Loop 1', number=4)
     # pem_files = pem_getter.get_pems(folder="Raw Boreholes\EB-21-68\RAW", number=1)
     # pem_files = pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0823.PEM")
-    pem_files = pem_getter.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0261-21\RAW\xy1310_1013.dmp2")
+    pem_files = pem_getter.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0251-21\RAW\xy_1019.PEM")
     # pem_files.extend(pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0824.PEM"))
     # pem_files.extend(pem_getter.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_getter.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
@@ -5178,7 +5180,7 @@ def main():
     mw.table.selectRow(0)
     # mw.scale_pem_coil_area(selected=True)
     # mw.table.selectAll()
-    mw.open_derotator()
+    # mw.open_derotator()
     # mw.open_pem_merger()
     # mw.open_pem_geometry()
     # mw.open_pem_plot_editor()
@@ -5187,7 +5189,7 @@ def main():
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.save_pem_file_as()¶
-    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    mw.pem_info_widgets[0].tabs.setCurrentIndex(3)
     # mw.add_gps_files(gps_files)
 
     """ Attempting to re-create printing bug """

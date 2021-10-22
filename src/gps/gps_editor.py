@@ -7,15 +7,11 @@ from pathlib import Path
 
 import chardet
 import geopandas as gpd
-import gpxpy
 import numpy as np
 import pandas as pd
-import utm
-import simplekml
-import fiona
 from pyproj import CRS
 from scipy import spatial
-from shapely.geometry import asMultiPoint, Point, Polygon, MultiLineString, MultiPoint, LineString
+from shapely.geometry import asMultiPoint, Point, Polygon, MultiLineString, LineString
 from zipfile import ZipFile
 
 from src import app_temp_dir
@@ -75,7 +71,7 @@ def parse_gps(file, gps_object):
     def read_gps(file):
         """
         Create a dataframe from the contents of the input. Accepts many different input formats.
-        :param file: input, can be list, dict, str, dataframe, or GPSObject.
+        :param file: can be list, dict, str, dataframe, or GPSObject.
         :return: dataframe
         """
         global error_msg
@@ -92,10 +88,9 @@ def parse_gps(file, gps_object):
 
             if Path(file).suffix.lower() == '.gpx':
                 # Convert the GPX file to string
-                gps, zone, hemisphere, crs, gpx_errors = GPXParser().get_utm(file, as_string=True)
-                if gpx_errors:
-                    error_msg += '\n'.join(gpx_errors)
-                contents = [c.strip().split() for c in gps]
+                gps, gdf, crs = read_gpx(file)
+                gps.rename(columns={"Name": "Station"}, inplace=True)
+                return gps
             else:
                 contents = read_file(file, as_list=True)
             gps = pd.DataFrame.from_records(contents)
@@ -269,14 +264,10 @@ def read_gpx(file, for_pemfile=False):
     Parse a GPX file, and create a DataFrame with the coordinates in UTM. Only keeps coordinates and name and description.
     :param file: str
     :param for_pemfile: Bool, automatically rename invalid station names and elevation values for PEM files.
-    :return: DataFrame
+    :return: UTM DataFrame, GeoDataFrame, CRS
     """
     def rename_station(name):
-        """
-        Rename a name so it is a valid station name. i.e. numbers only except for the cardinal suffix.
-        :param name: str
-        :return: str
-        """
+        # Rename a name so it is a valid station name. i.e. numbers only except for the cardinal suffix.
         station_name = re.sub(r'\W', '', name)
         station_name = re.sub(r"[^nsewNSEW\d]", "", station_name)
         return station_name
@@ -293,6 +284,10 @@ def read_gpx(file, for_pemfile=False):
     utm_df["Name"] = gdf.name
     utm_df["Description"] = gdf.desc
     utm_df["geometry"] = gdf.geometry
+
+    if for_pemfile is True:
+        utm_df["Name"] = utm_df["Name"].map(rename_station)
+
     return utm_df, gdf, crs
 
 
@@ -922,7 +917,7 @@ class BoreholeGeometry(BaseGPS):
     def get_segments(self):
         return self.segments.get_segments()
 
-    def to_string(self):
+    def to_string(self, header=False):
         units = self.collar.get_units()
         if units is None:
             logger.warning(f"No units passed. Assuming 'm'.")
@@ -930,121 +925,13 @@ class BoreholeGeometry(BaseGPS):
         self.segments.df.insert(len(self.segments.df.columns) - 1, "Units", ["2" if units == "m" else "1"] * len(self.segments.df))
         return self.collar.df.to_string() + '\n' + self.segments.df.to_string()
 
-    def to_csv(self):
+    def to_csv(self, header=False):
         units = self.collar.get_units()
         if units is None:
             logger.warning(f"No units passed. Assuming 'm'.")
         self.collar.df.insert(len(self.collar.df.columns) - 1, "Units", ["0" if units == "m" else "1"])
         self.segments.df.insert(len(self.segments.df.columns) - 1, "Units", ["2" if units == "m" else "1"] * len(self.segments.df))
         return self.collar.df.to_csv() + '\n' + self.segments.df.to_csv()
-
-
-class GPXParser:
-    """
-    GPX parsing tool for PEM files specifically.
-    Renames stations and creates elevation values of 0 for those which are missing.
-    """
-    @staticmethod
-    def parse_gpx(filepath):
-        with open(filepath, 'rb') as byte_file:
-            byte_content = byte_file.read()
-            encoding = chardet.detect(byte_content).get('encoding')
-            logger.info(f"Using {encoding} encoding.")
-            str_contents = byte_content.decode(encoding=encoding)
-        gpx = gpxpy.parse(str_contents)
-        gps = []
-        errors = []
-
-        if gpx.waypoints:
-            for waypoint in gpx.waypoints:
-                # name = re.sub(r'\s', '_', waypoint.name)  # Not used
-                name = re.sub(r'\W', '', waypoint.name)
-                name = re.sub(r"[^nsewNSEW\d]", "", name)
-                if not waypoint.elevation:
-                    logger.warning(F"{name} has no elevation value. Using '0.0' instead.")
-                    errors.append(F"{name} has no elevation value. Using '0.0' instead.")
-                    waypoint.elevation = 0.
-                gps.append([waypoint.latitude, waypoint.longitude, waypoint.elevation, '0', name])
-            if len(gpx.waypoints) != len(gps):
-                logger.warning(f"{len(gpx.waypoints)} waypoints found in GPX file but {len(gps)} points parsed.")
-        elif gpx.routes:  # Use Route points if no waypoints exist
-            route = gpx.routes[0]
-            for point in route.points:
-                # name = re.sub(r'\s', '_', point.name)
-                name = re.sub(r'\W', '', point.name)
-                if not point.elevation:
-                    logger.warning(F"{name} has no elevation value. Using '0.0' instead.")
-                    errors.append(F"{name} has no elevation value. Using '0.0' instead.")
-                    point.elevation = 0.
-                gps.append([point.latitude, point.longitude, 0., '0', name])  # Routes have no elevation data, thus 0.
-            if len(route.points) != len(gps):
-                logger.warning(f"{len(route.points)} points found in GPX file but {len(gps)} points parsed.")
-        else:
-            raise ValueError(F"No waypoints or routes found in {Path(filepath).name}.")
-
-        return gps, errors
-
-    def get_utm(self, gpx_file, as_string=False):
-        """
-        Retrieve the GPS from the GPS file in UTM coordinates
-        :param gpx_file: str or Path, filepath
-        :param as_string: bool, return a string instead of tuple if True
-        :return: latitude, longitude, elevation, unit, stn
-        """
-        try:
-            gps, errors = self.parse_gpx(gpx_file)
-        except Exception as e:
-            raise Exception(str(e))
-        zone = None
-        hemisphere = None
-        crs = None
-        utm_gps = []
-        for row in gps:
-            lat = row[0]
-            lon = row[1]
-            elevation = row[2]
-            units = row[3]
-            name = row[4]  # Station name usually
-            # stn = re.findall('\d+', re.split('-', name)[-1])
-            # stn = stn[0] if stn else ''
-            u = utm.from_latlon(lat, lon)
-            zone = u[2]
-            letter = u[3]
-            hemisphere = 'north' if lat >= 0 else 'south'  # Used in PEMEditor
-            if crs is None:
-                crs = self.get_crs(zone, hemisphere)
-            if as_string is True:
-                utm_gps.append(' '.join([str(u[0]), str(u[1]), str(elevation), units, name]))
-            else:
-                utm_gps.append([u[0], u[1], elevation, units, name])
-
-        return utm_gps, zone, hemisphere, crs, errors
-
-    def get_lat_long(self, gpx_filepath):
-        gps = self.parse_gpx(gpx_filepath)
-        return gps
-
-    def get_crs(self, zone_number, hemis):
-        if hemis == "north":
-            north = True
-        else:
-            north = False
-
-        # Assumes datum is WGS1984
-        if north:
-            epsg_code = f'326{zone_number:02d}'
-        else:
-            epsg_code = f'327{zone_number:02d}'
-        logger.debug(f"EPSG for zone {zone_number}, hemisphese {hemis}: {epsg_code}.")
-
-        try:
-            crs = CRS.from_epsg(epsg_code)
-        except Exception as e:
-            logger.error(f"{e}.")
-            return None
-        else:
-            logger.debug(f"Project CRS: {crs.name}")
-            return crs
 
 
 if __name__ == '__main__':
@@ -1054,7 +941,7 @@ if __name__ == '__main__':
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     # gps_parser = GPSParser()
-    gpx_editor = GPXParser()
+    # gpx_editor = GPXParser()
     # crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 1983'})
     # gpx_file = r'C:\_Data\2021\Eastern\L5N.gpx'
     # gpx_file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
