@@ -68,7 +68,7 @@ def parse_gps(file, gps_object):
             }
         return empty_gps, units, cols, error_msg
 
-    def read_gps(file):
+    def get_gps(file):
         """
         Create a dataframe from the contents of the input. Accepts many different input formats.
         :param file: can be list, dict, str, dataframe, or GPSObject.
@@ -172,7 +172,7 @@ def parse_gps(file, gps_object):
         logger.debug(f"No GPS passed.")
         return empty_gps, units, pd.DataFrame(), 'No GPS passed.'
     else:
-        gps = read_gps(file)
+        gps = get_gps(file)
 
     gps, error_gps = cull_gps(gps)  # Remove tags, units, extra columns and empty/NaN rows
     if gps.empty:
@@ -289,6 +289,41 @@ def read_gpx(file, for_pemfile=False):
         utm_df["Name"] = utm_df["Name"].map(rename_station)
 
     return utm_df, gdf, crs
+
+
+def read_gps(file, for_pemfile=False):
+    """
+    Helper function, parse a file which contains GPS information. Will read .txt, .xlsx, .xls, .csv, .kmz, .gpx.
+    :param file: str or Path, a file with extention [.txt, .xlsx, .xls, .csv, .kmz, .gpx.]
+    :param for_pemfile: Bool, if True, only keeps characters which are valid for station name conversion. Currently
+    only applicable to GPX files.
+    :return: tuple, UTM dataframe, GeoDataframe, CRS
+    """
+    if isinstance(file, str) or isinstance(file, Path):
+        file = Path(file)
+        if file.suffix.lower() == ".kmz":
+            return read_kmz(file)
+        elif file.suffix.lower() == ".gpx":
+            return read_gpx(file, for_pemfile=for_pemfile)
+        elif file.suffix.lower() == '.csv':
+            contents = pd.read_csv(file, delim_whitespace=False, header=None)
+            return contents, None, None
+        elif file.suffix.lower() == '.txt':
+            contents = pd.read_csv(file, delim_whitespace=True, header=None)
+            return contents, None, None
+        elif file.suffix.lower() in ['.xlsx', '.xls']:
+            contents = pd.read_excel(file, header=None, sheet_name=None, dtype=str)
+            return contents, None, None
+        else:
+            raise NotImplementedError(f"'{file.suffix}' files not supported."
+                                      f" Must be one of .txt, .xlsx, .xls, .csv, .kmz, .gpx,")
+    elif isinstance(file, list):
+        contents = pd.DataFrame.from_records(file)
+        return contents, None, None
+    elif isinstance(file, pd.DataFrame):
+        return file, None, None
+    else:
+        raise NotImplementedError(f"{file} is not supported. Must be a filepath, list, or dataframe.")
 
 
 class BaseGPS:
@@ -941,16 +976,17 @@ if __name__ == '__main__':
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     # gps_parser = GPSParser()
-    # gpx_editor = GPXParser()
     # crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 1983'})
+
+    # txt_file = r"C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA1000N_1025.txt"
     # gpx_file = r'C:\_Data\2021\Eastern\L5N.gpx'
     # gpx_file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
-    gpx_file = samples_folder.joinpath(r'GPX files\Loop-32.gpx')
+    # gpx_file = samples_folder.joinpath(r'GPX files\Loop-32.gpx')
 
-    # kml_file = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\KML Files\BHP Arizona OCLT-1801D.kmz"
+    kml_file = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\KML Files\BHP Arizona OCLT-1801D.kmz"
     # kml_file = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\KML Files\CAPA_A_stations.kmz"
     # read_kmz(kml_file)
-    utm_df, gdf, crs = read_gpx(gpx_file, for_pemfile=True)
+    utm_df, gdf, crs = read_gps(kml_file, for_pemfile=True)
     print(utm_df)
     # utm_gps, zone, hemisphere, crs, errors = gpx_editor.get_utm(gpx_file)
     # df = pd.DataFrame(utm_gps)

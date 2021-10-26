@@ -1279,7 +1279,6 @@ class PlanMap:
         return self.figure
 
     def format_figure(self):
-
         def add_title():
             """
             Adds the title box to the plot.
@@ -1434,7 +1433,7 @@ class PlanMap:
         self.figure.subplots_adjust(left=0.03, bottom=0.03, right=0.97, top=0.95)
 
         # Resize the figure to be 11" x 8.5"
-        auto_size_ax(self.ax, self.figure)
+        auto_size_ax(self.ax, self.figure, buffer=0.06)
 
         # Calculate and set the scale of the map
         self.map_scale = set_scale(self.ax, self.figure)
@@ -2941,7 +2940,7 @@ class PEMPrinter:
         """
         Plot the files to a PDF document
         :param save_path: str, PDF document filepath
-        :param files: list of PEMFile and RIFile objects. RI files are optional.
+        :param files: list of zipped PEMFile and RIFile objects. RI files are optional.
         """
         def save_plots(pem_files, ri_files, x_min, x_max):
             """
@@ -3148,9 +3147,6 @@ class PEMPrinter:
             logger.info(f"Number of PDF pages: {total_count}")
             return total_count
 
-        files = files  # Zipped PEM and RI files
-        save_path = save_path
-
         unique_bhs = defaultdict()
         unique_grids = defaultdict()
 
@@ -3176,6 +3172,7 @@ class PEMPrinter:
             unique_grids[loop] = list(files)
 
         num_pages = count_pdf_pages(unique_bhs, unique_grids)  # for the progress bar
+
         with PdfPages(save_path + '.PDF') as pdf:
             global dlg
             with CustomProgressDialog("Printing PDFs..", 0, num_pages, busyCursor=True) as dlg:
@@ -3256,8 +3253,8 @@ if __name__ == '__main__':
     pem_getter = PEMGetter()
     # pem_files = pem_getter.get_pems(folder='RI files', subfolder=r"PEMPro RI and Suffix Error Files/KBNorth", file="2200EAv KBNorth.PEM")
     # pem_files = [PEMParser().parse(r"C:\_Data\2021\TMC\131-21-38\Final\131-21-38 XYT.PEM")]
-    # pem_files = pem_getter.get_pems(folder="Raw Surface", subfolder=r"Loop L\Final", file="100E.PEM")
-    pem_files = pem_getter.get_pems(folder=r"Raw Surface\Nantou Loop 5\Final", number=10)
+    pem_files = pem_getter.get_pems(folder="Raw Surface", subfolder=r"Loop L\Final", file="100E.PEM")
+    # pem_files = pem_getter.get_pems(folder=r"Raw Surface\Nantou Loop 5\Final", number=10)
     # editor = PEMPlotEditor(pem_files[0])
     # editor.show()
     # planner = LoopPlanner()

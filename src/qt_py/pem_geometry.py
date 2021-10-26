@@ -428,9 +428,8 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             #     if not file.segments.df.empty:
             #         pem_file.geometry = file.get_geometry()
 
-        if not all([f.has_d7() for f in pem_files]) and not self.pem_file.has_geometry():
-            logger.error(f"PEM files must have D7 RAD tool objects or P tag geometry.")
-            return
+        assert all([f.has_d7() for f in pem_files]), f"PEM files must have D7 RAD tool information."
+        assert self.pem_file.has_geometry(), "PEM file must have all geometry information"
 
         if not self.pem_file.is_averaged():
             self.pem_file = self.pem_file.average()

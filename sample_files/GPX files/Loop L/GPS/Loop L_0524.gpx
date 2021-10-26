@@ -1,0 +1,1272 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gpx
+ xmlns="http://www.topografix.com/GPX/1/1"
+ creator="OziExplorer Version 3956f - http://www.oziexplorer.com"
+ version="1.1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+<metadata>
+ <time>2021-05-25T00:20:40Z</time>
+ <bounds minlat="49.659089" minlon="-74.433349" maxlat="52.336887" maxlon="-72.042591"/>
+</metadata>
+<wpt lat="52.3299020" lon="-72.1237430">
+ <ele>475.792786</ele>
+ <time>2021-05-23T15:59:45.997Z</time>
+ <name>168</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3296760" lon="-72.1240400">
+ <ele>475.488007</ele>
+ <time>2021-05-23T16:00:28.999Z</time>
+ <name>169</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3294460" lon="-72.1242730">
+ <ele>474.268799</ele>
+ <time>2021-05-23T16:01:12.000Z</time>
+ <name>170</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3291840" lon="-72.1244410">
+ <ele>474.573608</ele>
+ <time>2021-05-23T16:02:11.003Z</time>
+ <name>171</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3288950" lon="-72.1246010">
+ <ele>474.268799</ele>
+ <time>2021-05-23T16:04:48.000Z</time>
+ <name>172</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3286460" lon="-72.1245980">
+ <ele>474.573608</ele>
+ <time>2021-05-23T16:05:28.997Z</time>
+ <name>173</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3282930" lon="-72.1244410">
+ <ele>473.659210</ele>
+ <time>2021-05-23T16:06:03.004Z</time>
+ <name>174</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3279490" lon="-72.1242850">
+ <ele>474.268799</ele>
+ <time>2021-05-23T16:06:34.998Z</time>
+ <name>175</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3276270" lon="-72.1241430">
+ <ele>474.878387</ele>
+ <time>2021-05-23T16:07:13.999Z</time>
+ <name>176</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3270680" lon="-72.1237480">
+ <ele>473.963989</ele>
+ <time>2021-05-23T16:08:22.998Z</time>
+ <name>177</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3266690" lon="-72.1234630">
+ <ele>475.792786</ele>
+ <time>2021-05-23T16:09:16.004Z</time>
+ <name>178</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3261950" lon="-72.1231260">
+ <ele>476.097595</ele>
+ <time>2021-05-23T16:10:28.001Z</time>
+ <name>179</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3259980" lon="-72.1229850">
+ <ele>475.792786</ele>
+ <time>2021-05-23T16:17:03.998Z</time>
+ <name>180</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3257720" lon="-72.1227200">
+ <ele>475.183197</ele>
+ <time>2021-05-23T16:18:08.004Z</time>
+ <name>181</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3257020" lon="-72.1221820">
+ <ele>477.316803</ele>
+ <time>2021-05-23T16:19:56.004Z</time>
+ <name>182</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3259310" lon="-72.1215290">
+ <ele>482.498413</ele>
+ <time>2021-05-23T16:20:43.999Z</time>
+ <name>183</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3262930" lon="-72.1205600">
+ <ele>484.022400</ele>
+ <time>2021-05-23T16:22:19.998Z</time>
+ <name>184</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3267850" lon="-72.1197340">
+ <ele>478.840790</ele>
+ <time>2021-05-23T16:24:00.999Z</time>
+ <name>185</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3272610" lon="-72.1198170">
+ <ele>474.878387</ele>
+ <time>2021-05-23T16:27:20.998Z</time>
+ <name>186</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3278340" lon="-72.1193160">
+ <ele>475.792786</ele>
+ <time>2021-05-23T16:52:28.004Z</time>
+ <name>187</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3277170" lon="-72.1194800">
+ <ele>475.488007</ele>
+ <time>2021-05-23T16:52:58.002Z</time>
+ <name>188</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3275760" lon="-72.1196570">
+ <ele>475.488007</ele>
+ <time>2021-05-23T16:53:29.996Z</time>
+ <name>189</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3274550" lon="-72.1197720">
+ <ele>475.792786</ele>
+ <time>2021-05-23T16:53:57.998Z</time>
+ <name>190</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3333730" lon="-72.1333440">
+ <ele>491.337585</ele>
+ <time>2021-04-11T13:43:31.002Z</time>
+ <name>027</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3335640" lon="-72.1339460">
+ <ele>491.642395</ele>
+ <time>2021-04-11T13:44:18.004Z</time>
+ <name>028</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3339300" lon="-72.1346060">
+ <ele>491.947205</ele>
+ <time>2021-04-11T13:45:32.999Z</time>
+ <name>029</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3347580" lon="-72.1367720">
+ <ele>499.262390</ele>
+ <time>2021-04-11T13:50:04.001Z</time>
+ <name>030</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3357340" lon="-72.1407930">
+ <ele>503.529602</ele>
+ <time>2021-04-11T13:57:40.003Z</time>
+ <name>031</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3344180" lon="-72.1453110">
+ <ele>483.108002</ele>
+ <time>2021-04-11T14:22:48.996Z</time>
+ <name>032</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3346300" lon="-72.1448250">
+ <ele>483.717590</ele>
+ <time>2021-04-11T14:23:33.000Z</time>
+ <name>033</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3352720" lon="-72.1440550">
+ <ele>489.204010</ele>
+ <time>2021-04-11T14:29:22.998Z</time>
+ <name>034</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3358540" lon="-72.1435010">
+ <ele>495.909607</ele>
+ <time>2021-04-11T14:30:27.996Z</time>
+ <name>035</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3363850" lon="-72.1433140">
+ <ele>499.872009</ele>
+ <time>2021-04-11T14:32:27.997Z</time>
+ <name>036</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3361310" lon="-72.1413540">
+ <ele>499.872009</ele>
+ <time>2021-04-11T14:40:53.999Z</time>
+ <name>037</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3350450" lon="-72.1378070">
+ <ele>501.091187</ele>
+ <time>2021-04-11T14:48:42.002Z</time>
+ <name>038</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3349380" lon="-72.1444130">
+ <ele>487.984802</ele>
+ <time>2021-04-11T14:06:40.997Z</time>
+ <name>TP14</name>
+ <cmt>TP - 4/11/2021 8:53:40 PM</cmt>
+ <desc>TP - 4/11/2021 8:53:40 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3350960" lon="-72.1440690">
+ <ele>488.899200</ele>
+ <time>2021-04-11T14:05:58.998Z</time>
+ <name>TP15</name>
+ <cmt>TP - 4/11/2021 8:53:44 PM</cmt>
+ <desc>TP - 4/11/2021 8:53:44 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3356020" lon="-72.1436410">
+ <ele>492.556793</ele>
+ <time>2021-04-11T14:04:20.001Z</time>
+ <name>TP16</name>
+ <cmt>TP - 4/11/2021 8:53:47 PM</cmt>
+ <desc>TP - 4/11/2021 8:53:47 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3362890" lon="-72.1434160">
+ <ele>500.786407</ele>
+ <time>2021-04-11T14:02:32.001Z</time>
+ <name>TP17</name>
+ <cmt>TP - 4/11/2021 8:53:50 PM</cmt>
+ <desc>TP - 4/11/2021 8:53:50 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3368310" lon="-72.1426820">
+ <ele>504.444000</ele>
+ <time>2021-04-11T14:00:29.002Z</time>
+ <name>TP18</name>
+ <cmt>TP - 4/11/2021 8:53:55 PM</cmt>
+ <desc>TP - 4/11/2021 8:53:55 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3367780" lon="-72.1428730">
+ <ele>503.834412</ele>
+ <time>2021-04-11T14:01:42.001Z</time>
+ <name>TP19</name>
+ <cmt>TP - 4/11/2021 8:53:59 PM</cmt>
+ <desc>TP - 4/11/2021 8:53:59 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3366160" lon="-72.1421530">
+ <ele>503.224792</ele>
+ <time>2021-04-11T14:00:00.999Z</time>
+ <name>TP20</name>
+ <cmt>TP - 4/11/2021 8:54:03 PM</cmt>
+ <desc>TP - 4/11/2021 8:54:03 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3363120" lon="-72.1417400">
+ <ele>503.224792</ele>
+ <time>2021-04-11T13:59:17.998Z</time>
+ <name>TP21</name>
+ <cmt>TP - 4/11/2021 8:54:07 PM</cmt>
+ <desc>TP - 4/11/2021 8:54:07 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3359620" lon="-72.1411750">
+ <ele>502.310394</ele>
+ <time>2021-04-11T13:58:50.998Z</time>
+ <name>TP22</name>
+ <cmt>TP - 4/11/2021 8:54:11 PM</cmt>
+ <desc>TP - 4/11/2021 8:54:11 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3355840" lon="-72.1405050">
+ <ele>504.444000</ele>
+ <time>2021-04-11T13:57:10.999Z</time>
+ <name>TP23</name>
+ <cmt>TP - 4/11/2021 8:54:16 PM</cmt>
+ <desc>TP - 4/11/2021 8:54:16 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3354610" lon="-72.1401790">
+ <ele>506.577606</ele>
+ <time>2021-04-11T13:56:56.000Z</time>
+ <name>TP24</name>
+ <cmt>TP - 4/11/2021 8:54:20 PM</cmt>
+ <desc>TP - 4/11/2021 8:54:20 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3353050" lon="-72.1396770">
+ <ele>508.101593</ele>
+ <time>2021-04-11T13:56:27.997Z</time>
+ <name>TP25</name>
+ <cmt>TP - 4/11/2021 8:54:23 PM</cmt>
+ <desc>TP - 4/11/2021 8:54:23 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3352730" lon="-72.1391200">
+ <ele>509.320801</ele>
+ <time>2021-04-11T13:55:22.999Z</time>
+ <name>TP26</name>
+ <cmt>TP - 4/11/2021 8:54:34 PM</cmt>
+ <desc>TP - 4/11/2021 8:54:34 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3352500" lon="-72.1386940">
+ <ele>509.015991</ele>
+ <time>2021-04-11T13:54:58.003Z</time>
+ <name>TP27</name>
+ <cmt>TP - 4/11/2021 8:54:38 PM</cmt>
+ <desc>TP - 4/11/2021 8:54:38 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3351310" lon="-72.1383380">
+ <ele>507.187195</ele>
+ <time>2021-04-11T13:54:34.001Z</time>
+ <name>TP28</name>
+ <cmt>TP - 4/11/2021 8:54:40 PM</cmt>
+ <desc>TP - 4/11/2021 8:54:40 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3349910" lon="-72.1373920">
+ <ele>502.920013</ele>
+ <time>2021-04-11T13:53:26.998Z</time>
+ <name>TP29</name>
+ <cmt>TP - 4/11/2021 8:54:47 PM</cmt>
+ <desc>TP - 4/11/2021 8:54:47 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3345870" lon="-72.1362050">
+ <ele>496.824005</ele>
+ <time>2021-04-11T13:48:56.998Z</time>
+ <name>TP30</name>
+ <cmt>TP - 4/11/2021 8:54:50 PM</cmt>
+ <desc>TP - 4/11/2021 8:54:50 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3345740" lon="-72.1358760">
+ <ele>490.423187</ele>
+ <time>2021-04-11T15:00:23.000Z</time>
+ <name>TP31</name>
+ <cmt>TP - 4/11/2021 8:54:53 PM</cmt>
+ <desc>TP - 4/11/2021 8:54:53 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3344170" lon="-72.1355680">
+ <ele>492.861603</ele>
+ <time>2021-04-11T13:48:18.999Z</time>
+ <name>TP32</name>
+ <cmt>TP - 4/11/2021 8:54:56 PM</cmt>
+ <desc>TP - 4/11/2021 8:54:56 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3342940" lon="-72.1352420">
+ <ele>491.642395</ele>
+ <time>2021-04-11T13:48:04.000Z</time>
+ <name>TP33</name>
+ <cmt>TP - 4/11/2021 8:54:58 PM</cmt>
+ <desc>TP - 4/11/2021 8:54:58 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3342220" lon="-72.1349910">
+ <ele>491.032806</ele>
+ <time>2021-04-11T13:47:38.003Z</time>
+ <name>TP34</name>
+ <cmt>TP - 4/11/2021 8:55:03 PM</cmt>
+ <desc>TP - 4/11/2021 8:55:03 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3273800" lon="-72.1531000">
+ <ele>492.556793</ele>
+ <time>2021-04-11T20:59:23.375Z</time>
+ <name>005</name>
+ <cmt>26-AUG-01 10:08:34</cmt>
+ <desc>26-AUG-01 10:08:34</desc>
+ <sym>Skull and Crossbones</sym>
+</wpt>
+<wpt lat="52.3281600" lon="-72.1520600">
+ <ele>489.813599</ele>
+ <time>2021-04-11T20:59:23.375Z</time>
+ <name>006</name>
+ <cmt>26-AUG-01 10:11:04</cmt>
+ <desc>26-AUG-01 10:11:04</desc>
+ <sym>Skull and Crossbones</sym>
+</wpt>
+<wpt lat="52.3283600" lon="-72.1517300">
+ <ele>491.947205</ele>
+ <time>2021-04-11T20:59:23.375Z</time>
+ <name>007</name>
+ <cmt>26-AUG-01 10:11:55</cmt>
+ <desc>26-AUG-01 10:11:55</desc>
+ <sym>Skull and Crossbones</sym>
+</wpt>
+<wpt lat="52.3286300" lon="-72.1514400">
+ <ele>491.947205</ele>
+ <time>2021-04-11T20:59:23.375Z</time>
+ <name>008</name>
+ <cmt>26-AUG-01 10:13:54</cmt>
+ <desc>26-AUG-01 10:13:54</desc>
+ <sym>Skull and Crossbones</sym>
+</wpt>
+<wpt lat="52.3289400" lon="-72.1510700">
+ <ele>491.947205</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>009</name>
+ <cmt>26-AUG-01 10:14:47</cmt>
+ <desc>26-AUG-01 10:14:47</desc>
+ <sym>Skull and Crossbones</sym>
+</wpt>
+<wpt lat="52.3295100" lon="-72.1505900">
+ <ele>490.727997</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>010</name>
+ <cmt>26-AUG-01 10:18:50</cmt>
+ <desc>26-AUG-01 10:18:50</desc>
+ <sym>Skull and Crossbones</sym>
+</wpt>
+<wpt lat="52.3295500" lon="-72.1504000">
+ <ele>498.347992</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>EOW</name>
+ <cmt>25-AUG-01 12:11:15</cmt>
+ <desc>25-AUG-01 12:11:15</desc>
+ <sym>Skull and Crossbones</sym>
+</wpt>
+<wpt lat="52.2625600" lon="-72.1014400">
+ <ele>0.000000</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>I2</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.2632100" lon="-72.1277900">
+ <ele>0.000000</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>I3</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3261400" lon="-72.1522200">
+ <ele>495.299988</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>W 4</name>
+ <cmt>25-AUG-01 10:47:18</cmt>
+ <desc>25-AUG-01 10:47:18</desc>
+ <sym>Skull and Crossbones</sym>
+</wpt>
+<wpt lat="52.3277100" lon="-72.1527000">
+ <ele>494.385590</ele>
+ <time>2001-08-26T14:09:26.997Z</time>
+ <name>TP20</name>
+ <cmt>TP - 4/11/2021 8:14:42 PM</cmt>
+ <desc>TP - 4/11/2021 8:14:42 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3271400" lon="-72.1534000">
+ <ele>492.252014</ele>
+ <time>2001-08-26T14:07:57.003Z</time>
+ <name>TP19</name>
+ <cmt>TP - 4/11/2021 8:15:30 PM</cmt>
+ <desc>TP - 4/11/2021 8:15:30 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3269000" lon="-72.1537300">
+ <ele>493.166412</ele>
+ <time>2001-08-26T14:07:19.004Z</time>
+ <name>TP20A</name>
+ <cmt>TP - 4/11/2021 8:15:38 PM</cmt>
+ <desc>TP - 4/11/2021 8:15:38 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3268300" lon="-72.1540500">
+ <ele>493.166412</ele>
+ <time>2001-08-26T14:06:47.002Z</time>
+ <name>TP22</name>
+ <cmt>TP - 4/11/2021 8:16:14 PM</cmt>
+ <desc>TP - 4/11/2021 8:16:14 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3160400" lon="-72.1262400">
+ <ele>505.663208</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>100</name>
+ <cmt>10-AVR-21 10:00:21</cmt>
+ <desc>10-AVR-21 10:00:21</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3161800" lon="-72.1268400">
+ <ele>502.310394</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>101</name>
+ <cmt>10-AVR-21 10:01:47</cmt>
+ <desc>10-AVR-21 10:01:47</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3164100" lon="-72.1275000">
+ <ele>502.310394</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>102</name>
+ <cmt>10-AVR-21 10:02:31</cmt>
+ <desc>10-AVR-21 10:02:31</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3166600" lon="-72.1280800">
+ <ele>502.615204</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>103</name>
+ <cmt>10-AVR-21 10:03:11</cmt>
+ <desc>10-AVR-21 10:03:11</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3169800" lon="-72.1287100">
+ <ele>501.091187</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>104</name>
+ <cmt>10-AVR-21 10:04:13</cmt>
+ <desc>10-AVR-21 10:04:13</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3172300" lon="-72.1292400">
+ <ele>500.786407</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>105</name>
+ <cmt>10-AVR-21 10:04:57</cmt>
+ <desc>10-AVR-21 10:04:57</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3174000" lon="-72.1299500">
+ <ele>497.433594</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>106</name>
+ <cmt>10-AVR-21 10:05:48</cmt>
+ <desc>10-AVR-21 10:05:48</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3176600" lon="-72.1305900">
+ <ele>497.738403</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>107</name>
+ <cmt>10-AVR-21 10:06:37</cmt>
+ <desc>10-AVR-21 10:06:37</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3178900" lon="-72.1312200">
+ <ele>497.738403</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>108</name>
+ <cmt>10-AVR-21 10:22:42</cmt>
+ <desc>10-AVR-21 10:22:42</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3181700" lon="-72.1318100">
+ <ele>498.957611</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>109</name>
+ <cmt>10-AVR-21 10:23:25</cmt>
+ <desc>10-AVR-21 10:23:25</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3184100" lon="-72.1323600">
+ <ele>496.519196</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>110</name>
+ <cmt>10-AVR-21 10:24:03</cmt>
+ <desc>10-AVR-21 10:24:03</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3186700" lon="-72.1330200">
+ <ele>498.652802</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>111</name>
+ <cmt>10-AVR-21 10:24:46</cmt>
+ <desc>10-AVR-21 10:24:46</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3188300" lon="-72.1336700">
+ <ele>497.738403</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>112</name>
+ <cmt>10-AVR-21 10:25:31</cmt>
+ <desc>10-AVR-21 10:25:31</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3190600" lon="-72.1343400">
+ <ele>496.214386</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>113</name>
+ <cmt>10-AVR-21 10:26:14</cmt>
+ <desc>10-AVR-21 10:26:14</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3193100" lon="-72.1349900">
+ <ele>497.738403</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>114</name>
+ <cmt>10-AVR-21 10:26:49</cmt>
+ <desc>10-AVR-21 10:26:49</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3196500" lon="-72.1358300">
+ <ele>502.310394</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>115</name>
+ <cmt>10-AVR-21 10:28:18</cmt>
+ <desc>10-AVR-21 10:28:18</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3198400" lon="-72.1361700">
+ <ele>502.310394</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>116</name>
+ <cmt>10-AVR-21 10:28:46</cmt>
+ <desc>10-AVR-21 10:28:46</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3201500" lon="-72.1367000">
+ <ele>505.663208</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>117</name>
+ <cmt>10-AVR-21 10:35:55</cmt>
+ <desc>10-AVR-21 10:35:55</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3203300" lon="-72.1373000">
+ <ele>506.882385</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>118</name>
+ <cmt>10-AVR-21 10:36:44</cmt>
+ <desc>10-AVR-21 10:36:44</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3205500" lon="-72.1379600">
+ <ele>507.492004</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>119</name>
+ <cmt>10-AVR-21 10:37:38</cmt>
+ <desc>10-AVR-21 10:37:38</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3207700" lon="-72.1386500">
+ <ele>500.481598</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>120</name>
+ <cmt>10-AVR-21 10:38:43</cmt>
+ <desc>10-AVR-21 10:38:43</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3210800" lon="-72.1391800">
+ <ele>494.690399</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>121</name>
+ <cmt>10-AVR-21 10:40:29</cmt>
+ <desc>10-AVR-21 10:40:29</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3217000" lon="-72.1402400">
+ <ele>499.567200</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>122</name>
+ <cmt>10-AVR-21 10:53:22</cmt>
+ <desc>10-AVR-21 10:53:22</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3218200" lon="-72.1411200">
+ <ele>499.872009</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>123</name>
+ <cmt>10-AVR-21 11:01:52</cmt>
+ <desc>10-AVR-21 11:01:52</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3220000" lon="-72.1416300">
+ <ele>501.091187</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>124</name>
+ <cmt>10-AVR-21 11:04:49</cmt>
+ <desc>10-AVR-21 11:04:49</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3222100" lon="-72.1423900">
+ <ele>500.786407</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>125</name>
+ <cmt>10-AVR-21 11:07:12</cmt>
+ <desc>10-AVR-21 11:07:12</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3224600" lon="-72.1429100">
+ <ele>501.395996</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>126</name>
+ <cmt>10-AVR-21 11:08:02</cmt>
+ <desc>10-AVR-21 11:08:02</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3226900" lon="-72.1435300">
+ <ele>504.444000</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>127</name>
+ <cmt>10-AVR-21 11:08:39</cmt>
+ <desc>10-AVR-21 11:08:39</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3229100" lon="-72.1441600">
+ <ele>506.272797</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>128</name>
+ <cmt>10-AVR-21 11:09:22</cmt>
+ <desc>10-AVR-21 11:09:22</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3232000" lon="-72.1447400">
+ <ele>506.272797</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>129</name>
+ <cmt>10-AVR-21 11:10:10</cmt>
+ <desc>10-AVR-21 11:10:10</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3233900" lon="-72.1454000">
+ <ele>506.882385</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>130</name>
+ <cmt>10-AVR-21 11:12:23</cmt>
+ <desc>10-AVR-21 11:12:23</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3235400" lon="-72.1461000">
+ <ele>506.882385</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>131</name>
+ <cmt>10-AVR-21 11:20:15</cmt>
+ <desc>10-AVR-21 11:20:15</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3238300" lon="-72.1467200">
+ <ele>507.492004</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>132</name>
+ <cmt>10-AVR-21 11:21:02</cmt>
+ <desc>10-AVR-21 11:21:02</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3241400" lon="-72.1472900">
+ <ele>505.663208</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>133</name>
+ <cmt>10-AVR-21 11:22:15</cmt>
+ <desc>10-AVR-21 11:22:15</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3243500" lon="-72.1479100">
+ <ele>505.358398</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>134</name>
+ <cmt>10-AVR-21 11:23:16</cmt>
+ <desc>10-AVR-21 11:23:16</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3246300" lon="-72.1484700">
+ <ele>506.882385</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>135</name>
+ <cmt>10-AVR-21 11:24:01</cmt>
+ <desc>10-AVR-21 11:24:01</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3248600" lon="-72.1491200">
+ <ele>506.882385</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>136</name>
+ <cmt>10-AVR-21 11:24:38</cmt>
+ <desc>10-AVR-21 11:24:38</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3250700" lon="-72.1497600">
+ <ele>507.796814</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>137</name>
+ <cmt>10-AVR-21 11:25:15</cmt>
+ <desc>10-AVR-21 11:25:15</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3255400" lon="-72.1506000">
+ <ele>496.824005</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>138</name>
+ <cmt>10-AVR-21 11:27:38</cmt>
+ <desc>10-AVR-21 11:27:38</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3256300" lon="-72.1508900">
+ <ele>495.909607</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>139</name>
+ <cmt>10-AVR-21 11:35:59</cmt>
+ <desc>10-AVR-21 11:35:59</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3259100" lon="-72.1517600">
+ <ele>493.776001</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>140</name>
+ <cmt>10-AVR-21 11:37:43</cmt>
+ <desc>10-AVR-21 11:37:43</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3295800" lon="-72.1503200">
+ <ele>496.519196</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>141</name>
+ <cmt>10-AVR-21 12:37:33</cmt>
+ <desc>10-AVR-21 12:37:33</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3299400" lon="-72.1499100">
+ <ele>496.519196</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>142</name>
+ <cmt>10-AVR-21 12:43:58</cmt>
+ <desc>10-AVR-21 12:43:58</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3303200" lon="-72.1495300">
+ <ele>497.128815</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>143</name>
+ <cmt>10-AVR-21 12:44:44</cmt>
+ <desc>10-AVR-21 12:44:44</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3307200" lon="-72.1491200">
+ <ele>494.385590</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>144</name>
+ <cmt>10-AVR-21 12:45:34</cmt>
+ <desc>10-AVR-21 12:45:34</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3310600" lon="-72.1486400">
+ <ele>491.947205</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>145</name>
+ <cmt>10-AVR-21 12:46:17</cmt>
+ <desc>10-AVR-21 12:46:17</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3314400" lon="-72.1482400">
+ <ele>491.642395</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>146</name>
+ <cmt>10-AVR-21 12:46:57</cmt>
+ <desc>10-AVR-21 12:46:57</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3318500" lon="-72.1479300">
+ <ele>490.727997</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>147</name>
+ <cmt>10-AVR-21 12:47:38</cmt>
+ <desc>10-AVR-21 12:47:38</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3322200" lon="-72.1475400">
+ <ele>488.594391</ele>
+ <time>2021-04-11T20:59:23.384Z</time>
+ <name>148</name>
+ <cmt>10-AVR-21 12:48:35</cmt>
+ <desc>10-AVR-21 12:48:35</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3326300" lon="-72.1472100">
+ <ele>487.984802</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>149</name>
+ <cmt>10-AVR-21 12:53:57</cmt>
+ <desc>10-AVR-21 12:53:57</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3330100" lon="-72.1468200">
+ <ele>487.679993</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>150</name>
+ <cmt>10-AVR-21 12:54:36</cmt>
+ <desc>10-AVR-21 12:54:36</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3333400" lon="-72.1463200">
+ <ele>488.594391</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>151</name>
+ <cmt>10-AVR-21 12:59:16</cmt>
+ <desc>10-AVR-21 12:59:16</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3337100" lon="-72.1459500">
+ <ele>487.984802</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>152</name>
+ <cmt>10-AVR-21 13:00:08</cmt>
+ <desc>10-AVR-21 13:00:08</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3209900" lon="-72.1208200">
+ <ele>490.118408</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>153</name>
+ <cmt>10-AVR-21 14:28:45</cmt>
+ <desc>10-AVR-21 14:28:45</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3212600" lon="-72.1206000">
+ <ele>489.204010</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>154</name>
+ <cmt>10-AVR-21 14:30:48</cmt>
+ <desc>10-AVR-21 14:30:48</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3216700" lon="-72.1202700">
+ <ele>487.679993</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>155</name>
+ <cmt>10-AVR-21 14:31:41</cmt>
+ <desc>10-AVR-21 14:31:41</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3220700" lon="-72.1199200">
+ <ele>487.679993</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>156</name>
+ <cmt>10-AVR-21 14:32:43</cmt>
+ <desc>10-AVR-21 14:32:43</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3224300" lon="-72.1195000">
+ <ele>484.022400</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>157</name>
+ <cmt>10-AVR-21 14:33:55</cmt>
+ <desc>10-AVR-21 14:33:55</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3228500" lon="-72.1191300">
+ <ele>483.412811</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>158</name>
+ <cmt>10-AVR-21 14:34:59</cmt>
+ <desc>10-AVR-21 14:34:59</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3232600" lon="-72.1188000">
+ <ele>482.498413</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>159</name>
+ <cmt>10-AVR-21 14:36:56</cmt>
+ <desc>10-AVR-21 14:36:56</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3235700" lon="-72.1182800">
+ <ele>486.765594</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>160</name>
+ <cmt>10-AVR-21 14:38:06</cmt>
+ <desc>10-AVR-21 14:38:06</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3243300" lon="-72.1175300">
+ <ele>491.337585</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>161</name>
+ <cmt>10-AVR-21 14:46:52</cmt>
+ <desc>10-AVR-21 14:46:52</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3246900" lon="-72.1171200">
+ <ele>489.813599</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>162</name>
+ <cmt>10-AVR-21 14:47:53</cmt>
+ <desc>10-AVR-21 14:47:53</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3250700" lon="-72.1167100">
+ <ele>487.375214</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>163</name>
+ <cmt>10-AVR-21 14:48:49</cmt>
+ <desc>10-AVR-21 14:48:49</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3255200" lon="-72.1163900">
+ <ele>481.279205</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>164</name>
+ <cmt>10-AVR-21 14:49:50</cmt>
+ <desc>10-AVR-21 14:49:50</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3258300" lon="-72.1159700">
+ <ele>479.450409</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>165</name>
+ <cmt>10-AVR-21 14:55:18</cmt>
+ <desc>10-AVR-21 14:55:18</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3262700" lon="-72.1154000">
+ <ele>484.327209</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>166</name>
+ <cmt>10-AVR-21 14:56:32</cmt>
+ <desc>10-AVR-21 14:56:32</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3265300" lon="-72.1151100">
+ <ele>487.679993</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>167</name>
+ <cmt>10-AVR-21 14:57:46</cmt>
+ <desc>10-AVR-21 14:57:46</desc>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.2625600" lon="-72.1014400">
+ <ele>0.000000</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>I2</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.2632100" lon="-72.1277900">
+ <ele>0.000000</ele>
+ <time>2021-04-11T20:59:23.392Z</time>
+ <name>I3</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3200780" lon="-72.1219260">
+ <ele>499.872009</ele>
+ <time>2021-04-10T13:54:43.998Z</time>
+ <name>002</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3189880" lon="-72.1226920">
+ <ele>507.187195</ele>
+ <time>2021-04-10T13:56:42.003Z</time>
+ <name>003</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3184500" lon="-72.1233790">
+ <ele>509.320801</ele>
+ <time>2021-04-10T13:58:10.001Z</time>
+ <name>004</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3179740" lon="-72.1240190">
+ <ele>509.625610</ele>
+ <time>2021-04-10T13:59:33.999Z</time>
+ <name>005</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3177110" lon="-72.1242810">
+ <ele>507.796814</ele>
+ <time>2021-04-10T14:03:14.000Z</time>
+ <name>006</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3170570" lon="-72.1248260">
+ <ele>508.711212</ele>
+ <time>2021-04-10T14:08:42.000Z</time>
+ <name>007</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3160190" lon="-72.1260320">
+ <ele>502.615204</ele>
+ <time>2021-04-10T14:11:45.997Z</time>
+ <name>008</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3265930" lon="-72.1152180">
+ <ele>483.717590</ele>
+ <time>2021-04-10T17:52:00.998Z</time>
+ <name>009</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3268000" lon="-72.1160180">
+ <ele>475.183197</ele>
+ <time>2021-04-10T17:55:03.000Z</time>
+ <name>010</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3271760" lon="-72.1163800">
+ <ele>475.792786</ele>
+ <time>2021-04-10T17:55:39.996Z</time>
+ <name>011</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3273300" lon="-72.1166580">
+ <ele>475.488007</ele>
+ <time>2021-04-10T17:56:18.004Z</time>
+ <name>012</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3276010" lon="-72.1172710">
+ <ele>475.488007</ele>
+ <time>2021-04-10T17:57:00.003Z</time>
+ <name>013</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3276740" lon="-72.1177960">
+ <ele>472.744812</ele>
+ <time>2021-04-10T18:05:10.003Z</time>
+ <name>014</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3277030" lon="-72.1184180">
+ <ele>472.744812</ele>
+ <time>2021-04-10T18:08:12.998Z</time>
+ <name>015</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3279600" lon="-72.1187700">
+ <ele>472.135193</ele>
+ <time>2021-04-10T18:14:06.996Z</time>
+ <name>016</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3302180" lon="-72.1247940">
+ <ele>479.755188</ele>
+ <time>2021-04-10T18:39:14.003Z</time>
+ <name>020</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3304910" lon="-72.1253130">
+ <ele>485.241608</ele>
+ <time>2021-04-10T18:40:12.996Z</time>
+ <name>021</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3308990" lon="-72.1263100">
+ <ele>491.032806</ele>
+ <time>2021-04-10T18:41:20.000Z</time>
+ <name>022</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3341600" lon="-72.1454290">
+ <ele>490.423187</ele>
+ <time>2021-04-10T18:54:41.999Z</time>
+ <name>JOIN</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3318380" lon="-72.1290710">
+ <ele>489.204010</ele>
+ <time>2021-04-10T18:55:38.997Z</time>
+ <name>023</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3324880" lon="-72.1308440">
+ <ele>481.888794</ele>
+ <time>2021-04-10T18:59:02.003Z</time>
+ <name>024</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3327830" lon="-72.1318220">
+ <ele>479.755188</ele>
+ <time>2021-04-10T19:02:11.996Z</time>
+ <name>025</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3329540" lon="-72.1322020">
+ <ele>478.536011</ele>
+ <time>2021-04-10T19:03:21.004Z</time>
+ <name>026</name>
+ <sym>Flag, Green</sym>
+</wpt>
+<wpt lat="52.3166950" lon="-72.1252160">
+ <ele>506.577606</ele>
+ <time>2021-04-10T14:10:07.000Z</time>
+ <name>TP30</name>
+ <cmt>TP - 4/10/2021 5:43:36 PM</cmt>
+ <desc>TP - 4/10/2021 5:43:36 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3196630" lon="-72.1219150">
+ <ele>501.700806</ele>
+ <time>2021-04-10T14:38:10.003Z</time>
+ <name>TP31</name>
+ <cmt>TP - 4/10/2021 5:43:45 PM</cmt>
+ <desc>TP - 4/10/2021 5:43:45 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3314890" lon="-72.1281440">
+ <ele>498.347992</ele>
+ <time>2021-04-10T15:40:55.004Z</time>
+ <name>TP32</name>
+ <cmt>TP - 4/10/2021 5:44:33 PM</cmt>
+ <desc>TP - 4/10/2021 5:44:33 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3314610" lon="-72.1274900">
+ <ele>498.347992</ele>
+ <time>2021-04-10T16:03:10.999Z</time>
+ <name>TP33</name>
+ <cmt>TP - 4/10/2021 5:44:36 PM</cmt>
+ <desc>TP - 4/10/2021 5:44:36 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3321680" lon="-72.1301330">
+ <ele>491.032806</ele>
+ <time>2021-04-10T15:45:25.998Z</time>
+ <name>TP34</name>
+ <cmt>TP - 4/10/2021 5:44:40 PM</cmt>
+ <desc>TP - 4/10/2021 5:44:40 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3299780" lon="-72.1238730">
+ <ele>473.049591</ele>
+ <time>2021-04-10T18:31:00.002Z</time>
+ <name>TP35</name>
+ <cmt>TP - 4/10/2021 5:44:45 PM</cmt>
+ <desc>TP - 4/10/2021 5:44:45 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3332370" lon="-72.1328360">
+ <ele>485.546387</ele>
+ <time>2021-04-11T15:03:30.997Z</time>
+ <name>TP168</name>
+ <cmt>TP - 4/11/2021 8:55:22 PM</cmt>
+ <desc>TP - 4/11/2021 8:55:22 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3313220" lon="-72.1268590">
+ <ele>498.043213</ele>
+ <time>2021-04-10T16:04:00.998Z</time>
+ <name>TP169A</name>
+ <cmt>TP - 4/11/2021 8:55:58 PM</cmt>
+ <desc>TP - 4/11/2021 8:55:58 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3263400" lon="-72.1529400">
+ <ele>505.663208</ele>
+ <time>2021-04-11T13:56:50.004Z</time>
+ <name>TP170</name>
+ <cmt>TP - 4/11/2021 8:56:09 PM</cmt>
+ <desc>TP - 4/11/2021 8:56:09 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3257900" lon="-72.1514700">
+ <ele>493.776001</ele>
+ <time>2021-04-10T15:37:15.997Z</time>
+ <name>TP171</name>
+ <cmt>TP - 4/11/2021 8:56:21 PM</cmt>
+ <desc>TP - 4/11/2021 8:56:21 PM</desc>
+ <sym>Flag, Red</sym>
+</wpt>
+</gpx>

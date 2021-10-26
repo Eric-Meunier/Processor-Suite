@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gpx
+ xmlns="http://www.topografix.com/GPX/1/1"
+ creator="OziExplorer Version 3956f - http://www.oziexplorer.com"
+ version="1.1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+<metadata>
+ <time>2021-05-24T23:47:36Z</time>
+ <bounds minlat="49.659089" minlon="-74.433349" maxlat="52.336887" maxlon="-72.042591"/>
+</metadata>
+<wpt lat="52.3217380" lon="-72.1219620">
+ <ele>491.337585</ele>
+ <time>2021-05-24T14:47:28.000Z</time>
+ <name>2100 700</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3213780" lon="-72.1223080">
+ <ele>489.508789</ele>
+ <time>2021-05-24T14:49:17.003Z</time>
+ <name>2100 650</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3210010" lon="-72.1227070">
+ <ele>495.299988</ele>
+ <time>2021-05-24T14:50:41.001Z</time>
+ <name>2100 600</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3206220" lon="-72.1231080">
+ <ele>503.834412</ele>
+ <time>2021-05-24T14:52:49.996Z</time>
+ <name>2100 550</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3202420" lon="-72.1234920">
+ <ele>505.663208</ele>
+ <time>2021-05-24T14:54:50.999Z</time>
+ <name>2100 500</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3198600" lon="-72.1238890">
+ <ele>507.187195</ele>
+ <time>2021-05-24T14:56:44.002Z</time>
+ <name>2100 450</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3194780" lon="-72.1242740">
+ <ele>508.406403</ele>
+ <time>2021-05-24T14:58:41.998Z</time>
+ <name>2100 400</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3191200" lon="-72.1246560">
+ <ele>506.577606</ele>
+ <time>2021-05-24T15:14:38.999Z</time>
+ <name>2100 350</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3187400" lon="-72.1250450">
+ <ele>507.187195</ele>
+ <time>2021-05-24T15:17:07.002Z</time>
+ <name>2100 300</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3183500" lon="-72.1254340">
+ <ele>504.748810</ele>
+ <time>2021-05-24T15:19:42.997Z</time>
+ <name>2100 250</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3179810" lon="-72.1258280">
+ <ele>502.310394</ele>
+ <time>2021-05-24T15:21:29.002Z</time>
+ <name>2100 200</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3176030" lon="-72.1262210">
+ <ele>499.567200</ele>
+ <time>2021-05-24T15:23:36.001Z</time>
+ <name>2100 150</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3172210" lon="-72.1266170">
+ <ele>498.652802</ele>
+ <time>2021-05-24T15:25:40.996Z</time>
+ <name>2100 100</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3168410" lon="-72.1270060">
+ <ele>498.652802</ele>
+ <time>2021-05-24T15:27:29.998Z</time>
+ <name>2100 50</name>
+ <sym>Flag, Red</sym>
+</wpt>
+<wpt lat="52.3221300" lon="-72.1215200">
+ <ele>490.118408</ele>
+ <time>2021-05-24T19:47:36.724Z</time>
+ <name>2100 750</name>
+ <cmt>24-MAY-21 10:53:10</cmt>
+ <desc>24-MAY-21 10:53:10</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3225100" lon="-72.1211200">
+ <ele>491.032806</ele>
+ <time>2021-05-24T19:47:36.724Z</time>
+ <name>2100 800</name>
+ <cmt>24-MAY-21 10:54:41</cmt>
+ <desc>24-MAY-21 10:54:41</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3229000" lon="-72.1207700">
+ <ele>490.727997</ele>
+ <time>2021-05-24T19:47:36.724Z</time>
+ <name>2100 850</name>
+ <cmt>24-MAY-21 10:56:17</cmt>
+ <desc>24-MAY-21 10:56:17</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3232700" lon="-72.1203500">
+ <ele>485.546387</ele>
+ <time>2021-05-24T19:47:36.724Z</time>
+ <name>2100 900</name>
+ <cmt>24-MAY-21 10:58:37</cmt>
+ <desc>24-MAY-21 10:58:37</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3236500" lon="-72.1199800">
+ <ele>487.070404</ele>
+ <time>2021-05-24T19:47:36.724Z</time>
+ <name>2100 950</name>
+ <cmt>24-MAY-21 10:59:55</cmt>
+ <desc>24-MAY-21 10:59:55</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3240400" lon="-72.1195800">
+ <ele>484.327209</ele>
+ <time>2021-05-24T19:47:36.725Z</time>
+ <name>2100 1000</name>
+ <cmt>24-MAY-21 11:02:46</cmt>
+ <desc>24-MAY-21 11:02:46</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3244100" lon="-72.1191700">
+ <ele>490.118408</ele>
+ <time>2021-05-24T19:47:36.725Z</time>
+ <name>2100 1050</name>
+ <cmt>24-MAY-21 11:05:16</cmt>
+ <desc>24-MAY-21 11:05:16</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3248000" lon="-72.1187900">
+ <ele>494.690399</ele>
+ <time>2021-05-24T19:47:36.727Z</time>
+ <name>2100 1100</name>
+ <cmt>24-MAY-21 11:07:30</cmt>
+ <desc>24-MAY-21 11:07:30</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3251800" lon="-72.1184000">
+ <ele>494.080811</ele>
+ <time>2021-05-24T19:47:36.728Z</time>
+ <name>2100 1150</name>
+ <cmt>24-MAY-21 11:09:06</cmt>
+ <desc>24-MAY-21 11:09:06</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3255500" lon="-72.1180000">
+ <ele>491.947205</ele>
+ <time>2021-05-24T19:47:36.728Z</time>
+ <name>2100 1200</name>
+ <cmt>24-MAY-21 11:10:25</cmt>
+ <desc>24-MAY-21 11:10:25</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3259300" lon="-72.1176000">
+ <ele>490.423187</ele>
+ <time>2021-05-24T19:47:36.728Z</time>
+ <name>2100 1250</name>
+ <cmt>24-MAY-21 11:11:37</cmt>
+ <desc>24-MAY-21 11:11:37</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3263200" lon="-72.1172300">
+ <ele>488.899200</ele>
+ <time>2021-05-24T19:47:36.729Z</time>
+ <name>2100 1300</name>
+ <cmt>24-MAY-21 11:12:46</cmt>
+ <desc>24-MAY-21 11:12:46</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3267000" lon="-72.1168300">
+ <ele>482.498413</ele>
+ <time>2021-05-24T19:47:36.729Z</time>
+ <name>2100 1350</name>
+ <cmt>24-MAY-21 11:14:12</cmt>
+ <desc>24-MAY-21 11:14:12</desc>
+ <sym>City (Small)</sym>
+</wpt>
+</gpx>

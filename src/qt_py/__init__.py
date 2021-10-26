@@ -253,10 +253,12 @@ def df_to_table(df, table):
         df.astype("O").apply(write_row, axis=1)
 
 
-def table_to_df(table, dtypes=None):
+def table_to_df(table, dtypes=None, nan_replacement=False):
     """
     Create a DataFrame from the information in the table.
     :param table: QTableWidget
+    :param dtypes: list, data types of the data frame columns.
+    :param nan_replacement: str, convert NaNs to this value.
     :return: pandas pd.DataFrame
     """
     header = [table.horizontalHeaderItem(i).text() for i in range(table.columnCount())]
@@ -268,18 +270,24 @@ def table_to_df(table, dtypes=None):
         gps.append(gps_row)
 
     df = pd.DataFrame(gps, columns=header)
+
+    if nan_replacement is not False:
+        # In some data frames, the NaN is just a "nan" string
+        df = df.replace(to_replace=np.nan, value=nan_replacement)
+        df = df.replace(to_replace="nan", value=nan_replacement)
     if dtypes is not None:
         df = df.astype(dtypes)
     else:
-        df = df.apply(pd.to_numeric, errors='ignore')
+        df = df.apply(pd.to_numeric, errors='coerce')
     return df
 
 
-def auto_size_ax(ax, figure):
+def auto_size_ax(ax, figure, buffer=0):
     """
     Change the limits of the axes so the axes fills the full size of the figure.
     :param ax: Matplotlib Axes object
     :param figure: Matplotlib Figure object
+    :param buffer: int, marging (as a percentage) to add to the X and Y.
     :return: None
     """
     xmin, xmax = ax.get_xlim()
@@ -296,8 +304,9 @@ def auto_size_ax(ax, figure):
         new_width = map_width
         new_height = new_width * (1 / figure_ratio)
 
-    x_offset = 0
-    y_offset = 0.06 * new_height
+    x_offset = buffer * new_width
+    # y_offset = 0.06 * new_height  # Causes large margins on the right and left
+    y_offset = buffer * new_height
     new_xmin = (xmin - x_offset) - ((new_width - map_width) / 2)
     new_xmax = (xmax + x_offset) + ((new_width - map_width) / 2)
     new_ymin = (ymin - y_offset) - ((new_height - map_height) / 2)
@@ -320,7 +329,8 @@ def clear_table(table):
 class CustomProgressDialog(pg.ProgressDialog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.setWindowFlags(Qt.CustomizeWindowHint | Qt.WindowStaysOnTopHint)
+        # self.setWindowFlags(Qt.CustomizeWindowHint | Qt.WindowStaysOnTopHint)
+        self.setWindowFlags(Qt.CustomizeWindowHint)
 
         # parent = kwargs.get("parent")
         # if parent:
@@ -466,9 +476,10 @@ class TableSelector(QWidget):
     """
     accept_sig = Signal(object)
 
-    def __init__(self, selection_labels, parent=None, darkmode=False):
+    def __init__(self, selection_labels, single_click=False, parent=None, darkmode=False):
         super().__init__()
         self.parent = parent
+        self.single_click = single_click
         self.darkmode = darkmode
         self.setWindowIcon(get_icon("table.png"))
         self.setLayout(QVBoxLayout())
@@ -483,7 +494,8 @@ class TableSelector(QWidget):
         self.selection_limit = len(selection_labels)  # Maximum number of selected columns before resetting
         self.selection_count = 0
         self.selection_values = {}
-        self.selected_ranges = []
+        self.selected_ranges = []  # Only used when self.single_click is False
+        self.selected_cells = []  # Only used when self.single_click is True
         self.instruction_label = QLabel()
 
         self.tables = []
@@ -530,11 +542,6 @@ class TableSelector(QWidget):
         self.highlight_label(0)
 
     def accept(self):
-        # df = pd.DataFrame(self.holes, dtype=float)
-        # if not all([d == float for d in df.dtypes]):
-        #     logger.error(f'Data selected are not all numerical values.')
-        #     self.message.information(self, 'Error', f'The data selected are not all numerical values.')
-        # else:
         num_values = [len(values) for keys, values in self.selection_values.items()]
         if not all([v == num_values[0] for v in num_values]):
             logger.error(f"All selected information must have the same number of entries.\nNumber sele")
@@ -543,6 +550,34 @@ class TableSelector(QWidget):
         df = pd.DataFrame(self.selection_values)
         self.accept_sig.emit(df)
         self.close()
+
+    def cell_clicked(self, row, col):
+        """
+        Signal slot, color the cell and register it's contents when clicked.
+        :param row: Int
+        :param col: Int
+        :return: None
+        """
+        table = self.tables[self.tabs.currentIndex()]
+
+        # Cycle the selection back to the first item when going past the last selection
+        if len(self.selected_cells) == self.selection_limit:
+            self.selected_cells[0].setBackground(self.empty_background)
+            self.selected_cells.pop(0)
+
+        values = []
+        item = table.item(row, col)
+        item.setBackground(QColor(self.selection_color))
+        values.append(item.text())
+
+        if self.selection_count == self.selection_limit:
+            self.selection_count = 0
+
+        self.selection_values[self.selection_label_names[self.selection_count]] = values
+
+        self.selection_count += 1
+        self.highlight_label(self.selection_count)
+        self.selected_cells.append(item)
 
     def cell_double_clicked(self, row, col):
         """
@@ -650,10 +685,13 @@ class TableSelector(QWidget):
 
         for table in self.tables:
             table.setStyleSheet(f"selection-background-color: #{self.selection_color};")
-            table.cellDoubleClicked.connect(self.cell_double_clicked)
-            table.contextMenuEvent = self.table_context_menu
-            table.setMouseTracking(True)
-            table.viewport().installEventFilter(self)
+            if self.single_click is True:
+                table.cellClicked.connect(self.cell_clicked)
+            else:
+                table.cellDoubleClicked.connect(self.cell_double_clicked)
+                table.contextMenuEvent = self.table_context_menu
+                table.setMouseTracking(True)
+                table.viewport().installEventFilter(self)
 
         self.show()
 

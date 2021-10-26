@@ -517,55 +517,55 @@ class Derotator(QMainWindow, Ui_Derotator):
         else:
             self.pp_btn.setEnabled(False)
 
-        try:
-            self.pem_file, ineligible_stations = self.pem_file.prep_rotation()
-        except Exception as e:
-            # Common exception will be that there is no eligible data
-            logger.error(str(e))
-            self.message.information(self, 'Error', str(e))
+        # try:
+        self.pem_file, ineligible_stations = self.pem_file.prep_rotation()
+        # except Exception as e:
+        #     # Common exception will be that there is no eligible data
+        #     logger.error(str(e))
+        #     self.message.information(self, 'Error', str(e))
+        # else:
+        self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")
+
+        # Disable the PP values tab if there's no PP information
+        if all([self.pem_file.has_all_gps(), self.pem_file.ramp > 0]):
+            self.tabWidget.setTabEnabled(0, True)
+            self.tabWidget.setTabEnabled(2, True)
+
+            # Add the PP rotation plot curves and scatter items
+            if not pem_file.is_fluxgate():
+                self.rot_ax.addItem(self.cpp_rot_curve)
+                self.rot_ax.addItem(self.cpp_rot_scatter)
+            self.rot_ax.addItem(self.mpp_rot_curve)
+            self.rot_ax.addItem(self.mpp_rot_scatter)
+
+            plot_pp_values()
         else:
-            self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")
+            self.tabWidget.setTabEnabled(0, False)
+            self.tabWidget.setTabEnabled(3, False)
 
-            # Disable the PP values tab if there's no PP information
-            if all([self.pem_file.has_all_gps(), self.pem_file.ramp > 0]):
-                self.tabWidget.setTabEnabled(0, True)
-                self.tabWidget.setTabEnabled(2, True)
+        # Fill the table with the ineligible stations
+        if not ineligible_stations.empty:
+            fill_table(ineligible_stations)
+            self.bad_stations_label.show()
+        else:
+            self.bad_stations_label.hide()
 
-                # Add the PP rotation plot curves and scatter items
-                if not pem_file.is_fluxgate():
-                    self.rot_ax.addItem(self.cpp_rot_curve)
-                    self.rot_ax.addItem(self.cpp_rot_scatter)
-                self.rot_ax.addItem(self.mpp_rot_curve)
-                self.rot_ax.addItem(self.mpp_rot_scatter)
+        # Limit the profile plots to only show the station range
+        stations = self.pem_file.get_stations(converted=True)
+        for ax in np.concatenate([self.x_view_axes, self.y_view_axes]):
+            ax.setLimits(yMin=stations.min(), yMax=stations.max())
+        for ax in [self.dev_ax, self.dip_ax, self.mag_ax, self.rot_ax, self.pp_ax]:
+            ax.setLimits(yMin=stations.min() - 1, yMax=stations.max() + 1)
 
-                plot_pp_values()
-            else:
-                self.tabWidget.setTabEnabled(0, False)
-                self.tabWidget.setTabEnabled(3, False)
+        self.rotate()
+        if self.pem_file.has_d7():
+            plot_mag()
+            plot_dip()
+        else:
+            self.tabWidget.setTabEnabled(1, False)
 
-            # Fill the table with the ineligible stations
-            if not ineligible_stations.empty:
-                fill_table(ineligible_stations)
-                self.bad_stations_label.show()
-            else:
-                self.bad_stations_label.hide()
-
-            # Limit the profile plots to only show the station range
-            stations = self.pem_file.get_stations(converted=True)
-            for ax in np.concatenate([self.x_view_axes, self.y_view_axes]):
-                ax.setLimits(yMin=stations.min(), yMax=stations.max())
-            for ax in [self.dev_ax, self.dip_ax, self.mag_ax, self.rot_ax, self.pp_ax]:
-                ax.setLimits(yMin=stations.min() - 1, yMax=stations.max() + 1)
-
-            self.rotate()
-            if self.pem_file.has_d7():
-                plot_mag()
-                plot_dip()
-            else:
-                self.tabWidget.setTabEnabled(1, False)
-
-            self.show()
-            self.reset_range()
+        self.show()
+        self.reset_range()
 
     def plot_pem(self, pem_file):
         """

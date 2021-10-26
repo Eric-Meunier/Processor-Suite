@@ -23,9 +23,9 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from pyproj import CRS
 from shapely.geometry import asMultiPoint
 
-from src.gps.gps_editor import TransmitterLoop, SurveyLine, read_gpx, read_kmz
+from src.gps.gps_editor import TransmitterLoop, SurveyLine, read_gps
 from src.logger import logger
-from src.qt_py import (get_icon, NonScientific, read_file, table_to_df, df_to_table, get_line_color, clear_table,
+from src.qt_py import (get_icon, NonScientific, table_to_df, df_to_table, get_line_color, clear_table,
                        MapToolbar, auto_size_ax, CRSSelector, CustomProgressDialog, TableSelector)
 from src.ui.gpx_creator import Ui_GPXCreator
 from src.ui.line_adder import Ui_LineAdder
@@ -847,58 +847,6 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         self.setupUi(self)
         self.parent = parent
 
-        def format_plots():
-                self.plan_view.setTitle('Plan View')
-                self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
-                                             'bottom': NonScientific(orientation='bottom')})
-                self.section_view.setTitle('Elevation View')
-
-                self.plan_view.setAspectLocked()
-
-                self.plan_view.hideButtons()
-                self.section_view.hideButtons()
-
-                self.section_view.getAxis('bottom').setLabel('Index')  # Set the label only for the section X axis
-
-                self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-                self.plan_view.getAxis('bottom').enableAutoSIPrefix(
-                    enable=False)  # Disables automatic scaling of labels
-                self.section_view.getAxis('left').enableAutoSIPrefix(
-                    enable=False)  # Disables automatic scaling of labels
-                self.section_view.getAxis('bottom').enableAutoSIPrefix(
-                    enable=False)  # Disables automatic scaling of labels
-                self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
-                self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
-                self.section_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
-                self.section_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
-
-                self.plan_view.getAxis('right').setWidth(
-                    15)  # Move the right edge of the plot away from the window edge
-                self.plan_view.showAxis('right', show=True)  # Show the axis edge line
-                self.plan_view.showAxis('top', show=True)  # Show the axis edge line
-                self.plan_view.showLabel('right', show=False)
-                self.plan_view.showLabel('top', show=False)
-                self.section_view.getAxis('right').setWidth(
-                    15)  # Move the right edge of the plot away from the window edge
-                self.section_view.showAxis('right', show=True)  # Show the axis edge line
-                self.section_view.showAxis('top', show=True)  # Show the axis edge line
-                self.section_view.showLabel('right', show=False)
-                self.section_view.showLabel('top', show=False)
-
-                self.plan_view.getAxis('left').setLabel('Northing', units=None)
-                self.plan_view.getAxis('bottom').setLabel('Easting', units=None)
-
-                self.section_view.setLabel('left', f"Elevation", units=None)
-
-        def init_signals():
-            self.actionOpen.triggered.connect(self.open_file_dialog)
-
-            self.button_box.accepted.connect(self.accept)
-            self.button_box.rejected.connect(self.close)
-
-            self.table.cellChanged.connect(self.cell_changed)
-            self.table.itemSelectionChanged.connect(self.highlight_point)
-
         self.setWindowTitle('Collar Picker')
         self.actionOpen.setIcon(get_icon("open.png"))
         self.status_bar.hide()
@@ -933,8 +881,60 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         self.plan_view.setFocusPolicy(Qt.StrongFocus)
         self.section_view.setFocusPolicy(Qt.StrongFocus)
 
-        format_plots()
-        init_signals()
+        self.format_plots()
+        self.init_signals()
+
+    def format_plots(self):
+        self.plan_view.setTitle('Plan View')
+        self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
+                                     'bottom': NonScientific(orientation='bottom')})
+        self.section_view.setTitle('Elevation View')
+
+        self.plan_view.setAspectLocked()
+
+        self.plan_view.hideButtons()
+        self.section_view.hideButtons()
+
+        self.section_view.getAxis('bottom').setLabel('Index')  # Set the label only for the section X axis
+
+        self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+        self.plan_view.getAxis('bottom').enableAutoSIPrefix(
+            enable=False)  # Disables automatic scaling of labels
+        self.section_view.getAxis('left').enableAutoSIPrefix(
+            enable=False)  # Disables automatic scaling of labels
+        self.section_view.getAxis('bottom').enableAutoSIPrefix(
+            enable=False)  # Disables automatic scaling of labels
+        self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+        self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+        self.section_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+        self.section_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+
+        self.plan_view.getAxis('right').setWidth(
+            15)  # Move the right edge of the plot away from the window edge
+        self.plan_view.showAxis('right', show=True)  # Show the axis edge line
+        self.plan_view.showAxis('top', show=True)  # Show the axis edge line
+        self.plan_view.showLabel('right', show=False)
+        self.plan_view.showLabel('top', show=False)
+        self.section_view.getAxis('right').setWidth(
+            15)  # Move the right edge of the plot away from the window edge
+        self.section_view.showAxis('right', show=True)  # Show the axis edge line
+        self.section_view.showAxis('top', show=True)  # Show the axis edge line
+        self.section_view.showLabel('right', show=False)
+        self.section_view.showLabel('top', show=False)
+
+        self.plan_view.getAxis('left').setLabel('Northing', units=None)
+        self.plan_view.getAxis('bottom').setLabel('Easting', units=None)
+
+        self.section_view.setLabel('left', f"Elevation", units=None)
+
+    def init_signals(self):
+        self.actionOpen.triggered.connect(self.open_file_dialog)
+
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.close)
+
+        self.table.cellChanged.connect(self.cell_changed)
+        self.table.itemSelectionChanged.connect(self.highlight_point)
 
     def accept(self):
         selected_row = self.table.currentRow()
@@ -964,35 +964,15 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         """
         def get_df(gps):
             df = pd.DataFrame()
-            if isinstance(gps, str) or isinstance(gps, Path):
-                if Path(str(gps)).is_file():
-                    if Path(gps).suffix.lower() == '.gpx':
-                        # Convert the GPX file to string
-                        gps, zone, hemisphere, crs, gpx_errors = GPXParser().get_utm(gps, as_string=True)
-                        contents = [c.strip().split() for c in gps]
-                    else:
-                        contents = read_file(gps, as_list=True)
-                    try:
-                        df = pd.DataFrame.from_records(contents)
-                    except ValueError as e:
-                        self.show()
-                        self.message.critical(self, f"Parsing Error", str(e))
-                        return df
-            elif isinstance(gps, list):
-                try:
-                    df = pd.DataFrame.from_records(gps)
-                except ValueError as e:
-                    self.show()
-                    self.message.critical(self, f"Parsing Error", str(e))
-                    return df
-            else:
-                df = gps
-
+            try:
+                df, _, _ = read_gps(gps)
+            except ValueError as e:
+                self.show()
+                self.message.critical(self, f"Parsing Error", str(e))
             return df
 
         self.setWindowTitle(f'Collar Picker - {name}')
         gpx_errors = []
-        remove_cols = []
         self.df = get_df(gps)
 
         if self.df.empty:
@@ -1000,6 +980,10 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
             self.message.critical(self, 'Error', f"No GPS found.")
             return
         else:
+            # Convert NaNs to "0"
+            self.df = self.df.replace(to_replace=np.nan, value="0")
+            self.df = self.df.replace(to_replace="nan", value="0")  # In some dataframes, the NaN is just a "nan" string
+
             self.df = self.df.apply(pd.to_numeric, errors='ignore')
 
         # self.clear_table()
@@ -1017,7 +1001,7 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         Plot the data from the table to the axes.
         :return: None
         """
-        df = table_to_df(self.table)
+        df = table_to_df(self.table, nan_replacement="0")
         if df.empty:
             return
 
@@ -1041,7 +1025,7 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         # Save the information of the row for backup purposes
         self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
 
-        df = table_to_df(self.table)
+        df = table_to_df(self.table, nan_replacement="0")
 
         # Plot on the plan map
         plan_x, plan_y = df.iloc[row, 0], df.iloc[row, 1]
@@ -1073,7 +1057,7 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
             self.section_view.addItem(self.section_ly)
 
 
-class ExcelTablePicker(QWidget):
+class ExcelTablePicker2(QWidget):
     accept_sig = Signal(object)
 
     def __init__(self, parent=None):
@@ -1189,6 +1173,13 @@ class ExcelTablePicker(QWidget):
             self.tabs.addTab(table, sheet)
 
         self.show()
+
+
+class ExcelTablePicker(TableSelector):
+    def __init__(self, parent=None, darkmode=False):
+        super().__init__(["Easting", "Northing", "Elevation"], single_click=True, parent=parent, darkmode=darkmode)
+        self.setWindowTitle("Excel Table Selector")
+        self.instruction_label.setText("Sequentially click the cell for the items highlighted below.")
 
 
 # class DADSelector(QWidget):
@@ -1403,7 +1394,7 @@ class ExcelTablePicker(QWidget):
 
 class DADSelector(TableSelector):
     def __init__(self, parent=None, darkmode=False):
-        super().__init__(["Depth", "Azimuth", "Dip"], parent=parent, darkmode=darkmode)
+        super().__init__(["Depth", "Azimuth", "Dip"], single_click=False, parent=parent, darkmode=darkmode)
         self.setWindowTitle("DAD Selector")
         self.instruction_label.setText("Sequentially double-click the top value for the column name highlighted below.")
 
@@ -2017,15 +2008,9 @@ class GPSExtractor(QMainWindow):
         self.filepath = Path(filepath)
         self.setWindowTitle(f"GPS Extractor - {self.filepath.name}")
         suffix = self.filepath.suffix.lower()
-        if suffix == ".kmz":
+        if suffix == ".kmz" or suffix == ".gpx":
             try:
-                df, geo_df, crs = read_kmz(self.filepath)
-            except Exception as e:
-                self.error_msg.showMessage(str(e))
-                return
-        elif suffix == ".gpx":
-            try:
-                df, geo_df, crs = read_gpx(self.filepath)
+                df, geo_df, crs = read_gps(self.filepath)
             except Exception as e:
                 self.error_msg.showMessage(str(e))
                 return
@@ -2090,8 +2075,8 @@ if __name__ == '__main__':
     # mw.show()
 
     """GPS Conversion"""
-    mw = GPSConversionWidget()
-    mw.show()
+    # mw = GPSConversionWidget()
+    # mw.show()
 
     """GPX Creator"""
     # gpx_creator = GPXCreator()
@@ -2109,20 +2094,20 @@ if __name__ == '__main__':
     # loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Loop GPS'))
     #
     # # mw = CollarPicker(darkmode=darkmode)
-    # # file = r"C:\_Data\2021\TMC\Laurentia\GEN-21-09\GPS\Loop 09_0823.gpx"
+    # file = r"C:\_Data\2021\TMC\Laurentia\GEN-21-09\GPS\Loop 09_0823.gpx"
     # # mw = LoopAdder(darkmode=darkmode)
     # # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
     # # loop = TransmitterLoop(file)
     # mw = LineAdder(darkmode=darkmode)
-    # # mw = ExcelTablePicker()
+    mw = ExcelTablePicker()
     # # mw = DADSelector()
-    # # file = samples_folder.joinpath(r"Segments\BHEM-Belvais-2021-07-22.xlsx")
+    file = samples_folder.joinpath(r"Segments\BHEM-Belvais-2021-07-22.xlsx")
     # # file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
     # file = r"C:\_Data\2021\Eastern\Maritime Resources\Birchy 2\GPS\L5N.GPX"
     # # file = samples_folder.joinpath(r'Raw Boreholes\OBS-88-027\RAW\Obalski.xlsx')
     # # file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')
     # # line = SurveyLine(str(file))
-    # mw.open(file)
-    # mw.show()
+    mw.open(file)
+    mw.show()
 
     app.exec_()

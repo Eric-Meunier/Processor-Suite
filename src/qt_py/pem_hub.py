@@ -70,10 +70,8 @@ logger = logging.getLogger(__name__)
 # TODO Redo GPX parsing to use Geopandas. Might also want to revamp converting GPS.
 # TODO Improve un-rotation. One-click?
 # TODO Could add std plot to the right of decay plots
-# TODO remember size of splitters in PEMPro
 # TODO Add a Recent projects list, below project GPS, which will be a history of recently clicked folders.
 # TODO remember PEMmerger settings
-# TODO Fix Plan map margins
 # TODO CollarPicker should use TableSelector
 
 # Keep a list of widgets so they don't get garbage collected
@@ -129,16 +127,16 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.init_ui()
 
         # Menus
-        self.menu = QMenu(self.table)  # Main right-click menu
-        self.view_menu = QMenu('View', self.menu)
+        self.right_click_menu = QMenu(self.table)  # Main right-click menu
+        self.view_menu = QMenu('View', self.right_click_menu)
         self.view_menu.setIcon(get_icon('view.png'))
-        self.export_menu = QMenu('Export...', self.menu)
+        self.export_menu = QMenu('Export...', self.right_click_menu)
         self.export_menu.setIcon(get_icon('export.png'))
-        self.extract_menu = QMenu('Extract...', self.menu)
+        self.extract_menu = QMenu('Extract...', self.right_click_menu)
         self.extract_menu.setIcon(get_icon('station_splitter.png'))
-        self.share_menu = QMenu('Share', self.menu)
+        self.share_menu = QMenu('Share', self.right_click_menu)
         self.share_menu.setIcon(get_icon('share_gps.png'))
-        self.reverse_menu = QMenu('Reverse', self.menu)
+        self.reverse_menu = QMenu('Reverse', self.right_click_menu)
         self.reverse_menu.setIcon(get_icon('reverse.png'))
 
         # Actions
@@ -177,6 +175,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.reverse_z_component_action = QAction("Z Polarity", self)
         self.reverse_station_order_action = QAction("Station Order", self)
         self.derotate_action = QAction("De-rotate XY", self)
+        self.revert_xy_rotation_action = QAction("Revert XY Rotation", self)
         self.get_geometry_action = QAction("Geometry", self)
         self.rename_lines_action = QAction("Rename Lines/Holes", self)
         self.rename_files_action = QAction("Rename Files", self)
@@ -306,6 +305,16 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             self.open_gps_share(gps_obj, piw_widget)
 
+        def revert_xy_rotation():
+            pem_file, row = self.get_pem_files(selected=True)
+            pem_file = pem_file[0]
+            if pem_file.is_derotated():
+                pem_file.prep_rotation()
+                pem_file = pem_file.rotate(method="unrotate")
+                self.refresh_pem(pem_file)
+                self.update_selection_text()  # Update selection text since the file is currently selected
+                self.status_bar.showMessage("XY data rotation reverted.", 1500)
+
         if self.splash_screen:
             self.splash_screen.showMessage("Initializing actions")
 
@@ -400,6 +409,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         # Derotation
         self.derotate_action.triggered.connect(self.open_derotator)
         self.derotate_action.setIcon(get_icon('derotate.png'))
+        self.revert_xy_rotation_action.triggered.connect(revert_xy_rotation)
 
         # Borehole geometry
         self.get_geometry_action.triggered.connect(self.open_pem_geometry)
@@ -496,7 +506,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             :param row: int, click cell's row
             :param col: int, click cell's column
             """
-            update_selection_text()
+            # self.update_selection_text()
 
             if self.actionAlt_Click_Plotting.isChecked():
                 if keyboard.is_pressed('alt'):
@@ -551,6 +561,11 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             item = QTableWidgetItem(date.toString('MMMM dd, yyyy'))
             item.setTextAlignment(Qt.AlignCenter)
             self.table.setItem(current_row, current_col, item)
+
+        def title_header():
+            # Set the formatting of the text inside of "client_edit" and "grid_edit" to title()
+            self.client_edit.setText(self.client_edit.text().title())
+            self.grid_edit.setText(self.grid_edit.text().title())
 
         def apply_header():
             """
@@ -646,41 +661,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     self.gps_list.takeItem(row)
                     self.available_gps.pop(row)
 
-        def update_selection_text():
-            """
-            Change the information of the selected pem file(s) in the status bar
-            """
-            pem_files, rows = self.get_pem_files(selected=True)
-
-            if not pem_files:
-                return
-
-            if len(pem_files) == 1:
-                file = pem_files[0]
-                self.status_bar.showMessage(f"{file.filepath}")
-                timebase = f"Timebase: {file.timebase}ms"
-                zts = f"ZTS: {', '.join(file.data.ZTS.unique().astype(int).astype(str))}"
-                survey_type = f"Survey Type: {file.get_survey_type()}"
-                if file.is_pp():
-                    survey_type += " PP"
-
-                if file.is_borehole() and file.has_xy():
-                    derotated = f"De-rotated: {file.is_derotated()}"
-                else:
-                    derotated = ""
-            else:
-                self.status_bar.showMessage("")
-                timebase = f"Timebase(s): {', '.join(natsort.os_sorted(np.unique([str(f.timebase) + 'ms' for f in pem_files])))}"
-                zts = f"ZTS: {', '.join(np.unique(np.concatenate([f.data.ZTS.unique().astype(int).astype(str) for f in pem_files])))}"
-                survey_type = f"Survey Type(s): {', '.join(np.unique([f.get_survey_type() for f in pem_files]))}"
-                derotated = ""
-
-            self.selection_files_label.setText(f"Selected: {len(pem_files)}")
-            self.selection_timebase_label.setText(timebase)
-            self.selection_zts_label.setText(zts)
-            self.selection_survey_label.setText(survey_type)
-            self.selection_derotation_label.setText(derotated)
-
         def open_logs():
             log_file = app_data_dir.joinpath('logs.txt')
             if log_file.exists():
@@ -716,6 +696,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.calender.clicked.connect(set_date)
 
         # Buttons
+        self.title_btn.clicked.connect(title_header)
         self.apply_shared_header_btn.clicked.connect(apply_header)
         self.filter_pem_list_btn.clicked.connect(self.pem_list_filter.show)
         self.filter_gps_list_btn.clicked.connect(self.gps_list_filter.show)
@@ -726,7 +707,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.table.setFocusPolicy(Qt.StrongFocus)
 
         self.table.itemSelectionChanged.connect(lambda: self.stackedWidget.setCurrentIndex(self.table.currentRow()))
-        self.table.itemSelectionChanged.connect(update_selection_text)
+        self.table.itemSelectionChanged.connect(self.update_selection_text)
         self.table.cellChanged.connect(table_value_changed)
         self.table.cellClicked.connect(cell_clicked)
         self.table.cellDoubleClicked.connect(table_value_double_clicked)
@@ -1025,7 +1006,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             selected_pems, rows = self.get_pem_files(selected=True)
 
             # Clear the menu
-            self.menu.clear()
+            self.right_click_menu.clear()
             self.view_menu.clear()
             self.extract_menu.clear()
             self.export_menu.clear()
@@ -1033,19 +1014,19 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.reverse_menu.clear()
 
             # Add all the actions to the menu
-            self.menu.addAction(self.open_file_action)
-            self.menu.addAction(self.save_file_action)
+            self.right_click_menu.addAction(self.open_file_action)
+            self.right_click_menu.addAction(self.save_file_action)
 
             # Only for single file selection
             if len(self.table.selectionModel().selectedRows()) == 1:
                 pem_file = selected_pems[0]
 
-                self.menu.addAction(self.save_file_as_action)
-                self.menu.addAction(self.copy_to_cliboard_action)
-                self.menu.addSeparator()
+                self.right_click_menu.addAction(self.save_file_as_action)
+                self.right_click_menu.addAction(self.copy_to_cliboard_action)
+                self.right_click_menu.addSeparator()
 
                 # View menu
-                self.menu.addMenu(self.view_menu)
+                self.right_click_menu.addMenu(self.view_menu)
                 self.view_menu.addAction(self.calc_mag_dec_action)
                 if pem_file.has_any_gps():
                     self.calc_mag_dec_action.setDisabled(False)
@@ -1070,7 +1051,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         self.view_line_action.setDisabled(False)
 
                 # Add the export menu
-                self.menu.addMenu(self.export_menu)
+                self.right_click_menu.addMenu(self.export_menu)
                 self.export_menu.addAction(self.export_pem_action)
                 if pem_file.is_borehole():
                     self.export_menu.addAction(self.export_dad_action)
@@ -1086,7 +1067,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     self.export_gps_action.setDisabled(False)
 
                 # Add the extract menu
-                self.menu.addMenu(self.extract_menu)
+                self.right_click_menu.addMenu(self.extract_menu)
                 self.extract_menu.addAction(self.extract_stations_action)
                 self.extract_menu.addSeparator()
 
@@ -1108,7 +1089,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     self.extract_z_action.setDisabled(False)
 
                 # Add the share menu
-                self.menu.addMenu(self.share_menu)
+                self.right_click_menu.addMenu(self.share_menu)
 
                 # Share loop
                 self.share_menu.addAction(self.share_loop_action)
@@ -1145,62 +1126,64 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 else:
                     self.share_all_action.setDisabled(True)
             else:
-                self.menu.addAction(self.copy_to_cliboard_action)
+                self.right_click_menu.addAction(self.copy_to_cliboard_action)
 
-            self.menu.addSeparator()
+            self.right_click_menu.addSeparator()
             # Plot
-            self.menu.addAction(self.open_plot_editor_action)
-            self.menu.addAction(self.open_quick_map_action)
+            self.right_click_menu.addAction(self.open_plot_editor_action)
+            self.right_click_menu.addAction(self.open_quick_map_action)
             if not has_any_gps():
                 self.open_quick_map_action.setDisabled(True)
             else:
                 self.open_quick_map_action.setDisabled(False)
-            self.menu.addSeparator()
+            self.right_click_menu.addSeparator()
 
             # Merge PEMs
             if len(self.table.selectionModel().selectedRows()) == 2:
-                self.menu.addAction(self.merge_action)
+                self.right_click_menu.addAction(self.merge_action)
 
             # Data editing
-            self.menu.addAction(self.average_action)
-            self.menu.addAction(self.split_action)
-            self.menu.addAction(self.scale_current_action)
-            self.menu.addAction(self.scale_ca_action)
+            self.right_click_menu.addAction(self.average_action)
+            self.right_click_menu.addAction(self.split_action)
+            self.right_click_menu.addAction(self.scale_current_action)
+            self.right_click_menu.addAction(self.scale_ca_action)
             # self.menu.addAction(self.mag_offset_action)
-            self.menu.addSeparator()
+            self.right_click_menu.addSeparator()
 
             # Add the reverse data menu
-            self.menu.addMenu(self.reverse_menu)
+            self.right_click_menu.addMenu(self.reverse_menu)
             self.reverse_menu.addAction(self.reverse_x_component_action)
             self.reverse_menu.addAction(self.reverse_y_component_action)
             self.reverse_menu.addAction(self.reverse_z_component_action)
             self.reverse_menu.addSeparator()
             self.reverse_menu.addAction(self.reverse_station_order_action)
 
-            self.menu.addSeparator()
+            self.right_click_menu.addSeparator()
 
             # For boreholes only, do-rotate and geometry
             if all([f.is_borehole() for f in selected_pems]):
                 if len(self.table.selectionModel().selectedRows()) == 1:
-                    self.menu.addAction(self.derotate_action)
+                    self.right_click_menu.addAction(self.derotate_action)
                     if not pem_file.has_xy():
                         self.derotate_action.setDisabled(True)
                     else:
                         self.derotate_action.setDisabled(False)
-                self.menu.addAction(self.get_geometry_action)
-                self.menu.addSeparator()
+                    if pem_file.is_derotated():
+                        self.right_click_menu.addAction(self.revert_xy_rotation_action)
+                self.right_click_menu.addAction(self.get_geometry_action)
+                self.right_click_menu.addSeparator()
 
             if len(self.table.selectionModel().selectedRows()) > 1:
-                self.menu.addSeparator()
-                self.menu.addAction(self.rename_files_action)
-                self.menu.addAction(self.rename_lines_action)
+                self.right_click_menu.addSeparator()
+                self.right_click_menu.addAction(self.rename_files_action)
+                self.right_click_menu.addAction(self.rename_lines_action)
 
-            self.menu.addSeparator()
-            self.menu.addAction(self.print_plots_action)
-            self.menu.addSeparator()
-            self.menu.addAction(self.remove_file_action)
+            self.right_click_menu.addSeparator()
+            self.right_click_menu.addAction(self.print_plots_action)
+            self.right_click_menu.addSeparator()
+            self.right_click_menu.addAction(self.remove_file_action)
 
-            self.menu.popup(QCursor.pos())
+            self.right_click_menu.popup(QCursor.pos())
 
     def eventFilter(self, source, event):
         # Clear the selection when clicking away from any file
@@ -2156,7 +2139,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 pem_files, piws = zip(*filter(lambda x: x[0].is_borehole(),
                                               zip(self.pem_files, self.pem_info_widgets)))
             else:
-                pem_files = []
+                pem_files, piws = [], []
 
         if len(pem_files) < 2:
             return
@@ -3542,6 +3525,41 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             logger.error(f"PEMFile ID {id(pem_file)} is not in the table.")
             raise IndexError(f"PEMFile ID {id(pem_file)} is not in the table.")
 
+    def update_selection_text(self):
+        """
+        Change the information of the selected pem file(s) in the status bar
+        """
+        pem_files, rows = self.get_pem_files(selected=True)
+
+        if not pem_files:
+            return
+
+        if len(pem_files) == 1:
+            file = pem_files[0]
+            self.status_bar.showMessage(f"{file.filepath}")
+            timebase = f"Timebase: {file.timebase}ms"
+            zts = f"ZTS: {', '.join(file.data.ZTS.unique().astype(int).astype(str))}"
+            survey_type = f"Survey Type: {file.get_survey_type()}"
+            if file.is_pp():
+                survey_type += " PP"
+
+            if file.is_borehole() and file.has_xy():
+                derotated = f"De-rotated: {file.is_derotated()}"
+            else:
+                derotated = ""
+        else:
+            self.status_bar.showMessage("")
+            timebase = f"Timebase(s): {', '.join(natsort.os_sorted(np.unique([str(f.timebase) + 'ms' for f in pem_files])))}"
+            zts = f"ZTS: {', '.join(np.unique(np.concatenate([f.data.ZTS.unique().astype(int).astype(str) for f in pem_files])))}"
+            survey_type = f"Survey Type(s): {', '.join(np.unique([f.get_survey_type() for f in pem_files]))}"
+            derotated = ""
+
+        self.selection_files_label.setText(f"Selected: {len(pem_files)}")
+        self.selection_timebase_label.setText(timebase)
+        self.selection_zts_label.setText(zts)
+        self.selection_survey_label.setText(survey_type)
+        self.selection_derotation_label.setText(derotated)
+
     def backup_files(self):
         """
         Create a backup (.bak) file for each opened PEM file, saved in a backup folder.
@@ -4369,14 +4387,29 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
             plot_kwargs['x_min'] = None
             plot_kwargs['x_max'] = None
 
-        save_dir = self.save_path_edit.text()
-        if save_dir:
+        save_file = self.save_path_edit.text()
+
+        if save_file:
             plt.style.use('default')
-            save_dir = os.path.splitext(save_dir)[0]
-            printer = PEMPrinter(**plot_kwargs)
-            printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
-            os.startfile(save_dir + ".PDF")
-            plt.style.use('dark_background' if self.darkmode else 'default')  # Reset darkmode theme
+            Path(save_file).parent.mkdir(exist_ok=True)  # Create the path if it doesn't already exist.
+            save_dir = os.path.splitext(save_file)[0]
+
+            try:
+                printer = PEMPrinter(**plot_kwargs)
+            except RuntimeError:
+                self.message.error(self, "Error", F"An error has occurred. Please re-start the program.")
+                return
+
+            else:
+                try:
+                    printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
+                except PermissionError:
+                    self.message.error(self, "Error", F"{save_file} is currently opened by another process.")
+                    return
+
+                os.startfile(save_file)
+                # Always use default theme for printing, so reset it afterwards
+                plt.style.use('dark_background' if self.darkmode else 'default')
             self.close()
         else:
             logger.error(f"No file name passed.")
@@ -5162,7 +5195,8 @@ def main():
     # pem_files = pem_getter.get_pems(folder='Iscaycruz', subfolder='Loop 1', number=4)
     # pem_files = pem_getter.get_pems(folder="Raw Boreholes\EB-21-68\RAW", number=1)
     # pem_files = pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0823.PEM")
-    pem_files = pem_getter.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0251-21\RAW\xy_1019.PEM")
+    # pem_files = pem_getter.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0251-21\RAW\xy_1019.PEM")
+    pem_files = pem_getter.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0251-21\RAW\xy1910_1019.dmp2")
     # pem_files.extend(pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0824.PEM"))
     # pem_files.extend(pem_getter.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_getter.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
@@ -5178,9 +5212,10 @@ def main():
     # mw.open_3d_map()
     # mw.add_dmp_files(dmp_files)
     mw.table.selectRow(0)
+    # mw.revert_xy_rotation_action.trigger()
     # mw.scale_pem_coil_area(selected=True)
     # mw.table.selectAll()
-    # mw.open_derotator()
+    mw.open_derotator()
     # mw.open_pem_merger()
     # mw.open_pem_geometry()
     # mw.open_pem_plot_editor()
@@ -5189,7 +5224,7 @@ def main():
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.save_pem_file_as()¶
-    mw.pem_info_widgets[0].tabs.setCurrentIndex(3)
+    # mw.pem_info_widgets[0].tabs.setCurrentIndex(3)
     # mw.add_gps_files(gps_files)
 
     """ Attempting to re-create printing bug """

@@ -13,8 +13,7 @@ from PySide2.QtGui import QColor, QFont
 from PySide2.QtWidgets import (QMessageBox, QWidget, QAction, QErrorMessage,
                                QFileDialog, QApplication, QHeaderView, QTableWidgetItem, QItemDelegate)
 
-from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, \
-    read_gpx, parse_gps
+from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, read_gps
 from src.pem import convert_station
 from src.qt_py import clear_table, read_file, table_to_df, df_to_table, get_line_color
 from src.qt_py.gps_tools import LoopAdder, LineAdder, CollarPicker, ExcelTablePicker
@@ -24,8 +23,7 @@ from src.ui.pem_info_widget import Ui_PEMInfoWidget
 
 logger = logging.getLogger(__name__)
 
-
-get_collar_called = 0
+refs = []
 
 
 class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
@@ -331,34 +329,22 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         Open GPS files
         :param files: list or str, filepath(s) of GPS files
-        :param crs: Proj CRS object for the GPS objects
         """
         def merge_files(files, collar=False):
             """
-            Merge contents of files into one list
+            Merge contents of files into one data frame
             :param files: list of str, filepaths of text file or GPX files
             :param collar: bool, if the files are for a collar, which will return a dict if an Excel file is passed.
             :return: str
             """
             crs = None
-            merged_file = []
+            merged_file = pd.DataFrame()
             for file in files:
-                if file.suffix.lower() == '.gpx':
-                    gps, gdf, crs = read_gpx(file, for_pemfile=True)
-                    contents = gps.to_numpy()
-                else:
-                    if file.suffix.lower() == '.csv':
-                        contents = pd.read_csv(file, delim_whitespace=False, header=None).to_numpy()
+                contents, _, crs = read_gps(file)
+                if collar is True:
+                    return contents, crs
 
-                    elif file.suffix.lower() in ['.xlsx', '.xls']:
-                        contents = pd.read_excel(file, header=None, sheet_name=None, dtype=str)
-                        if collar is True:
-                            return contents, crs
-
-                    else:
-                        contents = read_file(file, as_list=True)
-
-                merged_file.extend(contents)
+                merged_file = pd.concat([contents, merged_file])
             return merged_file, crs
 
         if not isinstance(files, list):
@@ -367,19 +353,19 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         current_tab = self.tabs.currentWidget()
         files = [Path(f) for f in files]
 
-        file_contents, crs = merge_files(files, collar=bool(current_tab == self.geometry_tab))
+        gps_df, crs = merge_files(files, collar=bool(current_tab == self.geometry_tab))
 
         # Add survey line GPS
         if current_tab == self.station_gps_tab:
-            self.add_line(file_contents)
+            self.add_line(gps_df)
 
         # Add borehole collar GPS
         elif current_tab == self.geometry_tab:
-            self.add_collar(file_contents)
+            self.add_collar(gps_df)
 
         # Add loop GPS
         elif current_tab == self.loop_gps_tab:
-            self.add_loop(file_contents)
+            self.add_loop(gps_df)
 
         else:
             pass
@@ -387,23 +373,25 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         return crs
 
     def open_pem_geometry(self):
-        """
-        Open the PEMGeometry window
-        """
         def accept_geometry(seg):
             self.pem_file.segments = seg
             self.refresh_row_signal.emit()
 
-        global pem_geometry
+        if not self.pem_file.has_d7() and not self.pem_file.has_geometry():
+            logger.error(f"PEM files must have D7 RAD tool objects or P tag geometry.")
+            self.message.information(self, "Invalid File", f"The PEM file must have D7 RAD tool values and must have"
+                                                           f"geometry information.")
+            return
+
         pem_geometry = PEMGeometry(parent=self, darkmode=self.darkmode)
+        refs.append(pem_geometry)
         pem_geometry.accepted_sig.connect(accept_geometry)
         pem_geometry.open(self.pem_file)
 
     def add_line(self, line_content=None):
         """
         Open the LineAdder and add the SurveyLine
-        :param line_content: str or Path, SurveyLine object, or pd DataFrame. If None is passed, will take the line
-        in the line_table.
+        :param line_content: str or Path or pd DataFrame. If None is passed, will use what's in the self.line_table.
         """
         def line_accept_sig_wrapper(data):
             self.fill_gps_table(data, self.line_table)
@@ -429,10 +417,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
     def add_loop(self, loop_content=None):
         """
         Open the LoopAdder and add the TransmitterLoop
-        :param loop_content: str or Path, TransmitterLoop object, or pd DataFrame. If None is passed, will take the loop
-        in the loop_table.
+        :param loop_content: str or Path or pd DataFrame. If None is passed, will use what's in the loop_table.
         """
-
         def loop_accept_sig_wrapper(data):
             self.fill_gps_table(data, self.loop_table)
 
@@ -448,6 +434,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             loop = TransmitterLoop(loop_content)
             if loop.df.empty:
                 self.message.information(self, 'No GPS Found', f"{loop.error_msg}")
+                return
             self.loop_adder.open(loop, name=self.pem_file.loop_name)
         except Exception as e:
             logger.critical(f"{e}.")
@@ -474,7 +461,6 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 logger.critical(f"{e}.")
                 self.error.showMessage(f"Error adding borehole collar: {str(e)}.")
 
-        # global picker
         if isinstance(collar_content, dict):
             self.picker = ExcelTablePicker()
             self.picker.open(collar_content)

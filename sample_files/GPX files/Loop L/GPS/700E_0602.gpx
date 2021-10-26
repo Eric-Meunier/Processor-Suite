@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<gpx
+ xmlns="http://www.topografix.com/GPX/1/1"
+ creator="OziExplorer Version 3956f - http://www.oziexplorer.com"
+ version="1.1"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+<metadata>
+ <time>2021-05-31T23:39:48Z</time>
+ <bounds minlat="52.328480" minlon="-72.139260" maxlat="52.333430" maxlon="-72.134240"/>
+</metadata>
+<wpt lat="52.3334300" lon="-72.1342400">
+ <ele>486.765594</ele>
+ <time>2021-05-31T19:39:48.665Z</time>
+ <name>700 1350</name>
+ <cmt>31-MAY-21 13:02:57</cmt>
+ <desc>31-MAY-21 13:02:57</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3330600" lon="-72.1346300">
+ <ele>492.556793</ele>
+ <time>2021-05-31T19:39:48.666Z</time>
+ <name>700 1300</name>
+ <cmt>31-MAY-21 13:04:20</cmt>
+ <desc>31-MAY-21 13:04:20</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3326700" lon="-72.1350100">
+ <ele>496.214386</ele>
+ <time>2021-05-31T19:39:48.666Z</time>
+ <name>700 1250</name>
+ <cmt>31-MAY-21 13:07:05</cmt>
+ <desc>31-MAY-21 13:07:05</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3322900" lon="-72.1354000">
+ <ele>499.567200</ele>
+ <time>2021-05-31T19:39:48.667Z</time>
+ <name>700 1200</name>
+ <cmt>31-MAY-21 13:08:34</cmt>
+ <desc>31-MAY-21 13:08:34</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3319100" lon="-72.1358000">
+ <ele>501.091187</ele>
+ <time>2021-05-31T19:39:48.667Z</time>
+ <name>700 1150</name>
+ <cmt>31-MAY-21 13:09:40</cmt>
+ <desc>31-MAY-21 13:09:40</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3315100" lon="-72.1361400">
+ <ele>500.176788</ele>
+ <time>2021-05-31T19:39:48.667Z</time>
+ <name>700 1100</name>
+ <cmt>31-MAY-21 13:10:54</cmt>
+ <desc>31-MAY-21 13:10:54</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3311500" lon="-72.1365900">
+ <ele>497.433594</ele>
+ <time>2021-05-31T19:39:48.667Z</time>
+ <name>700 1050</name>
+ <cmt>31-MAY-21 13:11:59</cmt>
+ <desc>31-MAY-21 13:11:59</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3307600" lon="-72.1369400">
+ <ele>497.433594</ele>
+ <time>2021-05-31T19:39:48.668Z</time>
+ <name>700 1000</name>
+ <cmt>31-MAY-21 13:13:17</cmt>
+ <desc>31-MAY-21 13:13:17</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3303800" lon="-72.1373300">
+ <ele>495.299988</ele>
+ <time>2021-05-31T19:39:48.668Z</time>
+ <name>700 950</name>
+ <cmt>31-MAY-21 13:14:36</cmt>
+ <desc>31-MAY-21 13:14:36</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3300000" lon="-72.1377200">
+ <ele>492.252014</ele>
+ <time>2021-05-31T19:39:48.668Z</time>
+ <name>700 900</name>
+ <cmt>31-MAY-21 13:16:09</cmt>
+ <desc>31-MAY-21 13:16:09</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3296200" lon="-72.1381400">
+ <ele>489.204010</ele>
+ <time>2021-05-31T19:39:48.668Z</time>
+ <name>700 850</name>
+ <cmt>31-MAY-21 13:17:59</cmt>
+ <desc>31-MAY-21 13:17:59</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3292400" lon="-72.1385200">
+ <ele>488.289612</ele>
+ <time>2021-05-31T19:39:48.668Z</time>
+ <name>700 800</name>
+ <cmt>31-MAY-21 13:23:12</cmt>
+ <desc>31-MAY-21 13:23:12</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3288600" lon="-72.1389100">
+ <ele>488.289612</ele>
+ <time>2021-05-31T19:39:48.668Z</time>
+ <name>700 750</name>
+ <cmt>31-MAY-21 13:25:01</cmt>
+ <desc>31-MAY-21 13:25:01</desc>
+ <sym>City (Small)</sym>
+</wpt>
+<wpt lat="52.3284800" lon="-72.1392600">
+ <ele>487.984802</ele>
+ <time>2021-05-31T19:39:48.669Z</time>
+ <name>700 700</name>
+ <cmt>31-MAY-21 13:26:27</cmt>
+ <desc>31-MAY-21 13:26:27</desc>
+ <sym>City (Small)</sym>
+</wpt>
+</gpx>

@@ -988,7 +988,7 @@ class PEMFile:
     def get_eligible_derotation_data(self):
         """
         Filter the data to only keep readings that have a matching X and Y pair for the same RAD_tool ID.
-        :return: tuple, data frame of eligible and ineligible data.
+        :return: tuple, dataframe of eligible and dataframe of ineligible data.
         """
         def filter_data(group):
             """
@@ -1001,7 +1001,8 @@ class PEMFile:
                 group.Remove = True
             return group
 
-        data = self.data.copy()
+        # data = self.data.copy()
+        data = self.data
 
         # Add a 'Remove' column, which will be removed later.
         data['Remove'] = False
@@ -1069,9 +1070,6 @@ class PEMFile:
                 ]
 
         return info
-        # row = pd.DataFrame([info])
-        # row.to_clipboard(excel=True, header=False, index=False)
-        # print(f"Row information copied to clipboard.")
 
     def get_theory_pp(self):
         """
@@ -1821,8 +1819,11 @@ class PEMFile:
                                               weights=weights)
                 return averaged_reading
 
+            print(f"Rotating station {group.iloc[0].Station}")
+            if group.iloc[0].Station == "400":
+                print("Stopping here")
             # Create a new RADTool object ready for de-rotating
-            rad = group.iloc[0]['RAD_tool']
+            rad = group.iloc[0]['RAD_tool']  # Why do some RADs have no acc angle value?
             new_rad = get_new_rad(method)
             if method == "unrotate":
                 roll_angle = rad.angle_used
@@ -2184,7 +2185,8 @@ class PEMFile:
                                              as_index=False).apply(lambda l: prepare_rad(l))
 
         xy_filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
-        self.data[xy_filt] = prepped_data  # Using .update doesn't work here, because prepped_data is a copy().
+        # self.data[xy_filt] = prepped_data  # Using .update doesn't work here, because prepped_data is a copy().
+        self.data.update(prepped_data)  # Using .update doesn't work here, because prepped_data is a copy().
         # Remove the rows that were filtered out in filtered_data
         self.data.dropna(subset=['Station'], inplace=True)
         self.prepped_for_rotation = True
@@ -3484,6 +3486,9 @@ class RADTool:
         self.ppxy_measured = None
         self.cleaned_pp_roll_angle = None
         self.measured_pp_roll_angle = None
+
+        self.acc_dip = None
+        self.mag_dip = None
         self.pp_dip = None
 
         self.acc_roll_angle = None
@@ -3956,7 +3961,7 @@ if __name__ == '__main__':
 
     # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
     # file = r"C:\_Data\2021\TMC\Laurentia\STE-21-50-W3\RAW\ste-21-50w3xy_0819.dmp2"
-    pem_file = pg.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-211\RAW\em21-211 xy_1021.pem")
+    pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0251-21\RAW\xy_1019.PEM")
     # pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-264-21\RAW\xy_1002.PEM")
     # file = r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW\l35eb2_0.PEM817.dmp2"
     # pem_file, errors = dmpparser.parse(file)
@@ -3982,8 +3987,8 @@ if __name__ == '__main__':
     # pem_file.to_xyz()
     pem_file, _ = pem_file.prep_rotation()
     # pem_file.mag_offset()
-    pem_file = pem_file.rotate(method='acc', soa=0)
-    # pem_file = pem_file.rotate(method='unrotate', soa=10)
+    # pem_file = pem_file.rotate(method='acc', soa=0)
+    pem_file = pem_file.rotate(method='unrotate', soa=10)
     # pem_file = pem_file.rotate(method="pp", soa=1)
     # rotated_pem = prep_pem.rotate('pp')
 
