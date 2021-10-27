@@ -818,13 +818,18 @@ class PEMFile:
         components = list(self.data['Component'].unique())
         return components
 
-    def get_stations(self, converted=False):
+    def get_stations(self, converted=False, incl_deleted=True):
         """
         Return a list of unique stations in the PEM file.
         :param converted: Bool, whether to convert the stations to Int
+        :param incl_deleted: Bool, whether include readings which are flagged for deletion.
         :return: list
         """
-        stations = self.data.Station.unique()
+        if incl_deleted:
+            stations = self.data.Station.unique()
+        else:
+            stations = self.data[~self.data.Deleted].Station.unique()
+
         if converted:
             stations = [convert_station(station) for station in stations]
         return np.array(natsort.os_sorted(stations))

@@ -33,7 +33,6 @@ pd.options.mode.chained_assignment = None  # default='warn'
 # TODO Change auto clean to have a start and end channel
 # TODO maybe increase starting window size
 # TODO Changing readings to another component produces an error
-# TODO Unchecking mag box, closing then reopening, and then showing mag plot is bugged.
 
 
 class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
@@ -90,7 +89,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.last_active_ax = None  # last_active_ax is always a plotitem object, and never None after the init.
         self.last_active_ax_ind = None  # last_active_ax is always a plotitem object, and never None after the init.
         self.plotted_decay_lines = []
-        self.plotted_decay_data = pd.DataFrame()
+        self.decay_data = pd.DataFrame()
 
         # Status bar formatting
         self.station_text = QLabel()
@@ -374,7 +373,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Delete a decay when the delete key is pressed
         if event.key() == Qt.Key_Delete or event.key() == Qt.Key_R:
             if keyboard.is_pressed("shift"):
-                self.undelete_lines()
+                self.undelete_selected_lines()
             else:
                 self.delete_lines()
 
@@ -506,8 +505,12 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 self.plot_mag_cbox.setEnabled(False)
         else:
             self.plot_mag_cbox.setEnabled(False)
-
         self.toggle_mag_plots()  # Manually toggle mag plots incase they have been disabled in the previous step.
+
+        # Disable suffix changes if the file is a borehole
+        if self.pem_file.is_borehole():
+            self.change_profile_suffix_btn.setEnabled(False)
+            self.change_decay_suffix_btn.setEnabled(False)
 
         self.auto_clean_std_sbox.blockSignals(True)
         self.auto_clean_window_sbox.blockSignals(True)
@@ -955,14 +958,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Change the pen if the data is flagged for deletion or overload
             if row.Deleted is False:
-                # color = (96, 96, 96, 150)
-                # color = copy.copy(self.foreground_color)
                 color = get_line_color("foreground", "pyqt", self.darkmode, alpha=255)
-                # color.append(255)
                 z_value = 2
             else:
-                # color = copy.copy(self.deletion_color)
-                # color.append(200)
                 color = get_line_color("red", "pyqt", self.darkmode, alpha=200)
                 z_value = 1
 
@@ -972,6 +970,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             else:
                 style = Qt.SolidLine
 
+            # For all other lines
             pen = pg.mkPen(color, width=1., style=style)
 
             # Remove the on-time channels if the checkbox is checked
@@ -984,7 +983,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             decay_line = pg.PlotCurveItem(y=y, pen=pen)
             decay_line.setClickable(True, width=5)
             decay_line.setZValue(z_value)
-            decay_line.sigClicked.connect(self.decay_line_clicked)
 
             # Add the line at y=0
             ax.addLine(y=0, pen=pg.mkPen(self.foreground_color, width=0.15))
@@ -1011,33 +1009,37 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         for ax in self.decay_axes:
             ax.clear()
 
-        # Re-add the auto clean lines, since clearing all items except the auto clean lines isn't working correctly.
-        self.x_decay_plot.addItem(self.x_decay_lower_threshold_line)
-        self.x_decay_plot.addItem(self.x_decay_upper_threshold_line)
-        self.y_decay_plot.addItem(self.y_decay_lower_threshold_line)
-        self.y_decay_plot.addItem(self.y_decay_upper_threshold_line)
-        self.z_decay_plot.addItem(self.z_decay_lower_threshold_line)
-        self.z_decay_plot.addItem(self.z_decay_upper_threshold_line)
-
         self.plotted_decay_lines.clear()
-        # self.plotted_decay_data = None  # Not actually necessary
         self.nearest_decay = None
 
         # Filter the data
         filt = self.pem_file.data['cStation'] == station
-        self.plotted_decay_data = self.pem_file.data[filt]
+        self.decay_data = self.pem_file.data[filt]
 
         # Update the status bar text
-        set_status_text(self.plotted_decay_data)
+        set_status_text(self.decay_data)
+
+        # Re-add the auto clean lines, since clearing all items except the auto clean lines isn't working correctly.
+        # Only add them if there's data for that component, otherwise there's just the auto clean lines with no decays.
+        components = self.decay_data.Component.unique()
+        if "X" in components:
+            self.x_decay_plot.addItem(self.x_decay_lower_threshold_line)
+            self.x_decay_plot.addItem(self.x_decay_upper_threshold_line)
+        if "Y" in components:
+            self.y_decay_plot.addItem(self.y_decay_lower_threshold_line)
+            self.y_decay_plot.addItem(self.y_decay_upper_threshold_line)
+        if "Z" in components:
+            self.z_decay_plot.addItem(self.z_decay_lower_threshold_line)
+            self.z_decay_plot.addItem(self.z_decay_upper_threshold_line)
 
         # Update the titles of each decay axes
-        station = self.plotted_decay_data.Station.unique()[0]
+        station = self.decay_data.Station.unique()[0]
         self.x_decay_plot.setTitle(f"Station {station} - X Component")
         self.y_decay_plot.setTitle(f"Station {station} - Y Component")
         self.z_decay_plot.setTitle(f"Station {station} - Z Component")
 
         # Plot the decays
-        self.plotted_decay_data.apply(plot_decay, axis=1)
+        self.decay_data.apply(plot_decay, axis=1)
 
         self.update_auto_clean_lines()
 
@@ -1081,17 +1083,17 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         window_size = self.auto_clean_window_sbox.value()
         for ax in self.decay_axes:
             if ax == self.x_decay_plot:
-                comp_filt = self.plotted_decay_data.Component == "X"
+                comp_filt = self.decay_data.Component == "X"
                 thresh_line_1, thresh_line_2 = self.x_decay_lower_threshold_line, self.x_decay_upper_threshold_line
             elif ax == self.y_decay_plot:
-                comp_filt = self.plotted_decay_data.Component == "Y"
+                comp_filt = self.decay_data.Component == "Y"
                 thresh_line_1, thresh_line_2 = self.y_decay_lower_threshold_line, self.y_decay_upper_threshold_line
             else:
-                comp_filt = self.plotted_decay_data.Component == "Z"
+                comp_filt = self.decay_data.Component == "Z"
                 thresh_line_1, thresh_line_2 = self.z_decay_lower_threshold_line, self.z_decay_upper_threshold_line
 
             # Ignore deleted data when calculating median
-            existing_data = self.plotted_decay_data[comp_filt][~self.plotted_decay_data[comp_filt].Deleted.astype(bool)]
+            existing_data = self.decay_data[comp_filt][~self.decay_data[comp_filt].Deleted.astype(bool)]
             median_data = pd.DataFrame.from_records(existing_data.Reading.reset_index(drop=True))
             if median_data.empty:
                 continue
@@ -1125,7 +1127,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
     def highlight_lines(self):
         """
         Highlight the line selected and un-highlight any previously highlighted line.
-        :param lines: list, PlotItem lines
         """
         def set_decay_selection_text(selected_data):
             """
@@ -1199,29 +1200,28 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Enable decay editing buttons
         if len(self.selected_lines) > 0:
             self.change_comp_decay_btn.setEnabled(True)
-            self.change_decay_suffix_btn.setEnabled(True)
+            if not self.pem_file.is_borehole():
+                self.change_decay_suffix_btn.setEnabled(True)
             self.change_station_decay_btn.setEnabled(True)
             self.flip_decay_btn.setEnabled(True)
         else:
             self.change_comp_decay_btn.setEnabled(False)
-            self.change_decay_suffix_btn.setEnabled(False)
+            if not self.pem_file.is_borehole():
+                self.change_decay_suffix_btn.setEnabled(False)
             self.change_station_decay_btn.setEnabled(False)
             self.flip_decay_btn.setEnabled(False)
 
         # Change the color of the plotted lines
-        for line, Deleted, overload in zip(self.plotted_decay_lines, self.plotted_decay_data.Deleted,
-                                           self.plotted_decay_data.Overload):
+        for line, Deleted, overload in zip(self.plotted_decay_lines,
+                                           self.decay_data.Deleted,
+                                           self.decay_data.Overload):
 
             # Change the pen if the data is flagged for deletion
             if Deleted is False:
                 color = get_line_color("foreground", "pyqt", self.darkmode, alpha=200)
-                # color = copy.copy(self.foreground_color)
-                # color.append(200)
                 z_value = 2
             else:
                 color = get_line_color("red", "pyqt", self.darkmode, alpha=150)
-                # color = copy.copy(self.deletion_color)
-                #                 # color.append(150)
                 z_value = 1
 
             # Change the line style if the reading is overloaded
@@ -1234,19 +1234,15 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             if line in self.selected_lines:
                 if Deleted is False:
                     color = get_line_color("teal", "pyqt", self.darkmode, alpha=250)
-                    # color = copy.copy(self.selection_color)
-                    # color.append(250)
                     z_value = 4
                 else:
                     color = get_line_color("red", "pyqt", self.darkmode, alpha=200)
-                    # color = copy.copy(self.deletion_color)
-                    # color.append(200)
                     z_value = 3
 
                 line.setPen(color, width=2, style=style)
                 line.setZValue(z_value)
-            # Color the lines that aren't selected
             else:
+                # Color the lines that aren't selected
                 line.setPen(color, width=1, style=style)
                 line.setZValue(z_value)
 
@@ -1291,7 +1287,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         nearest station where the mouse is.
         :param evt: pyqtgraph MouseClickEvent
         """
-
         global nearest_station
         pos = evt
         mouse_point = self.active_profile_axes[0].vb.mapSceneToView(pos)
@@ -1322,21 +1317,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             ax.vb.lr.hide()
 
         self.profile_selection_text.setText("")
-
-    def decay_line_clicked(self, line):
-        """
-        Signal slot, select the decay line that was clicked. If control is held, it extends the current selection.
-        :param line: clicked PlotItem line
-        """
-        pass
-        # self.line_selected = True
-        # if keyboard.is_pressed('ctrl'):
-        #     self.selected_lines.append(line)
-        #     self.highlight_lines()
-        # else:
-        #     self.selected_data = None
-        #     self.selected_lines = [line]
-        #     self.highlight_lines()
 
     def decay_plot_clicked(self, evt):
         """
@@ -1515,7 +1495,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Enable the edit buttons and set the profile selection text
         if self.selected_profile_stations.any():
             self.change_comp_profile_btn.setEnabled(True)
-            self.change_profile_suffix_btn.setEnabled(True)
+            if not self.pem_file.is_borehole():
+                self.change_profile_suffix_btn.setEnabled(True)
             self.shift_station_profile_btn.setEnabled(True)
             self.flip_profile_btn.setEnabled(True)
             self.remove_profile_btn.setEnabled(True)
@@ -1556,7 +1537,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             print(f"Line is not in the list of decay lines.")
             return
         else:
-            data = self.plotted_decay_data.iloc[ind]
+            data = self.decay_data.iloc[ind]
             return data
 
     def get_selected_profile_data(self):
@@ -1604,7 +1585,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.pem_file.data.loc[selected_data.index] = selected_data
             self.refresh(components=selected_data.Component.unique(), preserve_selection=True)
 
-    def undelete_lines(self):
+    def undelete_selected_lines(self):
         """
         Undelete the selected lines. The data corresponding to the selected lines have their deletion flags changed to
         False. The station is then re-plotted. Line highlight is preserved.
@@ -1620,12 +1601,10 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
     def undelete_all(self):
         """
-        Un-delete all deleted readings.
+        Un-delete all deleted readings in the file.
         :return: None
         """
-        # Change the deletion flag
         self.pem_file.data.loc[:, 'Deleted'] = self.pem_file.data.loc[:, 'Deleted'].map(lambda x: False)
-
         self.refresh()
 
     def change_decay_component_dialog(self, source=None):
@@ -1633,18 +1612,13 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         Open a user input window to select the new component to change to.
         :param source: str, either 'decay' or 'profile' to signify which data to modify
         """
-        if not source:
-            logger.warning(f"No source selected.")
-            return
+        assert source is not None, f"No source selected."
 
-        new_comp, ok_pressed = QInputDialog.getText(self, "Change Component", "New Component:", QLineEdit.Normal)
+        new_comp, ok_pressed = QInputDialog.getItem(self, "Change Component", "New Component:", ["X", "Y", "Z"],
+                                                    current=0)
+
         if ok_pressed:
-            new_comp = new_comp.upper()
-            if new_comp not in ['X', 'Y', 'Z']:
-                self.message.information(self, 'Invalid Component', 'The component must be one of X, Y, Z.')
-                return
-            else:
-                self.change_component(new_comp, source=source)
+            self.change_component(new_comp, source=source)
 
     def change_component(self, new_component, source=None):
         """
@@ -1652,6 +1626,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         :param new_component: str
         :param source: str, either 'decay' or 'profile' to know which selected data to modify
         """
+        assert new_component in ["X", "Y", "Z"], f"Component must be either X, Y, or Z ({new_component} passed.)"
         if source == 'decay':
             selected_data = self.get_selected_decay_data()
         else:
@@ -1661,7 +1636,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         if not selected_data.empty and new_component != old_comp:
             # Change the deletion flag
-            selected_data.loc[:, 'Component'] = selected_data.loc[:, 'Component'].map(lambda x: new_component.upper())
+            selected_data.loc[:, 'Component'] = selected_data.loc[:, 'Component'].map(lambda x: new_component)
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
@@ -1670,20 +1645,14 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
     def change_suffix_dialog(self, source=None):
         """
         Open a user input window to select the new station suffix to change to.
-        :param source: str, must be in ['N', 'E', 'S', 'W']
+        :param source: str, 'decay' or 'profile'
         """
-        if not source:
-            logger.warning(f"No source selected.")
-            return
+        assert source is not None, f"No source selected."
 
-        new_suffix, ok_pressed = QInputDialog.getText(self, "Change Suffix", "New Suffix:")
+        new_suffix, ok_pressed = QInputDialog.getItem(self, "Change Suffix", "New Suffix:", ['N', 'E', 'S', 'W'],
+                                                      current=0)
         if ok_pressed:
-            new_suffix = new_suffix.upper()
-            if new_suffix not in ['N', 'E', 'S', 'W']:
-                self.message.information(self, 'Invalid Suffix', 'The suffix must be one of N, E, S, W.')
-                return
-            else:
-                self.change_suffix(new_suffix, source=source)
+            self.change_suffix(new_suffix, source=source)
 
     def change_suffix(self, new_suffix, source=None):
         """
@@ -1711,32 +1680,26 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         if self.selected_lines:
             selected_data = self.get_selected_decay_data()
             selected_station = selected_data.Station.unique()[0]
+            original_number = re.match(r"-?\d+", selected_station).group()
 
-            new_station, ok_pressed = QInputDialog.getText(self, "Change Station", "New Station:",
-                                                           text=selected_station)
+            new_station, ok_pressed = QInputDialog.getInt(self, "Change Station", "New Station:",
+                                                          value=int(original_number),
+                                                          step=5)
 
             if ok_pressed:
-                new_station = new_station.upper()
-                if re.match(r'-?\d+', new_station):
-                    # Update the station number in the selected data
-                    selected_data.loc[:, 'Station'] = new_station
-                    # Update the data in the pem file object
-                    self.pem_file.data.iloc[selected_data.index] = selected_data
+                # Update the station number in the selected data
+                selected_data.loc[:, 'Station'] = re.sub(r"-?\d+", str(new_station), original_number)
+                # Update the data in the pem file object
+                self.pem_file.data.iloc[selected_data.index] = selected_data
 
-                    # Update the plots
-                    try:
-                        self.plot_profiles(components=selected_data.Component.unique())
-                    except ValueError:
-                        self.message.critical(self, "Invalid Station Number",
-                                              f"{new_station} is not a valid station number")
-                    else:
-                        self.plot_station(self.selected_station)
+                # Update the plots
+                self.plot_profiles(components=selected_data.Component.unique())
+                self.plot_station(self.selected_station)
 
     def shift_stations(self):
         """
         Shift the station numbers of the selected profile data
         """
-
         def shift(station):
             # Find the numbers in the station name
             station_num = re.match(r'-?\d+', station).group()
@@ -1750,7 +1713,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             return
 
         global shift_amount
-        shift_amount, ok_pressed = QInputDialog.getInt(self, "Shift Stations", "Shift Amount:", value=0)
+        shift_amount, ok_pressed = QInputDialog.getInt(self, "Shift Stations", "Shift Amount:", value=0, step=5)
 
         if ok_pressed and shift_amount != 0:
             # Update the station number in the selected data

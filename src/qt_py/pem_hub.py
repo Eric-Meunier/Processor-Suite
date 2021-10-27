@@ -68,13 +68,10 @@ logger = logging.getLogger(__name__)
 # TODO Log recently opened files.
 # TODO Add GPS errors to table.
 # TODO Redo GPX parsing to use Geopandas. Might also want to revamp converting GPS.
-# TODO Improve un-rotation. One-click?
+# TODO Improve un-rotation. One-click?  Added but something is currently bugged.
 # TODO Could add std plot to the right of decay plots
 # TODO Add a Recent projects list, below project GPS, which will be a history of recently clicked folders.
-# TODO remember PEMmerger settings
-# TODO CollarPicker should use TableSelector
 # TODO Add non-split profile plot in PEMPlotEditor, similar to Maxwell.
-# TODO ESC and Delete should remove ruler in QuickMap
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
@@ -1611,8 +1608,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             pem_file.loop_name,
             pem_file.current,
             pem_file.coil_area,
-            pem_file.get_stations(converted=True).min(),
-            pem_file.get_stations(converted=True).max(),
+            pem_file.get_stations(converted=True, incl_deleted=False).min(),
+            pem_file.get_stations(converted=True, incl_deleted=False).max(),
             pem_file.is_averaged(),
             pem_file.is_split(),
             len(pem_file.get_suffix_warnings()),
