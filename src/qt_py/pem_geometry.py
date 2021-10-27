@@ -393,8 +393,8 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         """
         default_path = self.pem_file.filepath.parent
         files, ext = QFileDialog().getOpenFileNames(self, 'Open File', str(default_path),
-                                                  filter='DAD files (*.dad; *.csv; *.xlsx; *.xls; *.txt);; '
-                                                         'SEG files (*.seg; *.txt)')
+                                                    filter='DAD files (*.dad; *.csv; *.xlsx; *.xls; *.txt);; '
+                                                           'SEG files (*.seg; *.txt)')
         if files != '':
             for file in files:
                 if 'dad' in ext.lower():
@@ -415,9 +415,9 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
                 self.pem_file = file.copy()
                 break
 
-        if not all([f.is_borehole for f in pem_files]):
-            logger.error(f"PEM files must be borehole surveys.")
-            return
+        assert all([f.is_borehole for f in pem_files]), "PEM files must be borehole surveys."
+        assert any([f.has_d7() for f in pem_files]) or any([f.has_geometry() for f in pem_files]), f"PEM files must" \
+            f"either have D7 RAD tool information or full P-tag geometry"
 
         # Merge the data of the pem files
         if len(pem_files) > 1:
@@ -427,9 +427,6 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             # for file in pem_files:
             #     if not file.segments.df.empty:
             #         pem_file.geometry = file.get_geometry()
-
-        assert all([f.has_d7() for f in pem_files]), f"PEM files must have D7 RAD tool information."
-        assert self.pem_file.has_geometry(), "PEM file must have all geometry information"
 
         if not self.pem_file.is_averaged():
             self.pem_file = self.pem_file.average()

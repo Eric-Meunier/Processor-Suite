@@ -330,7 +330,9 @@ class CustomProgressDialog(pg.ProgressDialog):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # self.setWindowFlags(Qt.CustomizeWindowHint | Qt.WindowStaysOnTopHint)
-        self.setWindowFlags(Qt.CustomizeWindowHint)
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self.setWindowTitle("Loading...")
+        self.setWindowIcon(get_icon("conder.ico"))
 
         # parent = kwargs.get("parent")
         # if parent:

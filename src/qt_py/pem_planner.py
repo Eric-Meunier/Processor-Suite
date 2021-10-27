@@ -1098,27 +1098,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.ax.figure.subplots_adjust(left=0.1, bottom=0.02, right=0.98, top=0.98)
         self.ax.get_yaxis().set_visible(False)  # Hide the section plot until a loop is added.
 
-    def dragEnterEvent(self, e):
-        e.accept()
-
-    def dropEvent(self, e):
-        urls = [Path(url.toLocalFile()) for url in e.mimeData().urls()]
-
-        if all([file.suffix.lower() == ".tx" for file in urls]):
-            for file in urls:
-                self.open_tx_file(file)
-
-    def event(self, e):
-        if e.type() in [QEvent.Show]:  # , QEvent.Resize):
-            self.plot_hole()
-
-        return QMainWindow.event(self, e)
-
-    def closeEvent(self, e):
-        self.save_settings()
-        self.deleteLater()
-        e.accept()
-
     def save_settings(self):
         settings = QSettings("Crone Geophysics", "PEMPro")
         settings.beginGroup("LoopPlanner")
@@ -1153,6 +1132,27 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.project_dir = settings.value("project_dir")
 
         settings.endGroup()
+
+    def dragEnterEvent(self, e):
+        e.accept()
+
+    def dropEvent(self, e):
+        urls = [Path(url.toLocalFile()) for url in e.mimeData().urls()]
+
+        if all([file.suffix.lower() == ".tx" for file in urls]):
+            for file in urls:
+                self.open_tx_file(file)
+
+    def event(self, e):
+        if e.type() in [QEvent.Show]:  # , QEvent.Resize):
+            self.plot_hole()
+
+        return QMainWindow.event(self, e)
+
+    def closeEvent(self, e):
+        self.save_settings()
+        self.deleteLater()
+        e.accept()
 
     def select_hole(self, ind):
         """

@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pyqtgraph as pg
 import pandas as pd
-from PySide2.QtCore import Qt, Signal, QEvent
+from PySide2.QtCore import Qt, Signal, QSettings
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QAction, QFileDialog, QLabel, QApplication, QFrame,
                                QHBoxLayout, QLineEdit, QPushButton)
 
@@ -123,6 +123,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
             ax.getAxis('left').enableAutoSIPrefix(enable=False)
 
         self.init_signals()
+        self.load_settings()
 
     def init_signals(self):
         def toggle_symbols():
@@ -219,6 +220,29 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
 
         self.accept_btn.clicked.connect(self.accept_merge)
 
+    def save_settings(self):
+        settings = QSettings("Crone Geophysics", "PEMPro")
+        settings.beginGroup("pem_merger")
+
+        # Geometry
+        settings.setValue("windowGeometry", self.saveGeometry())
+
+        # Setting options
+        settings.setValue("actionSymbols", self.actionSymbols.isChecked())
+
+        settings.endGroup()
+
+    def load_settings(self):
+        settings = QSettings("Crone Geophysics", "PEMPro")
+        settings.beginGroup("pem_merger")
+
+        # Geometry
+        if settings.value("windowGeometry"):
+            self.restoreGeometry(settings.value("windowGeometry"))
+
+        # Setting options
+        self.actionSymbols.setChecked(settings.value("actionSymbols", defaultValue=True, type=bool))
+
     def keyPressEvent(self, event):
         # Delete a decay when the delete key is pressed
         if event.key() == Qt.Key_C:
@@ -228,6 +252,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
             self.reset_range()
 
     def closeEvent(self, e):
+        self.save_settings()
         self.deleteLater()
         e.accept()
 
@@ -683,10 +708,8 @@ if __name__ == '__main__':
 
     pem_getter = PEMGetter()
     # pem_files = pem_getter.get_pems(client='Minera', number=2)
-    # pf1 = pem_getter.get_pems(folder='Raw Boreholes', file='em10-10xy_0403.PEM')[0]
-    # pf2 = pem_getter.get_pems(folder='Raw Boreholes', file='em10-10-2xy_0403.PEM')[0]
-    pf1 = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-205\Final\EM21-205 XYT.PEM").split()
-    pf2 = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-205\RAW\xy.PEM").split()
+    pf1 = pem_getter.get_pems(folder='Raw Boreholes', file='em10-10xy_0403.PEM')[0]
+    pf2 = pem_getter.get_pems(folder='Raw Boreholes', file='em10-10-2xy_0403.PEM')[0]
     # pf1 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 XYT.PEM')[0]
     # pf2 = pem_getter.get_pems(client='Kazzinc', file='MANO-19-004 ZAv.PEM')[0]
     # pf1 = pem_getter.get_pems(client='Iscaycruz', subfolder='PZ-19-05', file='CXY_02.PEM')[0]

@@ -204,21 +204,6 @@ class GPSAdder(QMainWindow):
 
         self.table.blockSignals(False)
 
-    # def table_to_df(self):
-    #     """
-    #     Return a data frame from the information in the table
-    #     :return: pandas pd.DataFrame
-    #     """
-    #     # gps = []
-    #     # for row in range(self.table.rowCount()):
-    #     #     gps_row = list()
-    #     #     for col in range(self.table.columnCount()):
-    #     #         gps_row.append(self.table.item(row, col).text())
-    #     #     gps.append(gps_row)
-    #     #
-    #     # df = pd.DataFrame(gps, columns=self.df.columns).astype(dtype=self.df.dtypes)
-    #     return df
-
     def refresh_table(self):
         """
         Re-draw the table, resetting all coloring and keeping the vertical scroll bar position the same.
@@ -363,51 +348,6 @@ class GPSAdder(QMainWindow):
 class LineAdder(GPSAdder, Ui_LineAdder):
 
     def __init__(self, parent=None, darkmode=False):
-        def format_plots():
-            self.plan_view.setTitle('Plan View')
-            self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
-                                         'bottom': NonScientific(orientation='bottom')})
-            self.section_view.setTitle('Elevation View')
-            self.section_view.setAxisItems({'left': NonScientific(orientation='left'),
-                                            'bottom': NonScientific(orientation='bottom')})
-            self.plan_view.setAspectLocked()
-            self.section_view.setAspectLocked()
-
-            self.plan_view.hideButtons()  # Hide the little 'A' button at the bottom left
-            self.section_view.hideButtons()  # Hide the little 'A' button at the bottom left
-
-            self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-            self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-            self.section_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-            self.section_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-            self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
-            self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
-            self.section_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
-            self.section_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
-
-            self.plan_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
-            self.plan_view.showAxis('right', show=True)  # Show the axis edge line
-            self.plan_view.showAxis('top', show=True)  # Show the axis edge line
-            self.plan_view.showLabel('right', show=False)
-            self.plan_view.showLabel('top', show=False)
-            self.section_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
-            self.section_view.showAxis('right', show=True)  # Show the axis edge line
-            self.section_view.showAxis('top', show=True)  # Show the axis edge line
-            self.section_view.showLabel('right', show=False)
-            self.section_view.showLabel('top', show=False)
-
-        def init_signals():
-            self.actionOpen.triggered.connect(self.open_file_dialog)
-            self.actionEdit_Names.triggered.connect(self.edit_names)
-            self.actionInterp_Null_Elevation.triggered.connect(self.interp_elevation)
-
-            self.button_box.accepted.connect(self.accept)
-            self.button_box.rejected.connect(self.close)
-
-            self.table.cellChanged.connect(self.cell_changed)
-            self.table.itemSelectionChanged.connect(self.highlight_point)
-            self.auto_sort_cbox.toggled.connect(lambda: self.open(self.line))
-
         super().__init__(darkmode)
         self.setupUi(self)
         self.setWindowTitle('Line Adder')
@@ -431,8 +371,53 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.plan_view.setFocusPolicy(Qt.StrongFocus)
         self.section_view.setFocusPolicy(Qt.StrongFocus)
 
-        format_plots()
-        init_signals()
+        self.format_plots()
+        self.init_signals()
+
+    def format_plots(self):
+        self.plan_view.setTitle('Plan View')
+        self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
+                                     'bottom': NonScientific(orientation='bottom')})
+        self.section_view.setTitle('Elevation View')
+        self.section_view.setAxisItems({'left': NonScientific(orientation='left'),
+                                        'bottom': NonScientific(orientation='bottom')})
+        self.plan_view.setAspectLocked()
+        self.section_view.setAspectLocked()
+
+        self.plan_view.hideButtons()  # Hide the little 'A' button at the bottom left
+        self.section_view.hideButtons()  # Hide the little 'A' button at the bottom left
+
+        self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+        self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+        self.section_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+        self.section_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+        self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+        self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+        self.section_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+        self.section_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+
+        self.plan_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
+        self.plan_view.showAxis('right', show=True)  # Show the axis edge line
+        self.plan_view.showAxis('top', show=True)  # Show the axis edge line
+        self.plan_view.showLabel('right', show=False)
+        self.plan_view.showLabel('top', show=False)
+        self.section_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
+        self.section_view.showAxis('right', show=True)  # Show the axis edge line
+        self.section_view.showAxis('top', show=True)  # Show the axis edge line
+        self.section_view.showLabel('right', show=False)
+        self.section_view.showLabel('top', show=False)
+
+    def init_signals(self):
+        self.actionOpen.triggered.connect(self.open_file_dialog)
+        self.actionEdit_Names.triggered.connect(self.edit_names)
+        self.actionInterp_Null_Elevation.triggered.connect(self.interp_elevation)
+
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.close)
+
+        self.table.cellChanged.connect(self.cell_changed)
+        self.table.itemSelectionChanged.connect(self.highlight_point)
+        self.auto_sort_cbox.toggled.connect(lambda: self.open(self.line))
 
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_Delete:
@@ -655,50 +640,6 @@ class LineAdder(GPSAdder, Ui_LineAdder):
 class LoopAdder(GPSAdder, Ui_LoopAdder):
 
     def __init__(self, parent=None, darkmode=False):
-
-        def format_plots():
-            # Format the plots
-            self.plan_view.setTitle('Plan View')
-            self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
-                                         'bottom': NonScientific(orientation='bottom')})
-            self.section_view.setTitle('Elevation View')
-
-            self.plan_view.hideButtons()
-            self.section_view.hideButtons()
-
-            self.plan_view.setAspectLocked()
-            self.section_view.getAxis('bottom').setLabel('Index')  # Set the label only for the section X axis
-
-            self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-            self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-            self.section_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-            self.section_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
-            self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
-            self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
-            self.section_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
-            self.section_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
-
-            self.plan_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
-            self.plan_view.showAxis('right', show=True)  # Show the axis edge line
-            self.plan_view.showAxis('top', show=True)  # Show the axis edge line
-            self.plan_view.showLabel('right', show=False)
-            self.plan_view.showLabel('top', show=False)
-            self.section_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
-            self.section_view.showAxis('right', show=True)  # Show the axis edge line
-            self.section_view.showAxis('top', show=True)  # Show the axis edge line
-            self.section_view.showLabel('right', show=False)
-            self.section_view.showLabel('top', show=False)
-
-        def init_signals():
-            self.actionOpen.triggered.connect(self.open_file_dialog)
-
-            self.button_box.accepted.connect(self.accept)
-            self.button_box.rejected.connect(self.close)
-
-            self.table.cellChanged.connect(self.cell_changed)
-            self.table.itemSelectionChanged.connect(self.highlight_point)
-            self.auto_sort_cbox.toggled.connect(lambda: self.open(self.loop))
-
         super().__init__(darkmode)
         self.setupUi(self)
         self.parent = parent
@@ -718,8 +659,51 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.plan_view.setFocusPolicy(Qt.StrongFocus)
         self.section_view.setFocusPolicy(Qt.StrongFocus)
 
-        format_plots()
-        init_signals()
+        self.format_plots()
+        self.init_signals()
+
+    def format_plots(self):
+        # Format the plots
+        self.plan_view.setTitle('Plan View')
+        self.plan_view.setAxisItems({'left': NonScientific(orientation='left'),
+                                     'bottom': NonScientific(orientation='bottom')})
+        self.section_view.setTitle('Elevation View')
+
+        self.plan_view.hideButtons()
+        self.section_view.hideButtons()
+
+        self.plan_view.setAspectLocked()
+        self.section_view.getAxis('bottom').setLabel('Index')  # Set the label only for the section X axis
+
+        self.plan_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+        self.plan_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+        self.section_view.getAxis('left').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+        self.section_view.getAxis('bottom').enableAutoSIPrefix(enable=False)  # Disables automatic scaling of labels
+        self.plan_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+        self.plan_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+        self.section_view.getAxis("right").setStyle(showValues=False)  # Disable showing the values of axis
+        self.section_view.getAxis("top").setStyle(showValues=False)  # Disable showing the values of axis
+
+        self.plan_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
+        self.plan_view.showAxis('right', show=True)  # Show the axis edge line
+        self.plan_view.showAxis('top', show=True)  # Show the axis edge line
+        self.plan_view.showLabel('right', show=False)
+        self.plan_view.showLabel('top', show=False)
+        self.section_view.getAxis('right').setWidth(15)  # Move the right edge of the plot away from the window edge
+        self.section_view.showAxis('right', show=True)  # Show the axis edge line
+        self.section_view.showAxis('top', show=True)  # Show the axis edge line
+        self.section_view.showLabel('right', show=False)
+        self.section_view.showLabel('top', show=False)
+
+    def init_signals(self):
+        self.actionOpen.triggered.connect(self.open_file_dialog)
+
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.close)
+
+        self.table.cellChanged.connect(self.cell_changed)
+        self.table.itemSelectionChanged.connect(self.highlight_point)
+        self.auto_sort_cbox.toggled.connect(lambda: self.open(self.loop))
 
     def open(self, gps, name=''):
         """
@@ -954,7 +938,7 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
 
     def cell_changed(self, row, col):
         # Don't check for errors for CollarPicker.
-        pass
+        self.plot_table()
 
     def open(self, gps, name=''):
         """
@@ -1057,339 +1041,11 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
             self.section_view.addItem(self.section_ly)
 
 
-class ExcelTablePicker2(QWidget):
-    accept_sig = Signal(object)
-
-    def __init__(self, parent=None):
-        super().__init__()
-        self.parent = parent
-        self.setWindowTitle("Excel Table Picker")
-        self.setWindowIcon(get_icon("excel_file.png"))
-        self.setLayout(QVBoxLayout())
-
-        self.content = None
-        self.easting = None
-        self.northing = None
-        self.elevation = None
-        self.click_count = 0
-        self.selected_cells = []
-        self.selection_color = QColor(get_line_color("single_blue", "mpl", True))
-
-        self.tables = []
-        self.tabs = QTabWidget()
-        self.layout().addWidget(QLabel("Sequentially click the Easting, Northing, and Elevation cells."))
-        self.layout().addWidget(self.tabs)
-
-        self.selection_text = QLabel("Easting: \nNorthing: \nElevation: ")
-        self.layout().addWidget(self.selection_text)
-
-        self.accept_btn = QPushButton("Accept")
-        self.reset_btn = QPushButton("Reset")
-        self.close_btn = QPushButton("Close")
-        btn_frame = QFrame()
-        btn_frame.setLayout(QHBoxLayout())
-        btn_frame.layout().addWidget(self.accept_btn)
-        btn_frame.layout().addWidget(self.reset_btn)
-        btn_frame.layout().addWidget(self.close_btn)
-        self.layout().addWidget(btn_frame)
-
-        self.accept_btn.clicked.connect(self.accept)
-        self.reset_btn.clicked.connect(self.reset)
-        self.close_btn.clicked.connect(self.close)
-
-    def reset(self):
-        for item in self.selected_cells:
-            item.setBackground(empty_background)
-
-        for table in self.tables:
-            table.clearSelection()
-
-        self.easting = None
-        self.northing = None
-        self.elevation = None
-        self.selected_cells = []
-        self.click_count = 0
-        self.selection_text.setText("Easting: \nNorthing: \nElevation: ")
-
-    def accept(self):
-        self.accept_sig.emit({"Easting":self.easting, "Northing": self.northing, "Elevation": self.elevation})
-        self.close()
-
-    def cell_clicked(self, row, col):
-        """
-        Signal slot, color the cell and register it's contents when clicked.
-        :param row: Int
-        :param col: Int
-        :return: None
-        """
-        table = self.tables[self.tabs.currentIndex()]
-        item = table.item(row, col)
-        value = item.text()
-        table.item(row, col).setBackground(self.selection_color)
-
-        if self.click_count == 3:
-            self.click_count = 0
-
-        if self.click_count == 0:
-            self.easting = value
-        elif self.click_count == 1:
-            self.northing = value
-        else:
-            self.elevation = value
-
-        self.selection_text.setText(f"Easting: {self.easting or ''}\nNorthing: {self.northing or ''}\n"
-                                    f"Elevation: {self.elevation or ''}")
-        self.click_count += 1
-
-        self.selected_cells.append(item)
-        if len(self.selected_cells) > 3:
-            self.selected_cells[0].setBackground(empty_background)
-            self.selected_cells.pop(0)
-
-    def open(self, content):
-        """
-        :param content: dict or filepath, content of the Excel file (all sheets).
-        :return: None
-        """
-        if not isinstance(content, dict):
-            if isinstance(content, Path) or isinstance(content, str):
-                content = Path(content)
-                if not content.suffix.lower() in [".xls", ".xlsx"]:
-                    raise ValueError(f"{content.name} must be an excel file.")
-                if not content.is_file():
-                    raise ValueError(f"{content} does not exist.")
-
-                content = pd.read_excel(content,
-                                        header=None,
-                                        sheet_name=None)
-        self.content = content
-
-        for i, (sheet, info) in enumerate(self.content.items()):
-            table = pg.TableWidget()
-            table.setStyleSheet(f"selection-background-color: {self.selection_color};")
-            table.setData(info.replace(np.nan, '', regex=True).to_numpy())
-            table.cellClicked.connect(self.cell_clicked)
-            self.tables.append(table)
-            self.tabs.addTab(table, sheet)
-
-        self.show()
-
-
 class ExcelTablePicker(TableSelector):
     def __init__(self, parent=None, darkmode=False):
         super().__init__(["Easting", "Northing", "Elevation"], single_click=True, parent=parent, darkmode=darkmode)
         self.setWindowTitle("Excel Table Selector")
         self.instruction_label.setText("Sequentially click the cell for the items highlighted below.")
-
-
-# class DADSelector(QWidget):
-#     accept_sig = Signal(object)
-#
-#     def __init__(self, parent=None):
-#         super().__init__()
-#         self.parent = parent
-#         self.setWindowTitle("DAD Selector")
-#         self.setWindowIcon(get_icon("excel_file.png"))
-#         self.setLayout(QVBoxLayout())
-#         self.message = QMessageBox()
-#
-#         self.depths = None
-#         self.azimuths = None
-#         self.dips = None
-#         self.selection_count = 0
-#         self.selected_ranges = []
-#         self.selection_color = QColor(get_line_color("single_blue", "mpl", True))
-#         # self.selection_color = QColor('#50C878')
-#
-#         self.tables = []
-#         self.tabs = QTabWidget()
-#         self.layout().addWidget(QLabel(
-#             "Sequentially double-click the top cell of the Depth, Azimuth, and Dip cell ranges."))
-#         self.layout().addWidget(self.tabs)
-#
-#         self.selection_text = QLabel("Depth: \nAzimuth: \nDip: ")
-#         self.selection_text.setWordWrap(False)
-#         self.selection_text.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Preferred)
-#         self.layout().addWidget(self.selection_text)
-#
-#         self.accept_btn = QPushButton("Accept")
-#         self.reset_btn = QPushButton("Reset")
-#         self.close_btn = QPushButton("Close")
-#         btn_frame = QFrame()
-#         btn_frame.setLayout(QHBoxLayout())
-#         btn_frame.layout().addWidget(self.accept_btn)
-#         btn_frame.layout().addWidget(self.reset_btn)
-#         btn_frame.layout().addWidget(self.close_btn)
-#         self.layout().addWidget(btn_frame)
-#
-#         self.reset_shortcut = QShortcut(QKeySequence("Escape"), self, self.reset)
-#         self.accept_btn.clicked.connect(self.accept)
-#         self.reset_btn.clicked.connect(self.reset)
-#         self.close_btn.clicked.connect(self.close)
-#
-#     # def eventFilter(self, source, event):
-#     #     if event.type() == QEvent.MouseButtonRelease:
-#     #         table = self.tables[self.tabs.currentIndex()]
-#     #         selected_items = table.selectedItems()
-#     #
-#     #         # Remove the 3rd last selected range
-#     #         if len(self.selected_ranges) == 3:
-#     #             for item in self.selected_ranges[0]:
-#     #                 item.setBackground(empty_background)
-#     #             self.selected_ranges.pop(0)
-#     #
-#     #         values = []
-#     #         for item in selected_items:
-#     #             item.setBackground(self.selection_color)
-#     #             values.append(item.text())
-#     #
-#     #         if self.selection_count == 3:
-#     #             self.selection_count = 0
-#     #
-#     #         if self.selection_count == 0:
-#     #             self.depths = values
-#     #         elif self.selection_count == 1:
-#     #             self.azimuths = values
-#     #         else:
-#     #             self.dips = values
-#     #
-#     #         self.selection_text.setText(f"Depth: {self.depths or ''}\nAzimuth: {self.azimuths or ''}\n"
-#     #                                     f"Dip: {self.dips or ''}")
-#     #         self.selection_count += 1
-#     #         self.selected_ranges.append(selected_items)
-#     #
-#     #     # return QObject.eventFilter(source, event)
-#     #     return QWidget.eventFilter(self, source, event)
-#
-#     def reset(self):
-#         for range in self.selected_ranges:
-#             for item in range:
-#                 item.setBackground(empty_background)
-#
-#         for table in self.tables:
-#             table.clearSelection()
-#
-#         self.depths = None
-#         self.azimuths = None
-#         self.dips = None
-#         self.selected_ranges = []
-#         self.selection_count = 0
-#         self.selection_text.setText("Depth: \nAzimuth: \nDip: ")
-#
-#     def accept(self):
-#         data = {"Depth": self.depths, "Azimuth": self.azimuths, "Dip": self.dips}
-#         df = pd.DataFrame(data, dtype=float)
-#         if not all([d == float for d in df.dtypes]):
-#             logger.error(f'Data selected are not all numerical values.')
-#             self.message.information(self, 'Error', f'The data selected are not all numerical values.')
-#         else:
-#             self.accept_sig.emit(df)
-#             self.close()
-#
-#     def cell_double_clicked(self, row, col):
-#         """
-#         Signal slot, range-select all cells below the clicked cell. Stops at the first empty cell.
-#         :return: None
-#         """
-#         table = self.tables[self.tabs.currentIndex()]
-#
-#         # Remove the 3rd last selected range
-#         if len(self.selected_ranges) == 3:
-#             for item in self.selected_ranges[0]:
-#                 item.setBackground(empty_background)
-#             self.selected_ranges.pop(0)
-#
-#         values = []
-#         selected_range = []
-#         for selected_row in range(row, table.rowCount()):
-#             item = table.item(selected_row, col)
-#             if item is None or not item.text():
-#                 break
-#
-#             item.setBackground(self.selection_color)
-#             selected_range.append(item)
-#             values.append(item.text())
-#
-#         if self.selection_count == 3:
-#             self.selection_count = 0
-#
-#         if self.selection_count == 0:
-#             self.depths = values
-#         elif self.selection_count == 1:
-#             self.azimuths = values
-#         else:
-#             self.dips = values
-#
-#         self.selection_text.setText(f"Depth: {self.depths or ''}\nAzimuth: {self.azimuths or ''}\n"
-#                                     f"Dip: {self.dips or ''}")
-#         self.selection_count += 1
-#         self.selected_ranges.append(selected_range)
-#
-#     def table_context_menu(self, event):
-#         """
-#         Right-click context menu for tables, in order to add an empty row to the table.
-#         :param event: QEvent object
-#         :return:None
-#         """
-#         def add_row(y_coord, direction):
-#             table = self.tabs.currentWidget()
-#             row = table.rowAt(y_coord)
-#             if direction == "up":
-#                 print(f"Inserting row at {row}.")
-#                 table.insertRow(row)
-#             else:
-#                 print(f"Inserting row at {row + 1}.")
-#                 table.insertRow(row + 1)
-#
-#         y_coord = event.pos().y()
-#         menu = QMenu(self)
-#         add_row_above_action = QAction('Add Row Above', self)
-#         add_row_above_action.triggered.connect(lambda: add_row(y_coord, direction="up"))
-#         add_row_below_action = QAction('Add Row Below', self)
-#         add_row_below_action.triggered.connect(lambda: add_row(y_coord, direction="down"))
-#         menu.addAction(add_row_above_action)
-#         menu.addAction(add_row_below_action)
-#         menu.popup(QCursor.pos())
-#
-#     def open(self, filepath):
-#         """
-#         :param filepath: str or Path, can be an Excel file, CSV, or txt file.
-#         :return: None
-#         """
-#         filepath = Path(filepath)
-#
-#         if filepath.suffix == '.xlsx' or filepath.suffix == '.xls':
-#             content = pd.read_excel(filepath,
-#                                     header=None,
-#                                     sheet_name=None)
-#
-#             for i, (sheet, info) in enumerate(content.items()):
-#                 table = pg.TableWidget()
-#                 table.setData(info.replace(np.nan, '', regex=True).to_numpy())
-#                 self.tables.append(table)
-#                 self.tabs.addTab(table, str(sheet))
-#         else:
-#             if filepath.suffix == '.txt' or filepath.suffix == '.dad':
-#                 content = pd.read_csv(filepath,
-#                                       delim_whitespace=True,
-#                                       header=None)
-#             else:
-#                 content = pd.read_csv(filepath,
-#                                       header=None)
-#
-#             table = pg.TableWidget()
-#             table.setData(content.replace(np.nan, '', regex=True).to_numpy())
-#             self.tables.append(table)
-#             self.tabs.addTab(table, filepath.name)
-#
-#         for table in self.tables:
-#             table.setStyleSheet(f"selection-background-color: {self.selection_color};")
-#             table.cellDoubleClicked.connect(self.cell_double_clicked)
-#             table.contextMenuEvent = self.table_context_menu
-#             table.setMouseTracking(True)
-#             table.viewport().installEventFilter(self)
-#
-#         self.show()
 
 
 class DADSelector(TableSelector):

@@ -355,10 +355,10 @@ class Ui_PEMHub(object):
 
         self.gridLayout_6.addWidget(self.client_edit, 1, 1, 1, 1)
 
-        self.title_btn = QPushButton(self.groupBox_6)
-        self.title_btn.setObjectName(u"title_btn")
+        self.format_header_btn = QPushButton(self.groupBox_6)
+        self.format_header_btn.setObjectName(u"format_header_btn")
 
-        self.gridLayout_6.addWidget(self.title_btn, 4, 0, 1, 2)
+        self.gridLayout_6.addWidget(self.format_header_btn, 4, 0, 1, 2)
 
         self.line = QFrame(self.groupBox_6)
         self.line.setObjectName(u"line")
@@ -1103,6 +1103,9 @@ class Ui_PEMHub(object):
 #if QT_CONFIG(statustip)
         self.actionAuto_Name_Lines_Holes.setStatusTip(QCoreApplication.translate("PEMHub", u"Automatically re-name line/hole names based on their file names.", None))
 #endif // QT_CONFIG(statustip)
+#if QT_CONFIG(shortcut)
+        self.actionAuto_Name_Lines_Holes.setShortcut(QCoreApplication.translate("PEMHub", u"F4", None))
+#endif // QT_CONFIG(shortcut)
         self.actionAuto_Name_Repeat_Stations.setText(QCoreApplication.translate("PEMHub", u"Auto-Name Repeat Stations", None))
 #if QT_CONFIG(tooltip)
         self.actionAuto_Name_Repeat_Stations.setToolTip(QCoreApplication.translate("PEMHub", u"Automatically rename all repeat stations", None))
@@ -1290,12 +1293,12 @@ class Ui_PEMHub(object):
         self.share_client_cbox.setText(QCoreApplication.translate("PEMHub", u"Client", None))
         self.share_grid_cbox.setText(QCoreApplication.translate("PEMHub", u"Grid", None))
 #if QT_CONFIG(tooltip)
-        self.title_btn.setToolTip(QCoreApplication.translate("PEMHub", u"Apply 'Title' formatting to the Client and Grid text.", None))
+        self.format_header_btn.setToolTip(QCoreApplication.translate("PEMHub", u"Apply 'Title' formatting to the Client and Grid text.", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(statustip)
-        self.title_btn.setStatusTip(QCoreApplication.translate("PEMHub", u"Apply 'Title' formatting to the Client and Grid text.", None))
+        self.format_header_btn.setStatusTip(QCoreApplication.translate("PEMHub", u"Apply 'Title' formatting to the Client and Grid text.", None))
 #endif // QT_CONFIG(statustip)
-        self.title_btn.setText(QCoreApplication.translate("PEMHub", u"Title", None))
+        self.format_header_btn.setText(QCoreApplication.translate("PEMHub", u"Auto Format", None))
         ___qtablewidgetitem = self.table.horizontalHeaderItem(0)
         ___qtablewidgetitem.setText(QCoreApplication.translate("PEMHub", u"File", None));
         ___qtablewidgetitem1 = self.table.horizontalHeaderItem(1)

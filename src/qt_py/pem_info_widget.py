@@ -3,7 +3,6 @@ import math
 import os
 import sys
 from collections import OrderedDict
-from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
@@ -15,7 +14,7 @@ from PySide2.QtWidgets import (QMessageBox, QWidget, QAction, QErrorMessage,
 
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry, read_gps
 from src.pem import convert_station
-from src.qt_py import clear_table, read_file, table_to_df, df_to_table, get_line_color
+from src.qt_py import clear_table, table_to_df, get_line_color
 from src.qt_py.gps_tools import LoopAdder, LineAdder, CollarPicker, ExcelTablePicker
 from src.qt_py.pem_geometry import PEMGeometry
 from src.qt_py.ri_importer import RIFile

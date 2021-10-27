@@ -298,7 +298,7 @@
                </widget>
               </item>
               <item row="4" column="0" colspan="2">
-               <widget class="QPushButton" name="title_btn">
+               <widget class="QPushButton" name="format_header_btn">
                 <property name="toolTip">
                  <string>Apply 'Title' formatting to the Client and Grid text.</string>
                 </property>
@@ -306,7 +306,7 @@
                  <string>Apply 'Title' formatting to the Client and Grid text.</string>
                 </property>
                 <property name="text">
-                 <string>Title</string>
+                 <string>Auto Format</string>
                 </property>
                </widget>
               </item>
@@ -1192,7 +1192,7 @@ Warnings</string>
          </widget>
          <widget class="QFrame" name="piw_frame">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
@@ -1231,7 +1231,7 @@ Warnings</string>
            <item>
             <widget class="QStackedWidget" name="stackedWidget">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
@@ -1866,6 +1866,9 @@ Warnings</string>
    </property>
    <property name="statusTip">
     <string>Automatically re-name line/hole names based on their file names.</string>
+   </property>
+   <property name="shortcut">
+    <string>F4</string>
    </property>
   </action>
   <action name="actionAuto_Name_Repeat_Stations">

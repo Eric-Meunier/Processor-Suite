@@ -73,6 +73,8 @@ logger = logging.getLogger(__name__)
 # TODO Add a Recent projects list, below project GPS, which will be a history of recently clicked folders.
 # TODO remember PEMmerger settings
 # TODO CollarPicker should use TableSelector
+# TODO Add non-split profile plot in PEMPlotEditor, similar to Maxwell.
+# TODO ESC and Delete should remove ruler in QuickMap
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
@@ -562,10 +564,16 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             item.setTextAlignment(Qt.AlignCenter)
             self.table.setItem(current_row, current_col, item)
 
-        def title_header():
-            # Set the formatting of the text inside of "client_edit" and "grid_edit" to title()
-            self.client_edit.setText(self.client_edit.text().title())
-            self.grid_edit.setText(self.grid_edit.text().title())
+        def format_header():
+            """
+            Automatically format the text in self.client_edit, self.grid_edit and self.loop_edit.
+            For the client and grid, applies title().
+            For loop, applies upper() and removes "LOOP".
+            :return:
+            """
+            self.client_edit.setText(self.client_edit.text().title().strip())
+            self.grid_edit.setText(self.grid_edit.text().title().strip())
+            self.loop_edit.setText(re.sub("LOOP", "", self.loop_edit.text().upper()).strip())
 
         def apply_header():
             """
@@ -582,6 +590,32 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             if self.share_loop_cbox.isChecked():
                 for row in range(self.table.rowCount()):
                     self.table.item(row, 5).setText(self.loop_edit.text())
+
+        def auto_name_lines():
+            """
+            Automatically rename hole and line names.
+            For boreholes, applies upper() and removes "z" or "xy" since many operators tend to add that.
+            For surface, applies upper() and removes "L".
+            :return: None
+            """
+            if not self.pem_files:
+                self.status_bar.showMessage(f"No PEM files opened.", 2000)
+                return
+
+            line_name_column = self.table_columns.index('Line/Hole')
+            for row in range(self.table.rowCount()):
+                pem_file = self.pem_files[row]
+                current_name = self.table.item(row, line_name_column).text()
+                if pem_file.is_borehole():
+                    new_name = re.sub(r"xy|XY|z|Z", "", current_name.upper()).strip()
+                else:
+                    new_name = re.sub(r"L", "", current_name.upper()).strip()
+
+                name_item = QTableWidgetItem(new_name)
+                name_item.setTextAlignment(Qt.AlignCenter)
+                self.table.setItem(row, line_name_column, name_item)
+            
+            self.status_bar.showMessage(f"Renaming complete.", 1500)
 
         def toggle_pem_list_buttons():
             """
@@ -696,7 +730,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.calender.clicked.connect(set_date)
 
         # Buttons
-        self.title_btn.clicked.connect(title_header)
+        self.format_header_btn.clicked.connect(format_header)
         self.apply_shared_header_btn.clicked.connect(apply_header)
         self.filter_pem_list_btn.clicked.connect(self.pem_list_filter.show)
         self.filter_gps_list_btn.clicked.connect(self.gps_list_filter.show)
@@ -763,7 +797,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.actionScale_All_Currents.triggered.connect(lambda: self.scale_pem_current(selected=False))
         self.actionChange_All_Coil_Areas.triggered.connect(lambda: self.scale_pem_coil_area(selected=False))
         # self.actionOffset_Mag.triggered.connect(lambda: self.mag_offset_lastchn(selected=False))
-        self.actionAuto_Name_Lines_Holes.triggered.connect(self.auto_name_lines)
+        self.actionAuto_Name_Lines_Holes.triggered.connect(auto_name_lines)
 
         self.actionReverseX_Component.triggered.connect(
             lambda: self.reverse_component_data(comp='X', selected=False))
@@ -925,23 +959,31 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             settings.setValue("piw_frame_default_size", self.piw_frame.size())
 
         # Setting options
-        self.actionDark_Theme.setChecked(True if settings.value("actionDark_Theme") == "true" else False)
-        self.actionAlt_Click_Plotting.setChecked(True if settings.value("actionAlt_Click_Plotting") == "true" else False)
-        self.auto_sort_files_cbox.setChecked(False if settings.value("auto_sort_files_cbox") == "false" else True)
-        self.auto_create_backup_files_cbox.setChecked(False if settings.value("auto_create_backup_files_cbox") == "false" else True)
-        self.delete_merged_files_cbox.setChecked(False if settings.value("delete_merged_files_cbox") == "false" else True)
-        self.actionRename_Merged_Files.setChecked(False if settings.value("actionRename_Merged_Files") == "false" else True)
+        self.actionDark_Theme.setChecked(
+            settings.value("actionDark_Theme"), defaultValue=False, type=bool)
+        self.actionAlt_Click_Plotting.setChecked(
+            settings.value("actionAlt_Click_Plotting"), defaultValue=False, type=bool)
+        self.auto_sort_files_cbox.setChecked(
+            settings.value("auto_sort_files_cbox"), defaultValue=True, type=bool)
+        self.auto_create_backup_files_cbox.setChecked(
+            settings.value("auto_create_backup_files_cbox"), defaultValue=True, type=bool)
+        self.delete_merged_files_cbox.setChecked(
+            settings.value("delete_merged_files_cbox"), defaultValue=True, type=bool)
+        self.actionRename_Merged_Files.setChecked(
+            settings.value("actionRename_Merged_Files"), defaultValue=True, type=bool)
 
         # Project directory
         # self.project_dir_edit.setText(str(self.file_sys_model.rootPath()))  # In case no valid project dir is saved
         project_dir = settings.value("project_dir")
         if project_dir:
+            project_dir: str
             if Path(project_dir).is_dir():
-                self.move_dir_tree(str(project_dir), start_up=True)
+                self.move_dir_tree(project_dir, start_up=True)
 
         # Files
         last_opened_pems = settings.value("last_opened_files")
         if last_opened_pems:
+            last_opened_pems: list
             response = self.message.question(self, 'Open Previous Files', "Open the last previously opened PEM files?",
                                              self.message.Yes | self.message.No)
             if response == self.message.Yes:
@@ -954,7 +996,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         settings.endGroup()
 
         settings.beginGroup("Unpacker")
-        self.unpacker.open_damp_files_cbox.setChecked(False if settings.value("open_damp_files_cbox") == "false" else True)
+        self.unpacker.open_damp_files_cbox.setChecked(
+            settings.value("open_damp_files_cbox"), defaultValue=True, type=bool)
         settings.endGroup()
 
     def reset_settings(self):
@@ -2329,6 +2372,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         if not isinstance(dir_path, Path):
             dir_path = Path(dir_path)
 
+        dir_path: Path
         # Find the nearest (moving upwards) folder
         while dir_path.is_file():
             dir_path = dir_path.parent
@@ -4022,39 +4066,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
     #
     #     self.add_pem_files(files_to_open)
 
-    def auto_name_lines(self):
-        """
-        Rename the line and hole names based on the file name. For boreholes, looks for a space character, and uses
-        everything before the space (if it exists) as the new name. If there's no space it will use the entire filename
-        (minus the extension) as the new name. For surface, it looks for numbers followed by any suffix (NSEW) and uses
-        that (with the suffix) as the new name. Makes the change in the table and saves it in the PEM file in memory.
-        :return: None
-        """
-        if not self.pem_files:
-            logger.warning(f"No PEM files opened.")
-            self.status_bar.showMessage(f"No PEM files opened.", 2000)
-            return
-
-        file_name_column = self.table_columns.index('File')
-        line_name_column = self.table_columns.index('Line/Hole')
-        new_name = ''
-        for row in range(self.table.rowCount()):
-            pem_file = self.pem_files[row]
-            file_name = self.table.item(row, file_name_column).text()
-            if pem_file.is_borehole():
-                # hole_name = re.findall('(.*)(xy|XY|z|Z)', file_name)
-                hole_name = os.path.splitext(file_name)
-                if hole_name:
-                    new_name = re.split(r'\s', hole_name[0])[0]
-            else:
-                line_name = re.findall(r'\d+[nsewNSEW]', file_name)
-                if line_name:
-                    new_name = line_name[0].strip()
-
-            name_item = QTableWidgetItem(new_name)
-            name_item.setTextAlignment(Qt.AlignCenter)
-            self.table.setItem(row, line_name_column, name_item)
-
 
 class PathFilter(QWidget):
     accept_sig = Signal()
@@ -4397,14 +4408,14 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
             try:
                 printer = PEMPrinter(**plot_kwargs)
             except RuntimeError:
-                self.message.error(self, "Error", F"An error has occurred. Please re-start the program.")
+                self.message.critical(self, "Error", F"An error has occurred. Please re-start the program.")
                 return
 
             else:
                 try:
                     printer.print_files(save_dir, files=list(zip(self.pem_files, self.ri_files)))
                 except PermissionError:
-                    self.message.error(self, "Error", F"{save_file} is currently opened by another process.")
+                    self.message.critical(self, "Error", F"{save_file} is currently opened by another process.")
                     return
 
                 os.startfile(save_file)

@@ -10,7 +10,7 @@ import pyqtgraph as pg
 import numpy as np
 import pandas as pd
 import pylineclip as lc
-from PySide2.QtCore import Qt, Signal, QEvent, QTimer, QPointF, QRectF
+from PySide2.QtCore import Qt, Signal, QEvent, QTimer, QPointF, QRectF, QSettings
 from PySide2.QtGui import QColor, QFont, QTransform, QBrush, QPen, QKeySequence
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QLabel, QApplication, QLineEdit,
                                QInputDialog, QPushButton, QShortcut)
@@ -33,6 +33,7 @@ pd.options.mode.chained_assignment = None  # default='warn'
 # TODO Change auto clean to have a start and end channel
 # TODO maybe increase starting window size
 # TODO Changing readings to another component produces an error
+# TODO Unchecking mag box, closing then reopening, and then showing mag plot is bugged.
 
 
 class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
@@ -73,6 +74,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.fallback_file = None
         self.units = None
         self.stations = np.array([])
+        self.mag_df = None
 
         self.line_selected = False
         self.selected_station = None
@@ -219,7 +221,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         self.active_profile_axes = []
 
-        # Configure each axes, including the mag plots
+        # Configure each axes, including the mag plots. Axes linking is done during update_()
         for ax in self.profile_axes:
             ax.vb.installEventFilter(self)
             ax.vb.box_select_signal.connect(self.box_select_profile_plot)
@@ -229,12 +231,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             ax.getAxis('left').enableAutoSIPrefix(enable=False)
 
             # Add the vertical selection line
-            # color = (23, 23, 23, 100)
             color = get_line_color("teal", "pyqt", self.darkmode, alpha=200 if self.darkmode else 150)
-            # color.append(200 if self.darkmode else 150)
             font = QFont("Helvetica", 10)
-            # hover_color = (102, 178, 255, 100)
-            # select_color = (51, 51, 255, 100)
             hover_v_line = pg.InfiniteLine(angle=90, movable=False)
             hover_v_line.setPen(color, width=2.)
             selected_v_line = pg.InfiniteLine(angle=90, movable=False)
@@ -257,17 +255,10 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             ax.scene().sigMouseMoved.connect(self.profile_mouse_moved)
             ax.scene().sigMouseClicked.connect(self.profile_plot_clicked)
 
+        self.load_settings()  # Checking the checkboxes emits the signals, so load settings before connecting signals.
         self.init_signals()
 
     def init_signals(self):
-        def toggle_mag_plots():
-            if self.plot_mag_cbox.isChecked():
-                for ax in self.mag_profile_axes:
-                    ax.show()
-            else:
-                for ax in self.mag_profile_axes:
-                    ax.hide()
-
         def toggle_auto_clean_lines():
             for line in self.auto_clean_lines:
                 if self.plot_auto_clean_lines_cbox.isChecked():
@@ -293,7 +284,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         # Checkboxes
         self.show_scatter_cbox.toggled.connect(lambda: self.plot_profiles(components='all'))
-        self.plot_mag_cbox.toggled.connect(toggle_mag_plots)
+        self.plot_mag_cbox.toggled.connect(self.toggle_mag_plots)
         self.auto_range_cbox.toggled.connect(self.reset_range)
 
         self.plot_auto_clean_lines_cbox.toggled.connect(toggle_auto_clean_lines)
@@ -324,6 +315,60 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.auto_clean_btn.clicked.connect(self.auto_clean)
         self.actionReset_File.triggered.connect(self.reset_file)
         self.number_of_repeats.clicked.connect(self.rename_repeats)
+
+        # Manually toggle since its checkboxe may be set when loading settings, which doesn't occurs before the signals
+        # are connected. Toggling mag plots is done during open().
+        toggle_auto_clean_lines()
+
+    def toggle_mag_plots(self):
+        if self.plot_mag_cbox.isChecked() and self.plot_mag_cbox.isEnabled():
+            for ax in self.mag_profile_axes:
+                ax.show()
+        else:
+            for ax in self.mag_profile_axes:
+                ax.hide()
+
+    def save_settings(self):
+        settings = QSettings("Crone Geophysics", "PEMPro")
+        settings.beginGroup("pem_plot_editor")
+
+        # Geometry
+        settings.setValue("windowGeometry", self.saveGeometry())
+
+        # Setting options
+        settings.setValue("plot_ontime_decays_cbox", self.plot_ontime_decays_cbox.isChecked())
+        settings.setValue("plot_auto_clean_lines_cbox", self.plot_auto_clean_lines_cbox.isChecked())
+        settings.setValue("link_x_cbox", self.link_x_cbox.isChecked())
+        settings.setValue("link_y_cbox", self.link_y_cbox.isChecked())
+        settings.setValue("auto_range_cbox", self.auto_range_cbox.isChecked())
+        settings.setValue("plot_mag_cbox", self.plot_mag_cbox.isChecked())
+        settings.setValue("show_scatter_cbox", self.show_scatter_cbox.isChecked())
+
+        settings.endGroup()
+
+    def load_settings(self):
+        settings = QSettings("Crone Geophysics", "PEMPro")
+        settings.beginGroup("pem_plot_editor")
+
+        # Geometry
+        if settings.value("windowGeometry"):
+            self.restoreGeometry(settings.value("windowGeometry"))
+
+        # Setting options
+        self.plot_ontime_decays_cbox.setChecked(
+            settings.value("plot_ontime_decays_cbox", defaultValue=True, type=bool))
+        self.plot_auto_clean_lines_cbox.setChecked(
+            settings.value("plot_auto_clean_lines_cbox", defaultValue=True, type=bool))
+        self.link_x_cbox.setChecked(
+            settings.value("link_x_cbox", defaultValue=True, type=bool))
+        self.link_y_cbox.setChecked(
+            settings.value("link_y_cbox", defaultValue=True, type=bool))
+        self.auto_range_cbox.setChecked(
+            settings.value("auto_range_cbox", defaultValue=False, type=bool))
+        self.plot_mag_cbox.setChecked(
+            settings.value("plot_mag_cbox", defaultValue=True, type=bool))
+        self.show_scatter_cbox.setChecked(
+            settings.value("show_scatter_cbox", defaultValue=True, type=bool))
 
     def keyPressEvent(self, event):
         # Delete a decay when the delete key is pressed
@@ -393,6 +438,13 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.deleteLater()
         return super().eventFilter(watched, event)
 
+    def closeEvent(self, e):
+        self.save_settings()
+        self.close_sig.emit(self)
+
+        self.deleteLater()
+        e.accept()
+
     def pyqtgraphWheelEvent(self, evt):
         y = evt.delta()
         if y < 0:
@@ -438,31 +490,24 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                                 f"{self.pem_file.get_survey_type()} Survey",
                                 f"Operator: {self.pem_file.operator.title()}"])
         self.file_info_label.setText(file_info)
-        # self.timebase_label.setText(f"Timebase: {self.pem_file.timebase:.2f}ms")
-        # self.survey_type_label.setText(f"{self.pem_file.get_survey_type()} Survey")
-        # self.operator_label.setText(f"Operator: {self.pem_file.operator.title()}")
 
         if self.pem_file.is_split():
-            # self.plot_ontime_decays_cbox.setChecked(False)  # Triggers the signal
             self.plot_ontime_decays_cbox.setEnabled(False)
         else:
             self.plot_ontime_decays_cbox.setEnabled(True)
 
         # Plot the mag profile if available. Disable the plot mag button if it's not applicable.
         if all([self.pem_file.is_borehole(), self.pem_file.has_xy(), self.pem_file.has_d7()]):
-            mag_df = self.pem_file.get_mag(average=True)
-            if mag_df.Mag.any():
+            self.mag_df = self.pem_file.get_mag(average=True)
+            if self.mag_df.Mag.any():
                 self.plot_mag_cbox.setEnabled(True)
+                self.plot_mag()
             else:
-                self.plot_mag_cbox.setChecked(False)
                 self.plot_mag_cbox.setEnabled(False)
-                for ax in self.mag_profile_axes:
-                    ax.hide()
         else:
-            self.plot_mag_cbox.setChecked(False)
             self.plot_mag_cbox.setEnabled(False)
-            for ax in self.mag_profile_axes:
-                ax.hide()
+
+        self.toggle_mag_plots()  # Manually toggle mag plots incase they have been disabled in the previous step.
 
         self.auto_clean_std_sbox.blockSignals(True)
         self.auto_clean_window_sbox.blockSignals(True)
@@ -524,12 +569,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             file = files[0][0]
             if file.lower().endswith('.pem'):
                 self.open(file)
-
-    def closeEvent(self, e):
-        self.close_sig.emit(self)
-        # for ax in np.concatenate([self.decay_axes, self.profile_axes]):
-        #     ax.vb.close()
-        e.accept()
 
     def save(self):
         """
@@ -760,6 +799,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 axes.extend(self.z_layout_axes)
 
             for ax in axes:
+                # Don't clear the mag plots. They only need to be plotted once.
+                if ax in [self.mag_x_ax, self.mag_y_ax, self.mag_z_ax]:
+                    continue
                 ax.clearPlots()
 
         def plot_lin(profile_data, theory_data, axes):
@@ -793,19 +835,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
                 ax.addItem(scatter)
 
-            def plot_mag():
-                """Plot the mag profile if available. Disable the plot mag button if it's not applicable."""
-                if all([self.pem_file.is_borehole(), self.pem_file.has_xy(), self.pem_file.has_d7()]):
-                    mag_df = self.pem_file.get_mag(average=True)
-                    if mag_df.Mag.any():
-                        self.plot_mag_cbox.setEnabled(True)
-                        # Save the mag curves so they can be toggled easily.
-                        x, y = mag_df.Station.to_numpy(), mag_df.Mag.to_numpy()
-                        for ax in self.mag_profile_axes:
-                            mag_plot_item = pg.PlotCurveItem(x=x, y=y, pen=pg.mkPen('1DD219', width=2.))
-                            ax.getAxis("left").setLabel("Total Magnetic Field", units="pT")
-                            ax.addItem(mag_plot_item)
-
             def plot_theory_pp(df, ax):
                 """
                 Plot the theoretical PP values
@@ -838,7 +867,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                         plot_scatters(data, ax)
 
             plot_theory_pp(theory_data, axes[0])
-            plot_mag()
 
         self.update_()
 
@@ -1036,6 +1064,14 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         if self.auto_range_cbox.isChecked() and preserve_selection is False:
             for ax in self.active_decay_axes:
                 ax.autoRange()
+
+    def plot_mag(self):
+        # Only plot the mag once. It doesn't need to be cleared.
+        x, y = self.mag_df.Station.to_numpy(), self.mag_df.Mag.to_numpy()
+        for ax in self.mag_profile_axes:
+            mag_plot_item = pg.PlotCurveItem(x=x, y=y, pen=pg.mkPen('1DD219', width=2.))
+            ax.getAxis("left").setLabel("Total Magnetic Field", units="pT")
+            ax.addItem(mag_plot_item)
 
     def update_auto_clean_lines(self):
         """
