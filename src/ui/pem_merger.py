@@ -303,6 +303,11 @@ class Ui_PEMMerger(object):
 
         self.formLayout_3.setWidget(3, QFormLayout.LabelRole, self.label_28)
 
+        self.flip_stations_btn_1 = QPushButton(self.groupBox)
+        self.flip_stations_btn_1.setObjectName(u"flip_stations_btn_1")
+
+        self.formLayout_3.setWidget(5, QFormLayout.SpanningRole, self.flip_stations_btn_1)
+
 
         self.formLayout.setWidget(3, QFormLayout.SpanningRole, self.groupBox)
 
@@ -598,6 +603,11 @@ class Ui_PEMMerger(object):
 
         self.formLayout_8.setWidget(3, QFormLayout.LabelRole, self.label_30)
 
+        self.flip_stations_btn_2 = QPushButton(self.groupBox_6)
+        self.flip_stations_btn_2.setObjectName(u"flip_stations_btn_2")
+
+        self.formLayout_8.setWidget(5, QFormLayout.SpanningRole, self.flip_stations_btn_2)
+
 
         self.formLayout_2.setWidget(3, QFormLayout.FieldRole, self.groupBox_6)
 
@@ -687,8 +697,9 @@ class Ui_PEMMerger(object):
         self.label_3.setText(QCoreApplication.translate("PEMMerger", u"Current:", None))
         self.current_sbox_1.setSuffix(QCoreApplication.translate("PEMMerger", u"A", None))
         self.label_2.setText(QCoreApplication.translate("PEMMerger", u"Factor:", None))
-        self.flip_data_btn_1.setText(QCoreApplication.translate("PEMMerger", u"Flip Data", None))
+        self.flip_data_btn_1.setText(QCoreApplication.translate("PEMMerger", u"Flip Data Polarity", None))
         self.label_28.setText(QCoreApplication.translate("PEMMerger", u"SOA:", None))
+        self.flip_stations_btn_1.setText(QCoreApplication.translate("PEMMerger", u"Flip Station Order", None))
         self.file_label_2.setText(QCoreApplication.translate("PEMMerger", u"FileLabel2", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("PEMMerger", u"Header Information", None))
         self.label_17.setText(QCoreApplication.translate("PEMMerger", u"Client:", None))
@@ -719,8 +730,9 @@ class Ui_PEMMerger(object):
         self.label_6.setText(QCoreApplication.translate("PEMMerger", u"Current:", None))
         self.current_sbox_2.setSuffix(QCoreApplication.translate("PEMMerger", u"A", None))
         self.label_4.setText(QCoreApplication.translate("PEMMerger", u"Factor:", None))
-        self.flip_data_btn_2.setText(QCoreApplication.translate("PEMMerger", u"Flip Data", None))
+        self.flip_data_btn_2.setText(QCoreApplication.translate("PEMMerger", u"Flip Data Polarity", None))
         self.label_30.setText(QCoreApplication.translate("PEMMerger", u"SOA:", None))
+        self.flip_stations_btn_2.setText(QCoreApplication.translate("PEMMerger", u"Flip Station Order", None))
         self.menuFile.setTitle(QCoreApplication.translate("PEMMerger", u"File", None))
         self.menuView.setTitle(QCoreApplication.translate("PEMMerger", u"View", None))
     # retranslateUi

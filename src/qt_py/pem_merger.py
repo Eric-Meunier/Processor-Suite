@@ -190,6 +190,11 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
             pem_file.reverse_component(component)
             self.plot_profiles(pem_file, component)
 
+        def flip_stations(pem_file):
+            # Reverse the order of the stations. Does it for all data, not just the currently plotted component.
+            pem_file.reverse_station_numbers()
+            self.plot_profiles(pem_file)
+
         # Menu
         self.actionSave_As.triggered.connect(self.save_pem_file)
         self.actionSave_Screenshot.triggered.connect(self.save_img)
@@ -217,6 +222,9 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         # Buttons
         self.flip_data_btn_1.clicked.connect(lambda: flip_component(self.pf1))
         self.flip_data_btn_2.clicked.connect(lambda: flip_component(self.pf2))
+
+        self.flip_stations_btn_1.clicked.connect(lambda: flip_stations(self.pf1))
+        self.flip_stations_btn_2.clicked.connect(lambda: flip_stations(self.pf2))
 
         self.accept_btn.clicked.connect(self.accept_merge)
 

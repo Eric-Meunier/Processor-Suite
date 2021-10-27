@@ -960,17 +960,17 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         # Setting options
         self.actionDark_Theme.setChecked(
-            settings.value("actionDark_Theme"), defaultValue=False, type=bool)
+            settings.value("actionDark_Theme", defaultValue=False, type=bool))
         self.actionAlt_Click_Plotting.setChecked(
-            settings.value("actionAlt_Click_Plotting"), defaultValue=False, type=bool)
+            settings.value("actionAlt_Click_Plotting", defaultValue=False, type=bool))
         self.auto_sort_files_cbox.setChecked(
-            settings.value("auto_sort_files_cbox"), defaultValue=True, type=bool)
+            settings.value("auto_sort_files_cbox", defaultValue=True, type=bool))
         self.auto_create_backup_files_cbox.setChecked(
-            settings.value("auto_create_backup_files_cbox"), defaultValue=True, type=bool)
+            settings.value("auto_create_backup_files_cbox", defaultValue=True, type=bool))
         self.delete_merged_files_cbox.setChecked(
-            settings.value("delete_merged_files_cbox"), defaultValue=True, type=bool)
+            settings.value("delete_merged_files_cbox", defaultValue=True, type=bool))
         self.actionRename_Merged_Files.setChecked(
-            settings.value("actionRename_Merged_Files"), defaultValue=True, type=bool)
+            settings.value("actionRename_Merged_Files", defaultValue=True, type=bool))
 
         # Project directory
         # self.project_dir_edit.setText(str(self.file_sys_model.rootPath()))  # In case no valid project dir is saved
@@ -997,7 +997,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         settings.beginGroup("Unpacker")
         self.unpacker.open_damp_files_cbox.setChecked(
-            settings.value("open_damp_files_cbox"), defaultValue=True, type=bool)
+            settings.value("open_damp_files_cbox", defaultValue=True, type=bool))
         settings.endGroup()
 
     def reset_settings(self):
@@ -1590,6 +1590,49 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         self.table.horizontalHeader().show()
         self.status_bar.showMessage(f"{count} PEM files opened.", 1500)
+
+    def add_pem_to_table(self, pem_file, row):
+        """
+        Adds the information from a PEM file to the main table. Blocks the table signals while doing so.
+        :param pem_file: PEMFile object
+        :param row: int, row of the PEM file in the table
+        :return: None
+        """
+        logger.info(f"Adding {pem_file.filepath.name} to the table.")
+        self.table.blockSignals(True)
+
+        # Get the information for each column
+        row_info = [
+            pem_file.filepath.name,
+            pem_file.date,
+            pem_file.client,
+            pem_file.grid,
+            pem_file.line_name,
+            pem_file.loop_name,
+            pem_file.current,
+            pem_file.coil_area,
+            pem_file.get_stations(converted=True).min(),
+            pem_file.get_stations(converted=True).max(),
+            pem_file.is_averaged(),
+            pem_file.is_split(),
+            len(pem_file.get_suffix_warnings()),
+            len(pem_file.get_repeats()),
+            "N/A" if not pem_file.has_all_gps() else ', '.join(pem_file.get_reversed_components())
+        ]
+
+        # Set the information into each cell. Columns from First Station and on can't be edited.
+        for i, info in enumerate(row_info):
+            item = QTableWidgetItem(str(info))
+            item.setTextAlignment(Qt.AlignCenter)
+            # Disable editing of columns past First Station and for the date
+            if i > self.table_columns.index('Coil\nArea') or i == self.table_columns.index('Date'):
+                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+            self.table.setItem(row, i, item)
+
+        self.format_row(row)
+
+        if self.allow_signals:
+            self.table.blockSignals(False)
 
     def add_gps_files(self, gps_files):
         """
@@ -3500,49 +3543,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         self.table.blockSignals(False)
 
-    def add_pem_to_table(self, pem_file, row):
-        """
-        Adds the information from a PEM file to the main table. Blocks the table signals while doing so.
-        :param pem_file: PEMFile object
-        :param row: int, row of the PEM file in the table
-        :return: None
-        """
-        logger.info(f"Adding {pem_file.filepath.name} to the table.")
-        self.table.blockSignals(True)
-
-        # Get the information for each column
-        row_info = [
-            pem_file.filepath.name,
-            pem_file.date,
-            pem_file.client,
-            pem_file.grid,
-            pem_file.line_name,
-            pem_file.loop_name,
-            pem_file.current,
-            pem_file.coil_area,
-            pem_file.get_stations(converted=True).min(),
-            pem_file.get_stations(converted=True).max(),
-            pem_file.is_averaged(),
-            pem_file.is_split(),
-            len(pem_file.get_suffix_warnings()),
-            len(pem_file.get_repeats()),
-            "N/A" if not pem_file.has_all_gps() else ', '.join(pem_file.get_reversed_components())
-        ]
-
-        # Set the information into each cell. Columns from First Station and on can't be edited.
-        for i, info in enumerate(row_info):
-            item = QTableWidgetItem(str(info))
-            item.setTextAlignment(Qt.AlignCenter)
-            # Disable editing of columns past First Station and for the date
-            if i > self.table_columns.index('Coil\nArea') or i == self.table_columns.index('Date'):
-                item.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-            self.table.setItem(row, i, item)
-
-        self.format_row(row)
-
-        if self.allow_signals:
-            self.table.blockSignals(False)
-
     def refresh_table(self):
         for row in range(self.table.rowCount()):
             self.format_row(row)
@@ -3930,7 +3930,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         with CustomProgressDialog('Reversing Station Order...', 0, len(pem_files)) as dlg:
             for pem_file, row in zip(pem_files, rows):
                 dlg.setLabelText(f"Reversing station order of {pem_file.filepath.name}")
-                pem_file = pem_file.reverse_station_order()
+                pem_file = pem_file.reverse_station_numbers()
                 self.refresh_pem(pem_file)
                 dlg += 1
 

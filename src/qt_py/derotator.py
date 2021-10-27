@@ -389,8 +389,6 @@ class Derotator(QMainWindow, Ui_Derotator):
         Open, rotate, and plot the PEMFile.
         :param pem_file: borehole PEMFile object
         """
-        # TODO disable un-rotate button when file isn't D7.
-
         def fill_table(stations):
             """
             Fill the stations list with the ineligible readings
@@ -498,7 +496,6 @@ class Derotator(QMainWindow, Ui_Derotator):
                                   'File must be a borehole survey with X and Y component data.')
             return
 
-        # if not __name__ == "__main__":
         # Check that the file hasn't already been de-rotated.
         if self.pem_file.is_derotated():
             response = self.message.question(self, 'File already de-rotated',
@@ -511,12 +508,8 @@ class Derotator(QMainWindow, Ui_Derotator):
                 self.separator.show()
                 self.unrotate_btn.show()
 
-        # Disable PP de-rotation if it's lacking all necessary GPS
-        if self.pem_file.has_all_gps():
-            self.pp_btn.setEnabled(True)
-        else:
-            self.pp_btn.setEnabled(False)
-
+                if not self.pem_file.has_d7():
+                    self.unrotate_btn.setEnabled(False)
         # try:
         self.pem_file, ineligible_stations = self.pem_file.prep_rotation()
         # except Exception as e:
@@ -526,10 +519,11 @@ class Derotator(QMainWindow, Ui_Derotator):
         # else:
         self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")
 
-        # Disable the PP values tab if there's no PP information
+        # Disable the PP values tab if there's no PP information. Also disable PP de-rotation
         if all([self.pem_file.has_all_gps(), self.pem_file.ramp > 0]):
             self.tabWidget.setTabEnabled(0, True)
             self.tabWidget.setTabEnabled(2, True)
+            self.pp_btn.setEnabled(True)
 
             # Add the PP rotation plot curves and scatter items
             if not pem_file.is_fluxgate():
@@ -542,6 +536,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         else:
             self.tabWidget.setTabEnabled(0, False)
             self.tabWidget.setTabEnabled(3, False)
+            self.pp_btn.setEnabled(False)
 
         # Fill the table with the ineligible stations
         if not ineligible_stations.empty:

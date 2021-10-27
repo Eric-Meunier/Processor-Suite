@@ -479,7 +479,7 @@ class Map3DViewer(QMainWindow):
                                                             color=get_line_color("gray", "mpl", self.darkmode))),
                                       line=dict(width=4)
                                       )
-        # TODO Format the axis ticks
+
         self.map_figure.update_layout(yaxis_tickformat='%',
                                       legend=dict(
                                           yanchor="top",
@@ -945,6 +945,7 @@ class GPSViewer(QMainWindow):
         self.setWindowTitle(f"GPS Viewer")
         self.setWindowIcon(get_icon('gps_viewer.png'))
         self.setFocusPolicy(Qt.StrongFocus)
+        self.installEventFilter(self)
 
         pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
         pg.setConfigOption('foreground', 'w' if darkmode else (53, 53, 53))
@@ -1010,32 +1011,20 @@ class GPSViewer(QMainWindow):
         self.auto_range_action.activated.connect(lambda: self.plan_view.autoRange())
         self.plan_view.scene().sigMouseClicked.connect(self.mouse_clicked)
 
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Escape or event.key() == Qt.Key_Delete:
+            # Remove the ruler when Escape or Delete is pressed
+            if self.ruler in self.plan_view.items():
+                self.plan_view.removeItem(self.ruler)  # On second click, remove the tool entirely.
+                self.plan_view.removeItem(self.ruler_text)  # On second click, remove the tool entirely.
+                self.measuring_state = 0
+
     def mouse_clicked(self, e):
         """
         When the plot is clicked. Add the measuring tool if CTRL is held. Otherwise, the first normal click
         will stop moving the measuring tool end, and the second normal click will remove the tool all together.
         :param e: MouseClickEvent object.
         """
-        def update_ruler():
-            """
-            Move the distance text and position when the ruler is moved or changed.
-            :return: None
-            """
-            def get_ruler_info():
-                handles = self.ruler.getHandles()
-                handle_positions = np.array([vb.mapSceneToView(h.scenePos()) for h in handles])
-
-                distance = math.sqrt((handle_positions[0].x() - handle_positions[1].x()) ** 2 +
-                                     (handle_positions[0].y() - handle_positions[1].y()) ** 2)
-
-                new_pos = QPointF(np.mean([h.x() for h in handle_positions]), np.mean([h.y() for h in handle_positions]))
-                return new_pos, distance
-
-            vb = self.plan_view.getPlotItem().vb
-            new_pos, distance = get_ruler_info()
-            self.ruler_text.setText(f"{distance:.2f} m")
-            self.ruler_text.setPos(new_pos)
-
         if keyboard.is_pressed("CTRL"):
             """Add the measuring tool"""
             self.plan_view.removeItem(self.ruler)
@@ -1044,11 +1033,11 @@ class GPSViewer(QMainWindow):
             pos = self.plan_view.getPlotItem().vb.mapSceneToView(e.scenePos())
             self.measuring_pos = pos
             self.ruler = Ruler(positions=[pos, pos],
-                                        pen=pg.mkPen(self.green_color,
-                                                     style=Qt.DashLine,
-                                                     width=1.5))
+                               pen=pg.mkPen(self.green_color,
+                                            style=Qt.DashLine,
+                                            width=1.5))
             self.ruler.setZValue(10)
-            self.ruler.sigRegionChanged.connect(update_ruler)
+            self.ruler.sigRegionChanged.connect(self.update_ruler)
             self.ruler_text = pg.TextItem("length",
                                           color=pg.mkColor(self.green_color),
                                           anchor=(0.5, 0.5),
@@ -1059,7 +1048,7 @@ class GPSViewer(QMainWindow):
             self.plan_view.addItem(self.ruler, ignoreBounds=True)
             self.plan_view.addItem(self.ruler_text, ignoreBounds=True)
             self.plan_view.scene().sigMouseMoved.connect(self.move_measuring_tool)
-            update_ruler()
+            self.update_ruler()
         else:
             if self.ruler in self.plan_view.items():
                 if self.measuring_state % 2 == 0:  # On first click, stop moving the second handle, but keep the tool.
@@ -1076,6 +1065,26 @@ class GPSViewer(QMainWindow):
         """
         pos = self.plan_view.getPlotItem().vb.mapSceneToView(e)
         self.ruler.movePoint(self.ruler.getHandles()[-1], pos)
+
+    def update_ruler(self):
+        """
+        Move the distance text and position when the ruler is moved or changed.
+        :return: None
+        """
+        def get_ruler_info():
+            handles = self.ruler.getHandles()
+            handle_positions = np.array([vb.mapSceneToView(h.scenePos()) for h in handles])
+
+            distance = math.sqrt((handle_positions[0].x() - handle_positions[1].x()) ** 2 +
+                                 (handle_positions[0].y() - handle_positions[1].y()) ** 2)
+
+            new_pos = QPointF(np.mean([h.x() for h in handle_positions]), np.mean([h.y() for h in handle_positions]))
+            return new_pos, distance
+
+        vb = self.plan_view.getPlotItem().vb
+        new_pos, distance = get_ruler_info()
+        self.ruler_text.setText(f"{distance:.2f} m")
+        self.ruler_text.setPos(new_pos)
 
     def save_img(self):
         save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image', 'gps.png', 'PNG file (*.PNG)')
@@ -1372,8 +1381,8 @@ if __name__ == '__main__':
     files = getter.get_pems(folder=r'Final folders\PX20002-W01\Final', file='XY.PEM')
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
-    m = TileMapViewer()
-    # m = GPSViewer(darkmode=darkmode)
+    # m = TileMapViewer()
+    m = GPSViewer(darkmode=darkmode)
     # m = Map3DViewer(darkmode=darkmode)
     m.open(files)
     m.show()

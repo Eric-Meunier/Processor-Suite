@@ -519,7 +519,7 @@
              </size>
             </property>
             <property name="text">
-             <string>Flip Data</string>
+             <string>Flip Data Polarity</string>
             </property>
            </widget>
           </item>
@@ -530,6 +530,13 @@
             </property>
             <property name="text">
              <string>SOA:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0" colspan="2">
+           <widget class="QPushButton" name="flip_stations_btn_1">
+            <property name="text">
+             <string>Flip Station Order</string>
             </property>
            </widget>
           </item>
@@ -1078,7 +1085,7 @@
              <bool>true</bool>
             </property>
             <property name="text">
-             <string>Flip Data</string>
+             <string>Flip Data Polarity</string>
             </property>
            </widget>
           </item>
@@ -1102,6 +1109,13 @@
             </property>
             <property name="text">
              <string>SOA:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0" colspan="2">
+           <widget class="QPushButton" name="flip_stations_btn_2">
+            <property name="text">
+             <string>Flip Station Order</string>
             </property>
            </widget>
           </item>

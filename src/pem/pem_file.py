@@ -1682,7 +1682,6 @@ class PEMFile:
         """
         Reverse the order of all station numbers.
         """
-
         def get_new_station_num(station):
             old_number = re.search(r"\d+", station).group(0)
             new_number = new_order.get(old_number)
