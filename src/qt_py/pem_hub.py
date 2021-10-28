@@ -72,6 +72,8 @@ logger = logging.getLogger(__name__)
 # TODO Could add std plot to the right of decay plots
 # TODO Add a Recent projects list, below project GPS, which will be a history of recently clicked folders.
 # TODO Add non-split profile plot in PEMPlotEditor, similar to Maxwell.
+# TODO Add old PEM parsing
+# TODO When plotting PP files, set them all as the same station, and color code by timestamp. Also add plot of °----number---° showing drift.
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []
@@ -114,15 +116,16 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.calender = QCalendarWidget()
         self.calender.setWindowTitle('Select Date')
         self.crs_selector = CRSSelector(title="Project CRS")
+        self.crs_selector.setAlignment(Qt.AlignCenter)
         self.pem_list_filter = PathFilter('PEM', parent=self)
         self.gps_list_filter = PathFilter('GPS', parent=self)
         self.unpacker = Unpacker(parent=self)
         self.selection_files_label = QLabel()
+        self.selection_components_label = QLabel()
         self.selection_timebase_label = QLabel()
         self.selection_zts_label = QLabel()
         self.selection_survey_label = QLabel()
         self.selection_derotation_label = QLabel()
-        self.epsg_label = QLabel()
         self.init_ui()
 
         # Menus
@@ -871,19 +874,18 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         # Status bar formatting
         self.selection_files_label.setMargin(3)
+        self.selection_components_label.setMargin(3)
         self.selection_timebase_label.setMargin(3)
         self.selection_zts_label.setMargin(3)
         self.selection_survey_label.setMargin(3)
         self.selection_derotation_label.setMargin(3)
-        self.epsg_label.setMargin(3)
 
         self.status_bar.addPermanentWidget(self.selection_files_label, 0)
+        self.status_bar.addPermanentWidget(self.selection_components_label, 0)
         self.status_bar.addPermanentWidget(self.selection_timebase_label, 0)
         self.status_bar.addPermanentWidget(self.selection_zts_label, 0)
         self.status_bar.addPermanentWidget(self.selection_survey_label, 0)
         self.status_bar.addPermanentWidget(self.selection_derotation_label, 0)
-        # self.status_bar.addPermanentWidget(QLabel(), 0)  # Spacer
-        self.status_bar.addPermanentWidget(self.crs_selector.epsg_label, 0)
         self.status_bar.addPermanentWidget(self.dir_frame, 0)
 
     def center(self):
@@ -1587,6 +1589,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         self.table.horizontalHeader().show()
         self.status_bar.showMessage(f"{count} PEM files opened.", 1500)
+
+        # Save the settings incase it crashes
+        self.save_settings()
 
     def add_pem_to_table(self, pem_file, row):
         """
@@ -3253,6 +3258,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
     def reset_selection_labels(self):
         self.status_bar.showMessage("")
         for label in [self.selection_files_label,
+                      self.selection_components_label,
                       self.selection_timebase_label,
                       self.selection_zts_label,
                       self.selection_survey_label,
@@ -3595,7 +3601,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             survey_type = f"Survey Type(s): {', '.join(np.unique([f.get_survey_type() for f in pem_files]))}"
             derotated = ""
 
+        components = np.unique(np.concatenate([pem.get_components() for pem in pem_files]))
         self.selection_files_label.setText(f"Selected: {len(pem_files)}")
+        self.selection_components_label.setText(f"Component(s): {', '.join(components)}")
         self.selection_timebase_label.setText(timebase)
         self.selection_zts_label.setText(zts)
         self.selection_survey_label.setText(survey_type)
@@ -4943,21 +4951,28 @@ class StationSplitter(QWidget):
         for row in selected_rows:
             selected_stations.append(self.table.item(row, 0).text())
 
+        # Create a new PEM file using the selected stations.
         if selected_stations:
             default_path = str(self.pem_file.filepath.parent)
             save_file = os.path.splitext(QFileDialog.getSaveFileName(self, '', default_path)[0])[0] + '.PEM'
-            if save_file:
-                new_pem_file = self.pem_file.copy()
-                filt = new_pem_file.data.Station.isin(selected_stations)
-                new_data = new_pem_file.data.loc[filt]
-                new_pem_file.data = new_data
-                new_pem_file.filepath = Path(save_file)
-                new_pem_file.number_of_readings = len(new_data.index)
-                new_pem_file.save()
-                self.parent.add_pem_files(new_pem_file)
-                self.close()
-            else:
-                pass
+
+            if not save_file:
+                return
+
+            new_pem_file = self.pem_file.copy()
+            filt = new_pem_file.data.Station.isin(selected_stations)
+            new_data = new_pem_file.data.loc[filt]
+            new_pem_file.data = new_data
+            new_pem_file.filepath = Path(save_file)
+            new_pem_file.number_of_readings = len(new_data.index)
+            new_pem_file.save()
+            self.parent.add_pem_files(new_pem_file)
+
+            # Remove the selected stations from the original file.
+            self.pem_file.data = self.pem_file.data.loc[~filt]
+            self.parent.refresh_pem(self.pem_file)
+
+            self.close()
 
 
 class BatchNameEditor(QWidget):
@@ -5184,7 +5199,7 @@ class MagDeclinationCalculator(QMainWindow):
 def main():
     app = QApplication(sys.argv)
     mw = PEMHub(app)
-    # mw.actionDark_Theme.trigger()
+
     pem_getter = PEMGetter()
     pem_parser = PEMParser()
     dmp_parser = DMPParser()
@@ -5212,7 +5227,7 @@ def main():
 
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
-    mw.show()
+    # mw.show()
     # app.processEvents()
 
     mw.add_pem_files(pem_files)
@@ -5223,7 +5238,7 @@ def main():
     # mw.revert_xy_rotation_action.trigger()
     # mw.scale_pem_coil_area(selected=True)
     # mw.table.selectAll()
-    mw.open_derotator()
+    # mw.open_derotator()
     # mw.open_pem_merger()
     # mw.open_pem_geometry()
     # mw.open_pem_plot_editor()

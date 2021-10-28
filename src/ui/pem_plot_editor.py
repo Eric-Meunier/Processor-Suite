@@ -35,6 +35,10 @@ class Ui_PEMPlotEditor(object):
         self.actionSave_Screenshot.setObjectName(u"actionSave_Screenshot")
         self.actionUn_Delete_All = QAction(PEMPlotEditor)
         self.actionUn_Delete_All.setObjectName(u"actionUn_Delete_All")
+        self.actionSplit_Profile = QAction(PEMPlotEditor)
+        self.actionSplit_Profile.setObjectName(u"actionSplit_Profile")
+        self.actionSplit_Profile.setCheckable(True)
+        self.actionSplit_Profile.setChecked(True)
         self.centralwidget = QWidget(PEMPlotEditor)
         self.centralwidget.setObjectName(u"centralwidget")
         self.horizontalLayout_3 = QHBoxLayout(self.centralwidget)
@@ -286,6 +290,29 @@ class Ui_PEMPlotEditor(object):
 
         self.verticalLayout_11.addWidget(self.groupBox)
 
+        self.groupBox_4 = QGroupBox(self.frame)
+        self.groupBox_4.setObjectName(u"groupBox_4")
+        self.groupBox_4.setAlignment(Qt.AlignCenter)
+        self.gridLayout = QGridLayout(self.groupBox_4)
+        self.gridLayout.setObjectName(u"gridLayout")
+        self.max_ch_sbox = QSpinBox(self.groupBox_4)
+        self.max_ch_sbox.setObjectName(u"max_ch_sbox")
+
+        self.gridLayout.addWidget(self.max_ch_sbox, 0, 3, 1, 1)
+
+        self.min_ch_sbox = QSpinBox(self.groupBox_4)
+        self.min_ch_sbox.setObjectName(u"min_ch_sbox")
+
+        self.gridLayout.addWidget(self.min_ch_sbox, 0, 1, 1, 1)
+
+        self.label_5 = QLabel(self.groupBox_4)
+        self.label_5.setObjectName(u"label_5")
+
+        self.gridLayout.addWidget(self.label_5, 0, 2, 1, 1)
+
+
+        self.verticalLayout_11.addWidget(self.groupBox_4)
+
         self.groupBox_3 = QGroupBox(self.frame)
         self.groupBox_3.setObjectName(u"groupBox_3")
         self.groupBox_3.setAlignment(Qt.AlignCenter)
@@ -389,6 +416,8 @@ class Ui_PEMPlotEditor(object):
         self.menubar.setGeometry(QRect(0, 0, 1126, 21))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
+        self.menuView = QMenu(self.menubar)
+        self.menuView.setObjectName(u"menuView")
         PEMPlotEditor.setMenuBar(self.menubar)
         self.status_bar = QStatusBar(PEMPlotEditor)
         self.status_bar.setObjectName(u"status_bar")
@@ -410,6 +439,7 @@ class Ui_PEMPlotEditor(object):
         QWidget.setTabOrder(self.z_profile_layout, self.x_profile_layout)
 
         self.menubar.addAction(self.menuFile.menuAction())
+        self.menubar.addAction(self.menuView.menuAction())
         self.menuFile.addAction(self.actionSave)
         self.menuFile.addAction(self.actionSave_As)
         self.menuFile.addSeparator()
@@ -418,6 +448,7 @@ class Ui_PEMPlotEditor(object):
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionUn_Delete_All)
         self.menuFile.addAction(self.actionReset_File)
+        self.menuView.addAction(self.actionSplit_Profile)
 
         self.retranslateUi(PEMPlotEditor)
 
@@ -452,6 +483,7 @@ class Ui_PEMPlotEditor(object):
         self.actionSave_Screenshot.setShortcut(QCoreApplication.translate("PEMPlotEditor", u"Ctrl+Alt+C", None))
 #endif // QT_CONFIG(shortcut)
         self.actionUn_Delete_All.setText(QCoreApplication.translate("PEMPlotEditor", u"Un-Delete All", None))
+        self.actionSplit_Profile.setText(QCoreApplication.translate("PEMPlotEditor", u"Split Profile", None))
         self.label.setText(QCoreApplication.translate("PEMPlotEditor", u"Decay Options", None))
         self.groupBox_5.setTitle(QCoreApplication.translate("PEMPlotEditor", u"View", None))
         self.plot_ontime_decays_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Plot On-Time", None))
@@ -475,6 +507,10 @@ class Ui_PEMPlotEditor(object):
         self.groupBox.setTitle(QCoreApplication.translate("PEMPlotEditor", u"View", None))
         self.plot_mag_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Plot Mag", None))
         self.show_scatter_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Show Scatter", None))
+        self.groupBox_4.setTitle(QCoreApplication.translate("PEMPlotEditor", u"Channels", None))
+        self.max_ch_sbox.setPrefix(QCoreApplication.translate("PEMPlotEditor", u"Ch ", None))
+        self.min_ch_sbox.setPrefix(QCoreApplication.translate("PEMPlotEditor", u"Ch ", None))
+        self.label_5.setText(QCoreApplication.translate("PEMPlotEditor", u"-", None))
         self.groupBox_3.setTitle(QCoreApplication.translate("PEMPlotEditor", u"Edit", None))
         self.change_comp_profile_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Components", None))
         self.change_profile_suffix_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Suffixes", None))
@@ -486,5 +522,6 @@ class Ui_PEMPlotEditor(object):
         self.label_4.setText(QCoreApplication.translate("PEMPlotEditor", u"Window Size", None))
         self.auto_clean_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Auto-Clean", None))
         self.menuFile.setTitle(QCoreApplication.translate("PEMPlotEditor", u"File", None))
+        self.menuView.setTitle(QCoreApplication.translate("PEMPlotEditor", u"View", None))
     # retranslateUi
 

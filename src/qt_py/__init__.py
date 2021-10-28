@@ -745,6 +745,7 @@ class CRSSelector(QGroupBox):
         self.layout().addWidget(self.gps_zone_cbox, 2, 1, 1, 1)
         self.layout().addWidget(separator_line, 3, 0, 1, 2)
         self.layout().addWidget(self.epsg_edit, 4, 1, 1, 1)
+        self.layout().addWidget(self.epsg_label, 5, 0, 1, 2)
 
         # Signals
         self.gps_system_cbox.currentIndexChanged.connect(self.combo_boxes_changed)

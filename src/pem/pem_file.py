@@ -717,6 +717,12 @@ class PEMFile:
 
         return channel_bounds
 
+    def get_number_of_channels(self, incl_ontime=True):
+        if incl_ontime is True:
+            return len(self.channel_times)
+        else:
+            return len(self.channel_times[~self.channel_times.Remove.astype(bool)])
+
     def get_profile_data(self, component, averaged=False, converted=False, ontime=True, incl_deleted=False):
         """
         Transform the readings in the data in a manner to be plotted as a profile
@@ -2465,8 +2471,8 @@ class PEMParser:
 
             assert text, f'No data found in {self.filepath.name}.'
 
-            # Each reading is separated by two return characters
-            text = text.strip().split('\n\n')
+            # Each reading is separated by two return characters usually, but sometimes there are spaces too.
+            text = re.split(r"\n\s*\n", text.strip())
 
             data = []
             # Format each reading to be added to the data frame. Faster than creating Series object per row.
@@ -3965,7 +3971,7 @@ if __name__ == '__main__':
 
     # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
     # file = r"C:\_Data\2021\TMC\Laurentia\STE-21-50-W3\RAW\ste-21-50w3xy_0819.dmp2"
-    pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0251-21\RAW\xy_1019.PEM")
+    pem_file = pg.parse(r"C:\_Data\2021\TMC\Laurentia\STE-21-70\Final\STE-21-70 XYT.PEM")
     # pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-264-21\RAW\xy_1002.PEM")
     # file = r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW\l35eb2_0.PEM817.dmp2"
     # pem_file, errors = dmpparser.parse(file)
@@ -3989,10 +3995,10 @@ if __name__ == '__main__':
     # pem_file.get_dad()
     # pem_file = pg.get_pems(client='Kazzinc', number=1)[0]
     # pem_file.to_xyz()
-    pem_file, _ = pem_file.prep_rotation()
+    # pem_file, _ = pem_file.prep_rotation()
     # pem_file.mag_offset()
     # pem_file = pem_file.rotate(method='acc', soa=0)
-    pem_file = pem_file.rotate(method='unrotate', soa=10)
+    # pem_file = pem_file.rotate(method='unrotate', soa=10)
     # pem_file = pem_file.rotate(method="pp", soa=1)
     # rotated_pem = prep_pem.rotate('pp')
 
