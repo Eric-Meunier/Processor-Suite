@@ -75,6 +75,7 @@ logger = logging.getLogger(__name__)
 # TODO Add old PEM parsing
 # TODO When plotting PP files, set them all as the same station, and color code by timestamp. Also add plot of °----number---° showing drift.
 
+
 # Keep a list of widgets so they don't get garbage collected
 refs = []
 
@@ -148,6 +149,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.save_file_action = QAction("Save", self)
         self.save_file_as_action = QAction("Save As...", self)
         self.copy_to_cliboard_action = QAction("Copy to Clipboard", self)
+        self.set_as_project_dir_action = QAction("Set as Project Directory", self)
         self.export_pem_action = QAction("PEM", self)
         self.export_dad_action = QAction("DAD", self)
         self.export_gps_action = QAction("GPS", self)
@@ -308,14 +310,21 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.open_gps_share(gps_obj, piw_widget)
 
         def revert_xy_rotation():
-            pem_file, row = self.get_pem_files(selected=True)
-            pem_file = pem_file[0]
+            pem_files, rows = self.get_pem_files(selected=True)
+            pem_file = pem_files[0]
             if pem_file.is_derotated():
                 pem_file.prep_rotation()
                 pem_file = pem_file.rotate(method="unrotate")
                 self.refresh_pem(pem_file)
                 self.update_selection_text()  # Update selection text since the file is currently selected
                 self.status_bar.showMessage("XY data rotation reverted.", 1500)
+
+        def set_as_project_dir():
+            # Use the parent of the selected PEM as the project's directory
+            pem_files, row = self.get_pem_files(selected=True)
+            pem_file = pem_files[0]
+            parent = pem_file.filepath.parent
+            self.set_project_dir(parent)
 
         if self.splash_screen:
             self.splash_screen.showMessage("Initializing actions")
@@ -336,6 +345,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.save_file_as_action.triggered.connect(self.save_pem_file_as)
         self.copy_to_cliboard_action.setIcon(get_icon('copy.png'))
         self.copy_to_cliboard_action.triggered.connect(self.copy_pems_to_clipboard)
+        self.set_as_project_dir_action.setIcon(get_icon("directory.png"))
+        self.set_as_project_dir_action.triggered.connect(set_as_project_dir)
 
         # Exports
         self.export_pem_action.setIcon(get_icon('crone_logo.png'))
@@ -1065,6 +1076,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                 self.right_click_menu.addAction(self.save_file_as_action)
                 self.right_click_menu.addAction(self.copy_to_cliboard_action)
+                self.right_click_menu.addAction(self.set_as_project_dir_action)
                 self.right_click_menu.addSeparator()
 
                 # View menu
@@ -1210,7 +1222,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         self.derotate_action.setDisabled(True)
                     else:
                         self.derotate_action.setDisabled(False)
-                    if pem_file.is_derotated():
+                    if pem_file.is_derotated() and pem_file.has_d7():
                         self.right_click_menu.addAction(self.revert_xy_rotation_action)
                 self.right_click_menu.addAction(self.get_geometry_action)
                 self.right_click_menu.addSeparator()
@@ -4113,7 +4125,7 @@ class PathFilter(QWidget):
         frame.setLayout(QHBoxLayout())
         frame.setContentsMargins(0, 0, 0, 0)
         self.accept_btn = QPushButton("&Accept")
-        self.accept_btn.setShortcut('Return')
+        self.accept_btn.setShortcut("Return")
         self.reset_btn = QPushButton("&Reset")
 
         frame.layout().addWidget(self.accept_btn)
@@ -4167,9 +4179,9 @@ class PathFilter(QWidget):
 
     def reset(self):
         self.include_files_edit.setText('')
-        self.exclude_files_edit.setText('DTL, exp, Correct' if self.filetype == 'GPS' else '')
+        self.exclude_files_edit.setText('DTL, exp, Correct' if self.filetype == 'GPS' else '[M]')
         self.include_folders_edit.setText('GPS' if self.filetype == 'GPS' else '')
-        self.exclude_folders_edit.setText('DUMP')
+        self.exclude_folders_edit.setText('DUMP, Backup')
         self.include_exts_edit.setText('')
         self.exclude_exts_edit.setText('')
 
@@ -4185,11 +4197,12 @@ class PathFilter(QWidget):
             return
 
         edits = [self.include_files_edit, self.exclude_files_edit, self.include_folders_edit,
-                      self.exclude_folders_edit, self.include_exts_edit, self.exclude_exts_edit]
+                 self.exclude_folders_edit, self.include_exts_edit, self.exclude_exts_edit]
         for setting, edit in zip(settings, edits):
             edit.setText(setting)
         if refresh is True:
             self.accept_sig.emit()
+
 
 class PEMBrowser(QTextBrowser):
     close_request = Signal(object)

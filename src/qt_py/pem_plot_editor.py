@@ -32,7 +32,6 @@ pd.options.mode.chained_assignment = None  # default='warn'
 
 # TODO Change auto clean to have a start and end channel
 # TODO maybe increase starting window size
-# TODO Changing readings to another component produces an error
 
 
 class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
@@ -71,15 +70,19 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.pem_file = None
         self.fallback_file = None
         self.units = None
+
         self.stations = np.array([])
         self.mag_df = None
-
+        self.current_component = "X"
+        self.nearest_station = None
         self.line_selected = False
         self.selected_station = None
         self.selected_data = pd.DataFrame()
         self.selected_lines = []
         self.deleted_lines = []
         self.selected_profile_stations = np.array([])
+        self.selected_profile_component = None
+        self.component_stations = {}
         self.nearest_decay = None
         self.mag_curves = []
 
@@ -181,31 +184,31 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         # Configure the profile plots
         # X axis lin plots
-        self.x_ax = self.x_profile_layout.addPlot(0, 0, rowspan=5, viewBox=ProfileViewBox())
-        self.x_ax0 = self.x_profile_layout.addPlot(1, 0, rowspan=1, viewBox=ProfileViewBox())
-        self.x_ax1 = self.x_profile_layout.addPlot(2, 0, rowspan=1, viewBox=ProfileViewBox())
-        self.x_ax2 = self.x_profile_layout.addPlot(3, 0, rowspan=1, viewBox=ProfileViewBox())
-        self.x_ax3 = self.x_profile_layout.addPlot(4, 0, rowspan=1, viewBox=ProfileViewBox())
-        self.x_ax4 = self.x_profile_layout.addPlot(5, 0, rowspan=1, viewBox=ProfileViewBox())
-        self.mag_x_ax = self.x_profile_layout.addPlot(6, 0, rowspan=1, viewBox=ProfileViewBox())
+        self.x_ax = self.x_profile_layout.addPlot(row=0, col=0, rowspan=5, viewBox=ProfileViewBox())
+        self.x_ax0 = self.x_profile_layout.addPlot(row=1, col=0, rowspan=1, viewBox=ProfileViewBox())
+        self.x_ax1 = self.x_profile_layout.addPlot(row=2, col=0, rowspan=1, viewBox=ProfileViewBox())
+        self.x_ax2 = self.x_profile_layout.addPlot(row=3, col=0, rowspan=1, viewBox=ProfileViewBox())
+        self.x_ax3 = self.x_profile_layout.addPlot(row=4, col=0, rowspan=1, viewBox=ProfileViewBox())
+        self.x_ax4 = self.x_profile_layout.addPlot(row=5, col=0, rowspan=1, viewBox=ProfileViewBox())
+        self.mag_x_ax = self.x_profile_layout.addPlot(row=6, col=0, rowspan=1, viewBox=ProfileViewBox())
 
         # Y axis lin plots
-        self.y_ax = self.y_profile_layout.addPlot(0, 0, rowspan=5, viewBox=ProfileViewBox())
-        self.y_ax0 = self.y_profile_layout.addPlot(1, 0, rowspan=1, viewBox=ProfileViewBox())
-        self.y_ax1 = self.y_profile_layout.addPlot(2, 0, rowspan=1, viewBox=ProfileViewBox())
-        self.y_ax2 = self.y_profile_layout.addPlot(3, 0, rowspan=1, viewBox=ProfileViewBox())
-        self.y_ax3 = self.y_profile_layout.addPlot(4, 0, rowspan=1, viewBox=ProfileViewBox())
-        self.y_ax4 = self.y_profile_layout.addPlot(5, 0, rowspan=1, viewBox=ProfileViewBox())
-        self.mag_y_ax = self.y_profile_layout.addPlot(6, 0, rowspan=1, viewBox=ProfileViewBox())
+        self.y_ax = self.y_profile_layout.addPlot(row=0, col=0, rowspan=5, viewBox=ProfileViewBox())
+        self.y_ax0 = self.y_profile_layout.addPlot(row=1, col=0, rowspan=1, viewBox=ProfileViewBox())
+        self.y_ax1 = self.y_profile_layout.addPlot(row=2, col=0, rowspan=1, viewBox=ProfileViewBox())
+        self.y_ax2 = self.y_profile_layout.addPlot(row=3, col=0, rowspan=1, viewBox=ProfileViewBox())
+        self.y_ax3 = self.y_profile_layout.addPlot(row=4, col=0, rowspan=1, viewBox=ProfileViewBox())
+        self.y_ax4 = self.y_profile_layout.addPlot(row=5, col=0, rowspan=1, viewBox=ProfileViewBox())
+        self.mag_y_ax = self.y_profile_layout.addPlot(row=6, col=0, rowspan=1, viewBox=ProfileViewBox())
 
         # Z axis lin plots
-        self.z_ax = self.z_profile_layout.addPlot(0, 0, rowspan=5, viewBox=ProfileViewBox())
-        self.z_ax0 = self.z_profile_layout.addPlot(1, 0, rowspan=1, viewBox=ProfileViewBox())
-        self.z_ax1 = self.z_profile_layout.addPlot(2, 0, rowspan=1, viewBox=ProfileViewBox())
-        self.z_ax2 = self.z_profile_layout.addPlot(3, 0, rowspan=1, viewBox=ProfileViewBox())
-        self.z_ax3 = self.z_profile_layout.addPlot(4, 0, rowspan=1, viewBox=ProfileViewBox())
-        self.z_ax4 = self.z_profile_layout.addPlot(5, 0, rowspan=1, viewBox=ProfileViewBox())
-        self.mag_z_ax = self.z_profile_layout.addPlot(6, 0, rowspan=1, viewBox=ProfileViewBox())
+        self.z_ax = self.z_profile_layout.addPlot(row=0, col=0, rowspan=5, viewBox=ProfileViewBox())
+        self.z_ax0 = self.z_profile_layout.addPlot(row=1, col=0, rowspan=1, viewBox=ProfileViewBox())
+        self.z_ax1 = self.z_profile_layout.addPlot(row=2, col=0, rowspan=1, viewBox=ProfileViewBox())
+        self.z_ax2 = self.z_profile_layout.addPlot(row=3, col=0, rowspan=1, viewBox=ProfileViewBox())
+        self.z_ax3 = self.z_profile_layout.addPlot(row=4, col=0, rowspan=1, viewBox=ProfileViewBox())
+        self.z_ax4 = self.z_profile_layout.addPlot(row=5, col=0, rowspan=1, viewBox=ProfileViewBox())
+        self.mag_z_ax = self.z_profile_layout.addPlot(row=6, col=0, rowspan=1, viewBox=ProfileViewBox())
 
         self.x_layout_axes = [self.x_ax, self.x_ax0, self.x_ax1, self.x_ax2, self.x_ax3, self.x_ax4, self.mag_x_ax]
         self.y_layout_axes = [self.y_ax, self.y_ax0, self.y_ax1, self.y_ax2, self.y_ax3, self.y_ax4, self.mag_y_ax]
@@ -284,7 +287,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.actionSplit_Profile.triggered.connect(self.toggle_profile_plots)
         # Required or else the plots don't align correctly.
         self.actionSplit_Profile.triggered.connect(lambda: self.plot_profiles())
-        self.actionSplit_Profile.triggered.connect(lambda: self.reset_range(profile_only=True))
+        self.actionSplit_Profile.triggered.connect(lambda: self.reset_range(decays=False, profiles=True))
 
         # Shortcuts
         self.actionSave_Screenshot.triggered.connect(self.save_img)
@@ -293,7 +296,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Checkboxes
         self.show_scatter_cbox.toggled.connect(lambda: self.plot_profiles(components='all'))
         self.plot_mag_cbox.toggled.connect(self.toggle_mag_plots)
-        self.auto_range_cbox.toggled.connect(self.reset_range)
+        self.auto_range_cbox.toggled.connect(lambda: self.reset_range(decays=True, profiles=False))
 
         self.plot_auto_clean_lines_cbox.toggled.connect(toggle_auto_clean_lines)
         self.plot_ontime_decays_cbox.toggled.connect(lambda: self.plot_decays(self.selected_station,
@@ -354,9 +357,16 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 ax.show() if self.actionSplit_Profile.isChecked() else ax.hide()
 
         if self.actionSplit_Profile.isChecked():
+            self.x_profile_layout.ci.layout.setRowStretchFactor(0, 0)
+            self.y_profile_layout.ci.layout.setRowStretchFactor(0, 0)
+            self.z_profile_layout.ci.layout.setRowStretchFactor(0, 0)
             self.min_ch_sbox.setEnabled(False)
             self.max_ch_sbox.setEnabled(False)
         else:
+            # Set the stretch factor to allow the single profile ax to take up 5 spaces.
+            self.x_profile_layout.ci.layout.setRowStretchFactor(0, 5)
+            self.y_profile_layout.ci.layout.setRowStretchFactor(0, 5)
+            self.z_profile_layout.ci.layout.setRowStretchFactor(0, 5)
             self.min_ch_sbox.setEnabled(True)
             self.max_ch_sbox.setEnabled(True)
 
@@ -603,7 +613,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
     def open_file_dialog(self):
         """
-        Open files through the file dialog
+        Open PEM files through the file dialog.
         """
         default_path = None
         if self.parent:
@@ -619,12 +629,12 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
     def save(self):
         """
-        Save the PEM file
+        Save the PEM file.
         """
         self.status_bar.showMessage('Saving file...')
         self.pem_file.data = self.pem_file.data[~self.pem_file.data.Deleted.astype(bool)]
         self.pem_file.save()
-        self.refresh(components='all', preserve_selection=False)
+        self.refresh_plots(components='all', preserve_selection=False)
 
         self.status_bar.showMessage('File saved.', 2000)
         QTimer.singleShot(2000, lambda: self.station_text.setText(station_text))
@@ -632,7 +642,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
     def save_as(self):
         """
-        Save the PEM file to a new file name
+        Save the PEM file to a new file name.
         """
         file_path = QFileDialog.getSaveFileName(self, '', str(self.pem_file.filepath), 'PEM Files (*.PEM)')[0]
         if file_path:
@@ -648,51 +658,40 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         in the PEMFile.
         :return: None
         """
-        def update_decay_plots():
+        def update_active_decay_plots(available_components):
             """
             Show/hide decay plots and profile plot tabs based on the components in the pem file
             """
-            x_ax = self.x_decay_plot
-            y_ax = self.y_decay_plot
-            z_ax = self.z_decay_plot
+            def toggle_decay_ax(component):
+                if component == "X":
+                    ax = self.x_decay_plot
+                elif component == "Y":
+                    ax = self.y_decay_plot
+                else:
+                    ax = self.z_decay_plot
 
-            if 'X' in components:
-                x_ax.show()
-                if x_ax not in self.active_decay_axes:
-                    self.active_decay_axes.append(x_ax)
-            else:
-                x_ax.hide()
-                if x_ax in self.active_decay_axes:
-                    self.active_decay_axes.remove(x_ax)
+                if component in available_components:
+                    ax.show()
+                    if ax not in self.active_decay_axes:
+                        self.active_decay_axes.append(ax)
+                else:
+                    ax.hide()
+                    if ax in self.active_decay_axes:
+                        self.active_decay_axes.remove(ax)
 
-            if 'Y' in components:
-                y_ax.show()
-                # self.profile_tab_widget.setTabEnabled(1, True)
-                if y_ax not in self.active_decay_axes:
-                    self.active_decay_axes.append(y_ax)
-            else:
-                y_ax.hide()
-                if y_ax in self.active_decay_axes:
-                    self.active_decay_axes.remove(y_ax)
-
-            if 'Z' in components:
-                z_ax.show()
-                if z_ax not in self.active_decay_axes:
-                    self.active_decay_axes.append(z_ax)
-            else:
-                z_ax.hide()
-                if z_ax in self.active_decay_axes:
-                    self.active_decay_axes.remove(z_ax)
+            toggle_decay_ax("X")
+            toggle_decay_ax("Y")
+            toggle_decay_ax("Z")
 
             self.link_decay_x()
             self.link_decay_y()
 
-        def update_profile_plots(components):
+        def update_active_profile_plots(avaiable_components):
             """
             Update which profile axes are active based on what components are present and update the axis links.
             Resets and re-adds all axes in order to keep the sorting of self.active_profile_axes consistent.
             """
-            def link_profile_axes():
+            def link_profile_axes():  # is this necessary?
                 if len(self.active_profile_axes) > 1:
                     for ax in self.active_profile_axes[1:]:
                         ax.setXLink(self.active_profile_axes[0])
@@ -709,20 +708,23 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 split_profile_axes = layout_axes[1:-1]
                 mag_profile_ax = layout_axes[-1]
 
-                if component in components:
+                if component in avaiable_components:
                     if self.actionSplit_Profile.isChecked():
                         # Add the split profile axes
                         self.active_profile_axes.extend(split_profile_axes)
                     else:
                         # Add the single profile ax
                         self.active_profile_axes.append(single_profile_ax)
-
                     # Add the mag ax last to keep the order consistent
                     self.active_profile_axes.append(mag_profile_ax)
+                else:
+                    # Cycle to the next component if there's no EM data for that component
+                    if self.current_component not in avaiable_components:
+                        print(f"'{component}' is not in the list of available components ({avaiable_components})")
+                        self.cycle_profile_component()
 
-                # In case there's no X component in the data, it will change components.
-                if self.profile_tab_widget.currentIndex() == 0:
-                    self.cycle_profile_component()
+                # if self.profile_tab_widget.currentIndex() == 0:
+                #     self.cycle_profile_component()
 
             # Reset in order to keep the sorting of the self.active_profile_axes list consistent.
             self.active_profile_axes = []
@@ -731,7 +733,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             update_active_axes("Y")
             update_active_axes("Z")
 
-            # link_profile_axes()
+            # link_profile_axes()  # Is this necessary?
 
         # Update the list of stations
         self.stations = np.sort(self.pem_file.get_stations(converted=True))
@@ -754,11 +756,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         else:
             self.number_of_repeats.setStyleSheet('')  # Reset the color automatically
 
-        components = self.pem_file.get_components()
-        update_profile_plots(components)
-        update_decay_plots()
-
-        print(F"Number of active profile axes after update_(): {len(self.active_profile_axes)}")
+        avaiable_components = self.pem_file.get_components()
+        update_active_profile_plots(avaiable_components)
+        update_active_decay_plots(avaiable_components)
 
     def link_decay_x(self):
         """
@@ -782,11 +782,13 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 else:
                     ax.setYLink(None)
 
-    def reset_range(self, profile_only=False):
+    def reset_range(self, decays=True, profiles=True):
         """
-        Auto range all axes
+        Auto range all axes.
+        :param decays: bool, auto-range the decay plots.
+        :param profiles: bool, auto-range the profile plots.
         """
-        if profile_only is False:
+        if decays is True:
             # If the y axes are linked, manually set the Y limit
             if self.link_y_cbox.isChecked():
                 # Auto range the X, then manually set the Y.
@@ -799,10 +801,11 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 for ax in self.decay_axes:
                     ax.autoRange()
 
-        stations = self.pem_file.get_stations(converted=True, incl_deleted=True)
-        for ax in self.profile_axes:
-            ax.autoRange()
-            ax.setXRange(stations.min(), stations.max())
+        if profiles is True:
+            stations = self.pem_file.get_stations(converted=True, incl_deleted=True)
+            for ax in self.profile_axes:
+                ax.autoRange()
+                ax.setXRange(stations.min(), stations.max())
 
     def zoom_to_offtime(self):
         """
@@ -906,28 +909,30 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                     # Plot the data
                     for channel in range(bounds[0], bounds[1] + 1):
                         data = profile_data.iloc[:, channel]
-
                         plot_lines(data, ax)
                         if self.show_scatter_cbox.isChecked():
                             plot_scatters(data, ax)
+                        ax.autoRange()  # Is there ever a reason not to auto range the profile axes?
 
                 plot_theory_pp(theory_data, axes[1])
             else:
                 # Plot the single profile ax
                 min_ch, max_ch = self.min_ch_sbox.value(), self.max_ch_sbox.value()
+                ax = axes[0]
                 for channel in range(min_ch, max_ch):
-                    axes[0].setLabel('left', f"Channel {'PP' if min_ch == 0 else min_ch} to {max_ch}", units=self.units)
+                    ax.setLabel('left', f"Channel {'PP' if min_ch == 0 else min_ch} to {max_ch}", units=self.units)
                     data = profile_data.iloc[:, channel]
-                    plot_lines(data, axes[0])
+                    plot_lines(data, ax)
                     if self.show_scatter_cbox.isChecked():
-                        plot_scatters(data, axes[0])
-                plot_theory_pp(theory_data, axes[0])
-
-        self.update_()
+                        plot_scatters(data, ax)
+                    ax.autoRange()  # Is there ever a reason not to auto range the profile axes?
+                # Only plot the theoretical value if the PP is plotted.
+                if min_ch == 0:
+                    plot_theory_pp(theory_data, ax)
 
         file = copy.deepcopy(self.pem_file)
         file.data = file.data.loc[~file.data.Deleted.astype(bool)]
-
+        self.update_()
         self.number_of_readings.setText(f"{len(file.data)} reading(s)")
 
         if not isinstance(components, np.ndarray):
@@ -949,6 +954,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                                                  converted=True,
                                                  ontime=False,
                                                  incl_deleted=True).dropna()
+            # For nearest station calculation
+            self.component_stations[component] = self.pem_file.get_stations(component=component, converted=True)
+
             if profile_data.empty:
                 continue
 
@@ -1322,15 +1330,15 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Hide the profile selection text. Decay selection text is taken care of in self.highlight_lines
         self.profile_selection_text.hide()
 
-    # @Log()
     def find_nearest_station(self, x):
         """
-        Calculate the nearest station from the position x
+        Calculate the nearest station (for the current component) from the position x
         :param x: int, mouse x location
         :return: int, station number
         """
-        idx = (np.abs(self.stations - x)).argmin()
-        return self.stations[idx]
+        stations = self.component_stations.get(self.current_component)
+        idx = (np.abs(stations - x)).argmin()
+        return stations[idx]
 
     def profile_mouse_moved(self, evt):
         """
@@ -1339,33 +1347,21 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         :param evt: pyqtgraph MouseClickEvent
         """
         assert len(self.active_profile_axes) > 0, "There are no active profile axes."
-        global nearest_station
         pos = evt
 
-        # Find the first plot which isn't hidden. If a hidden plot is used, will throw a LinAlgError: Singular matrix.
-        # The plot could be hidden because the EM profile axes are removed but the mag one isn't, so in the list of
-        # active axes, the mag plot starts near the end, but moves to the beginning, so using an index of 0 or -1
-        # won't always work. Another solution would be to force the position of the mag plot in the list of
-        # active_profile_axes.
-        ind = None
-        for i, ax in enumerate(self.active_profile_axes):
-            if ax.isVisible():
-                ind = i
-
-        assert ind is not None, f"No profile axis is currently visible."
-
-        mouse_point = self.active_profile_axes[ind].vb.mapSceneToView(pos)
-        nearest_station = self.find_nearest_station(int(mouse_point.x()))
+        profile_axes = self.get_component_profile_axes(self.current_component)
+        mouse_point = profile_axes[0].vb.mapSceneToView(pos)
+        self.nearest_station = self.find_nearest_station(int(mouse_point.x()))
 
         for ax in self.active_profile_axes:
-            ax.items[0].setPos(nearest_station)  # Move the hover line
-            ax.items[1].setPos(nearest_station, ax.viewRange()[1][1])  # Move the hover text
+            ax.items[0].setPos(self.nearest_station)  # Move the hover line
+            ax.items[1].setPos(self.nearest_station, ax.viewRange()[1][1])  # Move the hover text
             # Change the anchor of the text for the later stations so they don't get clipped
-            if len(self.stations) > 1 and nearest_station in self.stations[-math.floor(len(self.stations) / 2):]:
+            if len(self.stations) > 1 and self.nearest_station in self.stations[-math.floor(len(self.stations) / 2):]:
                 ax.items[1].setAnchor((1, 0))
             else:
                 ax.items[1].setAnchor((0, 0))
-            ax.items[1].setText(str(nearest_station))  # Chang text to the be the station number
+            ax.items[1].setText(str(self.nearest_station))  # Chang text to the be the station number
 
     def profile_plot_clicked(self, evt):
         """
@@ -1374,8 +1370,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         Uses the nearest station calculated in self.profile_mouse_moved.
         :param evt: pyqtgraph MouseClickEvent (not used)
         """
-        self.selected_station = nearest_station
-        self.plot_decays(nearest_station)
+        self.selected_station = self.nearest_station
+        self.plot_decays(self.nearest_station)
 
         # Hide any profile box-selection
         for ax in self.profile_axes:
@@ -1383,32 +1379,10 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         self.profile_selection_text.setText("")
 
-    def decay_plot_clicked(self, evt):
-        """
-        Signal slot, change the profile tab to the same component as the clicked decay plot, and select the neareset
-        decay line. If control is held, it extends the current selection.
-        :param evt: MouseClick event
-        """
-        if self.active_ax_ind is not None:
-
-            self.profile_tab_widget.setCurrentIndex(self.active_ax_ind)
-
-            if self.nearest_decay:
-
-                self.line_selected = True
-                if keyboard.is_pressed('ctrl'):
-                    self.selected_lines.append(self.nearest_decay)
-                    self.highlight_lines()
-                else:
-                    self.selected_data = None
-                    self.selected_lines = [self.nearest_decay]
-                    self.highlight_lines()
-        else:
-            logger.warning(f"No nearest decay.")
-
     def decay_mouse_moved(self, evt):
         """
         Signal slot, find the decay_axes plot under the mouse when the mouse is moved to determine which plot is active.
+        Highlights the decay line closest to the mouse.
         :param evt: MouseMovement event
         """
         def normalize(point):
@@ -1481,6 +1455,29 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             for line in self.plotted_decay_lines:
                 line.setShadowPen(None)
 
+    def decay_plot_clicked(self, evt):
+        """
+        Signal slot, change the profile tab to the same component as the clicked decay plot, and select the neareset
+        decay line. If control is held, it extends the current selection.
+        :param evt: MouseClick event
+        """
+        if self.active_ax_ind is not None:
+
+            self.profile_tab_widget.setCurrentIndex(self.active_ax_ind)
+
+            if self.nearest_decay:
+
+                self.line_selected = True
+                if keyboard.is_pressed('ctrl'):
+                    self.selected_lines.append(self.nearest_decay)
+                    self.highlight_lines()
+                else:
+                    self.selected_data = None
+                    self.selected_lines = [self.nearest_decay]
+                    self.highlight_lines()
+        else:
+            logger.warning(f"No nearest decay.")
+
     def box_select_decay_lines(self, rect):
         """
         Signal slot, select all lines that intersect the drawn rectangle.
@@ -1542,9 +1539,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         x1 = self.find_nearest_station(range[1])
         # logger.info(f"Selecting stations from {x0} to {x1}")
 
-        ind, comp = self.get_active_component()
-        comp_profile_axes = self.get_component_profile(comp)
-        comp_stations = self.pem_file.data[self.pem_file.data.Component == comp].Station
+        comp_profile_axes = self.get_component_profile_axes(self.current_component)
+        comp_stations = self.pem_file.data[self.pem_file.data.Component == self.current_component].Station
         comp_stations = np.array([convert_station(s) for s in comp_stations])
 
         # Update the pg.LinearRegionItem for each axes of the current component
@@ -1553,8 +1549,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             ax.vb.lr.show()
 
         # Find the stations that fall within the selection range
-        self.selected_profile_stations = comp_stations[
-            np.where((comp_stations <= x1) & (comp_stations >= x0))]
+        self.selected_profile_stations = comp_stations[np.where((comp_stations <= x1) & (comp_stations >= x0))]
+        # Copy so the selected component doesn't change when cycling components
+        self.selected_profile_component = copy.deepcopy(self.current_component)
 
         # Enable the edit buttons and set the profile selection text
         if self.selected_profile_stations.any():
@@ -1575,7 +1572,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.remove_profile_btn.setEnabled(False)
             self.profile_selection_text.hide()
 
-    def get_component_profile(self, comp):
+    def get_component_profile_axes(self, comp):
         """
         Return the layout which contains the axes for the given component.
         :param comp: Str
@@ -1598,7 +1595,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             if line in self.plotted_decay_lines:
                 ind.append(self.plotted_decay_lines.index(line))
         if not ind:
-            print(f"Line is not in the list of decay lines.")
+            # print(f"Line is not in the list of decay lines.")
             return
         else:
             data = self.decay_data.iloc[ind]
@@ -1609,10 +1606,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         Return the corresponding data of the currently selected stations from the profile plots
         :return: pandas DataFrame
         """
-        ind, comp = self.get_active_component()
-
         df = self.pem_file.data
-        filt = ((df.Component == comp) &
+        filt = ((df.Component == self.selected_profile_component) &
                 (df.cStation >= self.selected_profile_stations.min()) &
                 (df.cStation <= self.selected_profile_stations.max()))
         data = self.pem_file.data[filt]
@@ -1632,6 +1627,21 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             comp = 'Z'
         return tab_ind, comp
 
+    def get_comp_indexes(self):
+        """
+        Return the index of the stacked widget of each component present in the PEM file
+        :return: list of int
+        """
+        indexes = []
+        components = self.pem_file.get_components()
+        if 'X' in components:
+            indexes.append(0)
+        if 'Y' in components:
+            indexes.append(1)
+        if 'Z' in components:
+            indexes.append(2)
+        return indexes
+
     def delete_lines(self):
         """
         Delete the selected lines. The data corresponding to the selected lines have their deletion flags flipped
@@ -1647,7 +1657,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Update the data in the pem file object
             self.pem_file.data.loc[selected_data.index] = selected_data
-            self.refresh(components=selected_data.Component.unique(), preserve_selection=True)
+            self.refresh_plots(components=selected_data.Component.unique(), preserve_selection=True)
 
     def undelete_selected_lines(self):
         """
@@ -1661,7 +1671,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Update the data in the pem file object
             self.pem_file.data.loc[selected_data.index] = selected_data
-            self.refresh(components=selected_data.Component.unique(), preserve_selection=True)
+            self.refresh_plots(components=selected_data.Component.unique(), preserve_selection=True)
 
     def undelete_all(self):
         """
@@ -1669,7 +1679,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         :return: None
         """
         self.pem_file.data.loc[:, 'Deleted'] = self.pem_file.data.loc[:, 'Deleted'].map(lambda x: False)
-        self.refresh()
+        self.refresh_plots()
 
     def change_decay_component_dialog(self, source=None):
         """
@@ -1704,7 +1714,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
-            self.refresh(components=[old_comp, new_component], preserve_selection=True)
+            self.refresh_plots(components=[old_comp, new_component], preserve_selection=True)
 
     def change_suffix_dialog(self, source=None):
         """
@@ -1735,7 +1745,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         # Update the data in the pem file object
         self.pem_file.data.iloc[selected_data.index] = selected_data
-        self.refresh()
+        self.refresh_plots()
 
     def change_station(self):
         """
@@ -1786,7 +1796,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.pem_file.data.iloc[selected_data.index] = selected_data
 
             # Update the plots
-            self.refresh(components=selected_data.Component.unique())
+            self.refresh_plots(components=selected_data.Component.unique())
 
     def flip_decays(self, source=None):
         """
@@ -1804,7 +1814,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
-            self.refresh(components=selected_data.Component.unique(), preserve_selection=True)
+            self.refresh_plots(components=selected_data.Component.unique(), preserve_selection=True)
 
     def remove_stations(self):
         """
@@ -1817,30 +1827,16 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
-            self.refresh(components=selected_data.Component.unique(), preserve_selection=True)
+            self.refresh_plots(components=selected_data.Component.unique(), preserve_selection=True)
 
     def cycle_profile_component(self):
         """
         Signal slot, cycle the profile plots to the next component
         """
-        def get_comp_indexes():
-            """
-            Return the index of the stacked widget of each component present in the PEM file
-            :return: list of int
-            """
-            indexes = []
-            components = self.pem_file.get_components()
-            if 'X' in components:
-                indexes.append(0)
-            if 'Y' in components:
-                indexes.append(1)
-            if 'Z' in components:
-                indexes.append(2)
-            return indexes
-
-        comp_indexes = get_comp_indexes()
+        comp_indexes = self.get_comp_indexes()
         current_ind = self.profile_tab_widget.currentIndex()
         if len(comp_indexes) > 1:
+            # Reset the cycle
             if current_ind + 1 > max(comp_indexes):
                 new_ind = min(comp_indexes)
             else:
@@ -1852,8 +1848,10 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         elif comp_indexes[0] != current_ind:
             new_ind = comp_indexes[0]
         else:
-            return
+            new_ind = current_ind  # Component wasn't changed
+
         self.profile_tab_widget.setCurrentIndex(new_ind)
+        self.current_component = ["X", "Y", "Z"][new_ind]
 
     def cycle_station(self, direction):
         """
@@ -1999,7 +1997,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.plot_decays(self.selected_station)
 
         # Reset the range for only the profile axes.
-        self.reset_range(profile_only=True)
+        self.reset_range(decays=False, profiles=True)
 
         self.message.information(self, 'Auto-clean results', f"{count} reading(s) automatically deleted.")
 
@@ -2031,11 +2029,11 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.pem_file.data.loc[repeats.index] = repeats
 
         # Plot the new data
-        self.refresh(components='all', preserve_selection=False)
+        self.refresh_plots(components='all', preserve_selection=False)
 
         self.message.information(self, 'Auto-rename results', f"{len(repeats)} reading(s) automatically renamed.")
 
-    def refresh(self, components='all', preserve_selection=False):
+    def refresh_plots(self, components='all', preserve_selection=False):
         self.plot_profiles(components=components)
         self.plot_decays(self.selected_station, preserve_selection=preserve_selection)
 
@@ -2221,7 +2219,6 @@ class ProfileViewBox(pg.ViewBox):
 
 
 if __name__ == '__main__':
-    from src.pem.pem_file import parse_file
     from pathlib import Path
     from src.qt_py import dark_palette
 
@@ -2240,8 +2237,8 @@ if __name__ == '__main__':
 
     # file = r"C:\_Data\2021\TMC\Murchison\Barraute B\3000E.PEM"  # Error
     # file = r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW\3000E.PEM"  # No error
-    # pem_file = pem_g.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-211\RAW\em21-211 xy_1021.pem")
-    pem_file = pem_g.parse(r"C:\_Data\2021\Managem\Surface\Kokiak Aicha\RAW\600n.PEM")
+    pem_file = pem_g.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-211\RAW\em21-211 xy_1021.pem")
+    # pem_file = pem_g.parse(r"C:\_Data\2021\Managem\Surface\Kokiak Aicha\RAW\600n.PEM")
     # pem_file.prep_rotation()
     # pem_file.rotate()
     # pem_file = pem_g.get_pems(folder="Raw Boreholes", file=r"SR-15-04 Z.PEM")[0]

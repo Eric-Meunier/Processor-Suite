@@ -824,20 +824,26 @@ class PEMFile:
         components = list(self.data['Component'].unique())
         return components
 
-    def get_stations(self, converted=False, incl_deleted=True):
+    def get_stations(self, component=None, converted=False, incl_deleted=True):
         """
         Return a list of unique stations in the PEM file.
-        :param converted: Bool, whether to convert the stations to Int
-        :param incl_deleted: Bool, whether include readings which are flagged for deletion.
+        :param component: str, only count stations for the given component. 'None' will consider all components.
+        :param converted: bool, whether to convert the stations to Int.
+        :param incl_deleted: bool, whether include readings which are flagged for deletion.
         :return: list
         """
         if incl_deleted:
-            stations = self.data.Station.unique()
+            data = self.data.copy()
         else:
-            stations = self.data[~self.data.Deleted].Station.unique()
+            data = self.data[~self.data.Deleted].copy()
 
+        if component is not None:
+            data = data[data.Component == component.upper()]
+
+        stations = data.Station.unique()
         if converted:
             stations = [convert_station(station) for station in stations]
+
         return np.array(natsort.os_sorted(stations))
 
     def get_gps_extents(self):
