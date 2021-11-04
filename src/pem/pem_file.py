@@ -11,7 +11,6 @@ import natsort
 import numpy as np
 import pandas as pd
 from pyproj import CRS
-import matplotlib.pyplot as plt
 from scipy.spatial.transform import Rotation as R
 
 from src.pem import convert_station
@@ -835,7 +834,7 @@ class PEMFile:
         if incl_deleted:
             data = self.data.copy()
         else:
-            data = self.data[~self.data.Deleted].copy()
+            data = self.data[~self.data.Deleted.astype(bool)].copy()
 
         if component is not None:
             data = data[data.Component == component.upper()]
@@ -1018,10 +1017,9 @@ class PEMFile:
                 group.Remove = True
             return group
 
-        # data = self.data.copy()
-        data = self.data
+        data = self.data.copy()
 
-        # Add a 'Remove' column, which will be removed later.
+        # Add a 'Remove' column, which will be removed later. This way a data frame of ineligible data can be kept.
         data['Remove'] = False
 
         # Create a filter for X and Y data only
@@ -1728,12 +1726,20 @@ class PEMFile:
         :return: PEM file object with rotated data
         """
         assert self.is_borehole(), f"{self.filepath.name} is not a borehole file."
+
+        if not self.prepped_for_rotation:
+            logger.info(f"{self.filepath.name} has not been prepped for rotation.")
+            self.prep_rotation()
+
         if method == "unrotate":
             assert self.is_derotated(), f"{self.filepath.name} has not been de-rotated."
             assert self.has_d7(), f"{self.filepath.name} RAD tool values must be D7."
-        else:
-            if method is not None:
-                assert self.prepped_for_rotation, f"{self.filepath.name} has not been prepped for rotation."
+        # else:
+        #     if method is not None:
+        #         # assert self.prepped_for_rotation, f"{self.filepath.name} has not been prepped for rotation."
+        #         if not self.prepped_for_rotation:
+        #             logger.info(f"{self.filepath.name} has not been prepped for rotation.")
+        #             self.prep_rotation()
         self.soa += soa
         logger.info(f"De-rotating data of {self.filepath.name} using {method} with SOA {self.soa}.")
 
@@ -1835,9 +1841,9 @@ class PEMFile:
                                               weights=weights)
                 return averaged_reading
 
-            print(f"Rotating station {group.iloc[0].Station}")
-            if group.iloc[0].Station == "400":
-                print("Stopping here")
+            # print(f"Rotating station {group.iloc[0].Station}")
+            # if group.iloc[0].Station == "400" or group.iloc[0].Station == "220":
+            #     print("Stopping here")
             # Create a new RADTool object ready for de-rotating
             rad = group.iloc[0]['RAD_tool']  # Why do some RADs have no acc angle value?
             new_rad = get_new_rad(method)
@@ -1903,7 +1909,6 @@ class PEMFile:
 
         self.data.update(rotated_data)  # Fixes KeyError "... value not in index"
 
-        # print(list(self.data[xy_filt].groupby(["Station", "RAD_ID"]))[0][1])
         # Remove the rows that were filtered out in filtered_data
         if method == "unrotate":
             self.soa = 0
@@ -2200,11 +2205,13 @@ class PEMFile:
                                              group_keys=False,
                                              as_index=False).apply(lambda l: prepare_rad(l))
 
+        # Don't use .update as the ineligible data will be kept in.
         xy_filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
-        # self.data[xy_filt] = prepped_data  # Using .update doesn't work here, because prepped_data is a copy().
-        self.data.update(prepped_data)  # Using .update doesn't work here, because prepped_data is a copy().
+        self.data[xy_filt] = prepped_data
+
         # Remove the rows that were filtered out in filtered_data
-        self.data.dropna(subset=['Station'], inplace=True)
+        # Resetting the index prevents the error IndexError: single positional indexer is out-of-bounds
+        self.data = self.data.dropna(subset=['Station']).reset_index(drop=True)
         self.prepped_for_rotation = True
         return self, ineligible_data
 
@@ -3870,7 +3877,6 @@ class PEMGetter:
     """
     Class to get a list of PEM files from a testing directory. Used for testing.
     """
-
     def __init__(self):
         self.pem_parser = PEMParser()
 
@@ -3975,10 +3981,16 @@ if __name__ == '__main__':
 
     pg = PEMGetter()
 
+    pem_file = pg.parse(sample_folder.joinpath(r"Line GPS\800N.PEM"))
+    txt_file = sample_folder.joinpath(r"Line GPS\KA800N_1027.txt")
+    line = SurveyLine(txt_file)
+    line.get_warnings(stations=pem_file.get_stations(converted=True, incl_deleted=False))
+
     # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
     # file = r"C:\_Data\2021\TMC\Laurentia\STE-21-50-W3\RAW\ste-21-50w3xy_0819.dmp2"
-    pem_file = pg.parse(r"C:\_Data\2021\TMC\Laurentia\STE-21-70\Final\STE-21-70 XYT.PEM")
-    # pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-264-21\RAW\xy_1002.PEM")
+    # pem_files = pg.parse(r"C:\_Data\2021\TMC\Laurentia\STE-21-70\Final\STE-21-70 XYT.PEM")
+    # pem_files = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-264-21\RAW\xy_1002.PEM")
+    # pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\SAN-0251-21\RAW\xy_1019.PEM")
     # file = r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW\l35eb2_0.PEM817.dmp2"
     # pem_file, errors = dmpparser.parse(file)
     # print(pem_file.to_string())
@@ -3990,6 +4002,7 @@ if __name__ == '__main__':
     # pem_files = pg.get_pems(folder="Raw Boreholes", file="em21-155 z_0415.PEM")
 
     # pem_file = pem_files[0]
+    # pem_file, _ = pem_file.prep_rotation()
     # pem_file.get_theory_pp()
     # pem_file.get_theory_data()
     # pem_file.get_reversed_components()

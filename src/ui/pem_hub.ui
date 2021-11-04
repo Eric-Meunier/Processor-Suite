@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1543</width>
+    <width>1152</width>
     <height>846</height>
    </rect>
   </property>
@@ -494,6 +494,12 @@ Station</string>
               <column>
                <property name="text">
                 <string>Split</string>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>GPS
+Warnings</string>
                </property>
               </column>
               <column>
@@ -1192,14 +1198,14 @@ Warnings</string>
          </widget>
          <widget class="QFrame" name="piw_frame">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
           <property name="minimumSize">
            <size>
-            <width>300</width>
+            <width>0</width>
             <height>0</height>
            </size>
           </property>
@@ -1231,7 +1237,7 @@ Warnings</string>
            <item>
             <widget class="QStackedWidget" name="stackedWidget">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
@@ -1261,7 +1267,7 @@ Warnings</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1543</width>
+     <width>1152</width>
      <height>21</height>
     </rect>
    </property>

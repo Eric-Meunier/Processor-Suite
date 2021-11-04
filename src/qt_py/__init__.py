@@ -213,11 +213,12 @@ def read_file(file, as_list=False):
     return contents
 
 
-def df_to_table(df, table):
+def df_to_table(df, table, set_role=False):
     """
     Add the contents of the data frame to the table
     :param df: pandas pd.DataFrame of the GPS
     :param table: QTableWidget
+    :param set_role: Use item.setData(Qt.EditRole), which will caused numbers to use a spin-box like cell.
     :return: None
     """
     def write_row(series):
@@ -227,11 +228,12 @@ def df_to_table(df, table):
          :return: None
          """
         def series_to_items(x):
-            # if isinstance(x, float):
-            #     return QTableWidgetItem(f"{x}")
-            #     # return QTableWidgetItem(f"{x:.2f}")
-            # else:
-            return QTableWidgetItem(str(x))
+            if set_role is True:
+                item = QTableWidgetItem()
+                item.setData(Qt.EditRole, x)
+                return item
+            else:
+                return QTableWidgetItem(str(x))
 
         row_pos = table.rowCount()
         table.insertRow(row_pos)

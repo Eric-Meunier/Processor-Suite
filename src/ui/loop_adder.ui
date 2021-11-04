@@ -204,7 +204,14 @@
     </property>
     <addaction name="auto_sort_cbox"/>
    </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionInterp_Null_Elevation"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
    <addaction name="menuSettings"/>
   </widget>
   <widget class="QStatusBar" name="status_bar">
@@ -229,6 +236,11 @@
    </property>
    <property name="text">
     <string>Auto-Sort By Position</string>
+   </property>
+  </action>
+  <action name="actionInterp_Null_Elevation">
+   <property name="text">
+    <string>Interpolate Null Elevation</string>
    </property>
   </action>
  </widget>

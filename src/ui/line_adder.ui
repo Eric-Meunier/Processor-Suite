@@ -30,6 +30,52 @@
     <property name="spacing">
      <number>3</number>
     </property>
+    <item row="1" column="0">
+     <widget class="QFrame" name="frame">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+        <horstretch>0</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="frameShape">
+       <enum>QFrame::StyledPanel</enum>
+      </property>
+      <property name="frameShadow">
+       <enum>QFrame::Plain</enum>
+      </property>
+      <layout class="QGridLayout" name="horizontalLayout">
+       <property name="leftMargin">
+        <number>3</number>
+       </property>
+       <property name="topMargin">
+        <number>3</number>
+       </property>
+       <property name="rightMargin">
+        <number>3</number>
+       </property>
+       <property name="bottomMargin">
+        <number>3</number>
+       </property>
+       <property name="spacing">
+        <number>3</number>
+       </property>
+       <item row="0" column="0">
+        <widget class="QDialogButtonBox" name="button_box">
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+         <property name="standardButtons">
+          <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+         </property>
+         <property name="centerButtons">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
     <item row="0" column="0">
      <widget class="QSplitter" name="splitter_2">
       <property name="orientation">
@@ -40,14 +86,14 @@
       </property>
       <widget class="QTableWidget" name="table">
        <property name="sizePolicy">
-        <sizepolicy hsizetype="Maximum" vsizetype="Expanding">
+        <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
          <horstretch>0</horstretch>
          <verstretch>0</verstretch>
         </sizepolicy>
        </property>
        <property name="minimumSize">
         <size>
-         <width>400</width>
+         <width>0</width>
          <height>0</height>
         </size>
        </property>
@@ -135,52 +181,6 @@
       </widget>
      </widget>
     </item>
-    <item row="1" column="0">
-     <widget class="QFrame" name="frame">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
-        <horstretch>0</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
-      </property>
-      <property name="frameShadow">
-       <enum>QFrame::Plain</enum>
-      </property>
-      <layout class="QGridLayout" name="horizontalLayout">
-       <property name="leftMargin">
-        <number>3</number>
-       </property>
-       <property name="topMargin">
-        <number>3</number>
-       </property>
-       <property name="rightMargin">
-        <number>3</number>
-       </property>
-       <property name="bottomMargin">
-        <number>3</number>
-       </property>
-       <property name="spacing">
-        <number>3</number>
-       </property>
-       <item row="0" column="0">
-        <widget class="QDialogButtonBox" name="button_box">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-         <property name="standardButtons">
-          <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
-         </property>
-         <property name="centerButtons">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </widget>
-    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -197,9 +197,6 @@
      <string>File</string>
     </property>
     <addaction name="actionOpen"/>
-    <addaction name="separator"/>
-    <addaction name="actionEdit_Names"/>
-    <addaction name="actionInterp_Null_Elevation"/>
    </widget>
    <widget class="QMenu" name="menuSettings">
     <property name="title">
@@ -207,7 +204,17 @@
     </property>
     <addaction name="auto_sort_cbox"/>
    </widget>
+   <widget class="QMenu" name="menuEdit">
+    <property name="title">
+     <string>Edit</string>
+    </property>
+    <addaction name="actionEdit_Names"/>
+    <addaction name="actionGenerate_Station_Names"/>
+    <addaction name="separator"/>
+    <addaction name="actionInterp_Null_Elevation"/>
+   </widget>
    <addaction name="menuFile"/>
+   <addaction name="menuEdit"/>
    <addaction name="menuSettings"/>
   </widget>
   <widget class="QStatusBar" name="status_bar">
@@ -247,6 +254,11 @@
   <action name="actionInterp_Null_Elevation">
    <property name="text">
     <string>Interpolate Null Elevation</string>
+   </property>
+  </action>
+  <action name="actionGenerate_Station_Names">
+   <property name="text">
+    <string>Generate Station Names</string>
    </property>
   </action>
  </widget>

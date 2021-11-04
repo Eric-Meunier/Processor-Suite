@@ -621,12 +621,30 @@ class TransmitterLoop(BaseGPS):
         # bottom-right, and bottom-left order
         return np.array([tl, tr, br, bl], dtype="float32")
 
+    def get_warnings(self):
+        """
+        Return rows where there are duplicates and where the elevation is 0.
+        :return: DataFrame
+        """
+        if self.df.empty:
+            return
+
+        duplicates = self.df[self.df.duplicated(subset=None, keep=False)]
+        print(f"Duplicates: \n{duplicates}")
+
+        # sorted_df = self.df.sort_values(by="Station", ascending=True).copy().reset_index(drop=True)
+        # sorting_mask = sorted_df.Station != self.df.Station
+        # sort_warnings = self.df[sorting_mask]
+        # print(f"Sorting warnings: \n{sort_warnings}")
+
+        elevation_warnings = self.df[self.df.Elevation == 0]
+        print(f"Elevation warnings:\n{elevation_warnings}")
+
 
 class SurveyLine(BaseGPS):
     """
     Survey Line class object representing the survey line GPS information
     """
-
     def __init__(self, line, crs=None):
         """
         :param line: Union (str, pd.DataFrame, list) filepath of a text file OR a data frame/list containing line GPS
@@ -655,7 +673,6 @@ class SurveyLine(BaseGPS):
         calculate the distance of each other point from that point, then sorts.
         :return: pandas pd.DataFrame of the sorted line GPS
         """
-
         def calc_distance(point, end_point):
             # Return the Euclidean distance between points p and q.
             p = end_point
@@ -713,12 +730,55 @@ class SurveyLine(BaseGPS):
 
         return pd.DataFrame.from_records(azimuths, columns=["Station", "Azimuth"])
 
+    def get_warnings(self, stations=None):
+        """
+        Return rows where the station is a duplicate, is out of order, or is missing from the EM data (only if stations
+        is passed), or where the elevation is 0.
+        :param stations: list of stations in the EM data.
+        :return: dict, duplicates, missing GPS, sorting warnings, elevation warnings.
+        """
+        duplicates = pd.DataFrame()
+        missing_gps = np.array([])
+        sorting_warnings = pd.DataFrame()
+        elevation_warnings = pd.DataFrame()
+
+        if self.df.empty:
+            return {"Duplicates": duplicates,
+                    "Missing GPS": missing_gps,
+                    "Sorting Warnings": sorting_warnings,
+                    "Elevation Warnings": elevation_warnings}
+
+        # Duplicates
+        duplicates = self.df[self.df.duplicated(subset="Station", keep=False)]
+        # print(f"Duplicates: \n{duplicates}")
+
+        # Missing GPS
+        if stations is not None:
+            missing_gps = stations[np.isin(stations, self.df.Station, invert=True)]
+            # print(f"Missing GPS:\n{missing_gps}")
+
+        # Sorting
+        ascending = True if self.df.Station.iloc[0] < self.df.Station.iloc[-1] else False
+        # print(F"Ascending is {ascending}")
+        sorted_df = self.df.sort_values(by="Station", ascending=ascending).copy().reset_index(drop=True)
+        sorting_mask = sorted_df.Station != self.df.Station
+        sorting_warnings = self.df[sorting_mask]
+        # print(f"Sorting warnings: \n{sorting_warnings}")
+
+        # Elevation
+        elevation_warnings = self.df[self.df.Elevation == 0]
+        # print(f"Elevation warnings:\n{elevation_warnings}")
+
+        return {"Duplicates": duplicates,
+                "Missing GPS": missing_gps,
+                "Sorting Warnings": sorting_warnings,
+                "Elevation Warnings": elevation_warnings}
+
 
 class BoreholeCollar(BaseGPS):
     """
     Class object representing the collar GPS
     """
-
     def __init__(self, hole, crs=None):
         """
         :param hole: Union (str filepath, pd.DataFrame, list), GPS data
@@ -1000,7 +1060,6 @@ class BoreholeGeometry(BaseGPS):
 
 if __name__ == '__main__':
     # from src.pem.pem_getter import PEMGetter
-    # pg = PEMGetter()
     # pem_files = pg.get_pems(client='Raglan', number=1)
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
@@ -1012,11 +1071,11 @@ if __name__ == '__main__':
     # gpx_file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
     # gpx_file = samples_folder.joinpath(r'GPX files\Loop-32.gpx')
 
-    kml_file = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\KML Files\BHP Arizona OCLT-1801D.kmz"
+    # kml_file = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\KML Files\BHP Arizona OCLT-1801D.kmz"
     # kml_file = r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\KML Files\CAPA_A_stations.kmz"
     # read_kmz(kml_file)
-    utm_df, gdf, crs = read_gps(kml_file, for_pemfile=True)
-    print(utm_df)
+    # utm_df, gdf, crs = read_gps(kml_file, for_pemfile=True)
+    # print(utm_df)
     # utm_gps, zone, hemisphere, crs, errors = gpx_editor.get_utm(gpx_file)
     # df = pd.DataFrame(utm_gps)
     # df.to_csv(r"C:\_Data\2021\Eastern\L5N.CSV")

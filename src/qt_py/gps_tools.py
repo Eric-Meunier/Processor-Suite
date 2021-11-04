@@ -194,13 +194,14 @@ class GPSAdder(QMainWindow):
         :return: None
         """
         self.table.blockSignals(True)
+        self.df = df
 
         if df.empty:
             logger.error(f"No GPS found.")
             self.message.error(self, 'Error', 'No GPS was found.')
         else:
             self.clear_table()
-            df_to_table(df, self.table)
+            df_to_table(df, self.table, set_role=True)
 
         self.table.blockSignals(False)
 
@@ -344,6 +345,21 @@ class GPSAdder(QMainWindow):
         if 'color_table' in dir(self):
             self.refresh_table()
 
+    def interp_elevation(self):
+        """
+        Interpolate missing ("0.0") elevation values. Common in GPX files.
+        :return: None
+        """
+        # Remove any selections/highlights
+        self.clear_selection()
+
+        elevation = self.df.Elevation
+        filt = elevation == 0
+        interp_elevation = np.interp(self.df.index, self.df[~filt.astype(bool)].index, self.df[~filt.astype(bool)].Elevation)
+        self.df.Elevation = interp_elevation.round(2)
+        self.df_to_table(self.df)
+        self.plot_table(preserve_limits=False)
+
 
 class LineAdder(GPSAdder, Ui_LineAdder):
 
@@ -353,10 +369,12 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.setWindowTitle('Line Adder')
         self.actionOpen.setIcon(get_icon("open.png"))
         self.actionEdit_Names.setIcon(get_icon("edit.png"))
+        self.actionGenerate_Station_Names.setIcon(get_icon("add_square"))
         self.actionInterp_Null_Elevation.setIcon(get_icon("grid_planner.png"))
         self.status_bar.hide()
 
         self.parent = parent
+        self.pem_file = None
         self.line = None
         self.selected_row_info = None
         self.name_edit = None
@@ -373,6 +391,19 @@ class LineAdder(GPSAdder, Ui_LineAdder):
 
         self.format_plots()
         self.init_signals()
+
+    def init_signals(self):
+        self.actionOpen.triggered.connect(self.open_file_dialog)
+        self.actionEdit_Names.triggered.connect(self.edit_names)
+        self.actionGenerate_Station_Names.triggered.connect(self.generate_station_names)
+        self.actionInterp_Null_Elevation.triggered.connect(self.interp_elevation)
+
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.close)
+
+        self.table.cellChanged.connect(self.cell_changed)
+        self.table.itemSelectionChanged.connect(self.highlight_point)
+        self.auto_sort_cbox.toggled.connect(lambda: self.open(self.line))
 
     def format_plots(self):
         self.plan_view.setTitle('Plan View')
@@ -407,18 +438,6 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.section_view.showLabel('right', show=False)
         self.section_view.showLabel('top', show=False)
 
-    def init_signals(self):
-        self.actionOpen.triggered.connect(self.open_file_dialog)
-        self.actionEdit_Names.triggered.connect(self.edit_names)
-        self.actionInterp_Null_Elevation.triggered.connect(self.interp_elevation)
-
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.close)
-
-        self.table.cellChanged.connect(self.cell_changed)
-        self.table.itemSelectionChanged.connect(self.highlight_point)
-        self.auto_sort_cbox.toggled.connect(lambda: self.open(self.line))
-
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_Delete:
             self.del_row()
@@ -430,38 +449,23 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         elif e.key() == Qt.Key_Escape:  # Clear the selection
             self.clear_selection()
 
-    def edit_names(self):
-        """
-        Remove text from station names. Useful for GPX files.
-        """
-        trunc_amt, _ = QInputDialog().getInt(self, "Edit Station Names", "Amount to truncate:", 1)
-        if trunc_amt:
-            # Remove any selections/highlights
-            self.clear_selection()
-            print(f"Truncating {trunc_amt}")
-            self.df.Station.loc[:] = self.df.Station.loc[:].map(lambda x: str(x)[trunc_amt:]).astype(int)
-            self.df_to_table(self.df)
-            self.plot_table(preserve_limits=True)
-
-    def interp_elevation(self):
-        """
-        Interpolate missing ("0.0") elevation values.
-        :return: None
-        """
-        df = table_to_df(self.table)
-        elevation = df.Elevation
-        filt = elevation == 0
-        interp_elevation = np.interp(df.index, df[~filt.astype(bool)].index, df[~filt.astype(bool)].Elevation)
-        df.Elevation = interp_elevation
-        self.df_to_table(df)
-        self.plot_table(preserve_limits=False)
-
-    def open(self, gps, name=''):
+    def open(self, gps, pem_file=None):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
         :param gps: Union [filepath; GPS object; pd.DataFrame], Loop to open
-        :param name: str, name of the line
+        :param pem_file: PEMFile object, if passed it will re-name the window and pass the stations to be used in
+        self.generate_stations()
         """
+        def check_elevation_errors():
+            null_elevation = self.df[self.df.Elevation == 0.]
+            if len(null_elevation) > 0:
+                response = self.message.question(self, "Interpolate Null Elevation?", f"{len(null_elevation)} "
+                                                       f"null elevation values were found. Interpolate these values"
+                                                       f" based on nearby values?",
+                                                 self.message.Yes, self.message.No)
+                if response == self.message.Yes:
+                    self.interp_elevation()
+
         errors = pd.DataFrame()
         if isinstance(gps, str) or isinstance(gps, Path):
             if Path(gps).is_file():
@@ -479,17 +483,20 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             self.message.critical(self, 'Error', f"No GPS found. {self.line.error_msg}.")
             return
 
-        self.setWindowTitle(f'Line Adder - {name}')
+        self.pem_file = pem_file
+        self.setWindowTitle(f'Line Adder - {pem_file.filepath.name}' if pem_file else "Line Adder")
+        self.actionGenerate_Station_Names.setEnabled(True if pem_file else False)
 
         self.clear_table()
         self.units = self.line.get_units()
         self.df = self.line.get_line(sorted=self.auto_sort_cbox.isChecked())
-        self.df.loc[:, "Easting":"Elevation"] = self.df.loc[:, "Easting":"Elevation"].astype(float).applymap(
-            lambda x: f"{x:.2f}")
+        self.df.loc[:, "Easting":"Elevation"] = self.df.loc[:, "Easting":"Elevation"].astype(float).round(2)
+        # self.df.loc[:, "Easting":"Elevation"] = self.df.loc[:, "Easting":"Elevation"].astype(float).applymap(
+        #     lambda x: f"{x:.2f}")
         # Convert the column dtypes for when the data is created from the table values
-        self.df["Easting"] = pd.to_numeric(self.df["Easting"])
-        self.df["Northing"] = pd.to_numeric(self.df["Northing"])
-        self.df["Elevation"] = pd.to_numeric(self.df["Elevation"])
+        # self.df["Easting"] = pd.to_numeric(self.df["Easting"])
+        # self.df["Northing"] = pd.to_numeric(self.df["Northing"])
+        # self.df["Elevation"] = pd.to_numeric(self.df["Elevation"])
         self.df_to_table(self.df)
         self.plot_table()
         self.color_table()
@@ -500,15 +507,18 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             self.message.warning(self, 'Parsing Error',
                                  f"The following rows could not be parsed:\n\n{errors.to_string()}")
 
+        check_elevation_errors()
+
     def plot_table(self, preserve_limits=False):
         """
         Plot the data from the table to the axes.
+        :param preserve_limits: bool, preserve the limits of the plan and section views. Not used in LineAdder.
         :return: None
         """
         df = table_to_df(self.table)
         if df.empty:
             return
-        df['Station'] = df['Station'].astype(int)
+        # df['Station'] = df['Station'].astype(int)
 
         self.plan_plot.setData(df.Easting.to_numpy(), df.Northing.to_numpy())
         self.section_plot.setData(df.Station.to_numpy(), df.Elevation.to_numpy())
@@ -636,6 +646,46 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         # self.errors_label.setText(f"{str(errors)} error(s) ")
         self.table.blockSignals(False)
 
+    def edit_names(self):
+        """
+        Remove (slice) text from station names. Useful for GPX files.
+        """
+        trunc_amt, ok_pressed = QInputDialog().getInt(self, "Edit Station Names", "Amount to truncate:", 1)
+        if trunc_amt and ok_pressed:
+            # Remove any selections/highlights
+            self.clear_selection()
+
+            try:
+                self.df.Station.loc[:] = self.df.Station.loc[:].map(lambda x: str(x)[trunc_amt:]).astype(int)
+            except ValueError:
+                self.message.information(self, "Error", f"The process would result in invalid station names.\n"
+                                                        f"The process was aborted.")
+            else:
+                self.df_to_table(self.df)
+                self.plot_table(preserve_limits=True)
+
+    def generate_station_names(self):
+        """
+        Use the station names from the PEMFile data and apply it to the GPS.
+        The number of station names from each must be the same.
+        Matches the sorting of the stations from the EM file.
+        :return: None
+        """
+        assert self.pem_file, f"To generate station names, a PEMFile must be passed"
+
+        gps_stations = self.df.Station
+        data_stations = self.pem_file.get_stations(converted=True)
+
+        if len(gps_stations) != len(data_stations):
+            self.message.information(self, "Error", f"The number of stations in the EM data and GPS must be equal.")
+            return
+
+        ascending = True if gps_stations.iloc[0] < gps_stations.iloc[-1] else False
+        data_stations = sorted(data_stations, reverse=not ascending)
+        self.df.Station = data_stations
+        self.df_to_table(self.df)
+        self.plot_table(preserve_limits=True)
+
 
 class LoopAdder(GPSAdder, Ui_LoopAdder):
 
@@ -645,10 +695,12 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.parent = parent
         self.darkmode = darkmode
 
+        self.pem_file = None
         self.loop = None
         self.selected_row_info = None
         self.setWindowTitle('Loop Adder')
         self.actionOpen.setIcon(get_icon("open.png"))
+        self.actionInterp_Null_Elevation.setIcon(get_icon("grid_planner.png"))
         self.status_bar.hide()
 
         self.table.setFixedWidth(400)
@@ -661,6 +713,17 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
 
         self.format_plots()
         self.init_signals()
+
+    def init_signals(self):
+        self.actionOpen.triggered.connect(self.open_file_dialog)
+        self.actionInterp_Null_Elevation.triggered.connect(self.interp_elevation)
+
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.close)
+
+        self.table.cellChanged.connect(self.cell_changed)
+        self.table.itemSelectionChanged.connect(self.highlight_point)
+        self.auto_sort_cbox.toggled.connect(lambda: self.open(self.loop))
 
     def format_plots(self):
         # Format the plots
@@ -695,24 +758,24 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.section_view.showLabel('right', show=False)
         self.section_view.showLabel('top', show=False)
 
-    def init_signals(self):
-        self.actionOpen.triggered.connect(self.open_file_dialog)
-
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.close)
-
-        self.table.cellChanged.connect(self.cell_changed)
-        self.table.itemSelectionChanged.connect(self.highlight_point)
-        self.auto_sort_cbox.toggled.connect(lambda: self.open(self.loop))
-
-    def open(self, gps, name=''):
+    def open(self, gps, pem_file=None):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
         :param gps: Union (filepath, dataframe), Loop to open
-        :param name: str, name of the loop
+        :param pem_file: PEMFile object, used to get the loop name only.
         """
+        def check_elevation_errors():
+            null_elevation = self.df[self.df.Elevation == 0]
+            if len(null_elevation) > 0:
+                response = self.message.question(self, "Interpolate Null Elevation?", f"{len(null_elevation)} "
+                                                       f"null elevation values were found. Interpolate these values"
+                                                       f" based on nearby values?",
+                                                 self.message.Yes, self.message.No)
+                if response == self.message.Yes:
+                    self.interp_elevation()
+
         errors = pd.DataFrame()
-        if isinstance(gps, str):
+        if isinstance(gps, str) or isinstance(gps, Path):
             if Path(gps).is_file():
                 self.loop = TransmitterLoop(gps)
                 errors = self.loop.get_errors()
@@ -728,17 +791,17 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
             self.message.critical(self, 'Error', f"No GPS found. {self.loop.error_msg}")
             return
 
-        self.setWindowTitle(f'Loop Adder - {name}')
+        self.pem_file = pem_file
+        self.setWindowTitle(f'Loop Adder - {pem_file.filepath.name}' if pem_file else "Loop Adder")
 
         self.clear_table()
         self.units = self.loop.get_units()
         self.df = self.loop.get_loop(closed=True, sorted=self.auto_sort_cbox.isChecked())
-        self.df.loc[:, "Easting":"Elevation"] = self.df.loc[:, "Easting":"Elevation"].astype(float).applymap(
-            lambda x: f"{x:.2f}")
+        self.df.loc[:, "Easting":"Elevation"] = self.df.loc[:, "Easting":"Elevation"].astype(float).round(2)
         # Convert the column dtypes for when the data is created from the table values
-        self.df["Easting"] = pd.to_numeric(self.df["Easting"])
-        self.df["Northing"] = pd.to_numeric(self.df["Northing"])
-        self.df["Elevation"] = pd.to_numeric(self.df["Elevation"])
+        # self.df["Easting"] = pd.to_numeric(self.df["Easting"])
+        # self.df["Northing"] = pd.to_numeric(self.df["Northing"])
+        # self.df["Elevation"] = pd.to_numeric(self.df["Elevation"])
         self.df_to_table(self.df)
         self.plot_table()
         self.show()
@@ -747,6 +810,8 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
             logger.warning(f"The following rows could not be parsed:\n\n{errors.to_string()}")
             self.message.warning(self, 'Parsing Error',
                                  f"The following rows could not be parsed:\n\n{errors.to_string()}")
+
+        check_elevation_errors()
 
     def plot_table(self, preserve_limits=False):
         """
@@ -1713,6 +1778,9 @@ class GPSExtractor(QMainWindow):
 
 if __name__ == '__main__':
     from src.qt_py import dark_palette
+    from src.pem.pem_file import PEMGetter
+
+    getter = PEMGetter()
 
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
@@ -1746,24 +1814,23 @@ if __name__ == '__main__':
     # # gpx_creator.export_gpx()
 
     """Adders"""
-    # line_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Line GPS'))
-    # loop_samples_folder = str(Path(Path(__file__).absolute().parents[2]).joinpath(r'sample_files/Loop GPS'))
-    #
     # # mw = CollarPicker(darkmode=darkmode)
     # file = r"C:\_Data\2021\TMC\Laurentia\GEN-21-09\GPS\Loop 09_0823.gpx"
-    # # mw = LoopAdder(darkmode=darkmode)
+    # mw = LoopAdder(darkmode=darkmode)
+    mw = LineAdder(darkmode=darkmode)
     # # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
-    # # loop = TransmitterLoop(file)
-    # mw = LineAdder(darkmode=darkmode)
-    mw = ExcelTablePicker()
+    file = samples_folder.joinpath(r"Line GPS\KA800N_1027.txt")
+    pem_file = getter.parse(samples_folder.joinpath(r"Line GPS\800N.PEM"))
+    # loop = TransmitterLoop(file)
+    # mw = ExcelTablePicker()
     # # mw = DADSelector()
-    file = samples_folder.joinpath(r"Segments\BHEM-Belvais-2021-07-22.xlsx")
+    # file = samples_folder.joinpath(r"Segments\BHEM-Belvais-2021-07-22.xlsx")
     # # file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
     # file = r"C:\_Data\2021\Eastern\Maritime Resources\Birchy 2\GPS\L5N.GPX"
     # # file = samples_folder.joinpath(r'Raw Boreholes\OBS-88-027\RAW\Obalski.xlsx')
     # # file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')
     # # line = SurveyLine(str(file))
-    mw.open(file)
+    mw.open(file, pem_file=pem_file)
     mw.show()
 
     app.exec_()

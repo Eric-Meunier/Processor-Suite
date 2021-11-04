@@ -17,7 +17,7 @@ class Ui_PEMHub(object):
     def setupUi(self, PEMHub):
         if not PEMHub.objectName():
             PEMHub.setObjectName(u"PEMHub")
-        PEMHub.resize(1543, 846)
+        PEMHub.resize(1152, 846)
         sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -392,8 +392,8 @@ class Ui_PEMHub(object):
         self.splitter.setHandleWidth(3)
         self.splitter.setChildrenCollapsible(False)
         self.table = QTableWidget(self.splitter)
-        if (self.table.columnCount() < 15):
-            self.table.setColumnCount(15)
+        if (self.table.columnCount() < 16):
+            self.table.setColumnCount(16)
         __qtablewidgetitem = QTableWidgetItem()
         self.table.setHorizontalHeaderItem(0, __qtablewidgetitem)
         __qtablewidgetitem1 = QTableWidgetItem()
@@ -424,6 +424,8 @@ class Ui_PEMHub(object):
         self.table.setHorizontalHeaderItem(13, __qtablewidgetitem13)
         __qtablewidgetitem14 = QTableWidgetItem()
         self.table.setHorizontalHeaderItem(14, __qtablewidgetitem14)
+        __qtablewidgetitem15 = QTableWidgetItem()
+        self.table.setHorizontalHeaderItem(15, __qtablewidgetitem15)
         self.table.setObjectName(u"table")
         sizePolicy5 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Preferred)
         sizePolicy5.setHorizontalStretch(0)
@@ -702,7 +704,7 @@ class Ui_PEMHub(object):
         self.piw_frame.setObjectName(u"piw_frame")
         sizePolicy1.setHeightForWidth(self.piw_frame.sizePolicy().hasHeightForWidth())
         self.piw_frame.setSizePolicy(sizePolicy1)
-        self.piw_frame.setMinimumSize(QSize(300, 0))
+        self.piw_frame.setMinimumSize(QSize(0, 0))
         self.piw_frame.setMaximumSize(QSize(16777215, 16777215))
         self.piw_frame.setFrameShape(QFrame.NoFrame)
         self.piw_frame.setFrameShadow(QFrame.Sunken)
@@ -711,8 +713,8 @@ class Ui_PEMHub(object):
         self.verticalLayout_10.setContentsMargins(0, 0, 0, 0)
         self.stackedWidget = QStackedWidget(self.piw_frame)
         self.stackedWidget.setObjectName(u"stackedWidget")
-        sizePolicy4.setHeightForWidth(self.stackedWidget.sizePolicy().hasHeightForWidth())
-        self.stackedWidget.setSizePolicy(sizePolicy4)
+        sizePolicy1.setHeightForWidth(self.stackedWidget.sizePolicy().hasHeightForWidth())
+        self.stackedWidget.setSizePolicy(sizePolicy1)
         self.stackedWidget.setMinimumSize(QSize(0, 0))
         self.stackedWidget.setFrameShape(QFrame.NoFrame)
 
@@ -728,7 +730,7 @@ class Ui_PEMHub(object):
         PEMHub.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(PEMHub)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1543, 21))
+        self.menubar.setGeometry(QRect(0, 0, 1152, 21))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuFile.setTearOffEnabled(False)
@@ -1327,13 +1329,16 @@ class Ui_PEMHub(object):
         ___qtablewidgetitem11 = self.table.horizontalHeaderItem(11)
         ___qtablewidgetitem11.setText(QCoreApplication.translate("PEMHub", u"Split", None));
         ___qtablewidgetitem12 = self.table.horizontalHeaderItem(12)
-        ___qtablewidgetitem12.setText(QCoreApplication.translate("PEMHub", u"Suffix\n"
+        ___qtablewidgetitem12.setText(QCoreApplication.translate("PEMHub", u"GPS\n"
 "Warnings", None));
         ___qtablewidgetitem13 = self.table.horizontalHeaderItem(13)
-        ___qtablewidgetitem13.setText(QCoreApplication.translate("PEMHub", u"Repeat\n"
+        ___qtablewidgetitem13.setText(QCoreApplication.translate("PEMHub", u"Suffix\n"
 "Warnings", None));
         ___qtablewidgetitem14 = self.table.horizontalHeaderItem(14)
-        ___qtablewidgetitem14.setText(QCoreApplication.translate("PEMHub", u"Polarity\n"
+        ___qtablewidgetitem14.setText(QCoreApplication.translate("PEMHub", u"Repeat\n"
+"Warnings", None));
+        ___qtablewidgetitem15 = self.table.horizontalHeaderItem(15)
+        ___qtablewidgetitem15.setText(QCoreApplication.translate("PEMHub", u"Polarity\n"
 "Warnings", None));
 #if QT_CONFIG(tooltip)
         self.table.setToolTip("")

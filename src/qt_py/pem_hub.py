@@ -68,12 +68,12 @@ logger = logging.getLogger(__name__)
 # TODO Log recently opened files.
 # TODO Add GPS errors to table.
 # TODO Redo GPX parsing to use Geopandas. Might also want to revamp converting GPS.
-# TODO Improve un-rotation. One-click?  Added but something is currently bugged.
 # TODO Could add std plot to the right of decay plots
 # TODO Add a Recent projects list, below project GPS, which will be a history of recently clicked folders.
-# TODO Add non-split profile plot in PEMPlotEditor, similar to Maxwell.
+# TODO Show/hide single profile plot instead of plotting every time when selecting channels in PlotEditor.
 # TODO Add old PEM parsing
 # TODO When plotting PP files, set them all as the same station, and color code by timestamp. Also add plot of °----number---° showing drift.
+# TODO to remove loop edge effects, remove the primary field (or a percentage of it) from the readings, which is the PP
 
 
 # Keep a list of widgets so they don't get garbage collected
@@ -115,12 +115,13 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.error.setWindowIcon(self.windowIcon())
         self.error.setWindowTitle("Error")
         self.calender = QCalendarWidget()
+        self.calender.setWindowIcon(get_icon("calendar.png"))
         self.calender.setWindowTitle('Select Date')
         self.crs_selector = CRSSelector(title="Project CRS")
         self.crs_selector.setAlignment(Qt.AlignCenter)
         self.pem_list_filter = PathFilter('PEM', parent=self)
         self.gps_list_filter = PathFilter('GPS', parent=self)
-        self.unpacker = Unpacker(parent=self)
+        self.unpacker = Unpacker(parent=self, darkmode=self.darkmode)
         self.selection_files_label = QLabel()
         self.selection_components_label = QLabel()
         self.selection_timebase_label = QLabel()
@@ -196,23 +197,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         # Table
         if self.splash_screen:
             self.splash_screen.showMessage("Initializing table")
-        self.table_columns = [
-            'File',
-            'Date',
-            'Client',
-            'Grid',
-            'Line/Hole',
-            'Loop',
-            'Current',
-            'Coil\nArea',
-            'First\nStation',
-            'Last\nStation',
-            'Averaged',
-            'Split',
-            'Suffix\nWarnings',
-            'Repeat\nWarnings',
-            'Polarity\nWarnings'
-        ]
+        self.table_columns = [self.table.horizontalHeaderItem(i).text() for i in range(self.table.columnCount())]
         header = self.table.horizontalHeader()
         header.hide()
         header.setSectionResizeMode(0, QHeaderView.Stretch)
@@ -423,6 +408,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.derotate_action.triggered.connect(self.open_derotator)
         self.derotate_action.setIcon(get_icon('derotate.png'))
         self.revert_xy_rotation_action.triggered.connect(revert_xy_rotation)
+        self.revert_xy_rotation_action.setIcon(get_icon('undo.png'))
 
         # Borehole geometry
         self.get_geometry_action.triggered.connect(self.open_pem_geometry)
@@ -574,6 +560,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             item = QTableWidgetItem(date.toString('MMMM dd, yyyy'))
             item.setTextAlignment(Qt.AlignCenter)
             self.table.setItem(current_row, current_col, item)
+            self.calender.hide()
 
         def format_header():
             """
@@ -942,10 +929,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         settings.endGroup()
 
-        settings.beginGroup("Unpacker")
-        settings.setValue("open_damp_files_cbox", self.unpacker.open_damp_files_cbox.isChecked())
-        settings.endGroup()
-
     def load_settings(self):
         settings = QSettings("Crone Geophysics", "PEMPro")
         settings.beginGroup("MainWindow")
@@ -961,7 +944,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.available_gps_frame.resize(settings.value("available_gps_frame_size"))
             self.piw_frame.resize(settings.value("piw_frame_size"))
         else:
-            # Remember the default sizes for when settings are reset.
+            # Remember the default sizes for when there are no saved settings.
             settings.setValue("project_frame_default_size", self.project_frame.size())
             settings.setValue("project_dir_frame_default_size", self.project_dir_frame.size())
             settings.setValue("available_pems_frame_default_size", self.available_pems_frame.size())
@@ -1005,11 +988,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         settings.endGroup()
 
-        settings.beginGroup("Unpacker")
-        self.unpacker.open_damp_files_cbox.setChecked(
-            settings.value("open_damp_files_cbox", defaultValue=True, type=bool))
-        settings.endGroup()
-
     def reset_settings(self):
         settings = QSettings("Crone Geophysics", "PEMPro")
         settings.clear()
@@ -1029,11 +1007,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.available_pems_frame.resize(settings.value("available_pems_frame_default_size"))
             self.available_gps_frame.resize(settings.value("available_gps_frame_default_size"))
             self.piw_frame.resize(settings.value("piw_frame_default_size"))
-
-        # self.project_dir = None
-        # self.project_dir_edit.setText("")
-
-        self.unpacker.open_damp_files_cbox.setChecked(True)
 
         self.pem_list_filter.reset()
         self.gps_list_filter.reset()
@@ -1462,7 +1435,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             pem_info_widget.blockSignals(True)
 
             # Create the PEMInfoWidget for the PEM file
-            pem_info_widget.open_file(pem_file)
+            pem_info_widget.open_pem_file(pem_file)
             # Change the current tab of this widget to the same as the opened ones
             pem_info_widget.tabs.setCurrentIndex(self.tab_num)
             # Connect a signal to change the tab when another PIW tab is changed
@@ -1472,7 +1445,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             pem_info_widget.refresh_row_signal.connect(lambda: self.refresh_pem(pem_info_widget.pem_file))
             # Ensure the CRS of each GPS object is always up to date
             pem_info_widget.refresh_row_signal.connect(lambda: pem_file.set_crs(self.get_crs()))
-            # pem_info_widget.add_geometry_signal.connect(self.open_pem_geometry)
 
             pem_info_widget.share_loop_signal.connect(share_gps_object)
             pem_info_widget.share_line_signal.connect(share_gps_object)
@@ -1629,6 +1601,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             pem_file.get_stations(converted=True, incl_deleted=False).max(),
             pem_file.is_averaged(),
             pem_file.is_split(),
+            "GPS Warnings",
             len(pem_file.get_suffix_warnings()),
             len(pem_file.get_repeats()),
             "N/A" if not pem_file.has_all_gps() else ', '.join(pem_file.get_reversed_components())
@@ -2280,10 +2253,12 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.set_project_dir(folder_dir)
             self.move_dir_tree(folder_dir)
 
-        self.unpacker.open_project_folder_sig.connect(open_unpacker_dir)
+        unpacker = Unpacker(parent=self, darkmode=self.darkmode)
+        refs.append(unpacker)
+        unpacker.open_project_folder_sig.connect(open_unpacker_dir)
         if folder:
-            self.unpacker.open_folder(folder, project_dir=self.project_dir)
-        self.unpacker.show()
+            unpacker.open_folder(folder, project_dir=self.project_dir)
+        unpacker.show()
 
     def open_gpx_creator(self):
         gpx_creator = GPXCreator(parent=self)
@@ -3330,13 +3305,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     if col == average_col:
                         if value == 'False':
                             item.setForeground(QColor('red'))
-                        # else:
-                        #     item.setForeground(QColor('black'))
                     elif col == split_col:
                         if value == 'False':
                             item.setForeground(QColor('red'))
-                        # else:
-                        #     item.setForeground(QColor('black'))
                     elif col == suffix_col:
                         if int(value) > 0:
                             item.setBackground(QColor('red'))
@@ -3369,41 +3340,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         self.table.item(row, date_column).setForeground(red_color)
                     else:
                         self.table.item(row, date_column).setForeground(default_color)
-
-        # def color_changes():
-        #     """
-        #     Bolden table cells where the value in the cell is different then what is the PEM file memory.
-        #     """
-        #     bold_font, normal_font = QFont(), QFont()
-        #     bold_font.setBold(True)
-        #     normal_font.setBold(False)
-        #
-        #     # Get the original information in the PEM file
-        #     row_info = [
-        #         pem_file.filepath.name,
-        #         pem_file.date,
-        #         pem_file.client,
-        #         pem_file.grid,
-        #         pem_file.line_name,
-        #         pem_file.loop_name,
-        #         pem_file.current,
-        #         pem_file.coil_area,
-        #         pem_file.get_stations(converted=True).min(),
-        #         pem_file.get_stations(converted=True).max(),
-        #         pem_file.is_averaged(),
-        #         pem_file.is_split(),
-        #         str(len(pem_file.get_suffix_warnings())),
-        #         str(len(pem_file.get_repeats()))
-        #     ]
-        #
-        #     # If the value in the table is different then in the PEM file, make the value bold.
-        #     for column in range(self.table.columnCount()):
-        #         if self.table.item(row, column):
-        #             original_value = str(row_info[column])
-        #             if self.table.item(row, column).text() != original_value:
-        #                 self.table.item(row, column).setFont(bold_font)
-        #             else:
-        #                 self.table.item(row, column).setFont(normal_font)
 
         self.table.blockSignals(True)
 
@@ -3576,13 +3512,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         if pem_file in self.pem_files:
             logger.info(f"Refreshing {pem_file.filepath.name}.")
             ind = self.pem_files.index(pem_file)
-            self.pem_info_widgets[ind].open_file(pem_file)
+            self.pem_info_widgets[ind].open_pem_file(pem_file, refresh=True)
             self.add_pem_to_table(pem_file, ind)
             self.format_row(ind)
             self.color_table_by_values()
         else:
             logger.error(f"PEMFile ID {id(pem_file)} is not in the table.")
             raise IndexError(f"PEMFile ID {id(pem_file)} is not in the table.")
+        print("Refresh complete.")
 
     def update_selection_text(self):
         """
@@ -5214,8 +5151,6 @@ def main():
     mw = PEMHub(app)
 
     pem_getter = PEMGetter()
-    pem_parser = PEMParser()
-    dmp_parser = DMPParser()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     # pem_files = [pem_parser.parse(samples_folder.joinpath(r"Test PEMS\223XYT.PEM"))]
@@ -5231,8 +5166,12 @@ def main():
     # pem_files = pem_getter.get_pems(folder='Iscaycruz', subfolder='Loop 1', number=4)
     # pem_files = pem_getter.get_pems(folder="Raw Boreholes\EB-21-68\RAW", number=1)
     # pem_files = pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0823.PEM")
-    # pem_files = pem_getter.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0251-21\RAW\xy_1019.PEM")
-    pem_files = pem_getter.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0251-21\RAW\xy1910_1019.dmp2")
+    # pem_files = pem_getter.parse(r"C:\_Data\2021\Trevali Peru\Borehole\SAN-0251-21\RAW\xy_1019.PEM")
+    # pem_files = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-206\RAW\em21-206 xy_1030.PEM")
+    # pem_files2 = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-206\RAW\em21-206 z_1030.PEM")
+    pem_files = pem_getter.parse(samples_folder.joinpath(r"Line GPS\800N.PEM"))
+    txt_file = samples_folder.joinpath(r"Line GPS\KA800N_1027.txt")
+    # pem_files = pem_getter.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0251-21\RAW\xy1910_1019.dmp2")
     # pem_files.extend(pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0824.PEM"))
     # pem_files.extend(pem_getter.get_pems(folder="Raw Boreholes", file="XY.PEM"))
     # pem_files = pem_getter.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
@@ -5259,9 +5198,9 @@ def main():
     # mw.open_pdf_plot_printer()
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
-    # mw.save_pem_file_as()¶
-    # mw.pem_info_widgets[0].tabs.setCurrentIndex(3)
-    # mw.add_gps_files(gps_files)
+    # mw.save_pem_file_as()
+    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    # mw.add_gps_files(txt_file)
 
     """ Attempting to re-create printing bug """
     # mw.open_unpacker(folder=samples_folder.joinpath(r"Raw Boreholes\EB-21-52\DUMP\July 20, 2021"))

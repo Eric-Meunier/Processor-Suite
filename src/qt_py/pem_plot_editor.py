@@ -82,6 +82,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.deleted_lines = []
         self.selected_profile_stations = np.array([])
         self.selected_profile_component = None
+        self.component_profile_plot_items = {}
         self.component_stations = {}
         self.nearest_decay = None
         self.mag_curves = []
@@ -861,7 +862,13 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 df_avg = df.groupby('Station').mean()
                 x, y = df_avg.index.to_numpy(), df_avg.to_numpy()
 
+                # TODO Try and add all the lines and cycle through instead for single axis
+                # line = pg.PlotCurveItem(x=x, y=y, pen=pg.mkPen(self.foreground_color, width=1.))
                 line = ax.plot(x=x, y=y, pen=pg.mkPen(self.foreground_color, width=1.))
+                # if not self.actionSplit_Profile.isChecked():
+                #     self.component_profile_plot_items[self.current_component].append(line)
+                # else:
+                #     ax.addItem(line)
 
             def plot_scatters(df, ax):
                 """

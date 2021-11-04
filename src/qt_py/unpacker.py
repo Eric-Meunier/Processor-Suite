@@ -5,7 +5,7 @@ from pathlib import Path
 from shutil import copyfile, rmtree
 
 import py7zr
-from PySide2.QtCore import Qt, QDir, Signal, QTimer, QDate
+from PySide2.QtCore import Qt, QDir, Signal, QTimer, QDate, QSettings
 from PySide2.QtGui import QIcon, QDropEvent
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QMenu, QErrorMessage,
                                QFileDialog, QVBoxLayout, QLabel, QApplication, QFrame, QHBoxLayout, QLineEdit,
@@ -22,9 +22,10 @@ logger = logging.getLogger(__name__)
 class Unpacker(QMainWindow, Ui_Unpacker):
     open_project_folder_sig = Signal(object)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, darkmode=False):
         super().__init__()
         self.parent = parent
+        self.darkmode = darkmode
         self.setupUi(self)
 
         self.setWindowTitle('Unpacker')
@@ -38,7 +39,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         self.message = QMessageBox()
         self.error = QErrorMessage()
         self.file_sys_model = QFileSystemModel()
-        self.db_plot = DBPlotter(parent=self)
+        self.db_plot = DBPlotter(parent=self, darkmode=self.darkmode)
 
         # Status bar
         dir_frame = QFrame()
@@ -127,6 +128,31 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         self.open_folder_action.triggered.connect(self.open_file_dialog)
         self.reset_action.triggered.connect(self.reset)
 
+        self.load_settings()
+
+    def save_settings(self):
+        settings = QSettings("Crone Geophysics", "PEMPro")
+        settings.beginGroup(__name__)
+
+        # Geometry
+        settings.setValue("windowGeometry", self.saveGeometry())
+
+        # Setting options
+        settings.setValue("open_damp_files_cbox", self.open_damp_files_cbox.isChecked())
+
+        settings.endGroup()
+
+    def load_settings(self):
+        settings = QSettings("Crone Geophysics", "PEMPro")
+        settings.beginGroup(__name__)
+
+        # Geometry
+        if settings.value("windowGeometry"):
+            self.restoreGeometry(settings.value("windowGeometry"))
+
+        # Setting options
+        self.open_damp_files_cbox.setChecked(settings.value("open_damp_files_cbox", defaultValue=True, type=bool))
+
     def dragEnterEvent(self, e):
         m = e.mimeData()
         if m.hasUrls():
@@ -145,6 +171,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
         self.open_folder(url)
 
     def closeEvent(self, e):
+        self.save_settings()
         self.db_plot.close()
         e.accept()
 

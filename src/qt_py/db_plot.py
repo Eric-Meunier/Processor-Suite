@@ -362,7 +362,6 @@ class DBPlotter(QMainWindow):
         """
         Copy the image of the window to the clipboard
         """
-
         def hide_status_bar():
             self.statusBar().hide()
 
@@ -392,6 +391,7 @@ class DBPlotWidget(QMainWindow):
         self.darkmode = darkmode
         self.color = get_line_color("teal", "pyqt", self.darkmode)
         self.foreground_color = get_line_color("foreground", "pyqt", self.darkmode)
+        self.background_color = get_line_color("background", "pyqt", self.darkmode)
         self.data = db_data
         self.date = date
         self.curve = None
@@ -448,14 +448,12 @@ class DBPlotWidget(QMainWindow):
         self.statusBar().addWidget(self.rate_of_change_label)
         self.statusBar().addPermanentWidget(self.file_label)
 
-        edge_pen_color = get_line_color("foreground", "pyqt", darkmode, alpha=100)
-        edge_pen_color_hover = get_line_color("foreground", "pyqt", darkmode, alpha=200)
         # Create the linear region item
         self.lr = pg.LinearRegionItem(
-            brush=pg.mkBrush(color=(51, 153, 255, 20)),
-            hoverBrush=pg.mkBrush(color=(51, 153, 255, 30)),
-            pen=pg.mkPen(color=edge_pen_color),
-            hoverPen=pg.mkPen(color=edge_pen_color_hover),
+            brush=pg.mkBrush(color=get_line_color("gray", "pyqt", darkmode, alpha=20)),
+            hoverBrush=pg.mkBrush(color=get_line_color("gray", "pyqt", darkmode, alpha=40)),
+            pen=pg.mkPen(color=get_line_color("foreground", "pyqt", darkmode, alpha=100)),
+            hoverPen=pg.mkPen(color=get_line_color("foreground", "pyqt", darkmode, alpha=200)),
         )
 
         self.lr.sigRegionChanged.connect(self.lr_moved)
@@ -469,13 +467,13 @@ class DBPlotWidget(QMainWindow):
         :param command: str, the command that was used in the damping box. Uses it for the legend name.
         """
         self.curve = pg.PlotCurveItem(self.data.Time.to_numpy(), self.data.Current.to_numpy(),
-                                   pen=pg.mkPen(color=self.color, width=2.5),
-                                   )
+                                      pen=pg.mkPen(color=self.color, width=2.5),
+                                      )
         self.symbols = pg.ScatterPlotItem(self.data.Time, self.data.Current,
-                                       symbol='+',
-                                       size=6,
-                                       pen=pg.mkPen(color=self.color, width=0.1),
-                                       )
+                                          symbol='+',
+                                          size=6,
+                                          pen=pg.mkPen(color=self.color, width=0.1),
+                                          )
         self.plot_widget.addItem(self.curve)
         self.plot_widget.addItem(self.symbols)
         self.plot_widget.addItem(self.lr)
@@ -540,8 +538,8 @@ if __name__ == '__main__':
 
     # files = str(Path(samples_folder).joinpath('CM 252.txt'))
     # files = str(Path(samples_folder).joinpath('Date error/0511_May11Dampingbox232Voltage.txt'))
-    files = str(Path(samples_folder).joinpath('0724_238-20210724 (no data error).log'))
-    # files = str(Path(samples_folder).joinpath('Date error/16_Damp Box 222 Current 01.16.2021.txt'))
+    # files = str(Path(samples_folder).joinpath('0724_238-20210724 (no data error).log'))
+    files = str(Path(samples_folder).joinpath('Date error/16_Damp Box 222 Current 01.16.2021.txt'))
     mw.open(files)
     mw.show()
 

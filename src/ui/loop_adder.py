@@ -26,6 +26,8 @@ class Ui_LoopAdder(object):
         self.auto_sort_cbox.setObjectName(u"auto_sort_cbox")
         self.auto_sort_cbox.setCheckable(True)
         self.auto_sort_cbox.setChecked(True)
+        self.actionInterp_Null_Elevation = QAction(LoopAdder)
+        self.actionInterp_Null_Elevation.setObjectName(u"actionInterp_Null_Elevation")
         self.layout = QWidget(LoopAdder)
         self.layout.setObjectName(u"layout")
         self.gridLayout = QGridLayout(self.layout)
@@ -121,6 +123,8 @@ class Ui_LoopAdder(object):
         self.menuFile.setObjectName(u"menuFile")
         self.menuSettings = QMenu(self.menubar)
         self.menuSettings.setObjectName(u"menuSettings")
+        self.menuEdit = QMenu(self.menubar)
+        self.menuEdit.setObjectName(u"menuEdit")
         LoopAdder.setMenuBar(self.menubar)
         self.status_bar = QStatusBar(LoopAdder)
         self.status_bar.setObjectName(u"status_bar")
@@ -129,9 +133,11 @@ class Ui_LoopAdder(object):
         LoopAdder.setStatusBar(self.status_bar)
 
         self.menubar.addAction(self.menuFile.menuAction())
+        self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuSettings.menuAction())
         self.menuFile.addAction(self.actionOpen)
         self.menuSettings.addAction(self.auto_sort_cbox)
+        self.menuEdit.addAction(self.actionInterp_Null_Elevation)
 
         self.retranslateUi(LoopAdder)
 
@@ -142,7 +148,9 @@ class Ui_LoopAdder(object):
         LoopAdder.setWindowTitle(QCoreApplication.translate("LoopAdder", u"MainWindow", None))
         self.actionOpen.setText(QCoreApplication.translate("LoopAdder", u"Open", None))
         self.auto_sort_cbox.setText(QCoreApplication.translate("LoopAdder", u"Auto-Sort By Position", None))
+        self.actionInterp_Null_Elevation.setText(QCoreApplication.translate("LoopAdder", u"Interpolate Null Elevation", None))
         self.menuFile.setTitle(QCoreApplication.translate("LoopAdder", u"File", None))
         self.menuSettings.setTitle(QCoreApplication.translate("LoopAdder", u"Settings", None))
+        self.menuEdit.setTitle(QCoreApplication.translate("LoopAdder", u"Edit", None))
     # retranslateUi
 
