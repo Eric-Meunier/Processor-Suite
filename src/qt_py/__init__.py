@@ -7,10 +7,10 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 from PySide2.QtCore import QSizeF, Qt, Signal, QPointF
-from PySide2.QtGui import QKeySequence, QColor, QCursor, QPixmap, QIcon, QPalette, QIntValidator
+from PySide2.QtGui import QKeySequence, QColor, QCursor, QPixmap, QIcon, QPalette, QIntValidator, QBrush
 from PySide2.QtWidgets import (QMessageBox, QWidget, QLabel, QFrame, QHBoxLayout, QVBoxLayout, QTabWidget, QMenu,
-                               QAction, QComboBox, QLineEdit, QGroupBox, QGridLayout, QRadioButton,
-                               QTableWidgetItem, QShortcut, QPushButton, QSizePolicy, QItemDelegate)
+                               QAction, QComboBox, QLineEdit, QGroupBox, QGridLayout, QRadioButton, QTableWidget,
+                               QTableWidgetItem, QShortcut, QPushButton, QSizePolicy, QItemDelegate, QAbstractItemView)
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from pyproj import CRS
 from src.logger import logger, Log
@@ -63,6 +63,7 @@ def get_line_color(color, style, darkmode, alpha=255):
     blue_color = [153, 204, 255, alpha] if darkmode else [46, 151, 255, alpha]
     single_blue_color = [42, 130, 218, alpha]
     red_color = [255, 153, 153, alpha] if darkmode else [255, 0, 0, alpha]
+    single_red_color = [255, 0, 0, alpha]
     purple_color = [204, 153, 255, alpha] if darkmode else [127, 0, 255, alpha]
     aquamarine_color = [153, 255, 204, alpha] if darkmode else [0, 255, 128, alpha]
     green_color = [102, 255, 102, alpha] if darkmode else [0, 204, 0, alpha]
@@ -100,6 +101,11 @@ def get_line_color(color, style, darkmode, alpha=255):
             return rgb2hex(*red_color[:-1])
         else:
             return red_color
+    elif color == "single_red":
+        if style == "mpl" or style == "hex":
+            return rgb2hex(*single_red_color[:-1])
+        else:
+            return single_red_color
     elif color == "purple":
         if style == "mpl" or style == "hex":
             return rgb2hex(*purple_color[:-1])
@@ -486,12 +492,12 @@ class TableSelector(QWidget):
         self.single_click = single_click
         self.darkmode = darkmode
         self.setWindowIcon(get_icon("table.png"))
+        self.resize(900, 600)
         self.setLayout(QVBoxLayout())
         self.message = QMessageBox()
 
-        self.foreground_color = get_line_color("foreground", "mpl", True)
-        self.selection_color = get_line_color("single_blue", "mpl", True)
-        self.empty_background = QColor(255, 255, 255, 0)
+        self.foreground_color = get_line_color("foreground", "mpl", self.darkmode)
+        self.selection_color = get_line_color("single_blue", "mpl", self.darkmode)
 
         self.selection_labels = []
         self.selection_label_names = selection_labels
@@ -536,7 +542,10 @@ class TableSelector(QWidget):
     def reset(self):
         for range in self.selected_ranges:
             for item in range:
-                item.setBackground(self.empty_background)
+                item.setBackground(QBrush())
+
+        for item in self.selected_cells:
+            item.setBackground(QBrush())
 
         for table in self.tables:
             table.clearSelection()
@@ -566,7 +575,7 @@ class TableSelector(QWidget):
 
         # Cycle the selection back to the first item when going past the last selection
         if len(self.selected_cells) == self.selection_limit:
-            self.selected_cells[0].setBackground(self.empty_background)
+            self.selected_cells[0].setBackground(QBrush())
             self.selected_cells.pop(0)
 
         values = []
@@ -593,7 +602,7 @@ class TableSelector(QWidget):
         # Remove the last selection range when going over the limit
         if len(self.selected_ranges) == 6:
             for item in self.selected_ranges[0]:
-                item.setBackground(self.empty_background)
+                item.setBackground(QBrush())
             self.selected_ranges.pop(0)
 
         values = []
@@ -669,8 +678,9 @@ class TableSelector(QWidget):
                                     sheet_name=None)
 
             for i, (sheet, info) in enumerate(content.items()):
-                table = pg.TableWidget()
-                table.setData(info.replace(np.nan, '', regex=True).to_numpy())
+                table = QTableWidget()
+                table.setSelectionMode(QAbstractItemView.SingleSelection)
+                df_to_table(info.replace(np.nan, '', regex=True), table, set_role=True)
                 self.tables.append(table)
                 self.tabs.addTab(table, str(sheet))
         else:
@@ -682,8 +692,9 @@ class TableSelector(QWidget):
                 content = pd.read_csv(filepath,
                                       header=None)
 
-            table = pg.TableWidget()
-            table.setData(content.replace(np.nan, '', regex=True).to_numpy())
+            table = QTableWidget()
+            table.setSelectionMode(QAbstractItemView.SingleSelection)
+            df_to_table(content.replace(np.nan, '', regex=True), table, set_role=True)
             self.tables.append(table)
             self.tabs.addTab(table, filepath.name)
 

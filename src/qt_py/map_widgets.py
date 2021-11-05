@@ -158,7 +158,7 @@ class TileMapViewer(MapboxViewer):
 
     def plot_pems(self):
         def plot_loop():
-            loop = pem_file.loop.to_latlon().get_loop(closed=True).dropna()
+            loop = pem_file.loop.to_latlon().get_loop_gps(closed=True).dropna()
             if loop.empty:
                 logger.warning(f"No loop GPS in {pem_file.filepath.name}")
                 return
@@ -178,7 +178,7 @@ class TileMapViewer(MapboxViewer):
                                                            text=loop.index))
 
         def plot_line():
-            line = pem_file.line.to_latlon().get_line().dropna()
+            line = pem_file.line.to_latlon().get_line_gps().dropna()
             if line.empty:
                 logger.warning(f"No line GPS in {pem_file.filepath.name}")
                 return
@@ -202,7 +202,7 @@ class TileMapViewer(MapboxViewer):
             proj = geometry.get_projection(latlon=True)
             if proj.empty:
                 logger.warning(f"Hole projection is empty for {pem_file.filepath.name}")
-            collar = pem_file.collar.to_latlon().get_collar().dropna()
+            collar = pem_file.collar.to_latlon().get_collar_gps().dropna()
 
             if not proj.empty and proj.to_string() not in self.holes:
                 logger.info(f"Plotting hole trace for {pem_file.filepath.name}")
@@ -377,7 +377,7 @@ class Map3DViewer(QMainWindow):
 
     def plot_pems(self):
         def plot_loop(pem_file):
-            loop = pem_file.get_loop(closed=True)
+            loop = pem_file.get_loop_gps(closed=True)
 
             if not loop.empty and loop.to_string() not in self.loops:
                 self.loops.append(loop.to_string())
@@ -392,7 +392,7 @@ class Map3DViewer(QMainWindow):
                                                        text=loop.index))
 
         def plot_line(pem_file):
-            line = pem_file.get_line()
+            line = pem_file.get_line_gps()
 
             if not line.empty and line.to_string() not in self.lines:
                 self.lines.append(line.to_string())
@@ -419,7 +419,7 @@ class Map3DViewer(QMainWindow):
                 #                                      yanchor="bottom"))
 
         def plot_hole(pem_file):
-            collar = pem_file.get_collar().dropna()
+            collar = pem_file.get_collar_gps().dropna()
             geometry = BoreholeGeometry(pem_file.collar, pem_file.segments)
             proj = geometry.get_projection(latlon=False)
 
@@ -1117,7 +1117,7 @@ class GPSViewer(QMainWindow):
                 # text_item.setFont(QFont("Helvetica", 7, QFont.Normal))
                 text_item.setZValue(0)
 
-            loop = pem_file.get_loop(sorted=False, closed=True).dropna()
+            loop = pem_file.get_loop_gps(sorted=False, closed=True).dropna()
             if loop.empty:
                 logger.warning(f"No loop GPS in {pem_file.filepath.name}.")
                 return
@@ -1167,7 +1167,7 @@ class GPSViewer(QMainWindow):
                 # text_item.setFont(QFont("Helvetica", 8, QFont.Normal))
                 text_item.setZValue(2)
 
-            line = pem_file.get_line().dropna()
+            line = pem_file.get_line_gps().dropna()
             if line.empty:
                 logger.warning(f"No line GPS in {pem_file.filepath.name}.")
                 return
@@ -1267,7 +1267,7 @@ class GPSViewer(QMainWindow):
                     text_item.setFont(QFont("Helvetica", 8, QFont.Normal))
                     text_item.setZValue(2)
 
-            collar = pem_file.get_collar().dropna()
+            collar = pem_file.get_collar_gps().dropna()
             if collar.empty:
                 logger.info(f"No collar GPS in {pem_file.filepath.name}.")
                 return

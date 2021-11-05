@@ -122,14 +122,6 @@ class Ui_PEMInfoWidget(object):
         self.gridLayout_8 = QGridLayout(self.frame_3)
         self.gridLayout_8.setObjectName(u"gridLayout_8")
         self.gridLayout_8.setContentsMargins(6, 6, 6, 6)
-        self.view_loop_btn = QPushButton(self.frame_3)
-        self.view_loop_btn.setObjectName(u"view_loop_btn")
-        icon = QIcon()
-        icon.addFile(u"icons/view.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.view_loop_btn.setIcon(icon)
-
-        self.gridLayout_8.addWidget(self.view_loop_btn, 3, 1, 1, 1)
-
         self.open_loop_gps_btn = QPushButton(self.frame_3)
         self.open_loop_gps_btn.setObjectName(u"open_loop_gps_btn")
         sizePolicy4 = QSizePolicy(QSizePolicy.Minimum, QSizePolicy.Fixed)
@@ -137,32 +129,11 @@ class Ui_PEMInfoWidget(object):
         sizePolicy4.setVerticalStretch(0)
         sizePolicy4.setHeightForWidth(self.open_loop_gps_btn.sizePolicy().hasHeightForWidth())
         self.open_loop_gps_btn.setSizePolicy(sizePolicy4)
-        icon1 = QIcon()
-        icon1.addFile(u"icons/open.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.open_loop_gps_btn.setIcon(icon1)
+        icon = QIcon()
+        icon.addFile(u"icons/open.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.open_loop_gps_btn.setIcon(icon)
 
         self.gridLayout_8.addWidget(self.open_loop_gps_btn, 1, 1, 1, 1)
-
-        self.export_loop_gps_btn = QPushButton(self.frame_3)
-        self.export_loop_gps_btn.setObjectName(u"export_loop_gps_btn")
-        icon2 = QIcon()
-        icon2.addFile(u"icons/export.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.export_loop_gps_btn.setIcon(icon2)
-
-        self.gridLayout_8.addWidget(self.export_loop_gps_btn, 1, 2, 1, 1)
-
-        self.share_loop_gps_btn = QPushButton(self.frame_3)
-        self.share_loop_gps_btn.setObjectName(u"share_loop_gps_btn")
-        icon3 = QIcon()
-        icon3.addFile(u"icons/share_gps.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.share_loop_gps_btn.setIcon(icon3)
-
-        self.gridLayout_8.addWidget(self.share_loop_gps_btn, 2, 1, 1, 1)
-
-        self.reverse_loop_btn = QPushButton(self.frame_3)
-        self.reverse_loop_btn.setObjectName(u"reverse_loop_btn")
-
-        self.gridLayout_8.addWidget(self.reverse_loop_btn, 2, 2, 1, 1)
 
         self.frame_2 = QFrame(self.frame_3)
         self.frame_2.setObjectName(u"frame_2")
@@ -184,7 +155,36 @@ class Ui_PEMInfoWidget(object):
         self.horizontalLayout_2.addWidget(self.shift_elevation_spinbox)
 
 
-        self.gridLayout_8.addWidget(self.frame_2, 3, 2, 1, 1)
+        self.gridLayout_8.addWidget(self.frame_2, 4, 2, 1, 1)
+
+        self.reverse_loop_btn = QPushButton(self.frame_3)
+        self.reverse_loop_btn.setObjectName(u"reverse_loop_btn")
+
+        self.gridLayout_8.addWidget(self.reverse_loop_btn, 3, 2, 1, 1)
+
+        self.export_loop_gps_btn = QPushButton(self.frame_3)
+        self.export_loop_gps_btn.setObjectName(u"export_loop_gps_btn")
+        icon1 = QIcon()
+        icon1.addFile(u"icons/export.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.export_loop_gps_btn.setIcon(icon1)
+
+        self.gridLayout_8.addWidget(self.export_loop_gps_btn, 1, 2, 1, 1)
+
+        self.share_loop_gps_btn = QPushButton(self.frame_3)
+        self.share_loop_gps_btn.setObjectName(u"share_loop_gps_btn")
+        icon2 = QIcon()
+        icon2.addFile(u"icons/share_gps.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.share_loop_gps_btn.setIcon(icon2)
+
+        self.gridLayout_8.addWidget(self.share_loop_gps_btn, 4, 1, 1, 1)
+
+        self.view_loop_btn = QPushButton(self.frame_3)
+        self.view_loop_btn.setObjectName(u"view_loop_btn")
+        icon3 = QIcon()
+        icon3.addFile(u"icons/view.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.view_loop_btn.setIcon(icon3)
+
+        self.gridLayout_8.addWidget(self.view_loop_btn, 3, 1, 1, 1)
 
 
         self.gridLayout_4.addWidget(self.frame_3, 2, 0, 1, 3)
@@ -248,37 +248,23 @@ class Ui_PEMInfoWidget(object):
         sizePolicy5.setVerticalStretch(0)
         sizePolicy5.setHeightForWidth(self.view_line_btn.sizePolicy().hasHeightForWidth())
         self.view_line_btn.setSizePolicy(sizePolicy5)
-        self.view_line_btn.setIcon(icon)
+        self.view_line_btn.setIcon(icon3)
 
-        self.gridLayout_6.addWidget(self.view_line_btn, 1, 0, 1, 1)
-
-        self.export_station_gps_btn = QPushButton(self.frame)
-        self.export_station_gps_btn.setObjectName(u"export_station_gps_btn")
-        sizePolicy5.setHeightForWidth(self.export_station_gps_btn.sizePolicy().hasHeightForWidth())
-        self.export_station_gps_btn.setSizePolicy(sizePolicy5)
-        self.export_station_gps_btn.setIcon(icon2)
-
-        self.gridLayout_6.addWidget(self.export_station_gps_btn, 0, 0, 1, 1)
+        self.gridLayout_6.addWidget(self.view_line_btn, 2, 0, 1, 1)
 
         self.flip_station_numbers_button = QPushButton(self.frame)
         self.flip_station_numbers_button.setObjectName(u"flip_station_numbers_button")
         sizePolicy5.setHeightForWidth(self.flip_station_numbers_button.sizePolicy().hasHeightForWidth())
         self.flip_station_numbers_button.setSizePolicy(sizePolicy5)
 
-        self.gridLayout_6.addWidget(self.flip_station_numbers_button, 1, 1, 1, 1)
-
-        self.share_line_gps_btn = QPushButton(self.frame)
-        self.share_line_gps_btn.setObjectName(u"share_line_gps_btn")
-        self.share_line_gps_btn.setIcon(icon3)
-
-        self.gridLayout_6.addWidget(self.share_line_gps_btn, 3, 0, 1, 1)
+        self.gridLayout_6.addWidget(self.flip_station_numbers_button, 2, 1, 1, 1)
 
         self.flip_station_signs_button = QPushButton(self.frame)
         self.flip_station_signs_button.setObjectName(u"flip_station_signs_button")
         sizePolicy5.setHeightForWidth(self.flip_station_signs_button.sizePolicy().hasHeightForWidth())
         self.flip_station_signs_button.setSizePolicy(sizePolicy5)
 
-        self.gridLayout_6.addWidget(self.flip_station_signs_button, 0, 1, 1, 1)
+        self.gridLayout_6.addWidget(self.flip_station_signs_button, 1, 1, 1, 1)
 
         self.stations_from_data_btn = QPushButton(self.frame)
         self.stations_from_data_btn.setObjectName(u"stations_from_data_btn")
@@ -288,15 +274,7 @@ class Ui_PEMInfoWidget(object):
         icon4.addFile(u"icons/add_square.png", QSize(), QIcon.Normal, QIcon.Off)
         self.stations_from_data_btn.setIcon(icon4)
 
-        self.gridLayout_6.addWidget(self.stations_from_data_btn, 2, 1, 1, 1)
-
-        self.open_station_gps_btn = QPushButton(self.frame)
-        self.open_station_gps_btn.setObjectName(u"open_station_gps_btn")
-        sizePolicy5.setHeightForWidth(self.open_station_gps_btn.sizePolicy().hasHeightForWidth())
-        self.open_station_gps_btn.setSizePolicy(sizePolicy5)
-        self.open_station_gps_btn.setIcon(icon1)
-
-        self.gridLayout_6.addWidget(self.open_station_gps_btn, 2, 0, 1, 1)
+        self.gridLayout_6.addWidget(self.stations_from_data_btn, 3, 1, 1, 1)
 
         self.cullStationGPSButton = QPushButton(self.frame)
         self.cullStationGPSButton.setObjectName(u"cullStationGPSButton")
@@ -306,7 +284,7 @@ class Ui_PEMInfoWidget(object):
         icon5.addFile(u"icons/remove.png", QSize(), QIcon.Normal, QIcon.Off)
         self.cullStationGPSButton.setIcon(icon5)
 
-        self.gridLayout_6.addWidget(self.cullStationGPSButton, 3, 1, 1, 1)
+        self.gridLayout_6.addWidget(self.cullStationGPSButton, 4, 1, 1, 1)
 
         self.frame_5 = QFrame(self.frame)
         self.frame_5.setObjectName(u"frame_5")
@@ -334,7 +312,7 @@ class Ui_PEMInfoWidget(object):
         self.horizontalLayout_6.addWidget(self.shiftStationGPSSpinbox)
 
 
-        self.gridLayout_6.addWidget(self.frame_5, 4, 1, 1, 1)
+        self.gridLayout_6.addWidget(self.frame_5, 5, 1, 1, 1)
 
         self.frame_4 = QFrame(self.frame)
         self.frame_4.setObjectName(u"frame_4")
@@ -364,7 +342,29 @@ class Ui_PEMInfoWidget(object):
         self.horizontalLayout_5.addWidget(self.lcdDistance)
 
 
-        self.gridLayout_6.addWidget(self.frame_4, 4, 0, 1, 1)
+        self.gridLayout_6.addWidget(self.frame_4, 5, 0, 1, 1)
+
+        self.share_line_gps_btn = QPushButton(self.frame)
+        self.share_line_gps_btn.setObjectName(u"share_line_gps_btn")
+        self.share_line_gps_btn.setIcon(icon2)
+
+        self.gridLayout_6.addWidget(self.share_line_gps_btn, 3, 0, 1, 1)
+
+        self.export_station_gps_btn = QPushButton(self.frame)
+        self.export_station_gps_btn.setObjectName(u"export_station_gps_btn")
+        sizePolicy5.setHeightForWidth(self.export_station_gps_btn.sizePolicy().hasHeightForWidth())
+        self.export_station_gps_btn.setSizePolicy(sizePolicy5)
+        self.export_station_gps_btn.setIcon(icon1)
+
+        self.gridLayout_6.addWidget(self.export_station_gps_btn, 4, 0, 1, 1)
+
+        self.open_station_gps_btn = QPushButton(self.frame)
+        self.open_station_gps_btn.setObjectName(u"open_station_gps_btn")
+        sizePolicy5.setHeightForWidth(self.open_station_gps_btn.sizePolicy().hasHeightForWidth())
+        self.open_station_gps_btn.setSizePolicy(sizePolicy5)
+        self.open_station_gps_btn.setIcon(icon)
+
+        self.gridLayout_6.addWidget(self.open_station_gps_btn, 1, 0, 1, 1)
 
 
         self.horizontalLayout.addWidget(self.frame)
@@ -374,19 +374,17 @@ class Ui_PEMInfoWidget(object):
 
         self.missing_gps_frame = QFrame(self.station_gps_tab)
         self.missing_gps_frame.setObjectName(u"missing_gps_frame")
-        sizePolicy3.setHeightForWidth(self.missing_gps_frame.sizePolicy().hasHeightForWidth())
-        self.missing_gps_frame.setSizePolicy(sizePolicy3)
+        sizePolicy6 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
+        sizePolicy6.setHorizontalStretch(0)
+        sizePolicy6.setVerticalStretch(0)
+        sizePolicy6.setHeightForWidth(self.missing_gps_frame.sizePolicy().hasHeightForWidth())
+        self.missing_gps_frame.setSizePolicy(sizePolicy6)
         self.missing_gps_frame.setMaximumSize(QSize(16777215, 16777215))
         self.missing_gps_frame.setFrameShape(QFrame.NoFrame)
         self.missing_gps_frame.setFrameShadow(QFrame.Raised)
         self.gridLayout_9 = QGridLayout(self.missing_gps_frame)
         self.gridLayout_9.setObjectName(u"gridLayout_9")
         self.gridLayout_9.setContentsMargins(9, 9, 9, 9)
-        self.extra_gps_label = QLabel(self.missing_gps_frame)
-        self.extra_gps_label.setObjectName(u"extra_gps_label")
-
-        self.gridLayout_9.addWidget(self.extra_gps_label, 0, 1, 1, 1)
-
         self.missing_gps_label = QLabel(self.missing_gps_frame)
         self.missing_gps_label.setObjectName(u"missing_gps_label")
 
@@ -394,25 +392,41 @@ class Ui_PEMInfoWidget(object):
 
         self.missing_gps_list = QListWidget(self.missing_gps_frame)
         self.missing_gps_list.setObjectName(u"missing_gps_list")
-        sizePolicy6 = QSizePolicy(QSizePolicy.Maximum, QSizePolicy.Maximum)
-        sizePolicy6.setHorizontalStretch(0)
-        sizePolicy6.setVerticalStretch(0)
-        sizePolicy6.setHeightForWidth(self.missing_gps_list.sizePolicy().hasHeightForWidth())
-        self.missing_gps_list.setSizePolicy(sizePolicy6)
+        sizePolicy3.setHeightForWidth(self.missing_gps_list.sizePolicy().hasHeightForWidth())
+        self.missing_gps_list.setSizePolicy(sizePolicy3)
         self.missing_gps_list.setMinimumSize(QSize(0, 0))
         self.missing_gps_list.setMaximumSize(QSize(16777215, 16777215))
 
         self.gridLayout_9.addWidget(self.missing_gps_list, 1, 0, 1, 1)
 
-        self.extra_gps_list = QListWidget(self.missing_gps_frame)
-        self.extra_gps_list.setObjectName(u"extra_gps_list")
-        sizePolicy6.setHeightForWidth(self.extra_gps_list.sizePolicy().hasHeightForWidth())
-        self.extra_gps_list.setSizePolicy(sizePolicy6)
-
-        self.gridLayout_9.addWidget(self.extra_gps_list, 1, 1, 1, 1)
-
 
         self.gridLayout_3.addWidget(self.missing_gps_frame, 19, 1, 1, 1)
+
+        self.extra_gps_frame = QFrame(self.station_gps_tab)
+        self.extra_gps_frame.setObjectName(u"extra_gps_frame")
+        sizePolicy7 = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        sizePolicy7.setHorizontalStretch(0)
+        sizePolicy7.setVerticalStretch(0)
+        sizePolicy7.setHeightForWidth(self.extra_gps_frame.sizePolicy().hasHeightForWidth())
+        self.extra_gps_frame.setSizePolicy(sizePolicy7)
+        self.extra_gps_frame.setFrameShape(QFrame.NoFrame)
+        self.extra_gps_frame.setFrameShadow(QFrame.Raised)
+        self.verticalLayout = QVBoxLayout(self.extra_gps_frame)
+        self.verticalLayout.setObjectName(u"verticalLayout")
+        self.extra_gps_label = QLabel(self.extra_gps_frame)
+        self.extra_gps_label.setObjectName(u"extra_gps_label")
+
+        self.verticalLayout.addWidget(self.extra_gps_label)
+
+        self.extra_gps_list = QListWidget(self.extra_gps_frame)
+        self.extra_gps_list.setObjectName(u"extra_gps_list")
+        sizePolicy3.setHeightForWidth(self.extra_gps_list.sizePolicy().hasHeightForWidth())
+        self.extra_gps_list.setSizePolicy(sizePolicy3)
+
+        self.verticalLayout.addWidget(self.extra_gps_list)
+
+
+        self.gridLayout_3.addWidget(self.extra_gps_frame, 19, 2, 1, 1)
 
         self.tabs.addTab(self.station_gps_tab, "")
         self.geometry_tab = QWidget()
@@ -471,16 +485,19 @@ class Ui_PEMInfoWidget(object):
         self.horizontalLayout_3.setContentsMargins(6, 6, 6, 6)
         self.add_segments_btn = QPushButton(self.frame_9)
         self.add_segments_btn.setObjectName(u"add_segments_btn")
+        self.add_segments_btn.setIcon(icon)
 
         self.horizontalLayout_3.addWidget(self.add_segments_btn)
 
         self.export_segments_btn = QPushButton(self.frame_9)
         self.export_segments_btn.setObjectName(u"export_segments_btn")
+        self.export_segments_btn.setIcon(icon1)
 
         self.horizontalLayout_3.addWidget(self.export_segments_btn)
 
         self.share_segments_btn = QPushButton(self.frame_9)
         self.share_segments_btn.setObjectName(u"share_segments_btn")
+        self.share_segments_btn.setIcon(icon2)
 
         self.horizontalLayout_3.addWidget(self.share_segments_btn)
 
@@ -537,16 +554,19 @@ class Ui_PEMInfoWidget(object):
         self.horizontalLayout_4.setContentsMargins(6, 6, 6, 6)
         self.open_collar_gps_btn = QPushButton(self.frame_10)
         self.open_collar_gps_btn.setObjectName(u"open_collar_gps_btn")
+        self.open_collar_gps_btn.setIcon(icon)
 
         self.horizontalLayout_4.addWidget(self.open_collar_gps_btn)
 
         self.export_collar_gps_btn = QPushButton(self.frame_10)
         self.export_collar_gps_btn.setObjectName(u"export_collar_gps_btn")
+        self.export_collar_gps_btn.setIcon(icon1)
 
         self.horizontalLayout_4.addWidget(self.export_collar_gps_btn)
 
         self.share_collar_gps_btn = QPushButton(self.frame_10)
         self.share_collar_gps_btn.setObjectName(u"share_collar_gps_btn")
+        self.share_collar_gps_btn.setIcon(icon2)
 
         self.horizontalLayout_4.addWidget(self.share_collar_gps_btn)
 
@@ -568,12 +588,12 @@ class Ui_PEMInfoWidget(object):
 
         self.tabs.addTab(self.ri_tab, "")
 
-        self.gridLayout.addWidget(self.tabs, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.tabs, 0, 0, 1, 1)
 
 
         self.retranslateUi(PEMInfoWidget)
 
-        self.tabs.setCurrentIndex(1)
+        self.tabs.setCurrentIndex(2)
 
 
         QMetaObject.connectSlotsByName(PEMInfoWidget)
@@ -592,12 +612,12 @@ class Ui_PEMInfoWidget(object):
         ___qtablewidgetitem3.setText(QCoreApplication.translate("PEMInfoWidget", u"Northing", None));
         ___qtablewidgetitem4 = self.loop_table.horizontalHeaderItem(2)
         ___qtablewidgetitem4.setText(QCoreApplication.translate("PEMInfoWidget", u"Elevation", None));
-        self.view_loop_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"View Loop", None))
         self.open_loop_gps_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"Open File", None))
+        self.shiftElevationLabel.setText(QCoreApplication.translate("PEMInfoWidget", u"Shift Elevation:", None))
+        self.reverse_loop_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"\u2191\u2193 Reverse Coordinates", None))
         self.export_loop_gps_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"Export Loop", None))
         self.share_loop_gps_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"Share Loop", None))
-        self.reverse_loop_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"\u2191\u2193 Reverse Coordinates", None))
-        self.shiftElevationLabel.setText(QCoreApplication.translate("PEMInfoWidget", u"Shift Elevation:", None))
+        self.view_loop_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"View Loop", None))
         self.tabs.setTabText(self.tabs.indexOf(self.loop_gps_tab), QCoreApplication.translate("PEMInfoWidget", u"Loop GPS", None))
         ___qtablewidgetitem5 = self.line_table.horizontalHeaderItem(0)
         ___qtablewidgetitem5.setText(QCoreApplication.translate("PEMInfoWidget", u"Easting", None));
@@ -608,29 +628,29 @@ class Ui_PEMInfoWidget(object):
         ___qtablewidgetitem8 = self.line_table.horizontalHeaderItem(3)
         ___qtablewidgetitem8.setText(QCoreApplication.translate("PEMInfoWidget", u"Station", None));
         self.view_line_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"View Line", None))
-        self.export_station_gps_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"Export GPS", None))
 #if QT_CONFIG(tooltip)
         self.flip_station_numbers_button.setToolTip(QCoreApplication.translate("PEMInfoWidget", u"Reverse order of the station GPS", None))
 #endif // QT_CONFIG(tooltip)
         self.flip_station_numbers_button.setText(QCoreApplication.translate("PEMInfoWidget", u"\u2191\u2193 Stations", None))
-#if QT_CONFIG(tooltip)
-        self.share_line_gps_btn.setToolTip(QCoreApplication.translate("PEMInfoWidget", u"Share this GPS with all other opened surface files", None))
-#endif // QT_CONFIG(tooltip)
-        self.share_line_gps_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"Share Line", None))
         self.flip_station_signs_button.setText(QCoreApplication.translate("PEMInfoWidget", u"+/- Stations", None))
 #if QT_CONFIG(tooltip)
         self.stations_from_data_btn.setToolTip(QCoreApplication.translate("PEMInfoWidget", u"Generate station numbers based on the stations in the EM data", None))
 #endif // QT_CONFIG(tooltip)
         self.stations_from_data_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"Generate Station Names", None))
-        self.open_station_gps_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"Open File", None))
 #if QT_CONFIG(tooltip)
         self.cullStationGPSButton.setToolTip(QCoreApplication.translate("PEMInfoWidget", u"Remove GPS stations for which there is no EM data", None))
 #endif // QT_CONFIG(tooltip)
         self.cullStationGPSButton.setText(QCoreApplication.translate("PEMInfoWidget", u"Remove Extra Stations", None))
         self.shiftStationLabel.setText(QCoreApplication.translate("PEMInfoWidget", u"Shift Stations:", None))
         self.label_2.setText(QCoreApplication.translate("PEMInfoWidget", u"Distance:", None))
-        self.extra_gps_label.setText(QCoreApplication.translate("PEMInfoWidget", u"Extra Stations:", None))
+#if QT_CONFIG(tooltip)
+        self.share_line_gps_btn.setToolTip(QCoreApplication.translate("PEMInfoWidget", u"Share this GPS with all other opened surface files", None))
+#endif // QT_CONFIG(tooltip)
+        self.share_line_gps_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"Share Line", None))
+        self.export_station_gps_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"Export GPS", None))
+        self.open_station_gps_btn.setText(QCoreApplication.translate("PEMInfoWidget", u"Open File", None))
         self.missing_gps_label.setText(QCoreApplication.translate("PEMInfoWidget", u"Missing Stations:", None))
+        self.extra_gps_label.setText(QCoreApplication.translate("PEMInfoWidget", u"Extra Stations:", None))
         self.tabs.setTabText(self.tabs.indexOf(self.station_gps_tab), QCoreApplication.translate("PEMInfoWidget", u"Station GPS", None))
         self.label_6.setText(QCoreApplication.translate("PEMInfoWidget", u"Segments", None))
         ___qtablewidgetitem9 = self.segments_table.horizontalHeaderItem(0)

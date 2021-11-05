@@ -291,12 +291,13 @@ def read_gpx(file, for_pemfile=False):
     return utm_df, gdf, crs
 
 
-def read_gps(file, for_pemfile=False):
+def read_gps(file, for_pemfile=False, nan_replacement=None):
     """
     Helper function, parse a file which contains GPS information. Will read .txt, .xlsx, .xls, .csv, .kmz, .gpx.
     :param file: str or Path, a file with extention [.txt, .xlsx, .xls, .csv, .kmz, .gpx.]
     :param for_pemfile: Bool, if True, only keeps characters which are valid for station name conversion. Currently
     only applicable to GPX files.
+    :param nan_replacement: value to replace NaNs with.
     :return: tuple, UTM dataframe, GeoDataframe, CRS
     """
     if isinstance(file, str) or isinstance(file, Path):
@@ -623,22 +624,28 @@ class TransmitterLoop(BaseGPS):
 
     def get_warnings(self):
         """
-        Return rows where there are duplicates and where the elevation is 0.
+        Return rows where the elevation is 0 and where the rows might not be sorted counter-clockwise.
         :return: DataFrame
         """
+        sorting_warnings = pd.DataFrame()
+        elevation_warnings = pd.DataFrame()
+
         if self.df.empty:
-            return
+            return {"Sorting Warnings": sorting_warnings,
+                    "Elevation Warnings": elevation_warnings}
 
-        duplicates = self.df[self.df.duplicated(subset=None, keep=False)]
-        print(f"Duplicates: \n{duplicates}")
+        # Sorting
+        sorted_df = self.get_sorted_loop().copy().reset_index(drop=True)
+        sorting_mask = sorted_df != self.df
+        sorting_warnings = self.df[sorting_mask].dropna()
+        # print(f"Sorting warnings: \n{sorting_warnings}")
 
-        # sorted_df = self.df.sort_values(by="Station", ascending=True).copy().reset_index(drop=True)
-        # sorting_mask = sorted_df.Station != self.df.Station
-        # sort_warnings = self.df[sorting_mask]
-        # print(f"Sorting warnings: \n{sort_warnings}")
-
+        # Elevation
         elevation_warnings = self.df[self.df.Elevation == 0]
-        print(f"Elevation warnings:\n{elevation_warnings}")
+        # print(f"Elevation warnings:\n{elevation_warnings}")
+
+        return {"Sorting Warnings": sorting_warnings,
+                "Elevation Warnings": elevation_warnings}
 
 
 class SurveyLine(BaseGPS):
@@ -961,7 +968,7 @@ class BoreholeGeometry(BaseGPS):
             logger.error(f"CRS must be projected, not geographic.")
             return projection
 
-        collar = self.collar.get_collar().dropna()
+        collar = self.collar.get_collar_gps().dropna()
         segments = self.segments.get_segments().dropna()
 
         if collar.empty:
@@ -1036,7 +1043,7 @@ class BoreholeGeometry(BaseGPS):
         return self.df
 
     def get_collar(self):
-        return self.collar.get_collar()
+        return self.collar.get_collar_gps()
 
     def get_segments(self):
         return self.segments.get_segments()

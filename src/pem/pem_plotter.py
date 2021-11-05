@@ -95,7 +95,7 @@ def plot_loop(pem_file, figure, annotate=True, label=True, color='black', buffer
     ax = figure.axes[0]
     loop = pem_file.loop
     if not loop.df.empty:
-        loop_gps = loop.get_loop(sorted=False, closed=(not is_mmr))
+        loop_gps = loop.get_loop_gps(sorted=False, closed=(not is_mmr))
         eastings, northings = loop_gps.Easting.to_numpy(), loop_gps.Northing.to_numpy()
 
         # Plot the loop
@@ -1268,8 +1268,8 @@ class PlanMap:
 
             # Plot the loops
             if self.draw_loops is True and pem_file.has_loop_gps():
-                if pem_file.get_loop().to_string() not in self.loops:
-                    self.loops.append(pem_file.get_loop().to_string())
+                if pem_file.get_loop_gps().to_string() not in self.loops:
+                    self.loops.append(pem_file.get_loop_gps().to_string())
                     self.loop_handle = plot_loop(pem_file, self.figure,
                                                  annotate=self.annotate_loop,
                                                  label=self.label_loops,
@@ -1528,7 +1528,7 @@ class SectionPlot:
             c1, c2 = (self.p1[0], self.p1[1], self.ax.get_ylim()[1]), (
                 self.p2[0], self.p2[1], self.ax.get_ylim()[1] - (1.1 * section_depth))
 
-            wire_coords = self.pem_file.get_loop()
+            wire_coords = self.pem_file.get_loop_gps()
             mag_calculator = MagneticFieldCalculator(wire_coords, closed_loop=not self.pem_file.is_mmr())
 
             xx, yy, zz, uproj, vproj, wproj, plotx, plotz, arrow_len = mag_calculator.get_2d_magnetic_field(c1, c2)

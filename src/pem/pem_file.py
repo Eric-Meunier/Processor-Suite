@@ -469,6 +469,27 @@ class PEMFile:
 
         return unit
 
+    def get_gps_warnings(self):
+        """
+        Return all the GPS warnings from the SurveyLine (if applicable) and TansmitterLoop objects.
+        :return: Dict
+        """
+        line_warnings = self.line.get_warnings()
+        loop_warnings = self.loop.get_warnings()
+        return {"Line Warnings": line_warnings, "Loop Warnings": loop_warnings}
+
+    def get_number_gps_warnings(self):
+        """
+        Return the number of GPS warnings in the SurveyLine (if applicable) and TansmitterLoop objects.
+        :return: int
+        """
+        count = 0
+        for gps_object, object_warnings in self.get_gps_warnings().items():
+            for type, warnings in object_warnings.items():
+                count += len(warnings)
+
+        return count
+
     def get_crs(self):
         """
         Return the PEMFile's CRS, or create one from the note in the PEM file if it exists.
@@ -520,13 +541,13 @@ class PEMFile:
                     logger.info(f"{self.filepath.name} CRS is {crs.name}")
                     return crs
 
-    def get_loop(self, sorted=False, closed=False):
+    def get_loop_gps(self, sorted=False, closed=False):
         return self.loop.get_loop(sorted=sorted, closed=closed)
 
-    def get_line(self, sorted=False):
+    def get_line_gps(self, sorted=False):
         return self.line.get_line(sorted=sorted)
 
-    def get_collar(self):
+    def get_collar_gps(self):
         return self.collar.get_collar()
 
     def get_segments(self):
@@ -786,7 +807,7 @@ class PEMFile:
             tf_row.loc[:, channels] = tf
             return tf_row
 
-        line_gps = self.get_line()
+        line_gps = self.get_line_gps()
         # Filter the GPS to only keep those that are in the data
         line_gps = line_gps[line_gps.Station.isin(self.get_stations(converted=True))]
 
@@ -850,10 +871,10 @@ class PEMFile:
         Return the minimum and maximum of each dimension of the GPS in the file
         :return: tuple of float, xmin, xmax, ymin, ymax, zmin, zmax
         """
-        loop = self.get_loop()
+        loop = self.get_loop_gps()
 
         if self.is_borehole() and self.has_collar_gps():
-            collar = self.get_collar()
+            collar = self.get_collar_gps()
             segments = self.get_segments()
 
             if not segments.empty:
@@ -861,7 +882,7 @@ class PEMFile:
             else:
                 line = collar
         else:
-            line = self.get_line()
+            line = self.get_line_gps()
 
         east = pd.concat([loop.Easting, line.Easting])
         north = pd.concat([loop.Northing, line.Northing])
@@ -1097,7 +1118,7 @@ class PEMFile:
         stations = list(self.get_stations(converted=True))
         pps = []
         borehole = self.is_borehole()
-        loop = self.get_loop(sorted=False, closed=False)
+        loop = self.get_loop_gps(sorted=False, closed=False)
         mag_calc = MagneticFieldCalculator(loop, closed_loop=not self.is_mmr())
         # columns = ["Station"]
         # columns.extend(self.get_components())
@@ -1188,7 +1209,7 @@ class PEMFile:
         stations = list(self.get_stations(converted=True))
         pps = []
         borehole = self.is_borehole()
-        loop = self.get_loop(sorted=False, closed=False)
+        loop = self.get_loop_gps(sorted=False, closed=False)
         mag_calc = MagneticFieldCalculator(loop, closed_loop=not self.is_mmr())
 
         if borehole:
@@ -1426,7 +1447,7 @@ class PEMFile:
             # Rename 'Relative_depth' to 'Station' for get_station_gps, so it matches with
             gps.rename(columns={'Relative_depth': 'Station'}, inplace=True)
         else:
-            gps = self.get_line(sorted=True).drop_duplicates('Station')
+            gps = self.get_line_gps(sorted=True).drop_duplicates('Station')
 
         # assert not self.is_borehole(), 'Can only create XYZ file with surface PEM files.'
         if gps.empty:
@@ -1967,7 +1988,7 @@ class PEMFile:
                                                   'CPPz'])
             geometry = BoreholeGeometry(self.collar, self.segments)
             proj = geometry.get_projection(stations=self.get_stations(converted=True))
-            loop = self.get_loop(sorted=False, closed=False)
+            loop = self.get_loop_gps(sorted=False, closed=False)
             # Get the ramp in seconds
             ramp = self.ramp / 10 ** 6
             mag_calc = MagneticFieldCalculator(loop, closed_loop=not self.is_mmr())
@@ -3251,7 +3272,7 @@ class PEMSerializer:
 
     def serialize_loop_coords(self):
         result = '~ Transmitter Loop Co-ordinates:'
-        loop = self.pem_file.get_loop()
+        loop = self.pem_file.get_loop_gps()
         units_code = self.pem_file.loop.get_units_code()
         assert units_code, f"No units code for the loop of {self.pem_file.get_name()}."
         if loop.empty:
@@ -3267,7 +3288,7 @@ class PEMSerializer:
     def serialize_line_coords(self):
         def serialize_station_coords():
             result = '~ Hole/Profile Co-ordinates:'
-            line = self.pem_file.get_line()
+            line = self.pem_file.get_line_gps()
             units_code = self.pem_file.line.get_units_code()
             assert units_code, f"No units code for the line of {self.pem_file.get_name()}."
             if line.empty:
@@ -3282,7 +3303,7 @@ class PEMSerializer:
 
         def serialize_collar_coords():
             result = '~ Hole/Profile Co-ordinates:'
-            collar = self.pem_file.get_collar()
+            collar = self.pem_file.get_collar_gps()
             collar.reset_index(drop=True, inplace=True)
             units_code = self.pem_file.collar.get_units_code()
             assert units_code, f"No units code for the collar of {self.pem_file.get_name()}."

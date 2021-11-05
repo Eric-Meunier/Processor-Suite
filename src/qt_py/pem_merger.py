@@ -626,7 +626,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         merged_pem.notes = list(np.unique(np.concatenate([pem_file.notes for pem_file in pems])))
 
         merged_pem.loop = TransmitterLoop(
-            pd.concat([pem_file.get_loop() for pem_file in pems], axis=0, ignore_index=True).drop_duplicates())
+            pd.concat([pem_file.get_loop_gps() for pem_file in pems], axis=0, ignore_index=True).drop_duplicates())
 
         if self.pf1.is_borehole():
             if self.pf1.has_collar_gps():
@@ -640,7 +640,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
                 merged_pem.segments = self.pf2.segments
         else:
             merged_pem.line = SurveyLine(
-                pd.concat([pem_file.get_line() for pem_file in pems], axis=0, ignore_index=True).drop_duplicates())
+                pd.concat([pem_file.get_line_gps() for pem_file in pems], axis=0, ignore_index=True).drop_duplicates())
 
         merged_pem.is_merged = True
 

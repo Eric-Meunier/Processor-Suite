@@ -77,7 +77,7 @@
       <enum>QTabWidget::Rounded</enum>
      </property>
      <property name="currentIndex">
-      <number>1</number>
+      <number>2</number>
      </property>
      <widget class="QWidget" name="info_tab">
       <attribute name="title">
@@ -763,7 +763,7 @@
        <item row="19" column="1">
         <widget class="QFrame" name="missing_gps_frame">
          <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+          <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
            <horstretch>0</horstretch>
            <verstretch>0</verstretch>
           </sizepolicy>
@@ -793,13 +793,6 @@
           <property name="bottomMargin">
            <number>9</number>
           </property>
-          <item row="0" column="1">
-           <widget class="QLabel" name="extra_gps_label">
-            <property name="text">
-             <string>Extra Stations:</string>
-            </property>
-           </widget>
-          </item>
           <item row="0" column="0">
            <widget class="QLabel" name="missing_gps_label">
             <property name="text">
@@ -810,7 +803,7 @@
           <item row="1" column="0">
            <widget class="QListWidget" name="missing_gps_list">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+             <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>
@@ -829,10 +822,35 @@
             </property>
            </widget>
           </item>
-          <item row="1" column="1">
+         </layout>
+        </widget>
+       </item>
+       <item row="19" column="2">
+        <widget class="QFrame" name="extra_gps_frame">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="frameShape">
+          <enum>QFrame::NoFrame</enum>
+         </property>
+         <property name="frameShadow">
+          <enum>QFrame::Raised</enum>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout">
+          <item>
+           <widget class="QLabel" name="extra_gps_label">
+            <property name="text">
+             <string>Extra Stations:</string>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QListWidget" name="extra_gps_list">
             <property name="sizePolicy">
-             <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+             <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
               <horstretch>0</horstretch>
               <verstretch>0</verstretch>
              </sizepolicy>

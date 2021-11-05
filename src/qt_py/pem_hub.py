@@ -282,11 +282,11 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             """
             piw_widget = self.pem_info_widgets[self.table.currentRow()]
             if obj_str == 'loop':
-                gps_obj = piw_widget.get_loop()
+                gps_obj = piw_widget.get_loop_gps()
             elif obj_str == 'line':
-                gps_obj = piw_widget.get_line()
+                gps_obj = piw_widget.get_line_gps()
             elif obj_str == 'collar':
-                gps_obj = piw_widget.get_collar()
+                gps_obj = piw_widget.get_collar_gps()
             elif obj_str == 'segments':
                 gps_obj = piw_widget.get_segments()
             else:
@@ -1601,7 +1601,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             pem_file.get_stations(converted=True, incl_deleted=False).max(),
             pem_file.is_averaged(),
             pem_file.is_split(),
-            "GPS Warnings",
+            pem_file.get_number_gps_warnings(),
             len(pem_file.get_suffix_warnings()),
             len(pem_file.get_repeats()),
             "N/A" if not pem_file.has_all_gps() else ', '.join(pem_file.get_reversed_components())
@@ -2134,17 +2134,17 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                         # Share the collar and segments if the source is a borehole
                         if source_widget.pem_file.is_borehole():
-                            widget.fill_gps_table(source_widget.get_collar().df, widget.collar_table)
+                            widget.fill_gps_table(source_widget.get_collar_gps().df, widget.collar_table)
                             widget.fill_gps_table(source_widget.get_segments().df, widget.segments_table)
                             widget.gps_object_changed(widget.collar_table, refresh=False)
                             widget.gps_object_changed(widget.segments_table, refresh=False)
                         # Share the line GPS if it's a surface line
                         else:
-                            widget.fill_gps_table(source_widget.get_line().df, widget.line_table)
+                            widget.fill_gps_table(source_widget.get_line_gps().df, widget.line_table)
                             widget.gps_object_changed(widget.line_table, refresh=False)
 
                         # Share the loop
-                        widget.fill_gps_table(source_widget.get_loop().df, widget.loop_table)
+                        widget.fill_gps_table(source_widget.get_loop_gps().df, widget.loop_table)
                         widget.gps_object_changed(widget.loop_table, refresh=True)  # Only refresh at the end
                         dlg += 1
 
@@ -2873,7 +2873,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             pem_file.set_crs(crs)
 
             # Save the loop
-            loop_gps = pem_file.loop.to_latlon().get_loop(closed=True)
+            loop_gps = pem_file.loop.to_latlon().get_loop_gps(closed=True)
             loop_name = pem_file.loop_name
 
             if not loop_gps.empty and loop_gps.to_string() not in loop_ids:
@@ -2883,7 +2883,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             # Save the line
             if not pem_file.is_borehole():
-                line_gps = pem_file.line.to_latlon().get_line()
+                line_gps = pem_file.line.to_latlon().get_line_gps()
                 line_name = pem_file.line_name
 
                 if not line_gps.empty and line_gps.to_string() not in line_ids:
@@ -3119,7 +3119,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                     for pem_file in pem_files:
                         if pem_file.has_loop_gps():
-                            loop = pem_file.get_loop(closed=False)
+                            loop = pem_file.get_loop_gps(closed=False)
                             if loop.to_string() not in loops:
                                 loop_name = pem_file.loop_name
                                 logger.info(f"Creating CSV file for loop {loop_name}.")
@@ -3138,7 +3138,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                                                axis=1)
 
                         if pem_file.has_station_gps():
-                            line = pem_file.line.get_line()
+                            line = pem_file.line.get_line_gps()
                             if line.to_string() not in lines:
                                 line_name = pem_file.line_name
                                 logger.info(f"Creating CSV file for line {line_name}.")
@@ -3158,7 +3158,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                                         axis=1)
 
                         if pem_file.has_collar_gps():
-                            collar = pem_file.get_collar()
+                            collar = pem_file.get_collar_gps()
                             if collar.to_string() not in collars:
                                 hole_name = pem_file.line_name
                                 logger.info(f"Creating CSV file for hole {hole_name}.")
@@ -3258,24 +3258,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             Color cells of the main table based on conditions. Ex: Red text if the PEM file isn't averaged.
             :return: None
             """
-            def has_all_gps(piw_widget):
-                if piw_widget.pem_file.is_borehole():
-                    if any([piw_widget.get_loop().df.dropna().empty,
-                            piw_widget.get_collar().df.dropna().empty,
-                            piw_widget.get_segments().df.dropna().empty,
-                            ]):
-                        return False
-                    else:
-                        return True
-
-                else:
-                    if any([piw_widget.get_line().df.dropna().empty,
-                            piw_widget.get_loop().df.dropna().empty,
-                            ]):
-                        return False
-                    else:
-                        return True
-
             def color_row_background(row_index, color):
                 """
                 Color an entire table row
@@ -3290,15 +3272,15 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             average_col = self.table_columns.index('Averaged')
             split_col = self.table_columns.index('Split')
+            gps_warnings_col = self.table_columns.index('GPS\nWarnings')
             suffix_col = self.table_columns.index('Suffix\nWarnings')
             repeat_col = self.table_columns.index('Repeat\nWarnings')
             polarity_col = self.table_columns.index('Polarity\nWarnings')
-            pem_has_gps = has_all_gps(self.pem_info_widgets[row])
 
-            if not pem_has_gps:
+            if not self.pem_files[row].has_all_gps():
                 color_row_background(row, 'blue')
 
-            for col in [average_col, split_col, suffix_col, repeat_col, polarity_col]:
+            for col in [average_col, split_col, gps_warnings_col, suffix_col, repeat_col, polarity_col]:
                 item = self.table.item(row, col)
                 if item:
                     value = item.text()
@@ -3308,6 +3290,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     elif col == split_col:
                         if value == 'False':
                             item.setForeground(QColor('red'))
+                    elif col == gps_warnings_col:
+                        if int(value) > 0:
+                            item.setBackground(QColor('red'))
+                            item.setForeground(QColor('white'))
                     elif col == suffix_col:
                         if int(value) > 0:
                             item.setBackground(QColor('red'))

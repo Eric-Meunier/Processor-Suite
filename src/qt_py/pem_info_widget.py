@@ -42,6 +42,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         self.blue_color = QColor(get_line_color("blue", "mpl", self.darkmode, alpha=255))
         self.red_color = QColor(get_line_color("red", "mpl", self.darkmode, alpha=255))
+        self.single_red_color = QColor(get_line_color("single_red", "mpl", self.darkmode, alpha=255))
         self.gray_color = QColor(get_line_color("gray", "mpl", self.darkmode, alpha=255))
         self.foreground_color = QColor(get_line_color("foreground", "mpl", self.darkmode, alpha=255))
         self.background_color = QColor(get_line_color("background", "mpl", self.darkmode, alpha=255))
@@ -82,6 +83,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.station_column = self.line_table_columns.index('Station')
 
         self.missing_gps_frame.hide()
+        self.extra_gps_frame.hide()
 
         # Actions
         self.loop_table.remove_row_action = QAction("&Remove", self)
@@ -146,7 +148,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.gps_object_changed(self.loop_table, refresh=False)
 
         # Buttons
-        self.cullStationGPSButton.clicked.connect(self.cull_station_gps)
+        self.cullStationGPSButton.clicked.connect(self.remove_extra_gps)
 
         self.flip_station_numbers_button.clicked.connect(self.reverse_station_gps_numbers)
         self.flip_station_signs_button.clicked.connect(self.flip_station_gps_polarity)
@@ -305,12 +307,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.init_tables()  # Fixes it crashing when changing a value in any of the tables.
 
         if self.pem_file.is_borehole():
-            self.fill_gps_table(self.pem_file.get_collar(), self.collar_table)
+            self.fill_gps_table(self.pem_file.get_collar_gps(), self.collar_table)
             self.fill_gps_table(self.pem_file.get_segments(), self.segments_table)
         else:
-            self.fill_gps_table(self.pem_file.get_line(), self.line_table)
+            self.fill_gps_table(self.pem_file.get_line_gps(), self.line_table)
         self.fill_info_tab()
-        self.fill_gps_table(self.pem_file.loop.get_loop(), self.loop_table)
+        self.fill_gps_table(self.pem_file.get_loop_gps(), self.loop_table)
 
     def open_ri_file(self, filepath):
         """
@@ -384,19 +386,19 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         if not isinstance(files, list):
             files = [files]
+        files = [Path(f) for f in files]
 
         current_tab = self.tabs.currentWidget()
-        files = [Path(f) for f in files]
+        if current_tab == self.geometry_tab:
+            file = files[0]  # Only accepts the first file for adding collars.
+            self.add_collar(file)
+            return
 
         gps_df, crs = merge_files(files, collar=bool(current_tab == self.geometry_tab))
 
         # Add survey line GPS
         if current_tab == self.station_gps_tab:
             self.add_line(gps_df)
-
-        # Add borehole collar GPS
-        elif current_tab == self.geometry_tab:
-            self.add_collar(gps_df)
 
         # Add loop GPS
         elif current_tab == self.loop_gps_tab:
@@ -432,7 +434,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.fill_gps_table(data, self.line_table)
 
         # global line_adder
-        self.line_adder = LineAdder(parent=self, darkmode=self.darkmode)
+        self.line_adder = LineAdder(self.pem_file, parent=self, darkmode=self.darkmode)
         self.line_adder.accept_sig.connect(line_accept_sig_wrapper)
         self.line_adder.accept_sig.connect(lambda: self.gps_object_changed(self.line_table, refresh=True))
 
@@ -444,7 +446,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             if line.df.empty:
                 self.message.information(self, 'No GPS Found', f"{line.error_msg}.")
             else:
-                self.line_adder.open(line, pem_file=self.pem_file)
+                self.line_adder.open(line)
         except Exception as e:
             logger.critical(str(e))
             self.error.showMessage(f"Error adding line: {str(e)}.")
@@ -458,27 +460,27 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.fill_gps_table(data, self.loop_table)
 
         # global loop_adder
-        self.loop_adder = LoopAdder(parent=self, darkmode=self.darkmode)
+        self.loop_adder = LoopAdder(self.pem_file, parent=self, darkmode=self.darkmode)
         self.loop_adder.accept_sig.connect(loop_accept_sig_wrapper)
         self.loop_adder.accept_sig.connect(lambda: self.gps_object_changed(self.loop_table, refresh=True))
 
         if loop_content is None:
             loop_content = self.get_loop()
 
-        try:
-            loop = TransmitterLoop(loop_content)
-            if loop.df.empty:
-                self.message.information(self, 'No GPS Found', f"{loop.error_msg}")
-                return
-            self.loop_adder.open(loop, pem_file=self.pem_file)
-        except Exception as e:
-            logger.critical(f"{e}.")
-            self.error.showMessage(f"Error adding loop: {str(e)}")
+        # try:
+        loop = TransmitterLoop(loop_content)
+        if loop.df.empty:
+            self.message.information(self, 'No GPS Found', f"{loop.error_msg}")
+            return
+        self.loop_adder.open(loop)
+        # except Exception as e:
+        #     logger.critical(f"{e}.")
+        #     self.error.showMessage(f"Error adding loop: {str(e)}")
 
-    def add_collar(self, collar_content=None):
+    def add_collar(self, file):
         """
         Open the CollarPicker (if needed) and add the collarGPS.
-        :param collar_content: list or dict of GPS points. If more than 1, uses the CollarPicker widget.
+        :param file: filepath of text, excel/CSV file, or GPX file
         """
         def accept_collar(data):
             try:
@@ -496,17 +498,18 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 logger.critical(f"{e}.")
                 self.error.showMessage(f"Error adding borehole collar: {str(e)}.")
 
-        if isinstance(collar_content, dict):
-            self.picker = ExcelTablePicker()
-            self.picker.open(collar_content)
-            self.picker.accept_sig.connect(accept_collar)
-        else:
-            if len(collar_content) > 1:
-                self.picker = CollarPicker(darkmode=self.darkmode)
-                self.picker.open(collar_content, name="GPX File")
+        if isinstance(file, Path):
+            if file.suffix in [".xlsx", ".xls", ".csv"]:
+                self.picker = ExcelTablePicker(darkmode=self.darkmode)
+                self.picker.open(file)
                 self.picker.accept_sig.connect(accept_collar)
             else:
-                accept_collar(collar_content)
+                self.picker = CollarPicker(darkmode=self.darkmode)
+                self.picker.open(file)
+                self.picker.accept_sig.connect(accept_collar)
+        else:
+            print(F"add_color, non-file was passed.")  # Testing if this ever happens
+            accept_collar(file)
 
     def fill_info_tab(self):
         """
@@ -614,15 +617,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         table.blockSignals(False)
 
     def update_line_gps(self):
+        """
+        Add coloring to the table based on values, and add missing and extra GPS to their respective lists.
+        :return: None
+        """
         self.color_line_table()
-        self.check_station_duplicates()
         self.check_missing_gps()
         self.check_extra_gps()
-
-        if self.missing_gps_list.count() == 0 and self.extra_gps_list.count() == 0:
-            self.missing_gps_frame.hide()
-        else:
-            self.missing_gps_frame.show()
 
     def color_line_table(self):
         """
@@ -637,49 +638,39 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         stations = line_gps.df.Station.map(convert_station).to_list()
         warnings = line_gps.get_warnings(stations=self.pem_file.get_stations(converted=True, incl_deleted=False))
         duplicates = warnings.get("Duplicates")
+        elevation_warnings = warnings.get("Elevation Warnings")
         sorted_stations = sorted(stations, reverse=bool(stations[0] > stations[-1]))
+        elevation_column = self.line_table_columns.index("Elevation")
 
         for row in range(self.line_table.rowCount()):
             table_value = stations[row]
             sorted_value = sorted_stations[row]
 
             if row in duplicates.index:
-                self.line_table.item(row, self.station_column).setForeground(self.red_color)
+                self.line_table.item(row, self.station_column).setForeground(self.single_red_color)
+
+            if row in elevation_warnings.index:
+                self.line_table.item(row, elevation_column).setForeground(self.single_red_color)
+            else:
+                # Can immediately reset colow for elevation since it isn't affected by anything else
+                self.line_table.item(row, elevation_column).setForeground(QBrush())
 
             # Color sorting errors
-            if self.line_table.item(row, self.station_column) and table_value > sorted_value:
+            if table_value > sorted_value:
                 # Only change the foreground color if it's not a duplicate, for better contrast
                 if row not in duplicates.index:
                     self.line_table.item(row, self.station_column).setForeground(self.background_color)
                 self.line_table.item(row, self.station_column).setBackground(self.blue_color)
-            elif self.line_table.item(row, self.station_column) and table_value < sorted_value:
+            elif table_value < sorted_value:
                 # Only change the foreground color if it's not a duplicate, for better contrast
                 if row not in duplicates.index:
                     self.line_table.item(row, self.station_column).setForeground(self.background_color)
                 self.line_table.item(row, self.station_column).setBackground(self.red_color)
             else:
-                self.line_table.item(row, self.station_column).setForeground(QBrush())  # Reset the background
+                # Prevent duplicates to be reset
+                if row not in duplicates.index:
+                    self.line_table.item(row, self.station_column).setForeground(QBrush())  # Reset the background
                 self.line_table.item(row, self.station_column).setBackground(QBrush())  # Reset the background
-
-        self.line_table.blockSignals(False)
-
-    def check_station_duplicates(self):
-        """
-        Colors station GPS table rows to indicate duplicate station numbers in the GPS.
-        :return: None
-        """
-        assert not self.pem_file.is_borehole(), f"GPS station duplicates only applies to surface surveys."
-
-        self.line_table.blockSignals(True)
-
-        warnings = self.get_line().get_warnings(stations=self.pem_file.get_stations(converted=True, incl_deleted=False))
-        duplicates = warnings.get("Duplicates")
-        if duplicates.empty:
-            return
-
-        for row in range(self.line_table.rowCount()):
-            if row in duplicates.index:
-                self.line_table.item(row, self.station_column).setForeground(self.red_color)
 
         self.line_table.blockSignals(False)
 
@@ -692,21 +683,21 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.missing_gps_list.clear()
         warnings = self.get_line().get_warnings(stations=self.pem_file.get_stations(converted=True, incl_deleted=False))
         missing_gps = warnings.get("Missing GPS")
-        if not missing_gps.any():
-            return
 
         if len(missing_gps) > 0:
-            self.missing_gps_list.show()
-            self.missing_gps_label.show()
+            self.missing_gps_frame.show()
         else:
-            self.missing_gps_list.hide()
-            self.missing_gps_label.hide()
+            self.missing_gps_frame.hide()
 
         # Add the missing GPS stations to the missing_gps_list
         for i, station in enumerate(missing_gps):
             self.missing_gps_list.addItem(str(station))
 
     def check_extra_gps(self):
+        """
+        Find GPS entries whose station number does not exist in the PEM file's EM data.
+        :return: None
+        """
         assert not self.pem_file.is_borehole(), f"Extra GPS only applies to surface surveys."
         self.extra_gps_list.clear()
 
@@ -715,11 +706,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         extra_stations = [station for station in gps_stations if station not in em_stations]
 
         if len(extra_stations) > 0:
-            self.extra_gps_list.show()
-            self.extra_gps_label.show()
+            self.extra_gps_frame.show()
         else:
-            self.extra_gps_list.hide()
-            self.extra_gps_label.hide()
+            self.extra_gps_frame.hide()
 
         # Add the extra GPS stations to the extra_gps_list
         for i, station in enumerate(extra_stations):
@@ -756,7 +745,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.ri_table.removeRow(0)
         self.ri_file = None
 
-    def cull_station_gps(self):
+    def remove_extra_gps(self):
         """
         Remove all station GPS from the line_table where the station number isn't in the PEM data
         :return: None
@@ -794,8 +783,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
         default_path = str(self.pem_file.filepath.parent)
         if type in ['station', 'loop', 'collar']:
-            selected_path = self.dialog.getSaveFileName(self, 'Save File',
-                                                        directory=default_path,
+            selected_path = self.dialog.getSaveFileName(self, 'Save File', default_path,
                                                         filter='Text file (*.txt);; CSV file (*.csv);;')
             if selected_path[0]:
                 if selected_path[0].endswith('txt'):
@@ -809,8 +797,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             else:
                 return
         else:
-            selected_path = self.dialog.getSaveFileName(self, 'Save File',
-                                                        directory=default_path,
+            selected_path = self.dialog.getSaveFileName(self, 'Save File', default_path,
                                                         filter='SEG files (*.seg)')
             if selected_path[0]:
                 gps_str = gps.to_string()
@@ -922,8 +909,9 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             # empty in the table.
             self.line_table.item(row, self.station_column).setData(Qt.EditRole, int(station))
 
-        self.gps_object_changed(self.line_table, refresh=False)
+        self.gps_object_changed(self.line_table, refresh=True)
         self.update_line_gps()
+
         self.line_table.blockSignals(False)
 
     def calc_distance(self):
