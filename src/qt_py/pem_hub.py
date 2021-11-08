@@ -61,13 +61,10 @@ from src.ui.plan_map_options import Ui_PlanMapOptions
 logger = logging.getLogger(__name__)
 
 # TODO Add quick view to unpacker? Or separate EXE entirely?
-# TODO Move progress dialog or error box when there's an error.
 # TODO create large PDF with summary of file, including 3d map.
 # TODO Hybrid PEMGeometry selection
 # TODO Plot some profile channels on plan map
 # TODO Log recently opened files.
-# TODO Add GPS errors to table.
-# TODO Redo GPX parsing to use Geopandas. Might also want to revamp converting GPS.
 # TODO Could add std plot to the right of decay plots
 # TODO Add a Recent projects list, below project GPS, which will be a history of recently clicked folders.
 # TODO Show/hide single profile plot instead of plotting every time when selecting channels in PlotEditor.
@@ -125,6 +122,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.selection_files_label = QLabel()
         self.selection_components_label = QLabel()
         self.selection_timebase_label = QLabel()
+        self.selection_reading_groups_label = QLabel()
+        self.selection_stacks_label = QLabel()
         self.selection_zts_label = QLabel()
         self.selection_survey_label = QLabel()
         self.selection_derotation_label = QLabel()
@@ -881,6 +880,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.status_bar.addPermanentWidget(self.selection_files_label, 0)
         self.status_bar.addPermanentWidget(self.selection_components_label, 0)
         self.status_bar.addPermanentWidget(self.selection_timebase_label, 0)
+        self.status_bar.addPermanentWidget(self.selection_reading_groups_label, 0)
+        self.status_bar.addPermanentWidget(self.selection_stacks_label, 0)
         self.status_bar.addPermanentWidget(self.selection_zts_label, 0)
         self.status_bar.addPermanentWidget(self.selection_survey_label, 0)
         self.status_bar.addPermanentWidget(self.selection_derotation_label, 0)
@@ -3505,7 +3506,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         else:
             logger.error(f"PEMFile ID {id(pem_file)} is not in the table.")
             raise IndexError(f"PEMFile ID {id(pem_file)} is not in the table.")
-        print("Refresh complete.")
 
     def update_selection_text(self):
         """
@@ -3520,6 +3520,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             file = pem_files[0]
             self.status_bar.showMessage(f"{file.filepath}")
             timebase = f"Timebase: {file.timebase}ms"
+            reading_groups = f"Read Groupings: {', '.join(sorted(file.data['Readings_per_set'].unique().astype(str)))}"
+            stacks = f"Stacks: {', '.join(sorted(file.data['Number_of_stacks'].unique().astype(str)))}"
             zts = f"ZTS: {', '.join(file.data.ZTS.unique().astype(int).astype(str))}"
             survey_type = f"Survey Type: {file.get_survey_type()}"
             if file.is_pp():
@@ -3535,11 +3537,15 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             zts = f"ZTS: {', '.join(np.unique(np.concatenate([f.data.ZTS.unique().astype(int).astype(str) for f in pem_files])))}"
             survey_type = f"Survey Type(s): {', '.join(np.unique([f.get_survey_type() for f in pem_files]))}"
             derotated = ""
+            reading_groups = ""
+            stacks = ""
 
         components = np.unique(np.concatenate([pem.get_components() for pem in pem_files]))
         self.selection_files_label.setText(f"Selected: {len(pem_files)}")
         self.selection_components_label.setText(f"Component(s): {', '.join(components)}")
         self.selection_timebase_label.setText(timebase)
+        self.selection_reading_groups_label.setText(reading_groups)
+        self.selection_stacks_label.setText(stacks)
         self.selection_zts_label.setText(zts)
         self.selection_survey_label.setText(survey_type)
         self.selection_derotation_label.setText(derotated)

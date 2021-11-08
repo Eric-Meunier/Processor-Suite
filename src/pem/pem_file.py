@@ -926,7 +926,7 @@ class PEMFile:
         Return the survey type in title format
         :return: str
         """
-        file_survey_type = re.sub('\s+', '_', self.survey_type.casefold())
+        file_survey_type = re.sub(r'\s+', '_', self.survey_type.casefold())
 
         if any(['s-coil' in file_survey_type,
                 'surface' in file_survey_type,
@@ -957,7 +957,8 @@ class PEMFile:
             survey_type = 'Borehole Fluxgate'
 
         elif any(['s-squid' in file_survey_type,
-                  'sf_squid_3c' in file_survey_type]):
+                  'sf_squid_3c' in file_survey_type,
+                  'sf_squid' in file_survey_type]):
             survey_type = 'SQUID'
 
         else:
