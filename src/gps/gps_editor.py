@@ -273,6 +273,9 @@ def read_gpx(file, for_pemfile=False):
         return station_name
 
     gdf = gpd.read_file(file)
+    if gdf.empty:
+        logger.warning(f"No waypoints found in {Path(file).name}.")
+        return gpd.GeoDataFrame(), gpd.GeoDataFrame(), None
     crs = gdf.estimate_utm_crs()
     logger.info(f"Reading GPX file {Path(file).name}. Estimated CRS: {crs.name}.")
     gdf = gdf.to_crs(crs)
@@ -815,7 +818,7 @@ class BoreholeCollar(BaseGPS):
 
         return gps, units, error_gps, error_msg
 
-    def get_collar(self):
+    def get_collar_gps(self):
         return self.df
 
 
@@ -938,6 +941,7 @@ class BoreholeSegments(BaseGPS):
         else:
             raise ValueError(f"{self.units} does not have an associated units code.")
 
+
 class BoreholeGeometry(BaseGPS):
     """
     Class that represents the geometry of a hole, with collar and segments.
@@ -1043,6 +1047,9 @@ class BoreholeGeometry(BaseGPS):
         return self.df
 
     def get_collar(self):
+        return self.collar
+
+    def get_collar_gps(self):
         return self.collar.get_collar_gps()
 
     def get_segments(self):

@@ -17,7 +17,7 @@ class Ui_PEMHub(object):
     def setupUi(self, PEMHub):
         if not PEMHub.objectName():
             PEMHub.setObjectName(u"PEMHub")
-        PEMHub.resize(1152, 846)
+        PEMHub.resize(1152, 1000)
         sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -268,7 +268,7 @@ class Ui_PEMHub(object):
         sizePolicy1.setVerticalStretch(0)
         sizePolicy1.setHeightForWidth(self.project_frame.sizePolicy().hasHeightForWidth())
         self.project_frame.setSizePolicy(sizePolicy1)
-        self.project_frame.setMinimumSize(QSize(0, 0))
+        self.project_frame.setMinimumSize(QSize(200, 0))
         self.project_frame.setMaximumSize(QSize(16777215, 16777215))
         self.project_frame.setBaseSize(QSize(0, 0))
         self.project_frame.setFocusPolicy(Qt.StrongFocus)
@@ -704,7 +704,7 @@ class Ui_PEMHub(object):
         self.piw_frame.setObjectName(u"piw_frame")
         sizePolicy4.setHeightForWidth(self.piw_frame.sizePolicy().hasHeightForWidth())
         self.piw_frame.setSizePolicy(sizePolicy4)
-        self.piw_frame.setMinimumSize(QSize(0, 0))
+        self.piw_frame.setMinimumSize(QSize(400, 0))
         self.piw_frame.setMaximumSize(QSize(16777215, 16777215))
         self.piw_frame.setFrameShape(QFrame.NoFrame)
         self.piw_frame.setFrameShadow(QFrame.Sunken)

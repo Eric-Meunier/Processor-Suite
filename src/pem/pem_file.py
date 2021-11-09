@@ -474,7 +474,10 @@ class PEMFile:
         Return all the GPS warnings from the SurveyLine (if applicable) and TansmitterLoop objects.
         :return: Dict
         """
-        line_warnings = self.line.get_warnings()
+        if self.is_borehole():
+            line_warnings = {}
+        else:
+            line_warnings = self.line.get_warnings()
         loop_warnings = self.loop.get_warnings()
         return {"Line Warnings": line_warnings, "Loop Warnings": loop_warnings}
 
@@ -548,7 +551,7 @@ class PEMFile:
         return self.line.get_line(sorted=sorted)
 
     def get_collar_gps(self):
-        return self.collar.get_collar()
+        return self.collar.get_collar_gps()
 
     def get_segments(self):
         return self.segments.get_segments()

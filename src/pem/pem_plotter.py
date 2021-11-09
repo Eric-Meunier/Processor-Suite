@@ -95,7 +95,7 @@ def plot_loop(pem_file, figure, annotate=True, label=True, color='black', buffer
     ax = figure.axes[0]
     loop = pem_file.loop
     if not loop.df.empty:
-        loop_gps = loop.get_loop_gps(sorted=False, closed=(not is_mmr))
+        loop_gps = loop.get_loop(sorted=False, closed=(not is_mmr))
         eastings, northings = loop_gps.Easting.to_numpy(), loop_gps.Northing.to_numpy()
 
         # Plot the loop
@@ -143,8 +143,8 @@ def plot_loop(pem_file, figure, annotate=True, label=True, color='black', buffer
         return loop_handle
 
 
-def plot_line(pem_file, figure, annotate=True, label=True, plot_ticks=True, color='black',
-              buffer_color="white", zorder=2):
+def plot_line(pem_file, figure, annotate=True, label=True, plot_ticks=True, color='black', buffer_color="white",
+              zorder=2):
     """
     Plot the line GPS of a pem_file.
     :param pem_file: PEMFile object
@@ -1268,8 +1268,9 @@ class PlanMap:
 
             # Plot the loops
             if self.draw_loops is True and pem_file.has_loop_gps():
-                if pem_file.get_loop_gps().to_string() not in self.loops:
-                    self.loops.append(pem_file.get_loop_gps().to_string())
+                loop_gps_str = pem_file.get_loop_gps().to_string()
+                if loop_gps_str not in self.loops:
+                    self.loops.append(loop_gps_str)
                     self.loop_handle = plot_loop(pem_file, self.figure,
                                                  annotate=self.annotate_loop,
                                                  label=self.label_loops,

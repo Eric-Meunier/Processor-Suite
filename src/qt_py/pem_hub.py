@@ -41,7 +41,7 @@ from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, Bor
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, PEMGetter
 from src.pem.pem_plotter import PEMPrinter
 from src.qt_py import (icons_path, get_extension_icon, get_icon, CustomProgressDialog, read_file, light_palette,
-                       dark_palette, get_line_color, CRSSelector)
+                       dark_palette, get_line_color, CRSSelector, df_to_table, clear_table)
 from src.qt_py.db_plot import DBPlotter
 from src.qt_py.derotator import Derotator
 from src.qt_py.gps_tools import GPXCreator, GPSConversionWidget, GPSExtractor
@@ -71,6 +71,7 @@ logger = logging.getLogger(__name__)
 # TODO Add old PEM parsing
 # TODO When plotting PP files, set them all as the same station, and color code by timestamp. Also add plot of °----number---° showing drift.
 # TODO to remove loop edge effects, remove the primary field (or a percentage of it) from the readings, which is the PP
+# TODO Add component specific coil area scaling (for SQUID).
 
 
 # Keep a list of widgets so they don't get garbage collected
@@ -281,11 +282,11 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             """
             piw_widget = self.pem_info_widgets[self.table.currentRow()]
             if obj_str == 'loop':
-                gps_obj = piw_widget.get_loop_gps()
+                gps_obj = piw_widget.get_loop()
             elif obj_str == 'line':
-                gps_obj = piw_widget.get_line_gps()
+                gps_obj = piw_widget.get_line()
             elif obj_str == 'collar':
-                gps_obj = piw_widget.get_collar_gps()
+                gps_obj = piw_widget.get_collar()
             elif obj_str == 'segments':
                 gps_obj = piw_widget.get_segments()
             else:
@@ -2135,7 +2136,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                         # Share the collar and segments if the source is a borehole
                         if source_widget.pem_file.is_borehole():
-                            widget.fill_gps_table(source_widget.get_collar_gps().df, widget.collar_table)
+                            widget.fill_gps_table(source_widget.get_collar_gps(), widget.collar_table)
                             widget.fill_gps_table(source_widget.get_segments().df, widget.segments_table)
                             widget.gps_object_changed(widget.collar_table, refresh=False)
                             widget.gps_object_changed(widget.segments_table, refresh=False)
@@ -3248,6 +3249,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         for label in [self.selection_files_label,
                       self.selection_components_label,
                       self.selection_timebase_label,
+                      self.selection_reading_groups_label,
+                      self.selection_stacks_label,
                       self.selection_zts_label,
                       self.selection_survey_label,
                       self.selection_derotation_label]:
@@ -3520,8 +3523,12 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             file = pem_files[0]
             self.status_bar.showMessage(f"{file.filepath}")
             timebase = f"Timebase: {file.timebase}ms"
-            reading_groups = f"Read Groupings: {', '.join(sorted(file.data['Readings_per_set'].unique().astype(str)))}"
-            stacks = f"Stacks: {', '.join(sorted(file.data['Number_of_stacks'].unique().astype(str)))}"
+            if pem_files[0].is_averaged():
+                reading_groups = ""
+                stacks = ""
+            else:
+                reading_groups = f"Read Groupings: {', '.join(sorted(file.data['Readings_per_set'].unique().astype(str)))}"
+                stacks = f"Stacks: {', '.join(sorted(file.data['Number_of_stacks'].unique().astype(str)))}"
             zts = f"ZTS: {', '.join(file.data.ZTS.unique().astype(int).astype(str))}"
             survey_type = f"Survey Type: {file.get_survey_type()}"
             if file.is_pp():
@@ -4514,7 +4521,7 @@ class ChannelTimeViewer(QMainWindow):
 
     def __init__(self, pem_file, parent=None):
         """
-        Class that visualizes channel times in a PEMFile using a color gradient table.
+        Class that visualizes and edits channel times in a PEMFile using a color gradient table.
         :param pem_file: PEMFile object
         :param parent: Qt parent object
         """
@@ -4524,7 +4531,8 @@ class ChannelTimeViewer(QMainWindow):
         self.df = pd.DataFrame()
         self.text_format = ""
 
-        self.table = pg.TableWidget()
+        # self.table = pg.TableWidget()
+        self.table = QTableWidget()
 
         # Format window
         self.setLayout(QVBoxLayout())
@@ -4566,6 +4574,7 @@ class ChannelTimeViewer(QMainWindow):
         self.menu.addAction(delete_action)
 
         # Format table
+        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.sizePolicy().setHorizontalPolicy(QSizePolicy.Maximum)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -4585,7 +4594,6 @@ class ChannelTimeViewer(QMainWindow):
         self.deleteLater()
 
     def contextMenuEvent(self, event):
-        print(f"Table right-clicked.")
         self.menu.popup(QCursor.pos())
 
     def keyPressEvent(self, event):
@@ -4609,21 +4617,19 @@ class ChannelTimeViewer(QMainWindow):
         """
         Fill and color the table with the channel times of the PEMFile.
         """
-
         def color_table():
             """
             Color the background of the cells based on their values. Also colors the text and aligns the text.
             """
             mpl_red, mpl_blue = np.array([34, 79, 214]) / 256, np.array([247, 42, 42]) / 256
             q_red = QColor(mpl_red[0] * 255,
-                                 mpl_red[1] * 255,
-                                 mpl_red[2] * 255)
+                           mpl_red[1] * 255,
+                           mpl_red[2] * 255)
             q_blue = QColor(mpl_blue[0] * 255,
-                                  mpl_blue[1] * 255,
-                                  mpl_blue[2] * 255)
+                            mpl_blue[1] * 255,
+                            mpl_blue[2] * 255)
 
             for i, column in enumerate(self.df.columns):
-
                 if column != 'Remove':
                     # Normalize column values for color mapping
                     mn, mx, count = self.df[column].min(), self.df[column].max(), len(self.df[column])
@@ -4633,7 +4639,7 @@ class ChannelTimeViewer(QMainWindow):
                     cm = LCMap.from_list('Custom', [mpl_red, mpl_blue])
 
                     # Apply the color map to the values in the column
-                    colors = cm(norm(self.df[column].to_numpy()))
+                    colors = cm(norm(self.df[column].astype(float).to_numpy()))
 
                 for row in range(self.table.rowCount()):
                     item = self.table.item(row, i)
@@ -4652,35 +4658,37 @@ class ChannelTimeViewer(QMainWindow):
                     else:
                         # Color the background based on the value
                         color = QColor(colors[row][0] * 255,
-                                             colors[row][1] * 255,
-                                             colors[row][2] * 255)
+                                       colors[row][1] * 255,
+                                       colors[row][2] * 255)
                         item.setBackground(color)
 
+        slider_position = self.table.verticalScrollBar().sliderPosition()
         self.df = self.pem_file.channel_times.copy()
         # print(F"Channel times given to table viewer: {self.df.to_string(index=False)}")
 
         if self.units_combo.currentText() == 'µs':
-            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'] * 1000000
-            self.text_format = '%0.0f'
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'].astype(float) * 1000000
+            self.text_format = '{:0.0f}'
         elif self.units_combo.currentText() == 'ms':
-            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'] * 1000
-            self.text_format = '%0.3f'
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'].astype(float) * 1000
+            self.text_format = '{:0.3f}'
         else:
-            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width']
-            self.text_format = '%0.6f'
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'].astype(float)
+            self.text_format = '{:0.6f}'
 
-        self.table.setData(self.df.to_dict('index'))
-        self.table.setFormat(self.text_format)
+        self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'].applymap(self.text_format.format)
+        clear_table(self.table)
+        df_to_table(self.df, self.table)
         self.table.resizeRowsToContents()
 
         color_table()
+        self.table.verticalScrollBar().setSliderPosition(slider_position)
 
     def delete_channel(self):
         """
         Delete a channel from the table and the EM data.
         :return: None
         """
-        print("Deleting channels")
         selected_rows = [model.row() for model in self.table.selectionModel().selectedRows()]
         if selected_rows:
             self.pem_file.channel_times = self.pem_file.channel_times.drop(selected_rows).reset_index(drop=True)
@@ -4693,13 +4701,13 @@ class ChannelTimeViewer(QMainWindow):
         self.df.loc[row, "Remove"] = not self.df.loc[row, "Remove"]
 
         if self.units_combo.currentText() == 'µs':
-            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'] / 1000000
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'].astype(float) / 1000000
             self.text_format = '%0.0f'
         elif self.units_combo.currentText() == 'ms':
-            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'] / 1000
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'].astype(float) / 1000
             self.text_format = '%0.3f'
         else:
-            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width']
+            self.df.loc[:, 'Start':'Width'] = self.df.loc[:, 'Start':'Width'].astype(float)
             self.text_format = '%0.6f'
 
         self.pem_file.channel_times = self.df
@@ -5140,7 +5148,7 @@ class MagDeclinationCalculator(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    mw = PEMHub(app)
+    # mw = PEMHub(app)
 
     pem_getter = PEMGetter()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
@@ -5169,16 +5177,18 @@ def main():
     # pem_files = pem_getter.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
     # assert len(pem_files) == len(ri_files)
 
+    channel_viewer = ChannelTimeViewer(pem_files)
+    channel_viewer.show()
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
     # mw.show()
     # app.processEvents()
 
-    mw.add_pem_files(pem_files)
+    # mw.add_pem_files(pem_files)
 
     # mw.open_3d_map()
     # mw.add_dmp_files(dmp_files)
-    mw.table.selectRow(0)
+    # mw.table.selectRow(0)
     # mw.revert_xy_rotation_action.trigger()
     # mw.scale_pem_coil_area(selected=True)
     # mw.table.selectAll()
@@ -5191,7 +5201,7 @@ def main():
     # mw.open_name_editor('Line', selected=False)
     # mw.open_ri_importer()
     # mw.save_pem_file_as()
-    mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
+    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.add_gps_files(txt_file)
 
     """ Attempting to re-create printing bug """
@@ -5234,7 +5244,7 @@ def main():
 
     """"""
 
-    mw.show()
+    # mw.show()
     # mw.open_pdf_plot_printer(selected=False)
     app.exec_()
 

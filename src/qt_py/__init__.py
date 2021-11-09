@@ -679,7 +679,6 @@ class TableSelector(QWidget):
 
             for i, (sheet, info) in enumerate(content.items()):
                 table = QTableWidget()
-                table.setSelectionMode(QAbstractItemView.SingleSelection)
                 df_to_table(info.replace(np.nan, '', regex=True), table, set_role=True)
                 self.tables.append(table)
                 self.tabs.addTab(table, str(sheet))
@@ -693,13 +692,14 @@ class TableSelector(QWidget):
                                       header=None)
 
             table = QTableWidget()
-            table.setSelectionMode(QAbstractItemView.SingleSelection)
             df_to_table(content.replace(np.nan, '', regex=True), table, set_role=True)
             self.tables.append(table)
             self.tabs.addTab(table, filepath.name)
 
         for table in self.tables:
             table.setStyleSheet(f"selection-background-color: #{self.selection_color};")
+            table.setSelectionMode(QAbstractItemView.SingleSelection)
+            table.setEditTriggers(QAbstractItemView.NoEditTriggers)
             if self.single_click is True:
                 table.cellClicked.connect(self.cell_clicked)
             else:

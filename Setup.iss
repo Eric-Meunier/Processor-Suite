@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "PEMPro"
-#define MyAppVersion "0.12.3"
+#define MyAppVersion "0.12.4"
 #define MyAppPublisher "Crone Geophysics & Exploration Ltd."
 #define MyAppURL "https://www.cronegeophysics.com/"
 #define MyAppExeName "PEMPro.exe"

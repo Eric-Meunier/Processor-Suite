@@ -394,7 +394,11 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.add_collar(file)
             return
 
-        gps_df, crs = merge_files(files, collar=bool(current_tab == self.geometry_tab))
+        try:
+            gps_df, crs = merge_files(files, collar=bool(current_tab == self.geometry_tab))
+        except Exception as e:
+            self.message.critical(self, "Error opening GPS file", str(e))
+            return
 
         # Add survey line GPS
         if current_tab == self.station_gps_tab:
