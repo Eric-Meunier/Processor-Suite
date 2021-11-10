@@ -477,7 +477,7 @@ class PEMFile:
         if self.is_borehole():
             line_warnings = {}
         else:
-            line_warnings = self.line.get_warnings()
+            line_warnings = self.line.get_warnings(stations=self.get_stations(converted=True))
         loop_warnings = self.loop.get_warnings()
         return {"Line Warnings": line_warnings, "Loop Warnings": loop_warnings}
 
@@ -545,10 +545,10 @@ class PEMFile:
                     return crs
 
     def get_loop_gps(self, sorted=False, closed=False):
-        return self.loop.get_loop(sorted=sorted, closed=closed)
+        return self.loop.get_loop_gps(sorted=sorted, closed=closed)
 
     def get_line_gps(self, sorted=False):
-        return self.line.get_line(sorted=sorted)
+        return self.line.get_line_gps(sorted=sorted)
 
     def get_collar_gps(self):
         return self.collar.get_collar_gps()
@@ -1684,7 +1684,6 @@ class PEMFile:
         This will remove all amplitude information from the PEM!
         :return: PEMFile object, self with data scaled
         """
-
         def substract_mag(reading):
             off_time_data = np.delete(reading, self.channel_times.Remove)
             mag = np.average(off_time_data[-3:])
@@ -1698,6 +1697,20 @@ class PEMFile:
         logger.info(f"Data in {self.filepath.name} offset by last reading - Amplitude information lost")
 
         self.notes.append('<HE3> Data shifted to force last chn to zero.')
+        return self
+
+    def change_suffix(self, new_suffix):
+        """
+        Change the station suffix of all data in the PEMFile to new_suffix. Only applies to surface surveys.
+        :param new_suffix: str, either N, S, E, W
+        :return: PEMFile object
+        """
+        assert new_suffix.upper() in ['N', 'E', 'S', 'W'], f"{new_suffix} is not a valid suffix."
+        assert not self.is_borehole(), f"Suffixes only apply to surface surveys."
+
+        self.data.loc[:, 'Station'] = self.data.loc[:, 'Station'].map(
+            lambda x: re.sub(r'[NESW]', new_suffix.upper(), x))
+
         return self
 
     def reverse_component(self, component):

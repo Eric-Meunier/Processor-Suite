@@ -1,20 +1,18 @@
 import datetime
 import logging
-import os
 import re
 import sys
-import chardet
+import numpy as np
 from pathlib import Path
 from threading import Timer
 
+import math
 import pandas as pd
 import pyqtgraph as pg
-import matplotlib.pyplot as plt
-from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QMenu, QAction,
                                QFileDialog, QVBoxLayout, QLabel, QApplication)
-from src.qt_py import icons_path, read_file, get_icon, get_line_color
+from src.qt_py import read_file, get_icon, get_line_color
 
 logger = logging.getLogger(__name__)
 logger.setLevel("DEBUG")
@@ -514,11 +512,15 @@ class DBPlotWidget(QMainWindow):
             self.delta_current_label.setStyleSheet(f'color: {get_line_color("foreground", "mpl", self.darkmode)}')
 
         time_d = data.Time.max() - data.Time.min()
-        hours = int(time_d / 3600)
-        minutes = int(time_d % 3600 / 60)
-        seconds = int(time_d % 60)
-        self.duration_label.setText(f"Duration: {hours:02d}:{minutes:02d}:{seconds:02d} ")
-        self.rate_of_change_label.setText(f"Rate: {current_delta / (time_d / 3600):.1f} A/h ")
+        if math.isnan(time_d) or time_d == 0.:
+            self.duration_label.setText(f"Duration: nan ")
+            self.rate_of_change_label.setText(f"Rate: nan ")
+        else:
+            hours = int(time_d / 3600)
+            minutes = int(time_d % 3600 / 60)
+            seconds = int(time_d % 60)
+            self.duration_label.setText(f"Duration: {hours:02d}:{minutes:02d}:{seconds:02d} ")
+            self.rate_of_change_label.setText(f"Rate: {current_delta / (time_d / 3600):.1f} A/h ")
 
 
 if __name__ == '__main__':
@@ -539,7 +541,7 @@ if __name__ == '__main__':
     # files = str(Path(samples_folder).joinpath('CM 252.txt'))
     # files = str(Path(samples_folder).joinpath('Date error/0511_May11Dampingbox232Voltage.txt'))
     # files = str(Path(samples_folder).joinpath('0724_238-20210724 (no data error).log'))
-    files = str(Path(samples_folder).joinpath('Date error/16_Damp Box 222 Current 01.16.2021.txt'))
+    files = str(Path(samples_folder).joinpath('1110_Nov10DB228Current.txt'))
     mw.open(files)
     mw.show()
 

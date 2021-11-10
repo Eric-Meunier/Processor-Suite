@@ -489,7 +489,7 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         f1, f2 = pem_files[0].copy(), pem_files[1].copy()
         assert f1.is_borehole() == f2.is_borehole(), f"Cannot merge a borehole survey with a surface survey."
         assert f1.is_fluxgate() == f2.is_fluxgate(), f"Cannot merge a fluxgate survey with an induction survey."
-        assert f1.timebase == f2.timebase, f"Both files must have the same timebase."
+        # assert f1.timebase == f2.timebase, f"Both files must have the same timebase."
         assert f1.number_of_channels == f2.number_of_channels, f"Both files must have the same number of channels."
 
         # Enable the SOA spin boxes if the file is a borehole file and has XY component data

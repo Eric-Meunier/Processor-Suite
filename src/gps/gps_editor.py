@@ -585,7 +585,7 @@ class TransmitterLoop(BaseGPS):
                self.df['Northing'].sum() / self.df.shape[0], \
                self.df['Elevation'].sum() / self.df.shape[0],
 
-    def get_loop(self, sorted=False, closed=False):
+    def get_loop_gps(self, sorted=False, closed=False):
         if sorted:
             df = self.get_sorted_loop()
         else:
@@ -709,7 +709,7 @@ class SurveyLine(BaseGPS):
             df.drop('Distance', axis=1, inplace=True)
         return df
 
-    def get_line(self, sorted=True):
+    def get_line_gps(self, sorted=True):
         if sorted:
             df = self.get_sorted_line()
         else:

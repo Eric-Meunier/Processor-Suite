@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1152</width>
+    <width>1499</width>
     <height>1000</height>
    </rect>
   </property>
@@ -1237,7 +1237,7 @@ Warnings</string>
            <item>
             <widget class="QStackedWidget" name="stackedWidget">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
@@ -1267,7 +1267,7 @@ Warnings</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1152</width>
+     <width>1499</width>
      <height>21</height>
     </rect>
    </property>
@@ -1321,8 +1321,13 @@ Warnings</string>
      <property name="title">
       <string>Rename</string>
      </property>
+     <property name="icon">
+      <iconset>
+       <normaloff>icons/rename.png</normaloff>icons/rename.png</iconset>
+     </property>
      <addaction name="actionRename_Files"/>
      <addaction name="actionRename_Lines_Holes"/>
+     <addaction name="actionRename_Suffixes"/>
      <addaction name="separator"/>
      <addaction name="actionAuto_Name_Lines_Holes"/>
     </widget>
@@ -2087,6 +2092,10 @@ Warnings</string>
    </property>
   </action>
   <action name="actionMake_DXF">
+   <property name="icon">
+    <iconset>
+     <normaloff>icons/dxf.png</normaloff>icons/dxf.png</iconset>
+   </property>
    <property name="text">
     <string>Make DXF</string>
    </property>
@@ -2245,6 +2254,11 @@ Warnings</string>
    </property>
    <property name="text">
     <string>KMZ Extractor</string>
+   </property>
+  </action>
+  <action name="actionRename_Suffixes">
+   <property name="text">
+    <string>Suffixes</string>
    </property>
   </action>
  </widget>

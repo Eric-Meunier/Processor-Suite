@@ -72,6 +72,7 @@ logger = logging.getLogger(__name__)
 # TODO When plotting PP files, set them all as the same station, and color code by timestamp. Also add plot of °----number---° showing drift.
 # TODO to remove loop edge effects, remove the primary field (or a percentage of it) from the readings, which is the PP
 # TODO Add component specific coil area scaling (for SQUID).
+# TODO Add scroll wheel channel-scrolling for single plot in plot editor.
 
 
 # Keep a list of widgets so they don't get garbage collected
@@ -184,6 +185,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.get_geometry_action = QAction("Geometry", self)
         self.rename_lines_action = QAction("Rename Lines/Holes", self)
         self.rename_files_action = QAction("Rename Files", self)
+        self.change_suffix_action = QAction("Change Suffix", self)
         self.init_actions()
 
         # Project Directory
@@ -239,6 +241,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.actionScale_All_Currents.setIcon(get_icon("current.png"))
         self.actionChange_All_Coil_Areas.setIcon(get_icon("coil.png"))
         self.menuReverse_Polarity.setIcon(get_icon("reverse.png"))
+        self.menuRename.setIcon(get_icon("rename.png"))
 
         self.actionSave_as_KMZ.setIcon(get_icon("google_earth.png"))
         self.actionExport_All_GPS.setIcon(get_icon("csv.png"))
@@ -390,6 +393,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.scale_current_action.setIcon(get_icon('current.png'))
         self.scale_ca_action.triggered.connect(lambda: self.scale_pem_coil_area(selected=True))
         self.scale_ca_action.setIcon(get_icon('coil.png'))
+        self.change_suffix_action.setIcon(get_icon('rename.png'))
         # self.mag_offset_action = QAction("Mag Offset", self)
         # self.mag_offset_action.triggered.connect(lambda: self.mag_offset_lastchn(selected=True))
 
@@ -417,6 +421,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         # Rename lines and files
         self.rename_lines_action.triggered.connect(lambda: self.open_name_editor('Line', selected=True))
         self.rename_files_action.triggered.connect(lambda: self.open_name_editor('File', selected=True))
+        self.change_suffix_action.triggered.connect(lambda: self.change_suffix(selected=True))
 
         self.actionNRCan_Declination_Calculator.triggered.connect(self.open_nrcan_calculator)
 
@@ -790,6 +795,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         # PEM menu
         self.actionRename_Lines_Holes.triggered.connect(lambda: self.open_name_editor('Line', selected=False))
         self.actionRename_Files.triggered.connect(lambda: self.open_name_editor('File', selected=False))
+        self.actionRename_Suffixes.triggered.connect(lambda: self.change_suffix(selected=False))
         self.actionAverage_All_PEM_Files.triggered.connect(lambda: self.average_pem_data(selected=False))
         self.actionSplit_All_PEM_Files.triggered.connect(lambda: self.split_pem_channels(selected=False))
         self.actionScale_All_Currents.triggered.connect(lambda: self.scale_pem_current(selected=False))
@@ -923,11 +929,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         settings.setValue("project_dir", self.project_dir)
 
         # Files
-        settings.setValue("last_opened_files", [f.filepath for f in self.pem_files])
-
-        # File filters
-        settings.setValue("PEM_filter", self.pem_list_filter.get_settings())
-        settings.setValue("GPS_filter", self.gps_list_filter.get_settings())
+        settings.setValue("last_opened_files", [f.filepath for f in self.pem_files if f.filepath.is_file()])
 
         settings.endGroup()
 
@@ -968,7 +970,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             settings.value("actionRename_Merged_Files", defaultValue=True, type=bool))
 
         # Project directory
-        # self.project_dir_edit.setText(str(self.file_sys_model.rootPath()))  # In case no valid project dir is saved
         project_dir = settings.value("project_dir")
         if project_dir:
             project_dir: str
@@ -983,10 +984,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                                              self.message.Yes | self.message.No)
             if response == self.message.Yes:
                 self.add_pem_files(last_opened_pems)
-
-        # File filters
-        self.pem_list_filter.set_settings(settings.value("PEM_filter"), refresh=False)
-        self.gps_list_filter.set_settings(settings.value("GPS_filter"), refresh=False)
 
         settings.endGroup()
 
@@ -1177,6 +1174,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.right_click_menu.addAction(self.scale_current_action)
             self.right_click_menu.addAction(self.scale_ca_action)
             # self.menu.addAction(self.mag_offset_action)
+            if all([not f.is_borehole() for f in selected_pems]):
+                self.right_click_menu.addAction(self.change_suffix_action)
             self.right_click_menu.addSeparator()
 
             # Add the reverse data menu
@@ -1847,11 +1846,11 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                              f" {f2.filepath.name} is a {f2.get_survey_type()}.")
                 self.message.information(self, 'Error', f"Cannot merge a fluxgate survey with an induction survey.")
                 return False
-            if not f1.timebase == f2.timebase:
-                logger.error(f"{f1.filepath.name} has a timebase of {f1.timebase} and"
-                             f" {f2.filepath.name} has a timebase of {f2.timebase}.")
-                self.message.information(self, 'Error', f"Both files must have the same timebase.")
-                return False
+            # if not f1.timebase == f2.timebase:
+            #     logger.error(f"{f1.filepath.name} has a timebase of {f1.timebase} and"
+            #                  f" {f2.filepath.name} has a timebase of {f2.timebase}.")
+            #     self.message.information(self, 'Error', f"Both files must have the same timebase.")
+            #     return False
             if not f1.number_of_channels == f2.number_of_channels:
                 logger.error(f"{f1.filepath.name} has {len(f1.channel_times)} channels and"
                              f" {f2.filepath.name} has {len(f2.channel_times)} channels.")
@@ -3849,6 +3848,27 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.status_bar.showMessage(f"Process complete. "
                                     f"Mag offset of {len(pem_files)} PEM file(s) complete.", 2000)
 
+    def change_suffix(self, selected=False):
+        pem_files, rows = self.get_pem_files(selected=selected)
+        if not all([not file.is_borehole() for file in pem_files]):
+            self.message.information(self, "Error", f"Changing suffixes only applies to surface surveys.")
+            return
+
+        new_suffix, ok_pressed = QInputDialog.getItem(self, "Change Suffix", "New Suffix:", ['N', 'E', 'S', 'W'],
+                                                      current=0)
+        if ok_pressed:
+            with CustomProgressDialog(f'Changing Suffixes...', 0, len(pem_files)) as dlg:
+                for pem_file in pem_files:
+                    dlg.setLabelText(f"Changing suffixes of {pem_file.filepath.name}")
+                    if dlg.wasCanceled():
+                        break
+
+                    pem_file.change_suffix(new_suffix)
+                    self.refresh_pem(pem_file)
+                    dlg += 1
+
+                self.status_bar.showMessage(F"Suffixes changed to '{new_suffix}'")
+
     def reverse_component_data(self, comp, selected=False):
         """
         Reverse the polarity of all data of a given component for all opened PEM files.
@@ -4102,8 +4122,27 @@ class PathFilter(QWidget):
 
         # Signals
         self.reset_btn.clicked.connect(self.reset)
+        self.accept_btn.clicked.connect(self.save_settings)
         self.accept_btn.clicked.connect(self.accept_sig.emit)
         self.accept_btn.clicked.connect(self.hide)
+
+        self.load_settings()
+
+    def save_settings(self):
+        settings = QSettings("Crone Geophysics", "PEMPro")
+        settings.beginGroup(f"PathFilter - {self.filetype}")
+
+        settings.setValue(f"settings", self.get_settings())
+
+        settings.endGroup()
+
+    def load_settings(self):
+        settings = QSettings("Crone Geophysics", "PEMPro")
+        settings.beginGroup(f"PathFilter - {self.filetype}")
+
+        self.set_settings(settings.value("settings"), refresh=False)
+
+        settings.endGroup()
 
     def keyPressEvent(self, e):
         if e.key() == Qt.Key_Escape:
@@ -5148,7 +5187,7 @@ class MagDeclinationCalculator(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    # mw = PEMHub(app)
+    mw = PEMHub(app)
 
     pem_getter = PEMGetter()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
@@ -5177,8 +5216,8 @@ def main():
     # pem_files = pem_getter.get_pems(folder="Raw Boreholes", file="em10-10z_0403.PEM")
     # assert len(pem_files) == len(ri_files)
 
-    channel_viewer = ChannelTimeViewer(pem_files)
-    channel_viewer.show()
+    # channel_viewer = ChannelTimeViewer(pem_files)
+    # channel_viewer.show()
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
     # mw.show()
@@ -5244,7 +5283,7 @@ def main():
 
     """"""
 
-    # mw.show()
+    mw.show()
     # mw.open_pdf_plot_printer(selected=False)
     app.exec_()
 

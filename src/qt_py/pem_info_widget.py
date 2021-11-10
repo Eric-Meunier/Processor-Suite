@@ -150,7 +150,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         # Buttons
         self.cullStationGPSButton.clicked.connect(self.remove_extra_gps)
 
-        self.flip_station_numbers_button.clicked.connect(self.reverse_station_gps_numbers)
+        self.flip_station_numbers_button.clicked.connect(self.reverse_station_gps_order)
         self.flip_station_signs_button.clicked.connect(self.flip_station_gps_polarity)
         self.stations_from_data_btn.clicked.connect(self.generate_station_names)
 
@@ -874,13 +874,13 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             new_station = int(self.line_table.item(row, self.station_column).text())
             self.line_table.item(row, self.station_column).setData(Qt.EditRole, new_station * -1)
 
-        self.gps_object_changed(self.line_table, refresh=False)
+        self.gps_object_changed(self.line_table, refresh=True)
         self.update_line_gps()
         self.line_table.blockSignals(False)
 
-    def reverse_station_gps_numbers(self):
+    def reverse_station_gps_order(self):
         """
-        Flips the station numbers from the StationGPSTable head-over-heels.
+        Reverse the order of station numbers in the StationGPSTable.
         :return: None
         """
         self.line_table.blockSignals(True)

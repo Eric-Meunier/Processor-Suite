@@ -457,7 +457,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         self.setWindowTitle(f'Line Adder - {self.pem_file.filepath.name}')
 
         self.units = self.gps_object.get_units()
-        df = self.gps_object.get_line(sorted=self.auto_sort_cbox.isChecked())
+        df = self.gps_object.get_line_gps(sorted=self.auto_sort_cbox.isChecked())
         df.loc[:, "Easting":"Elevation"] = df.loc[:, "Easting":"Elevation"].astype(float).round(2)
         self.df_to_table(df)
         self.plot_table()
@@ -749,7 +749,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
 
         self.clear_table()
         self.units = self.gps_object.get_units()
-        df = self.gps_object.get_loop(closed=True, sorted=self.auto_sort_cbox.isChecked())
+        df = self.gps_object.get_loop_gps(closed=True, sorted=self.auto_sort_cbox.isChecked())
         df.loc[:, "Easting":"Elevation"] = df.loc[:, "Easting":"Elevation"].astype(float).round(2)
         self.df_to_table(df)
         self.plot_table()

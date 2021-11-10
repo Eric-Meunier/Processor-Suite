@@ -95,7 +95,7 @@ def plot_loop(pem_file, figure, annotate=True, label=True, color='black', buffer
     ax = figure.axes[0]
     loop = pem_file.loop
     if not loop.df.empty:
-        loop_gps = loop.get_loop(sorted=False, closed=(not is_mmr))
+        loop_gps = loop.get_loop_gps(sorted=False, closed=(not is_mmr))
         eastings, northings = loop_gps.Easting.to_numpy(), loop_gps.Northing.to_numpy()
 
         # Plot the loop
