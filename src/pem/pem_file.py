@@ -1066,11 +1066,12 @@ class PEMFile:
         Copies the information of the PEMFile to the clipboard for the purposes of filling out the geophysicssheet.
         """
         stations = self.get_stations(converted=True)
+        survey_type = f"{self.get_survey_type()} {''.join(self.get_components())}"  # Differentiates Z and XY surveys
         info = [self.operator,  # Operator
                 self.date,  # Date
                 self.client,  # Client
                 '',  # Helpers
-                '',  # Type of day
+                'Survey',  # Type of day
                 '',  # Per diem
                 '',  # Total hours worked
                 self.grid,  # Grid
@@ -1079,7 +1080,7 @@ class PEMFile:
                 stations.min(),  # Start
                 stations.max(),  # End
                 '',  # Complete?
-                self.get_survey_type(),  # Survey type
+                survey_type,  # Survey type
                 '',  # Start time on drill
                 '',  # Time leaving drill
                 ', '.join(self.data.ZTS.astype(int).astype(str).unique()),  # ZTS

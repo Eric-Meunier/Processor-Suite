@@ -8,4 +8,4 @@ app_data_dir.mkdir(exist_ok=True)
 app_temp_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro/temp")
 app_temp_dir.mkdir(exist_ok=True)
 
-__version__ = '0.12.4'
+__version__ = '0.12.5'

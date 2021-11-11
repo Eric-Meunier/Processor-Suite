@@ -57,6 +57,8 @@ class SurveyPlanner(QMainWindow):
         self.message = QMessageBox()
         self.error = QErrorMessage()
         self.error.setWindowTitle("Error")
+        self.project_path_label = QLabel()
+        self.statusBar().addPermanentWidget(self.project_path_label)
         self.crs_selector = CRSSelector(title="Input CRS")
         self.crs_selector.gps_system_cbox.setCurrentIndex(2)
         self.crs_selector.gps_datum_cbox.setCurrentIndex(1)
@@ -984,7 +986,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.crs_selector.gps_zone_cbox.setCurrentIndex(17)
 
         # Status bar
-        self.status_bar.addPermanentWidget(self.crs_selector.epsg_label, 0)
+        # self.status_bar.addPermanentWidget(self.crs_selector.epsg_label, 0)
         self.plan_view.setMenuEnabled(False)
 
         # Icons
@@ -1683,6 +1685,15 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         hole_importer.open(filepath)
         hole_importer.show()
 
+    def get_default_path(self):
+        default_path = None
+        if self.save_name:
+            default_path = Path(self.save_name).parent
+        elif self.parent:
+            default_path = self.parent.project_dir_edit.text()
+
+        return str(default_path)
+
     def open_project(self, filepath=None):
         """
         Parse a .LFP file and add the holes and loops in the file to the project
@@ -1690,9 +1701,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         :return: None
         """
         if filepath is None:
-            default_path = None
-            if self.parent:
-                default_path = self.parent.project_dir_edit.text()
+            default_path = self.get_default_path()
 
             filepath, filetype = QFileDialog.getOpenFileName(self, "Loop Planning File",
                                                              default_path,
@@ -1700,6 +1709,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         if filepath:
             self.save_name = filepath
+            self.project_path_label.setText(self.save_name)
 
             # Remove existing holes and loops
             for ind in reversed(range(len(self.hole_widgets))):
@@ -1708,7 +1718,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
                 self.remove_loop(ind, prompt=False)
 
             file_content = open(filepath, "r").read()
-            epsg = re.search("EPSG: (\d+)", file_content).group(1)
+            epsg = re.search(r"EPSG: (\d+)", file_content).group(1)
             holes = re.findall(
                 r">> Hole\n(name:.*\neasting:.*\nnorthing:.*\nelevation:.*\nazimuth:.*\ndip:.*\nlength:.*\n)<<",
                 file_content)
@@ -1757,7 +1767,9 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         :return: None
         """
         if save_as or not self.save_name:
-            save_name, filetype = QFileDialog.getSaveFileName(self, "Project File Name", "", "Loop Planning File (*.lpf)")
+            default_path = self.get_default_path()
+            save_name, filetype = QFileDialog.getSaveFileName(self, "Project File Name", default_path,
+                                                              "Loop Planning File (*.lpf)")
             if save_name:
                 self.save_name = save_name
             else:
@@ -1784,72 +1796,79 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             file.write(result)
 
         # os.startfile(save_name)
+        self.project_path_label.setText(self.save_name)
         self.statusBar().showMessage("Project file saved.", 1500)
 
     def save_kmz(self):
         """
         Save the loop and hole collar to a KMZ file.
         """
+        def get_kml():
+            crs = self.get_crs()
+
+            kml = simplekml.Kml()
+
+            loop_style = simplekml.Style()
+            loop_style.linestyle.width = 4
+            loop_style.linestyle.color = simplekml.Color.yellow
+
+            trace_style = simplekml.Style()
+            trace_style.linestyle.width = 2
+            trace_style.linestyle.color = simplekml.Color.magenta
+
+            collar_style = simplekml.Style()
+            collar_style.iconstyle.icon.href = 'http://maps.google.com/mapfiles/kml/paddle/wht-stars.png'
+            collar_style.iconstyle.color = simplekml.Color.magenta
+
+            for hole_widget in self.hole_widgets:
+                hole_name = hole_widget.hole_name_edit.text()
+                folder = kml.newfolder(name=hole_name)
+
+                # Add the collar
+                proj = hole_widget.get_proj_latlon(crs).loc[:, "Easting":"Northing"]
+                if proj.empty:
+                    logger.warning(f"{hole_name} projection is empty.")
+                    continue
+
+                collar = proj.iloc[0]
+
+                collar_point = folder.newpoint(name=hole_name, coords=[collar.to_numpy()])
+                collar_point.style = collar_style
+
+                # Add the hole trace
+                trace = folder.newlinestring(name=hole_name)
+                trace.coords = proj.to_numpy()
+                trace.extrude = 1
+                trace.style = trace_style
+
+            for loop_widget in self.loop_widgets:
+                loop_name = loop_widget.loop_name_edit.text()
+
+                # Add the loop
+                loop = loop_widget.get_loop_coords_latlon(crs).loc[:, "Easting":"Northing"]
+
+                if loop.empty:
+                    logger.error(f"Loop {loop_name} GPS is empty.")
+                    return
+
+                ls = kml.newlinestring(name=loop_name)
+                ls.coords = loop.to_numpy()
+                ls.extrude = 1
+                ls.style = loop_style
+
+            return kml
+
         if not any([self.hole_widgets, self.loop_widgets]):
             self.status_bar.showMessage(f"No GPS to save.", 1000)
             return
 
-        crs = self.get_crs()
-
-        kml = simplekml.Kml()
-
-        loop_style = simplekml.Style()
-        loop_style.linestyle.width = 4
-        loop_style.linestyle.color = simplekml.Color.yellow
-
-        trace_style = simplekml.Style()
-        trace_style.linestyle.width = 2
-        trace_style.linestyle.color = simplekml.Color.magenta
-
-        collar_style = simplekml.Style()
-        collar_style.iconstyle.icon.href = 'http://maps.google.com/mapfiles/kml/paddle/wht-stars.png'
-        collar_style.iconstyle.color = simplekml.Color.magenta
-
-        for hole_widget in self.hole_widgets:
-            hole_name = hole_widget.hole_name_edit.text()
-            folder = kml.newfolder(name=hole_name)
-
-            # Add the collar
-            proj = hole_widget.get_proj_latlon(crs).loc[:, "Easting":"Northing"]
-            if proj.empty:
-                logger.warning(f"{hole_name} projection is empty.")
-                continue
-
-            collar = proj.iloc[0]
-
-            collar_point = folder.newpoint(name=hole_name, coords=[collar.to_numpy()])
-            collar_point.style = collar_style
-
-            # Add the hole trace
-            trace = folder.newlinestring(name=hole_name)
-            trace.coords = proj.to_numpy()
-            trace.extrude = 1
-            trace.style = trace_style
-
-        for loop_widget in self.loop_widgets:
-            loop_name = loop_widget.loop_name_edit.text()
-
-            # Add the loop
-            loop = loop_widget.get_loop_coords_latlon(crs).loc[:, "Easting":"Northing"]
-
-            if loop.empty:
-                logger.error(f"Loop {loop_name} GPS is empty.")
-                return
-
-            ls = kml.newlinestring(name=loop_name)
-            ls.coords = loop.to_numpy()
-            ls.extrude = 1
-            ls.style = loop_style
-
-        save_dir = self.dialog.getSaveFileName(self, 'Save KMZ File', '', 'KMZ Files (*.kmz)')[0]
+        default_path = self.get_default_path()
+        save_dir = self.dialog.getSaveFileName(self, 'Save KMZ File', default_path, 'KMZ Files (*.kmz)')[0]
         if save_dir:
-            kmz_save_dir = os.path.splitext(save_dir)[0] + '.kmz'
+            kml = get_kml()
+            kmz_save_dir = str(Path(save_dir).with_suffix(".kmz"))
             kml.savekmz(kmz_save_dir, format=False)
+            self.statusBar().showMesage("Save complete.", 1500)
             # try:
             #     logger.info(f"Saving {Path(kmz_save_dir).name}.")
             #     os.startfile(kmz_save_dir)
@@ -1861,66 +1880,70 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         """
         Save the loop and collar coordinates to a GPX file.
         """
+        def get_gpx():
+            crs = self.get_crs()
+
+            gpx = gpxpy.gpx.GPX()
+
+            # Add the collars
+            for hole_widget in self.hole_widgets:
+                hole_name = hole_widget.hole_name_edit.text()
+
+                # Add the collar
+                proj = hole_widget.get_proj_latlon(crs).loc[:, "Easting":"Northing"]
+                if proj.empty:
+                    logger.warning(f"{hole_name} projection is empty.")
+                    continue
+
+                collar = proj.iloc[0]
+
+                waypoint = gpxpy.gpx.GPXWaypoint(latitude=collar.Northing,
+                                                 longitude=collar.Easting,
+                                                 name=hole_name)
+                gpx.waypoints.append(waypoint)
+
+            # Add the loops
+            for loop_widget in self.loop_widgets:
+                loop_name = loop_widget.loop_name_edit.text()
+
+                # Add the loop
+                loop = loop_widget.get_loop_coords_latlon(crs).loc[:, "Easting":"Northing"]
+
+                if loop.empty:
+                    logger.error(f"Loop {loop_name} GPS is empty.")
+                    return
+
+                # Create the GPX waypoints
+                route = gpxpy.gpx.GPXRoute()
+                for i, coord in loop.iterrows():
+                    waypoint = gpxpy.gpx.GPXWaypoint(latitude=coord.Northing,
+                                                     longitude=coord.Easting,
+                                                     name=loop_name)
+                    gpx.waypoints.append(waypoint)
+                    route.points.append(waypoint)
+                gpx.routes.append(route)
+
+            return gpx
+
         if not any([self.hole_widgets, self.loop_widgets]):
-            self.status_bar.showMessage(f"No GPS to save.", 1000)
+            self.status_bar.showMessage(f"No GPS to save.", 1500)
             return
 
-        crs = self.get_crs()
-
-        gpx = gpxpy.gpx.GPX()
-
-        # Add the collars
-        for hole_widget in self.hole_widgets:
-            hole_name = hole_widget.hole_name_edit.text()
-
-            # Add the collar
-            proj = hole_widget.get_proj_latlon(crs).loc[:, "Easting":"Northing"]
-            if proj.empty:
-                logger.warning(f"{hole_name} projection is empty.")
-                continue
-
-            collar = proj.iloc[0]
-
-            waypoint = gpxpy.gpx.GPXWaypoint(latitude=collar.Northing,
-                                             longitude=collar.Easting,
-                                             name=hole_name)
-            gpx.waypoints.append(waypoint)
-
-        # Add the loops
-        for loop_widget in self.loop_widgets:
-            loop_name = loop_widget.loop_name_edit.text()
-
-            # Add the loop
-            loop = loop_widget.get_loop_coords_latlon(crs).loc[:, "Easting":"Northing"]
-
-            if loop.empty:
-                logger.error(f"Loop {loop_name} GPS is empty.")
-                return
-
-            # Create the GPX waypoints
-            route = gpxpy.gpx.GPXRoute()
-            for i, coord in loop.iterrows():
-                waypoint = gpxpy.gpx.GPXWaypoint(latitude=coord.Northing,
-                                                 longitude=coord.Easting,
-                                                 name=loop_name)
-                gpx.waypoints.append(waypoint)
-                route.points.append(waypoint)
-            gpx.routes.append(route)
-
         # Save the file
-        save_path = self.dialog.getSaveFileName(self, 'Save GPX File', '', 'GPX Files (*.gpx)')[0]
+        default_path = self.get_default_path()
+        save_path = self.dialog.getSaveFileName(self, 'Save GPX File', default_path, 'GPX Files (*.gpx)')[0]
         if save_path:
+            gpx = get_gpx()
             with open(save_path, 'w') as f:
                 f.write(gpx.to_xml())
-            self.status_bar.showMessage('Save complete.', 2000)
+
+            self.status_bar.showMessage('Save complete.', 1500)
             # try:
             #     logger.info(f"Saving {Path(save_path).name}.")
             #     os.startfile(save_path)
             # except OSError:
             #     logger.error(f'No application to open {save_path}.')
             #     pass
-        else:
-            self.status_bar.showMessage('Cancelled.', 2000)
 
 
 class GridPlanner(SurveyPlanner, Ui_GridPlanner):
@@ -1992,7 +2015,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
         self.actionSave_as_KMZ.setIcon(get_icon("google_earth.png"))
         self.actionSave_as_GPX.setIcon(get_icon("garmin_file.png"))
         self.view_map_action.setIcon(get_icon("folium.png"))
-        self.status_bar.addPermanentWidget(self.crs_selector.epsg_label, 0)
+        # self.status_bar.addPermanentWidget(self.crs_selector.epsg_label, 0)
 
     def init_signals(self):
         def change_loop_width():
