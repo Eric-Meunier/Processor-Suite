@@ -2444,7 +2444,7 @@ class PEMParser:
                 table['Remove'] = False
 
                 # If the file isn't a PP file
-                if not table.Width.max() < 1e-5:
+                if table.Width.max() > 1.1e-5:  # 1.1 because of python floats are imprecise
                     # Configure which channels to remove
                     table = get_split_table(table, units, ramp)
 

@@ -2244,7 +2244,12 @@ if __name__ == '__main__':
 
     # file = r"C:\_Data\2021\TMC\Murchison\Barraute B\3000E.PEM"  # Error
     # file = r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW\3000E.PEM"  # No error
-    pem_file = pem_g.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-211\RAW\em21-211 xy_1021.pem")
+
+    # PP drift testing
+    # pem_file = pem_g.parse(samples_folder.joinpath(r"Test PEMS\pp (40 us drift).dmp"))
+    pem_file = pem_g.parse(samples_folder.joinpath(r"Test PEMS\pp (eastern drift).dmp2"))
+
+    # pem_file = pem_g.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-211\RAW\em21-211 xy_1021.pem")
     # pem_file = pem_g.parse(r"C:\_Data\2021\Managem\Surface\Kokiak Aicha\RAW\600n.PEM")
     # pem_file.prep_rotation()
     # pem_file.rotate()

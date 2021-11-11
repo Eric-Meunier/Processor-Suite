@@ -69,7 +69,7 @@ logger = logging.getLogger(__name__)
 # TODO Add a Recent projects list, below project GPS, which will be a history of recently clicked folders.
 # TODO Show/hide single profile plot instead of plotting every time when selecting channels in PlotEditor.
 # TODO Add old PEM parsing
-# TODO When plotting PP files, set them all as the same station, and color code by timestamp. Also add plot of °----number---° showing drift.
+# TODO When plotting PP files, set them all as the same station, and color code by timestamp. Also add plot of °----(drift number here)---° showing drift.
 # TODO to remove loop edge effects, remove the primary field (or a percentage of it) from the readings, which is the PP
 # TODO Add component specific coil area scaling (for SQUID).
 # TODO Add scroll wheel channel-scrolling for single plot in plot editor.
@@ -2135,17 +2135,17 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                         # Share the collar and segments if the source is a borehole
                         if source_widget.pem_file.is_borehole():
-                            widget.fill_gps_table(source_widget.get_collar_gps(), widget.collar_table)
+                            widget.fill_gps_table(source_widget.get_collar(), widget.collar_table)
                             widget.fill_gps_table(source_widget.get_segments().df, widget.segments_table)
                             widget.gps_object_changed(widget.collar_table, refresh=False)
                             widget.gps_object_changed(widget.segments_table, refresh=False)
                         # Share the line GPS if it's a surface line
                         else:
-                            widget.fill_gps_table(source_widget.get_line_gps().df, widget.line_table)
+                            widget.fill_gps_table(source_widget.get_line().df, widget.line_table)
                             widget.gps_object_changed(widget.line_table, refresh=False)
 
                         # Share the loop
-                        widget.fill_gps_table(source_widget.get_loop_gps().df, widget.loop_table)
+                        widget.fill_gps_table(source_widget.get_loop().df, widget.loop_table)
                         widget.gps_object_changed(widget.loop_table, refresh=True)  # Only refresh at the end
                         dlg += 1
 

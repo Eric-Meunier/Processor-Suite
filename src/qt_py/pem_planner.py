@@ -15,12 +15,12 @@ import plotly.graph_objects as go
 import pyqtgraph as pg
 import simplekml
 from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QPointF, QSettings, QSize
-from PySide2.QtGui import QIntValidator, QKeySequence, QTransform
+from PySide2.QtGui import QKeySequence, QTransform
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QFileDialog, QLabel, QApplication,
                                QFrame, QHBoxLayout, QLineEdit, QErrorMessage, QHeaderView, QInputDialog,
                                QTableWidgetItem, QGroupBox, QFormLayout, QTableWidget,
                                QShortcut, QPushButton, QCheckBox, QDoubleSpinBox, QRadioButton,
-                               QItemDelegate, QSpinBox)
+                               QItemDelegate)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from pandas import DataFrame, read_excel, read_csv, read_table
@@ -57,8 +57,6 @@ class SurveyPlanner(QMainWindow):
         self.message = QMessageBox()
         self.error = QErrorMessage()
         self.error.setWindowTitle("Error")
-        self.project_path_label = QLabel()
-        self.statusBar().addPermanentWidget(self.project_path_label)
         self.crs_selector = CRSSelector(title="Input CRS")
         self.crs_selector.gps_system_cbox.setCurrentIndex(2)
         self.crs_selector.gps_datum_cbox.setCurrentIndex(1)
@@ -75,8 +73,7 @@ class SurveyPlanner(QMainWindow):
     def save_img(self):
         save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image',
                                                            'map.png',
-                                                           'PNG file (*.png)'
-                                                           )
+                                                           'PNG file (*.png)')
         if save_name:
             self.grab().save(save_name)
 
@@ -985,8 +982,6 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         self.crs_selector.gps_datum_cbox.setCurrentIndex(1)
         self.crs_selector.gps_zone_cbox.setCurrentIndex(17)
 
-        # Status bar
-        # self.status_bar.addPermanentWidget(self.crs_selector.epsg_label, 0)
         self.plan_view.setMenuEnabled(False)
 
         # Icons
@@ -1709,7 +1704,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         if filepath:
             self.save_name = filepath
-            self.project_path_label.setText(self.save_name)
+            self.setWindowTitle(f"Loop Planner - {Path(self.save_name).name}")
 
             # Remove existing holes and loops
             for ind in reversed(range(len(self.hole_widgets))):
@@ -1796,7 +1791,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             file.write(result)
 
         # os.startfile(save_name)
-        self.project_path_label.setText(self.save_name)
+        self.setWindowTitle(f"Loop Planner - {Path(self.save_name).name}")
         self.statusBar().showMessage("Project file saved.", 1500)
 
     def save_kmz(self):
