@@ -355,8 +355,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         Open GPS files through the file dialog
         """
-        files = self.dialog.getOpenFileNames(self, 'Open GPS File(s)', filter='TXT files (*.txt);; CSV files (*.csv);; '
-                                                                              'GPX files (*.gpx);; All files(*.*)')[0]
+        default_path = str(self.pem_file.parent)
+        files = self.dialog.getOpenFileNames(self, 'Open GPS File(s)', default_path,
+                                             filter='TXT files (*.txt);; CSV files (*.csv);; '
+                                                    'GPX files (*.gpx);; All files(*.*)')[0]
         if not files:
             return
 
@@ -508,7 +510,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.picker.open(file)
                 self.picker.accept_sig.connect(accept_collar)
             else:
-                self.picker = CollarPicker(darkmode=self.darkmode)
+                self.picker = CollarPicker(self.pem_file, darkmode=self.darkmode)
                 self.picker.open(file)
                 self.picker.accept_sig.connect(accept_collar)
         else:
@@ -692,9 +694,10 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.missing_gps_frame.show()
         else:
             self.missing_gps_frame.hide()
+            return
 
         # Add the missing GPS stations to the missing_gps_list
-        for i, station in enumerate(missing_gps):
+        for station in missing_gps.to_numpy():
             self.missing_gps_list.addItem(str(station))
 
     def check_extra_gps(self):
@@ -713,6 +716,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             self.extra_gps_frame.show()
         else:
             self.extra_gps_frame.hide()
+            return
 
         # Add the extra GPS stations to the extra_gps_list
         for i, station in enumerate(extra_stations):

@@ -1863,7 +1863,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             kml = get_kml()
             kmz_save_dir = str(Path(save_dir).with_suffix(".kmz"))
             kml.savekmz(kmz_save_dir, format=False)
-            self.statusBar().showMesage("Save complete.", 1500)
+            self.statusBar().showMessage("Save complete.", 1500)
             # try:
             #     logger.info(f"Saving {Path(kmz_save_dir).name}.")
             #     os.startfile(kmz_save_dir)

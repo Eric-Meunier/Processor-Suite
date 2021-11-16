@@ -254,6 +254,8 @@ def df_to_table(df, table, set_role=False):
         logger.error(f"Empty data frame passed.")
         raise ValueError("Empty data frame passed.")
     else:
+        if isinstance(df, pd.Series):  # For missing GPS, which is a Series
+            df = df.to_frame()
         columns = df.columns.to_list()
         table.setColumnCount(len(columns))
         table.setHorizontalHeaderLabels(columns)

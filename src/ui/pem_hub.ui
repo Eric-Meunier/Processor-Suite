@@ -86,14 +86,14 @@
          </property>
          <widget class="QFrame" name="project_frame">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
           </property>
           <property name="minimumSize">
            <size>
-            <width>200</width>
+            <width>250</width>
             <height>0</height>
            </size>
           </property>
@@ -134,7 +134,7 @@
            <item>
             <widget class="QGroupBox" name="groupBox_6">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Expanding" vsizetype="Maximum">
+              <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>
@@ -1198,7 +1198,7 @@ Warnings</string>
          </widget>
          <widget class="QFrame" name="piw_frame">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
@@ -1237,7 +1237,7 @@ Warnings</string>
            <item>
             <widget class="QStackedWidget" name="stackedWidget">
              <property name="sizePolicy">
-              <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+              <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
                <horstretch>0</horstretch>
                <verstretch>0</verstretch>
               </sizepolicy>

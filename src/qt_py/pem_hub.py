@@ -28,7 +28,7 @@ from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, Q
                                QCalendarWidget, QFileSystemModel, QDoubleSpinBox, QHeaderView, QInputDialog,
                                QTableWidgetItem, QGroupBox, QFormLayout, QTextBrowser, QDialogButtonBox,
                                QTableWidget, QShortcut, QSizePolicy, QPushButton, QComboBox, QListWidgetItem,
-                               QAbstractItemView, QCheckBox)
+                               QAbstractItemView, QCheckBox, QScrollArea)
 from matplotlib import pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap as LCMap
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -539,10 +539,16 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 global current_row, current_col
                 current_row, current_col = row, col
 
+            elif col == self.table_columns.index('GPS\nWarnings'):
+                if self.table.item(row, col).text() != '0':
+                    gps_warning_viewer = GPSWarningViewer(pem_file)
+                    refs.append(gps_warning_viewer)
+                else:
+                    self.status_bar.showMessage(f"No GPS warnings to show.", 1000)
+
             elif col == self.table_columns.index('Suffix\nWarnings'):
                 if self.table.item(row, col).text() != '0' and not pem_file.is_borehole():
-
-                    suffix_viewer = WarningViewer(pem_file, warning_type='suffix')
+                    suffix_viewer = WarningEditor(pem_file, warning_type='suffix')
                     refs.append(suffix_viewer)
                     suffix_viewer.accept_sig.connect(accept_change)
                 else:
@@ -550,8 +556,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             elif col == self.table_columns.index('Repeat\nWarnings'):
                 if self.table.item(row, col).text() != '0':
-
-                    repeat_viewer = WarningViewer(pem_file, warning_type='repeat')
+                    repeat_viewer = WarningEditor(pem_file, warning_type='repeat')
                     refs.append(repeat_viewer)
                     repeat_viewer.accept_sig.connect(accept_change)
                 else:
@@ -2135,7 +2140,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                         # Share the collar and segments if the source is a borehole
                         if source_widget.pem_file.is_borehole():
-                            widget.fill_gps_table(source_widget.get_collar(), widget.collar_table)
+                            widget.fill_gps_table(source_widget.get_collar().df, widget.collar_table)
                             widget.fill_gps_table(source_widget.get_segments().df, widget.segments_table)
                             widget.gps_object_changed(widget.collar_table, refresh=False)
                             widget.gps_object_changed(widget.segments_table, refresh=False)
@@ -2333,9 +2338,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         def open_step():
             # Open the Step window at the selected location in the project tree
             path = self.get_current_project_path()
-
-            os.chdir(str(path))
-            os.system('cmd /c "step"')
+            if path.is_dir():
+                os.chdir(str(path))
+                os.system('cmd /c "step"')
 
         def create_delivery_folder():
             """
@@ -4779,12 +4784,12 @@ class SuffixWarningViewer(QMainWindow):
         self.show()
 
 
-class WarningViewer(QMainWindow):
+class WarningEditor(QMainWindow):
     accept_sig = Signal(object)
 
     def __init__(self, pem_file, warning_type=None, parent=None):
         """
-        Widget to view Repeat and Suffix warnings, and allow to fix them easily.
+        Widget to view and edit Repeat and Suffix warnings, and allow to fix them easily.
         :param pem_file: PEMFile object
         :param warning_type: str, either "suffix" or "repeat" for which kind of warning to present.
         :param parent: PyQt parent object
@@ -4814,7 +4819,6 @@ class WarningViewer(QMainWindow):
             self.setWindowTitle(f"Suffix Warnings - {pem_file.filepath.name}")
 
         else:
-
             def get_new_name(station):
                 """
                 Automatically rename the repeat.
@@ -4874,6 +4878,58 @@ class WarningViewer(QMainWindow):
                 item = self.table.item(row, col)
                 item.setTextAlignment(Qt.AlignCenter)
         self.table.resizeRowsToContents()
+
+
+class GPSWarningViewer(QMainWindow):
+
+    def __init__(self, pem_file, parent=None):
+        super().__init__()
+        self.parent = parent
+        self.pem_file = pem_file
+        self.resize(600, 400)
+        self.setWindowTitle(f"GPS Warning Viewer - {self.pem_file.filepath.name}")
+        self.setWindowIcon(get_icon("view"))
+
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setLayout(QVBoxLayout())
+        # self.scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.scroll_area.setWidgetResizable(True)
+        self.setCentralWidget(self.scroll_area)
+
+        gps_warnings = self.pem_file.get_gps_warnings()
+
+        self.widget = QWidget()
+        self.widget.setLayout(QVBoxLayout())
+        self.scroll_area.setWidget(self.widget)
+        # frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+
+        for name, warnings in gps_warnings.items():  # Line and Loop warnings
+            if warnings:
+                box = QGroupBox()
+                box.setLayout(QVBoxLayout())
+                # box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                box.setTitle(name)
+                box.setAlignment(Qt.AlignCenter)
+
+                for warning_type, warnings_df in warnings.items():  # Specific types of warnings, duplicates, sorting, etc..
+                    box.layout().addWidget(QLabel(warning_type + ":"))
+                    if warnings_df.empty:
+                        box.layout().addWidget(QLabel("None"))
+                        continue
+                    table = QTableWidget()
+                    # table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                    table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
+                    table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+                    df_to_table(warnings_df, table)
+                    box.layout().addWidget(table)
+
+                self.widget.layout().addWidget(box)
+
+        self.show()
+
+    def closeEvent(self, e):
+        self.deleteLater()
+        e.accept()
 
 
 class StationSplitter(QWidget):
@@ -5187,7 +5243,7 @@ class MagDeclinationCalculator(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    mw = PEMHub(app)
+    # mw = PEMHub(app)
 
     pem_getter = PEMGetter()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
@@ -5205,11 +5261,12 @@ def main():
     # pem_files = pem_getter.get_pems(folder='Iscaycruz', subfolder='Loop 1', number=4)
     # pem_files = pem_getter.get_pems(folder="Raw Boreholes\EB-21-68\RAW", number=1)
     # pem_files = pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0823.PEM")
-    # pem_files = pem_getter.parse(r"C:\_Data\2021\Trevali Peru\Borehole\SAN-0251-21\RAW\xy_1019.PEM")
+    # pem_files = pem_getter.parse(r"C:\_Data\2021\Managem\Surface\Kokiak Aicha 2\RAW\600n_1112.dmp2")
+    pem_files = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-207\Final\_EM21-207 XYT.PEM")
     # pem_files = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-206\RAW\em21-206 xy_1030.PEM")
     # pem_files2 = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-206\RAW\em21-206 z_1030.PEM")
-    pem_files = pem_getter.parse(samples_folder.joinpath(r"Line GPS\800N.PEM"))
-    txt_file = samples_folder.joinpath(r"Line GPS\KA800N_1027.txt")
+    # pem_files = pem_getter.parse(samples_folder.joinpath(r"Line GPS\800N.PEM"))
+    # txt_file = samples_folder.joinpath(r"Line GPS\KA800N_1027.txt")
     # pem_files = pem_getter.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0251-21\RAW\xy1910_1019.dmp2")
     # pem_files.extend(pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0824.PEM"))
     # pem_files.extend(pem_getter.get_pems(folder="Raw Boreholes", file="XY.PEM"))
@@ -5218,6 +5275,8 @@ def main():
 
     # channel_viewer = ChannelTimeViewer(pem_files)
     # channel_viewer.show()
+
+    gps_warning_viewer = GPSWarningViewer(pem_files)
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
     # mw.show()
@@ -5283,7 +5342,7 @@ def main():
 
     """"""
 
-    mw.show()
+    # mw.show()
     # mw.open_pdf_plot_printer(selected=False)
     app.exec_()
 

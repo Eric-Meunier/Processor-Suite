@@ -1595,7 +1595,7 @@ class PEMFile:
         self.data.Reading = self.data.Reading.map(lambda x: x[~self.channel_times.Remove.astype(bool)])
         # Create a filter and update the channels table
         filt = ~self.channel_times.Remove.astype(bool)
-        self.channel_times = self.channel_times[filt]
+        self.channel_times = self.channel_times[filt].reset_index(drop=True)
         # Update the PEM file's number of channels attribute
         self.number_of_channels = len(self.channel_times)
 
@@ -3829,8 +3829,11 @@ class RADTool:
 
             result.append(f"{self.roll_angle:g}")
             result.append(f"{self.dip:g}")
-            result.append(self.R)
-            result.append(f"{self.angle_used:g}")
+
+            # Files output with otool don't have an "R" or angle used value.
+            if self.R is not None and self.angle_used is not None:
+                result.append(self.R)
+                result.append(f"{self.angle_used:g}")
 
         else:
             # Create the D5 RAD tool line that is compatible with Step (just for borehole XY).

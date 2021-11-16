@@ -748,7 +748,7 @@ class SurveyLine(BaseGPS):
         :return: dict, duplicates, missing GPS, sorting warnings, elevation warnings.
         """
         duplicates = pd.DataFrame()
-        missing_gps = np.array([])
+        missing_gps = pd.DataFrame()
         sorting_warnings = pd.DataFrame()
         elevation_warnings = pd.DataFrame()
 
@@ -765,6 +765,7 @@ class SurveyLine(BaseGPS):
         # Missing GPS
         if stations is not None:
             missing_gps = stations[np.isin(stations, self.df.Station, invert=True)]
+            missing_gps = pd.Series(missing_gps, name="Station")
             # print(f"Missing GPS:\n{missing_gps}")
 
         # Sorting

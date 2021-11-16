@@ -12,8 +12,8 @@ import pandas as pd
 import pylineclip as lc
 from PySide2.QtCore import Qt, Signal, QEvent, QTimer, QPointF, QRectF, QSettings
 from PySide2.QtGui import QColor, QFont, QTransform, QBrush, QPen, QKeySequence
-from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QLabel, QApplication, QLineEdit,
-                               QInputDialog, QPushButton, QShortcut)
+from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QLabel, QApplication, QWidget,
+                               QInputDialog, QPushButton, QShortcut, QVBoxLayout)
 from scipy import spatial, signal
 
 from src.pem import convert_station
@@ -31,7 +31,6 @@ logger = logging.getLogger(__name__)
 pd.options.mode.chained_assignment = None  # default='warn'
 
 # TODO Change auto clean to have a start and end channel
-# TODO maybe increase starting window size
 
 
 class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
@@ -498,14 +497,14 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         else:
             self.cycle_station('up')
 
-    def dragEnterEvent(self, e):
-        urls = [url.toLocalFile() for url in e.mimeData().urls()]
-        if all([url.lower().endswith('pem') for url in urls]):
-            e.accept()
-
-    def dropEvent(self, e):
-        urls = [url.toLocalFile() for url in e.mimeData().urls()]
-        self.open(urls[0])
+    # def dragEnterEvent(self, e):
+    #     urls = [url.toLocalFile() for url in e.mimeData().urls()]
+    #     if all([url.lower().endswith('pem') for url in urls]):
+    #         e.accept()
+    #
+    # def dropEvent(self, e):
+    #     urls = [url.toLocalFile() for url in e.mimeData().urls()]
+    #     self.open(urls[0])
 
     def save_img(self):
         """Save an image of the window """
@@ -527,17 +526,19 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         if isinstance(pem_file, str):
             parser = PEMParser()
             pem_file = parser.parse(pem_file)
+        # assert not pem_file.is_pp(), f"PEMFile cannot be a PP file."
+
+        self.setWindowTitle(f"PEM Plot Editor - {pem_file.filepath.name}")
 
         self.fallback_file = pem_file.copy()
         self.pem_file = pem_file
-        self.setWindowTitle(f"PEM Plot Editor - {pem_file.filepath.name}")
 
         file_info = ' | '.join([f"Timebase: {self.pem_file.timebase:.2f}ms",
                                 f"{self.pem_file.get_survey_type()} Survey",
                                 f"Operator: {self.pem_file.operator.title()}"])
         self.file_info_label.setText(file_info)
 
-        if self.pem_file.is_split():
+        if self.pem_file.is_split():  # Takes care of PP files too
             self.plot_ontime_decays_cbox.setEnabled(False)
         else:
             self.plot_ontime_decays_cbox.setEnabled(True)
@@ -552,7 +553,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 self.plot_mag_cbox.setEnabled(False)
         else:
             self.plot_mag_cbox.setEnabled(False)
-        self.toggle_mag_plots()  # Manually toggle mag plots incase they may have been disabled in the previous step.
+        # Manually toggle mag plots incase they may have been disabled in the previous step.
+        self.toggle_mag_plots()
 
         # Disable suffix changes if the file is a borehole
         if self.pem_file.is_borehole():
@@ -581,8 +583,13 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.auto_clean_window_sbox.setValue(int(num_offtime_channels / 2))
         self.min_ch_sbox.setMaximum(num_offtime_channels)
         self.max_ch_sbox.setMaximum(num_offtime_channels)
+
+        self.max_ch_sbox.blockSignals(True)
+        self.min_ch_sbox.blockSignals(True)
         self.max_ch_sbox.setValue(num_offtime_channels)
         self.min_ch_sbox.setValue(int(num_offtime_channels / 2))
+        self.max_ch_sbox.blockSignals(False)
+        self.min_ch_sbox.blockSignals(False)
 
         self.auto_clean_std_sbox.blockSignals(False)
         self.auto_clean_window_sbox.blockSignals(False)
@@ -602,6 +609,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         # Plot the LIN profiles
         self.plot_profiles(components='all')
+
         # Plot the first station. This also helps with the linking of the X and Y axes for the decay plots.
         self.plot_decays(self.stations.min())
 
@@ -612,21 +620,21 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         self.show()
 
-    def open_file_dialog(self):
-        """
-        Open PEM files through the file dialog.
-        """
-        default_path = None
-        if self.parent:
-            default_path = self.parent.project_dir_edit.text()
-
-        files = QFileDialog.getOpenFileNames(self, 'Open File',
-                                             default_path,
-                                             filter='PEM files (*.pem)')
-        if files[0] != '':
-            file = files[0][0]
-            if file.lower().endswith('.pem'):
-                self.open(file)
+    # def open_file_dialog(self):
+    #     """
+    #     Open PEM files through the file dialog.
+    #     """
+    #     default_path = None
+    #     if self.parent:
+    #         default_path = self.parent.project_dir_edit.text()
+    #
+    #     files = QFileDialog.getOpenFileNames(self, 'Open File',
+    #                                          default_path,
+    #                                          filter='PEM files (*.pem)')
+    #     if files[0] != '':
+    #         file = files[0][0]
+    #         if file.lower().endswith('.pem'):
+    #             self.open(file)
 
     def save(self):
         """
@@ -739,12 +747,12 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Update the list of stations
         self.stations = np.sort(self.pem_file.get_stations(converted=True))
 
+        # Re-calculate the converted station numbers
+        self.pem_file.data['cStation'] = self.pem_file.data.Station.map(convert_station)
+
         # Select a new selected station if it no longer exists
         if self.selected_station not in self.stations:
             self.selected_station = self.stations[0]
-
-        # Re-calculate the converted station numbers
-        self.pem_file.data['cStation'] = self.pem_file.data.Station.map(convert_station)
 
         # Re-set the limits of the profile plots
         for ax in np.concatenate([self.profile_axes, self.mag_profile_axes]):
@@ -882,7 +890,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 scatter = pg.ScatterPlotItem(x=x, y=y,
                                              pen=pg.mkPen(self.foreground_color, width=1.),
                                              symbol='o',
-                                             size=2,
+                                             size=1.,
                                              brush='w')
 
                 ax.addItem(scatter)
@@ -2058,6 +2066,607 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.status_bar.showMessage('File reset.', 1000)
 
 
+class PPViewer(QMainWindow):
+    def __init__(self, parent=None, darkmode=False):
+        super().__init__()
+        self.parent = parent
+        self.darkmode = darkmode
+        self.message = QMessageBox()
+        self.pem_file = None
+
+        self.foreground_color = get_line_color("foreground", "pyqt", self.darkmode)
+        self.selection_color = get_line_color("teal", "pyqt", self.darkmode)
+        self.deletion_color = get_line_color("red", "pyqt", self.darkmode)
+        self.autoclean_color = get_line_color("green", "pyqt", self.darkmode)
+        pg.setConfigOption('background', get_line_color("background", "pyqt", self.darkmode))
+        pg.setConfigOption('foreground', self.foreground_color)
+
+        self.setFocusPolicy(Qt.StrongFocus)
+        self.installEventFilter(self)
+        self.activateWindow()
+        self.setWindowTitle('PEM Plot Editor')
+        self.setWindowIcon(get_icon('plot_editor.png'))
+
+        self.layout = QVBoxLayout()
+        self.widget = pg.GraphicsLayoutWidget()
+        self.widget.setLayout(self.layout)
+        self.setCentralWidget(self.widget)
+
+        self.decay_selection_text = QLabel()
+        self.decay_selection_text.setIndent(20)
+        self.decay_selection_text.setStyleSheet(f'color: rgb{tuple(self.selection_color)}')
+        self.decay_selection_text.hide()
+        self.number_of_readings = QLabel()
+        self.number_of_readings.setIndent(20)
+        self.file_info_label = QLabel()
+        self.file_info_label.setIndent(20)
+
+        self.statusBar().addWidget(self.decay_selection_text, 0)
+        self.statusBar().addPermanentWidget(self.file_info_label, 0)
+        self.statusBar().addPermanentWidget(self.number_of_readings, 0)
+
+        self.selected_data = pd.DataFrame()
+        self.selected_lines = []
+        self.line_selected = False
+        self.deleted_lines = []
+        self.nearest_decay = None
+        self.plotted_decay_lines = []
+        self.decay_data = pd.DataFrame()
+
+        # self.decay_layout = pg.GraphicsLayout()
+        # self.layout.addWidget(self.decay_layout)
+        self.decay_plot = self.widget.addPlot(0, 0, title='Z Component', viewBox=DecayViewBox())
+        self.decay_plot.setTitle(f"PP Decays")
+        self.decay_plot.setLabel('left', f"Response", units="nT/s")
+        self.decay_plot.setLabel('bottom', 'Time (μs)')
+
+        self.decay_plot.vb.installEventFilter(self)
+        self.decay_plot.vb.box_select_signal.connect(self.box_select_decay_lines)
+        self.decay_plot.hideButtons()
+        self.decay_plot.setMenuEnabled(False)
+        self.decay_plot.getAxis('left').enableAutoSIPrefix(enable=False)
+
+        self.decay_plot.scene().sigMouseMoved.connect(self.decay_mouse_moved)
+        self.decay_plot.scene().sigMouseClicked.connect(self.decay_plot_clicked)
+
+    def keyPressEvent(self, event):
+        # Delete a decay when the delete key is pressed
+        if event.key() == Qt.Key_Delete or event.key() == Qt.Key_R:
+            if keyboard.is_pressed("shift"):
+                self.undelete_selected_lines()
+            else:
+                self.delete_lines()
+
+        # Cycle through highlighted decays forwards
+        elif event.key() == Qt.Key_D or event.key() == Qt.RightArrow:
+            self.cycle_selection('up')
+
+        # Cycle through highlighted decays backwards
+        elif event.key() == Qt.Key_A or event.key() == Qt.LeftArrow:
+            self.cycle_selection('down')
+
+        # Flip the decay when the F key is pressed
+        elif event.key() == Qt.Key_F:
+            if self.selected_lines:
+                self.flip_decays()
+
+        # Reset the ranges of the plots when the space bar is pressed
+        elif event.key() == Qt.Key_Space:
+            self.reset_range()
+
+        # Clear the selected decays when the Escape key is pressed
+        elif event.key() == Qt.Key_Escape:
+            self.clear_selection()
+
+    def save_img(self):
+        """Save an image of the window """
+        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image', 'map.png', 'PNG file (*.PNG)')
+        if save_name:
+            self.grab().save(save_name)
+            self.status_bar.showMessage(f"Image saved.", 1500)
+
+    def copy_img(self):
+        """Take an image of the window and copy it to the clipboard"""
+        QApplication.clipboard().setPixmap(self.grab())
+        self.status_bar.showMessage(f"Image saved to clipboard.", 1500)
+
+    def reset_range(self):
+        self.decay_plot.autoRange()
+
+    def reset_file(self):
+        """
+        Revert all changes made to the PEM file.
+        """
+        response = self.message.question(self, 'Reset File',
+                                         'Resetting the file will revert all changes made. '
+                                         'Are you sure you wish to continue?',
+                                         self.message.Yes | self.message.No)
+        if response == self.message.Yes:
+            self.reset_file_sig.emit((self.pem_file, self.fallback_file))
+            self.open(self.fallback_file)
+            self.status_bar.showMessage('File reset.', 1000)
+
+    def open(self, pem_file):
+        """
+        Open a PP PEMFile object and plot the data.
+        :param pem_file: PEMFile object.
+        """
+        if isinstance(pem_file, str):
+            parser = PEMParser()
+            pem_file = parser.parse(pem_file)
+        assert pem_file.is_pp(), f"PEMFile must be a PP file."
+
+        self.setWindowTitle(f"PP Viewer - {pem_file.filepath.name}")
+
+        self.pem_file = pem_file.copy()
+        # Change all stations to be '0', and all components to be 'Z'.
+        self.pem_file.data.Station = 0
+        self.pem_file.data.Component = "Z"
+
+        file_info = ' | '.join([f"Timebase: {self.pem_file.timebase:.2f}ms",
+                                f"{self.pem_file.survey_type}",
+                                f"Operator: {self.pem_file.operator.title()}"])
+        self.file_info_label.setText(file_info)
+
+        self.plot_decays()
+        self.reset_range()
+
+    def plot_decays(self, preserve_selection=False):
+        """
+        Plot the decay lines for each component of the given station
+        :param preserve_selection: bool, re-select the selected lines after plotting
+        """
+        def set_status_text(data):
+            """
+            Set the status bar text with information about the station
+            :param data: dataFrame of plotted decays
+            """
+            global station_text
+            stn = data.Station.unique()
+            if stn.any():
+                station_number_text = f" Station: {stn[0]}"
+                reading_numbers = data.Reading_number.unique()
+                if len(reading_numbers) > 1:
+                    r_numbers_range = f"R-numbers: {reading_numbers.min()} - {reading_numbers.max()}"
+                else:
+                    r_numbers_range = f"R-number: {reading_numbers.min()}"
+
+                station_readings = f"{len(data.index)} {'Reading' if len(data.index) == 1 else 'Readings'}"
+
+                station_text = ' | '.join([station_number_text, station_readings, r_numbers_range])
+            else:
+                station_text = ''
+            self.station_text.setText(station_text)
+
+        def plot_decay(row):
+            """
+            Plot the decay line (Reading) of the row
+            :param row: pandas Series
+            """
+            # Change the pen if the data is flagged for deletion or overload
+            if row.Deleted is False:
+                color = get_line_color("foreground", "pyqt", self.darkmode, alpha=255)
+                z_value = 2
+            else:
+                color = get_line_color("red", "pyqt", self.darkmode, alpha=200)
+                z_value = 1
+
+            # Use a dotted line for readings that are flagged as Overloads
+            if row.Overload is True:
+                style = Qt.DashDotDotLine
+            else:
+                style = Qt.SolidLine
+
+            # For all other lines
+            pen = pg.mkPen(color, width=1., style=style)
+
+            y = row.Reading
+
+            # Create and configure the line item
+            decay_line = pg.PlotCurveItem(x=x, y=y, pen=pen, name="Testing line name")
+            decay_line.setClickable(True, width=5)
+            decay_line.setZValue(z_value)
+
+            # Add the line at y=0
+            self.decay_plot.addLine(y=0, pen=pg.mkPen(self.foreground_color, width=0.15))
+            # Plot the decay
+            self.decay_plot.addItem(decay_line)
+            # Add the plot item to the list of plotted items
+            self.plotted_decay_lines.append(decay_line)
+
+        # TODO also plot where ideal should location would be, and calculate that difference with what was used.
+        def plot_shoulder():
+            data = self.pem_file.data.sort_values(by="Reading_number", ascending=False)
+            channel_centers = self.pem_file.channel_times.Center.to_numpy() * 1e6
+            # Sort the data so the last two readings have shoulders plotted.
+            if len(data) < 2:
+                logger.info(f"{self.pem_file.filepath.name} doesn't have 2 PP readings.")
+                return
+
+            readings = data.iloc[0:2].Reading
+            for decay in readings:
+                y = np.percentile(decay, 90)
+                x_ind = list(decay).index(min(decay, key=lambda x: abs(x-y)))
+
+                scatter = pg.ScatterPlotItem(x=[channel_centers[x_ind]], y=[y],
+                                             name="Shoulder",
+                                             pen=pg.mkPen(self.foreground_color, width=0.15))
+                self.decay_plot.addItem(scatter)
+
+                for value in [100, 90, 50, 10, 0]:
+                    p = np.percentile(decay, value)
+                    line = pg.InfiniteLine(pos=p, angle=0, pen=pg.mkPen(get_line_color("blue", "pyqtgraph", self.darkmode)),
+                                           label=str(value), name=str(value))
+                    self.decay_plot.addItem(line)
+
+        index_of_selected = []
+        # Keep the same lines highlighted after data modification
+        if preserve_selection is False:
+            self.selected_lines.clear()
+        else:
+            ax_lines = [line for line in self.selected_lines if line.name() is None]  # Ignore median lines
+            index_of_selected = [self.plotted_decay_lines.index(line) for line in ax_lines]
+
+        self.decay_plot.clear()
+        self.plotted_decay_lines.clear()
+        self.nearest_decay = None
+
+        # Filter the data
+        self.decay_data = self.pem_file.data
+
+        # # Update the status bar text
+        # set_status_text(self.decay_data)
+
+        # Plot the decays
+        x = self.pem_file.channel_times.Center.to_numpy() * 1e6
+        self.decay_data.apply(plot_decay, axis=1)
+        plot_shoulder()
+
+        self.decay_plot.setLimits(xMin=x.min(), xMax=x.max())
+
+        # Re-select lines that were selected
+        if preserve_selection is True:
+            self.selected_lines = [self.plotted_decay_lines[i] for i in index_of_selected]
+            self.highlight_lines()
+        else:
+            self.decay_selection_text.hide()
+
+        if preserve_selection is False:
+            self.reset_range()
+
+    def clear_selection(self):
+        """
+        Signal slot, clear all selections (decay and profile plots)
+        """
+        self.selected_data = None
+        self.selected_lines = []
+        self.highlight_lines()
+
+    def highlight_lines(self):
+        """
+        Highlight the line selected and un-highlight any previously highlighted line.
+        """
+        def set_decay_selection_text(selected_data):
+            """
+            Update the status bar with information about the selected lines
+            """
+            if self.selected_lines and selected_data is not None:
+                decay_selection_text = []
+                # Show the range of reading numbers and reading indexes if multiple decays are selected
+                if len(selected_data) > 1:
+                    num_deleted = len(selected_data[selected_data.Deleted])
+                    num_selected = f"{len(selected_data)} readings selected ({num_deleted} deleted)"
+                    r_numbers = selected_data.Reading_number.unique()
+                    r_indexes = selected_data.Reading_index.unique()
+                    ztses = selected_data.ZTS.unique()
+
+                    if len(r_numbers) > 1:
+                        r_number_text = f"R-numbers: {r_numbers.min()}-{r_numbers.max()}"
+                    else:
+                        r_number_text = f"R-number: {r_numbers.min()}"
+
+                    if len(r_indexes) > 1:
+                        r_index_text = f"R-indexes: {r_indexes.min()}-{r_indexes.max()}"
+                    else:
+                        r_index_text = f"R-index: {r_indexes.min()}"
+
+                    if len(ztses) > 1:
+                        ztses_text = f"ZTS: {ztses.min():g}-{ztses.max():g}"
+                    else:
+                        ztses_text = f"ZTS: {ztses.min():g}"
+
+                    # decay_selection_text = f"{len(selected_data)} selected    {r_number_text}    {r_index_text}"
+                    decay_selection_text.extend([num_selected, r_number_text, r_index_text, ztses_text])
+
+                # Show the reading number, reading index for the selected decay, plus azimuth, dip, and roll for bh
+                else:
+                    selected_decay = selected_data.iloc[0]
+
+                    r_number_text = f"R-number: {selected_decay.Reading_number}"
+                    r_index_text = f"R-index: {selected_decay.Reading_index}"
+                    zts = f"ZTS: {selected_decay.ZTS:g}"
+
+                    decay_selection_text.append(r_number_text)
+                    decay_selection_text.append(r_index_text)
+                    decay_selection_text.append(zts)
+
+                    # Add the time stamp if it exists
+                    if not pd.isna(selected_decay.Timestamp):
+                        date_time = f"Timestamp: {selected_decay.Timestamp.strftime('%b %d - %H:%M:%S')}"
+                        decay_selection_text.append(date_time)
+
+                self.decay_selection_text.setText(' | '.join(decay_selection_text))
+                self.decay_selection_text.show()
+
+            # Reset the selection text if nothing is selected
+            else:
+                self.decay_selection_text.hide()
+
+        if not self.plotted_decay_lines:  # if nothing is plotted in the decay plot
+            return
+
+        # Change the color of the plotted lines
+        for line, Deleted, overload in zip(self.plotted_decay_lines,
+                                           self.decay_data.Deleted,
+                                           self.decay_data.Overload):
+
+            # Change the pen if the data is flagged for deletion
+            if Deleted is False:
+                color = get_line_color("foreground", "pyqt", self.darkmode, alpha=200)
+                z_value = 2
+            else:
+                color = get_line_color("red", "pyqt", self.darkmode, alpha=150)
+                z_value = 1
+
+            # Change the line style if the reading is overloaded
+            if overload is True:
+                style = Qt.DashDotDotLine
+            else:
+                style = Qt.SolidLine
+
+            # Colors for the lines if they selected
+            if line in self.selected_lines:
+                if Deleted is False:
+                    color = get_line_color("teal", "pyqt", self.darkmode, alpha=250)
+                    z_value = 4
+                else:
+                    color = get_line_color("red", "pyqt", self.darkmode, alpha=200)
+                    z_value = 3
+
+                line.setPen(color, width=2, style=style)
+                line.setZValue(z_value)
+            else:
+                # Color the lines that aren't selected
+                line.setPen(color, width=1, style=style)
+                line.setZValue(z_value)
+
+        set_decay_selection_text(self.get_selected_decay_data())
+
+    def get_selected_decay_data(self):
+        """
+        Return the corresponding data of the decay lines that are currently selected
+        :return: pandas DataFrame
+        """
+        ind = []
+        for line in self.selected_lines:
+            if line in self.plotted_decay_lines:
+                ind.append(self.plotted_decay_lines.index(line))
+        if not ind:
+            # print(f"Line is not in the list of decay lines.")
+            return
+        else:
+            data = self.decay_data.iloc[ind]
+            return data
+
+    def decay_mouse_moved(self, evt):
+        """
+        Signal slot, find the decay_axes plot under the mouse when the mouse is moved to determine which plot is active.
+        Highlights the decay line closest to the mouse.
+        :param evt: MouseMovement event
+        """
+        def normalize(point):
+            """
+            Normalize a point so it works as a percentage of the view box data coordinates.
+            :param point: QPoint object
+            :return: normalized QPointF object
+            """
+            view = vb.viewRect()
+            nx = (point.x() + view.x()) / view.width()
+            ny = (point.y() + view.y()) / view.height()
+            return QPointF(nx, ny)
+
+        line_distances = []
+        ax_lines = [line for line in self.decay_plot.curves if isinstance(line, pg.PlotCurveItem)]
+        vb = self.decay_plot.vb
+
+        if not ax_lines:
+            return
+
+        # Change the mouse coordinates to be in the plot's native coordinates (not data coordinates)
+        m_pos = vb.mapSceneToView(evt)
+        m_pos = normalize(m_pos)
+        mouse_point = (m_pos.x(), m_pos.y())
+        # logger.info(f"Mouse pos: {mouse_point[0]:.2f}, {mouse_point[1]:.2f}")
+
+        for line in ax_lines:
+            xi, yi = line.xData, line.yData
+            interp_xi = np.linspace(xi.min(), xi.max(), 100)
+            interp_yi = np.interp(interp_xi, xi, yi)  # Interp for when the mouse in between two points
+            line_qpoints = [normalize(QPointF(x, y)) for x, y in zip(interp_xi, interp_yi)]
+            line_points = np.array([(p.x(), p.y()) for p in line_qpoints])
+
+            # logger.info(f"Line data pos: {np.average([p[0] for p in line_points]):.2f}, "
+            #             f"{np.average([p[1] for p in line_points]):.2f}")
+
+            # Calculate the distance between each point of the line and the mouse position
+            distances = spatial.distance.cdist(np.array([mouse_point]), line_points, metric='euclidean')
+            line_distances.append(distances)
+
+        # Find the index of the smallest overall distance
+        ind_of_min = np.array([l.min() for l in line_distances]).argmin()
+        # logger.info(f"Line {ind_of_min} is nearest the mouse.")
+
+        self.nearest_decay = ax_lines[ind_of_min]
+        for line in ax_lines:
+            if line == self.nearest_decay:
+                line_color = line.opts.get('pen').color()
+                line.setShadowPen(pg.mkPen(line_color, width=2.5, cosmetic=True))
+            else:
+                line.setShadowPen(None)
+
+    def decay_plot_clicked(self, evt):
+        """
+        Signal slot, change the profile tab to the same component as the clicked decay plot, and select the neareset
+        decay line. If control is held, it extends the current selection.
+        :param evt: MouseClick event
+        """
+        if self.nearest_decay:
+            self.line_selected = True
+            if keyboard.is_pressed('ctrl'):
+                self.selected_lines.append(self.nearest_decay)
+                self.highlight_lines()
+            else:
+                self.selected_data = None
+                self.selected_lines = [self.nearest_decay]
+                self.highlight_lines()
+        else:
+            logger.warning(f"No nearest decay.")
+
+    def box_select_decay_lines(self, rect):
+        """
+        Signal slot, select all lines that intersect the drawn rectangle.
+        :param rect: QRectF object
+        """
+        def intersects_rect(line):
+            """
+            Uses cohen-sutherland algorithm to find if a line intersects the rectangle at any point.
+            :param line: pg.PlotCurveItem
+            :return: bool
+            """
+            xi, yi = line.xData, line.yData
+
+            # Line is broken down into segments for the algorithm
+            for i, (x, y) in enumerate(zip(xi[:-1], yi[:-1])):
+                x1, y1 = float(x), y
+                x2, y2 = float(xi[i + 1]), yi[i + 1]
+                x3, y3, x4, y4 = lc.cohensutherland(left, top, right, bottom, x1, y1, x2, y2)
+
+                if any([x3, y3, x4, y4]):
+                    return True
+
+        # Create the clip window for the line clipping algorithm.
+        left, top, right, bottom = min(rect.left(), rect.right()), max(rect.top(), rect.bottom()), \
+                                   max(rect.left(), rect.right()), min(rect.top(), rect.bottom())
+        curves = [line for line in self.decay_plot.curves if isinstance(line, pg.PlotCurveItem)]
+        lines = [line for line in curves if intersects_rect(line)]
+
+        if keyboard.is_pressed('ctrl'):
+            self.selected_lines.extend(lines)
+        else:
+            self.selected_lines = lines
+        self.selected_data = None
+
+        self.highlight_lines()
+        self.get_selected_decay_data()
+
+    def flip_decays(self):
+        """
+        Flip the polarity of the decays of the selected data.
+        """
+        selected_data = self.get_selected_decay_data()
+
+        if not selected_data.empty:
+            # Reverse the reading
+            selected_data.loc[:, 'Reading'] = selected_data.loc[:, 'Reading'] * -1
+
+            # Update the data in the pem file object
+            self.pem_file.data.iloc[selected_data.index] = selected_data
+            self.plot_decays(preserve_selection=True)
+
+    def delete_lines(self):
+        """
+        Delete the selected lines. The data corresponding to the selected lines have their deletion flags flipped
+        (i.e. from True > False or False > True). The station is then re-plotted. Line highlight is preserved.
+        """
+        selected_data = self.get_selected_decay_data()
+        if selected_data is None:
+            return
+
+        if not selected_data.empty:
+            # Change the deletion flag
+            selected_data.loc[:, 'Deleted'] = selected_data.loc[:, 'Deleted'].map(lambda x: not x)
+
+            # Update the data in the pem file object
+            self.pem_file.data.loc[selected_data.index] = selected_data
+            self.plot_decays(preserve_selection=True)
+
+    def undelete_selected_lines(self):
+        """
+        Undelete the selected lines. The data corresponding to the selected lines have their deletion flags changed to
+        False. The station is then re-plotted. Line highlight is preserved.
+        """
+        selected_data = self.get_selected_decay_data()
+        if not selected_data.empty:
+            # Change the deletion flag
+            selected_data.loc[:, 'Deleted'] = selected_data.loc[:, 'Deleted'].map(lambda x: False)
+
+            # Update the data in the pem file object
+            self.pem_file.data.loc[selected_data.index] = selected_data
+            self.plot_decays(preserve_selection=True)
+
+    def undelete_all(self):
+        """
+        Un-delete all deleted readings in the file.
+        :return: None
+        """
+        self.pem_file.data.loc[:, 'Deleted'] = self.pem_file.data.loc[:, 'Deleted'].map(lambda x: False)
+        self.plot_decays()
+
+    def cycle_selection(self, direction):
+        """
+        Change the selected decay
+        :param direction: str, direction to cycle decays. Either 'up' or 'down'.
+        """
+        if not self.selected_lines:
+            return
+
+        # Cycle through highlighted decays backwards
+        if direction == 'down':
+            new_selection = []
+            # For each decay axes, find any selected lines and cycle to the next line in that axes
+            num_plotted = len(self.decay_plot.curves)
+            # Find the index of any lines in the current ax that is selected
+            index_of_selected = [self.decay_plot.curves.index(line)
+                                 for line in self.selected_lines if line in self.decay_plot.curves]
+            if index_of_selected:
+                old_index = index_of_selected[0]  # Only take the first selected decay
+                if old_index == 0:
+                    new_index = num_plotted - 1
+                else:
+                    new_index = old_index - 1
+                new_selection.append(self.decay_plot.curves[new_index])
+            self.selected_lines = new_selection
+            self.highlight_lines()
+
+        # Cycle through highlighted decays forwards
+        elif direction == 'up':
+            new_selection = []
+            # For each decay axes, find any selected lines and cycle to the next line in that axes
+            num_plotted = len(self.decay_plot.curves)
+            # Find the index of any lines in the current ax that is selected
+            index_of_selected = [self.decay_plot.curves.index(line)
+                                 for line in self.selected_lines if line in self.decay_plot.curves]
+            if index_of_selected:
+                old_index = index_of_selected[0]  # Only take the first selected decay
+                if old_index < num_plotted - 1:
+                    new_index = old_index + 1
+                else:
+                    new_index = 0
+                new_selection.append(self.decay_plot.curves[new_index])
+            self.selected_lines = new_selection
+            self.highlight_lines()
+
+
 class DecayViewBox(pg.ViewBox):
     """
     Custom pg.ViewBox for the decay plots. Allows box selecting, box-zoom when shift is held, and mouse wheel when shift
@@ -2247,7 +2856,21 @@ if __name__ == '__main__':
 
     # PP drift testing
     # pem_file = pem_g.parse(samples_folder.joinpath(r"Test PEMS\pp (40 us drift).dmp"))
-    pem_file = pem_g.parse(samples_folder.joinpath(r"Test PEMS\pp (eastern drift).dmp2"))
+
+    pp_viewer = PPViewer(darkmode=darkmode)
+    # pp_viewer.setWindowState(pp_viewer.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
+    # pp_viewer.setWindowFlags(Qt.WindowStaysOnTopHint)
+    pp_viewer.show()
+    pp_files = samples_folder.joinpath("PP files").glob("*.*")
+    for pp_file in list(pp_files)[:1]:
+        print(F"PP file: {pp_file}")
+        pem_file = pem_g.parse(pp_file)
+        pp_viewer.open(pem_file)
+        # pp_viewer.activateWindow()
+        # app.processEvents()
+        # input("Press Enter to continue...")
+
+    # pem_file = pem_g.parse(samples_folder.joinpath(r"Test PEMS\pp (eastern drift).dmp2"))
 
     # pem_file = pem_g.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-211\RAW\em21-211 xy_1021.pem")
     # pem_file = pem_g.parse(r"C:\_Data\2021\Managem\Surface\Kokiak Aicha\RAW\600n.PEM")
@@ -2261,9 +2884,8 @@ if __name__ == '__main__':
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\1200E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]
 
-    editor = PEMPlotEditor(darkmode=darkmode)
-    # editor.move(0, 0)
-    editor.open(pem_file)
+    # editor = PEMPlotEditor(darkmode=darkmode)
+    # editor.open(pem_file)
     # editor.actionSplit_Profile.trigger()
     # editor.auto_clean()
 

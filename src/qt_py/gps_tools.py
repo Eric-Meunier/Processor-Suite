@@ -55,7 +55,6 @@ class GPSAdder(QMainWindow):
         self.error = False  # For pending errors
         self.units = None
         self.selection = []
-        self.selected_row_info = None
         self.message = QMessageBox()
         self.warnings = {}
 
@@ -882,9 +881,6 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         self.status_bar.hide()
         self.menuSettings.deleteLater()
 
-        self.gps_content = None
-        self.selected_row_info = None
-
         self.table.setFixedWidth(400)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table.horizontalHeader().hide()
@@ -969,7 +965,6 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
     def accept(self):
         selected_row = self.table.currentRow()
         gps = [[self.table.item(selected_row, col).text() for col in range(self.table.columnCount())]]
-        print(f"Collar GPS: {gps}")
         self.accept_sig.emit(gps)
         self.close()
 
@@ -1008,7 +1003,7 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
         gpx_errors = []
         df = get_df(gps)
 
-        if self.df.empty:
+        if df.empty:
             logger.critical(f"No GPS found to Collar Picker.")
             self.message.critical(self, 'Error', f"No GPS found.")
             return
@@ -1047,9 +1042,6 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
             else:
                 logger.info(f"No row selected.")
                 return
-
-        # Save the information of the row for backup purposes
-        self.selected_row_info = [self.table.item(row, j).clone() for j in range(len(self.df.columns))]
 
         df = table_to_df(self.table, nan_replacement="0")
 
