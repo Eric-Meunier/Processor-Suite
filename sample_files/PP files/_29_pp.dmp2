@@ -1,0 +1,207 @@
+name: pp
+Channel_Config: PP
+Channel_Config_Index: 0
+Channel_Number: -9	-8	-7	-6	-5	-4	-3	-2	-1	0	1	2	3	4	5	6	7	8	9
+Channel_Time: -90	-80	-70	-60	-50	-40	-30	-20	-10	0	10	20	30	40	50	60	70	80	90	100
+Client_Name: garibaldi
+Clock_Version: 1.10
+
+Coil_Area: 4000.000000
+Crone_Digital_PEM_Receiver: 402
+Current: 20
+Date: 9/29/2020
+File_Name: pp
+File_Notes: 
+Firmware_Version: 1.03
+Grid_Name: shirley
+Last_Group: 0
+Last_Reading: 14
+Line_Hole_Name: 1
+Loop_Height: 200
+Loop_Name: mini loop
+Loop_Width: 200
+Off_Time_Last_Channel: 20
+Operator_Name: wayne
+Ramp_Length: 1500
+Ramp_Length_Index: 3
+Rejection_Threshold_Base_[pT]: 500.000000
+Released: May13,2019
+Sample: 20000
+Sensor_Number: 150
+Software_Version: 2.00
+Survey_Type: SF_Coil
+Survey_Type_Index: 0
+Sync_Type: Crystal
+Sync_Type_Index: 0
+Time_Base: 50 ms
+Time_Base_Index: 5
+Tool_Number: 402
+Tx_Delay: 500 
+ZTS_Offset: =Tx_Delay+Ramp_Length+ZTS_Adjust
+Units: Tesla/s
+Azimuth_Ref: 0.000000E+0
+Total_Readings:6
+$$
+
+name: 0E,-,R1
+Number_of_Stacks: 64
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+Control_Sensor: Magnetometer
+Date_Time: 9/29/2020,10:26:14 AM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 9
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 40
+ZTS_Offset: 2040
+Deleted: F
+dataZ: 1.606913E-4	1.600190E-4	1.592811E-4	1.584475E-4	1.574673E-4	1.562186E-4	1.543497E-4	1.506442E-4	1.424255E-4	1.271258E-4	1.049958E-4	7.948600E-5	5.511499E-5	3.515534E-5	2.077017E-5	1.144364E-5	5.908784E-6	2.870252E-6	1.329038E-6
+
+name: 0E,-,R2
+Number_of_Stacks: 64
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+Control_Sensor: Magnetometer
+Date_Time: 9/29/2020,10:26:51 AM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 10
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: -40
+ZTS_Offset: 1960
+Deleted: T
+dataZ: 1.649946E-4	1.645196E-4	1.640300E-4	1.635256E-4	1.630047E-4	1.624650E-4	1.619037E-4	1.613168E-4	1.606955E-4	1.600261E-4	1.592920E-4	1.584586E-4	1.574750E-4	1.562227E-4	1.543519E-4	1.506512E-4	1.424494E-4	1.271718E-4	1.050573E-4
+
+name: 0E,-,R3
+Number_of_Stacks: 64
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+Control_Sensor: Magnetometer
+Date_Time: 9/29/2020,10:27:19 AM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 11
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 40
+ZTS_Offset: 2040
+Deleted: F
+dataZ: 1.606701E-4	1.599998E-4	1.592649E-4	1.584312E-4	1.574483E-4	1.561975E-4	1.543311E-4	1.506333E-4	1.424318E-4	1.271568E-4	1.050475E-4	7.954589E-5	5.516988E-5	3.519890E-5	2.079841E-5	1.145652E-5	5.911814E-6	2.868383E-6	1.322730E-6
+
+name: 0E,-,R4
+Number_of_Stacks: 64
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+Control_Sensor: Magnetometer
+Date_Time: 9/29/2020,10:27:34 AM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 12
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 40
+ZTS_Offset: 2040
+Deleted: F
+dataZ: 1.606709E-4	1.599984E-4	1.592609E-4	1.584302E-4	1.574522E-4	1.562092E-4	1.543506E-4	1.506739E-4	1.425151E-4	1.272894E-4	1.052137E-4	7.971442E-5	5.531446E-5	3.530664E-5	2.087187E-5	1.150496E-5	5.942732E-6	2.888623E-6	1.337729E-6
+
+name: 0E,-,R5
+Number_of_Stacks: 64
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+Control_Sensor: Magnetometer
+Date_Time: 9/29/2020,10:27:50 AM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 13
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 40
+ZTS_Offset: 2040
+Deleted: F
+dataZ: 1.606916E-4	1.600199E-4	1.592796E-4	1.584420E-4	1.574568E-4	1.562074E-4	1.543428E-4	1.506483E-4	1.424511E-4	1.271741E-4	1.050583E-4	7.954770E-5	5.516487E-5	3.519202E-5	2.079353E-5	1.145743E-5	5.916029E-6	2.873669E-6	1.329280E-6
+
+name: 20E,-,R1
+Number_of_Stacks: 64
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+Control_Sensor: Magnetometer
+Date_Time: 9/29/2020,3:22:08 PM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 14
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 40
+ZTS_Offset: 2040
+Deleted: F
+dataZ: 1.614850E-4	1.607878E-4	1.600160E-4	1.591339E-4	1.580722E-4	1.566617E-4	1.543480E-4	1.493839E-4	1.387849E-4	1.206944E-4	9.661810E-5	7.075019E-5	4.744288E-5	2.928318E-5	1.674925E-5	8.934217E-6	4.459749E-6	2.086132E-6	9.269526E-7
+

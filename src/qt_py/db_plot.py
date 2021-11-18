@@ -208,8 +208,7 @@ class DBPlotter(QMainWindow):
 
             # Create a data frame
             df = pd.DataFrame(data,
-                           columns=['Hours', 'Minutes', 'Seconds', 'Num_samples', 'Current']
-                           ).dropna().astype(int)
+                              columns=['Hours', 'Minutes', 'Seconds', 'Num_samples', 'Current']).dropna().astype(int)
 
             if df.empty:
                 logger.info(f"No data found in {name}")
@@ -229,9 +228,9 @@ class DBPlotter(QMainWindow):
             logger.info(f"Parsing file {name}.")
             str_contents = read_file(file, as_list=False)
             # For files with spaces
-            # str_contents = re.sub(r" (\w)", r"\g<1>", str_contents)
-            # str_contents = re.sub(r"  ", r" ", str_contents)
-            # str_contents = re.sub(r" ([/:])", r"\g<1>", str_contents)
+            str_contents = re.sub(r" (\w)", r"\g<1>", str_contents)
+            str_contents = re.sub(r"  ", r" ", str_contents)
+            str_contents = re.sub(r" ([/:])", r"\g<1>", str_contents)
 
             # Try to create a DBPlot for each 'read' command found
             reads = re.split(r'read ', str_contents)
@@ -462,7 +461,6 @@ class DBPlotWidget(QMainWindow):
     def plot_df(self):
         """
         Plot the damping box data
-        :param command: str, the command that was used in the damping box. Uses it for the legend name.
         """
         self.curve = pg.PlotCurveItem(self.data.Time.to_numpy(), self.data.Current.to_numpy(),
                                       pen=pg.mkPen(color=self.color, width=2.5),
@@ -541,7 +539,8 @@ if __name__ == '__main__':
     # files = str(Path(samples_folder).joinpath('CM 252.txt'))
     # files = str(Path(samples_folder).joinpath('Date error/0511_May11Dampingbox232Voltage.txt'))
     # files = str(Path(samples_folder).joinpath('0724_238-20210724 (no data error).log'))
-    files = str(Path(samples_folder).joinpath('1110_Nov10DB228Current.txt'))
+    # files = str(Path(samples_folder).joinpath('1110_Nov10DB228Current.txt'))
+    files = str(Path(samples_folder).joinpath(r'Extra spaces\1108_CM 252 11,08.txt'))
     mw.open(files)
     mw.show()
 

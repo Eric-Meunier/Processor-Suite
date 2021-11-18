@@ -1,0 +1,145 @@
+name: pp0304
+Boot_Block_Release_Date: Mar 19, 2020
+Boot_Block_Version: 3.02
+Bootloader_Release_Date: Sep 24, 2019
+Bootloader_Version: 3.00
+Channel_Config: PP
+Channel_Config_Index: 0
+Channel_Number: -9	-8	-7	-6	-5	-4	-3	-2	-1	0	1	2	3	4	5	6	7	8	9
+Channel_Time: -90	-80	-70	-60	-50	-40	-30	-20	-10	0	10	20	30	40	50	60	70	80	90	100
+Client_Name: nantou
+Clock_Version: 1.10
+Coil_Area: 7.900000E+3
+Crone_Digital_PEM_Receiver: 401
+Current: 17
+Date: 4/3/2021
+File_Name: pp0304
+File_Notes: 
+Firmware_Release_Date: May 26, 2020
+Firmware_Version: 3.02
+Grid_Name: perkoa
+Last_Group: 0
+Last_Reading: 3
+Line_Hole_Name: tx
+Loop_Length: 1000
+Loop_Name: loop2
+Loop_Width: 1000
+MCU_ID: 17492
+Number_Of_Channels: 19
+Off_Time_Last_Channel: 20
+Operator_Name: av
+Ramp_Length: 1500
+Ramp_Length_Index: 3
+Rejection_Threshold_Base_[pT]: 5E+2
+Sample: 60000
+Sensor_Number: 134
+Software_Release_Date: Nov 19, 2020
+Software_Version: 3.03
+Survey_Type: BH Z Probe
+Survey_Type_Index: 10
+Sync_Type: Crystal Clock
+Sync_Type_Index: 0
+Time_Base: 150 ms
+Time_Base_Index: 7
+Tool_Number: 0
+Tx_Delay: 500 
+ZTS_Offset: =Tx_Delay+Ramp_Length+ZTS_Adjust
+Units: Tesla/s
+Azimuth_Ref: 0.000000E+0
+Declination: 0.000000E+0
+Total_Readings:3
+$$
+
+name: 0,-,R1
+Clock_Time: 1002
+Control_Sensor: Magnetometer
+Date_Time: 4/3/2021,3:43:11 AM
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 1
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: -20
+ZTS_Offset: 1980
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -1.057964E-5	-1.055072E-5	-1.051579E-5	-1.048910E-5	-1.041766E-5	-1.035995E-5	-1.025549E-5	-9.960165E-6	-9.566822E-6	-8.955499E-6	-8.168867E-6	-7.414856E-6	-6.624070E-6	-5.780443E-6	-5.212838E-6	-4.720106E-6	-4.182987E-6	-3.849721E-6	-3.580898E-6
+
+name: 0,-,R2
+Clock_Time: 1032
+Control_Sensor: Magnetometer
+Date_Time: 4/3/2021,3:43:40 AM
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 2
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: -20
+ZTS_Offset: 1980
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -1.059897E-5	-1.055248E-5	-1.052085E-5	-1.054006E-5	-1.045354E-5	-1.036537E-5	-1.023451E-5	-9.941462E-6	-9.462755E-6	-8.859089E-6	-8.103147E-6	-7.281546E-6	-6.419682E-6	-5.683419E-6	-4.994376E-6	-4.446805E-6	-4.013518E-6	-3.637880E-6	-3.345053E-6
+
+name: 10,-,R1
+Clock_Time: 18030
+Control_Sensor: Magnetometer
+Date_Time: 4/3/2021,8:26:58 AM
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 3
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: -20
+ZTS_Offset: 1980
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -1.017074E-5	-1.013796E-5	-1.011164E-5	-1.010282E-5	-1.002609E-5	-1.001317E-5	-9.933989E-6	-9.838878E-6	-9.614912E-6	-9.232781E-6	-8.720730E-6	-8.100110E-6	-7.388763E-6	-6.684723E-6	-5.961626E-6	-5.379393E-6	-4.892823E-6	-4.456457E-6	-4.088072E-6
+

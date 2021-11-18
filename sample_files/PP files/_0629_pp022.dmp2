@@ -1,0 +1,145 @@
+name: pp022
+Boot_Block_Release_Date: Mar 19, 2020
+Boot_Block_Version: 3.02
+Bootloader_Release_Date: Sep 24, 2019
+Bootloader_Version: 3.00
+Channel_Config: PP
+Channel_Config_Index: 0
+Channel_Number: -9	-8	-7	-6	-5	-4	-3	-2	-1	0	1	2	3	4	5	6	7	8	9
+Channel_Time: -90	-80	-70	-60	-50	-40	-30	-20	-10	0	10	20	30	40	50	60	70	80	90	100
+Client_Name: laurentia
+Clock_Version: 1.07
+Coil_Area: 7.900000E+3
+Crone_Digital_PEM_Receiver: 304
+Current: 20
+Date: 6/29/2021
+File_Name: pp022
+File_Notes: 
+Firmware_Release_Date: May 26, 2020
+Firmware_Version: 3.02
+Grid_Name: amex perron
+Last_Group: 0
+Last_Reading: 3
+Line_Hole_Name: 163-15-022
+Loop_Length: 400
+Loop_Name: loop nord
+Loop_Width: 400
+MCU_ID: 17492
+Number_Of_Channels: 19
+Off_Time_Last_Channel: 20
+Operator_Name: guy
+Ramp_Length: 1500
+Ramp_Length_Index: 3
+Rejection_Threshold_Base_[pT]: 5E+2
+Sample: 6667
+Sensor_Number: 108
+Software_Release_Date: Nov 19, 2020
+Software_Version: 3.03
+Survey_Type: BH Z Probe
+Survey_Type_Index: 10
+Sync_Type: Crystal Clock
+Sync_Type_Index: 0
+Time_Base: 16.66 ms
+Time_Base_Index: 2
+Tool_Number: 0
+Tx_Delay: 500 
+ZTS_Offset: =Tx_Delay+Ramp_Length+ZTS_Adjust
+Units: Tesla/s
+Azimuth_Ref: 0.000000E+0
+Declination: 0.000000E+0
+Total_Readings:3
+$$
+
+name: 0,-,R1
+Clock_Time: 1928
+Control_Sensor: Magnetometer
+Date_Time: 6/29/2021,7:34:26
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 1
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 40
+ZTS_Offset: 2040
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -6.138091E-5	-6.116744E-5	-6.093152E-5	-6.065955E-5	-6.031834E-5	-5.980676E-5	-5.890117E-5	-5.707636E-5	-5.349717E-5	-4.756189E-5	-3.953898E-5	-3.057640E-5	-2.207944E-5	-1.505636E-5	-9.862176E-6	-6.330270E-6	-4.061356E-6	-2.650694E-6	-1.786031E-6
+
+name: 0,-,R2
+Clock_Time: 1992
+Control_Sensor: Magnetometer
+Date_Time: 6/29/2021,7:35:30
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 2
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 40
+ZTS_Offset: 2040
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -6.135883E-5	-6.114090E-5	-6.090596E-5	-6.063857E-5	-6.029797E-5	-5.978154E-5	-5.887358E-5	-5.704646E-5	-5.346000E-5	-4.751266E-5	-3.948346E-5	-3.052419E-5	-2.203622E-5	-1.502073E-5	-9.832467E-6	-6.308537E-6	-4.046259E-6	-2.638499E-6	-1.775014E-6
+
+name: 10,-,R1
+Clock_Time: 11583
+Control_Sensor: Magnetometer
+Date_Time: 6/29/2021,10:15:20
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 3
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 40
+ZTS_Offset: 2040
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -6.125836E-5	-6.103871E-5	-6.079983E-5	-6.052552E-5	-6.018038E-5	-5.966847E-5	-5.877428E-5	-5.699016E-5	-5.348927E-5	-4.764794E-5	-3.969463E-5	-3.074823E-5	-2.222028E-5	-1.514114E-5	-9.892105E-6	-6.322176E-6	-4.032636E-6	-2.611474E-6	-1.743299E-6
+

@@ -1,0 +1,344 @@
+name: pp
+description: 
+title: 
+author: 
+datetime:
+Channel_Config: PP
+Channel_Config_Index: 0
+Channel_Number: -9	-8	-7	-6	-5	-4	-3	-2	-1	0	1	2	3	4	5	6	7	8	9
+
+Channel_Time: -90	-80	-70	-60	-50	-40	-30	-20	-10	0	10	20	30	40	50	60	70	80	90	100
+
+Client_Name: kazzinc
+Coil_Area: 7900.000000
+Crone_Digital_PEM_Receiver: #309
+Current: 12.00
+Date: 4/11/2021
+File_Name: pp
+File_Notes: 
+Grid_Name: rodnik
+Last_Group: 0
+Last_Reading: 10
+Line_Hole_Name: maro-21-005
+Loop_Height: 1000
+Loop_Name: 1
+Loop_Width: 1000
+Off_Time_Last_Channel: 20
+Operator_Name: daniyar
+Ramp_Length: 1500
+Rejection_Threshold_Base_[pT]: 500.000000
+Released: Feb22,2018
+Sample: 8000
+Sensor_Number: 144
+Software_Version: 1.10.7
+Survey_Type: BH_Z
+Survey_Type_Index: 10
+Sync_Type: Crystal
+Time_Base: 20 ms
+Time_Base_Index: 3
+Tool_Number: 0
+Tx_Delay: 500 
+ZTS_Offset: =Tx_Delay+Ramp_Length+ZTS_Adjust
+Units: Tesla/s
+Total_Readings:10
+$$ 
+NI_ChannelLength:
+NI_DataType:
+name: 0,-,R1
+Number_of_Stacks: 32
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+description: 
+Control_Sensor: Magnetometer
+Date_Time: 4/11/2021,6:02:11 PM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 4
+Number_of_Readings: 2
+Overload: F
+RAD: 0.000000	0.000000	0.000000	0.000000	0.000000	0.000000
+Reading_Notes: 
+Reading_Number: 1
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 30
+ZTS_Offset: 2030
+isDeleted: F
+dataZ: 9.465529E-6	9.448933E-6	9.431582E-6	9.414631E-6	9.396433E-6	9.376767E-6	9.356187E-6	9.335791E-6	9.312294E-6	9.284813E-6	9.250725E-6	9.208306E-6	9.152111E-6	9.076833E-6	8.975438E-6	8.842676E-6	8.676733E-6	8.478504E-6	8.251285E-6
+
+NI_ChannelLength:
+NI_DataType:
+name: 0,-,R2
+Number_of_Stacks: 32
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+description: 
+Control_Sensor: Magnetometer
+Date_Time: 4/11/2021,6:02:15 PM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 4
+Number_of_Readings: 2
+Overload: F
+RAD: 0.000000	0.000000	0.000000	0.000000	0.000000	0.000000
+Reading_Notes: 
+Reading_Number: 2
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 30
+ZTS_Offset: 2030
+isDeleted: F
+dataZ: 9.464277E-6	9.446705E-6	9.429802E-6	9.413574E-6	9.396640E-6	9.378332E-6	9.357632E-6	9.336111E-6	9.313046E-6	9.286022E-6	9.251431E-6	9.207897E-6	9.150122E-6	9.073543E-6	8.971534E-6	8.838997E-6	8.673361E-6	8.475858E-6	8.249598E-6
+
+NI_ChannelLength:
+NI_DataType:
+name: 0,-,R3
+Number_of_Stacks: 32
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+description: 
+Control_Sensor: Magnetometer
+Date_Time: 4/11/2021,6:04:22 PM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 4
+Number_of_Readings: 2
+Overload: F
+RAD: 0.000000	0.000000	0.000000	0.000000	0.000000	0.000000
+Reading_Notes: 
+Reading_Number: 3
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 30
+ZTS_Offset: 2030
+isDeleted: F
+dataZ: 9.465443E-6	9.449116E-6	9.431321E-6	9.413733E-6	9.394688E-6	9.374650E-6	9.354188E-6	9.331857E-6	9.310397E-6	9.283569E-6	9.250045E-6	9.207032E-6	9.149728E-6	9.073100E-6	8.970446E-6	8.837120E-6	8.671848E-6	8.473595E-6	8.246504E-6
+
+NI_ChannelLength:
+NI_DataType:
+name: 0,-,R4
+Number_of_Stacks: 32
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+description: 
+Control_Sensor: Magnetometer
+Date_Time: 4/11/2021,6:04:26 PM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 4
+Number_of_Readings: 2
+Overload: F
+RAD: 0.000000	0.000000	0.000000	0.000000	0.000000	0.000000
+Reading_Notes: 
+Reading_Number: 4
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 30
+ZTS_Offset: 2030
+isDeleted: F
+dataZ: 9.466808E-6	9.450355E-6	9.433252E-6	9.415849E-6	9.397918E-6	9.379506E-6	9.360290E-6	9.338425E-6	9.315503E-6	9.288146E-6	9.254690E-6	9.210378E-6	9.152689E-6	9.076064E-6	8.973993E-6	8.841689E-6	8.676369E-6	8.478973E-6	8.251687E-6
+
+NI_ChannelLength:
+NI_DataType:
+name: 0,-,R5
+Number_of_Stacks: 32
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+description: 
+Control_Sensor: Magnetometer
+Date_Time: 4/11/2021,6:04:32 PM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 4
+Number_of_Readings: 2
+Overload: F
+RAD: 0.000000	0.000000	0.000000	0.000000	0.000000	0.000000
+Reading_Notes: 
+Reading_Number: 5
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 30
+ZTS_Offset: 2030
+isDeleted: F
+dataZ: 9.465815E-6	9.450022E-6	9.433076E-6	9.414955E-6	9.395792E-6	9.376670E-6	9.355990E-6	9.335538E-6	9.313039E-6	9.286419E-6	9.253802E-6	9.211568E-6	9.153287E-6	9.075456E-6	8.971368E-6	8.838978E-6	8.673478E-6	8.475142E-6	8.247627E-6
+
+NI_ChannelLength:
+NI_DataType:
+name: 0,-,R6
+Number_of_Stacks: 32
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+description: 
+Control_Sensor: Magnetometer
+Date_Time: 4/11/2021,6:04:36 PM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 4
+Number_of_Readings: 2
+Overload: F
+RAD: 0.000000	0.000000	0.000000	0.000000	0.000000	0.000000
+Reading_Notes: 
+Reading_Number: 6
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 30
+ZTS_Offset: 2030
+isDeleted: F
+dataZ: 9.464932E-6	9.447943E-6	9.431288E-6	9.413742E-6	9.395001E-6	9.375589E-6	9.355637E-6	9.332842E-6	9.308707E-6	9.280882E-6	9.247048E-6	9.204775E-6	9.149158E-6	9.072511E-6	8.970821E-6	8.837463E-6	8.671629E-6	8.473144E-6	8.245415E-6
+
+NI_ChannelLength:
+NI_DataType:
+name: 10,-,R1
+Number_of_Stacks: 32
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+description: 
+Control_Sensor: Magnetometer
+Date_Time: 4/11/2021,7:23:34 PM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 4
+Number_of_Readings: 2
+Overload: F
+RAD: 0.000000	0.000000	0.000000	0.000000	0.000000	0.000000
+Reading_Notes: 
+Reading_Number: 7
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 30
+ZTS_Offset: 2030
+isDeleted: F
+dataZ: 9.454800E-6	9.436877E-6	9.419129E-6	9.402107E-6	9.384523E-6	9.364704E-6	9.343933E-6	9.319376E-6	9.293531E-6	9.262650E-6	9.223904E-6	9.172914E-6	9.104648E-6	9.011783E-6	8.890106E-6	8.736752E-6	8.549552E-6	8.332291E-6	8.088290E-6
+
+NI_ChannelLength:
+NI_DataType:
+name: 10,-,R2
+Number_of_Stacks: 32
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+description: 
+Control_Sensor: Magnetometer
+Date_Time: 4/11/2021,7:23:38 PM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 4
+Number_of_Readings: 2
+Overload: F
+RAD: 0.000000	0.000000	0.000000	0.000000	0.000000	0.000000
+Reading_Notes: 
+Reading_Number: 8
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 30
+ZTS_Offset: 2030
+isDeleted: F
+dataZ: 9.450854E-6	9.434302E-6	9.417880E-6	9.401718E-6	9.384330E-6	9.364767E-6	9.343778E-6	9.321365E-6	9.296642E-6	9.267138E-6	9.229374E-6	9.178150E-6	9.108858E-6	9.014594E-6	8.891475E-6	8.735963E-6	8.548264E-6	8.330032E-6	8.085714E-6
+
+NI_ChannelLength:
+NI_DataType:
+name: 10,-,R3
+Number_of_Stacks: 32
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+description: 
+Control_Sensor: Magnetometer
+Date_Time: 4/11/2021,7:23:55 PM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 4
+Number_of_Readings: 2
+Overload: F
+RAD: 0.000000	0.000000	0.000000	0.000000	0.000000	0.000000
+Reading_Notes: 
+Reading_Number: 9
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 30
+ZTS_Offset: 2030
+isDeleted: F
+dataZ: 9.451434E-6	9.433936E-6	9.415309E-6	9.397556E-6	9.378760E-6	9.360148E-6	9.340885E-6	9.319098E-6	9.293555E-6	9.262681E-6	9.224211E-6	9.172559E-6	9.103647E-6	9.010995E-6	8.890042E-6	8.736788E-6	8.549979E-6	8.332152E-6	8.088111E-6
+
+NI_ChannelLength:
+NI_DataType:
+name: 10,-,R4
+Number_of_Stacks: 32
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+description: 
+Control_Sensor: Magnetometer
+Date_Time: 4/11/2021,7:24:00 PM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 4
+Number_of_Readings: 2
+Overload: F
+RAD: 0.000000	0.000000	0.000000	0.000000	0.000000	0.000000
+Reading_Notes: 
+Reading_Number: 10
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 30
+ZTS_Offset: 2030
+isDeleted: F
+dataZ: 9.456290E-6	9.439752E-6	9.421093E-6	9.403542E-6	9.384655E-6	9.364582E-6	9.344729E-6	9.323265E-6	9.298648E-6	9.268570E-6	9.228579E-6	9.176222E-6	9.106332E-6	9.013041E-6	8.891296E-6	8.738101E-6	8.551561E-6	8.334111E-6	8.090216E-6
+

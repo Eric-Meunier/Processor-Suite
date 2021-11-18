@@ -1,0 +1,145 @@
+name: pp2124
+Boot_Block_Release_Date: Mar 19, 2020
+Boot_Block_Version: 3.02
+Bootloader_Release_Date: Sep 24, 2019
+Bootloader_Version: 3.00
+Channel_Config: PP
+Channel_Config_Index: 0
+Channel_Number: -9	-8	-7	-6	-5	-4	-3	-2	-1	0	1	2	3	4	5	6	7	8	9
+Channel_Time: -90	-80	-70	-60	-50	-40	-30	-20	-10	0	10	20	30	40	50	60	70	80	90	100
+Client_Name: laurentia
+Clock_Version: 1.10
+Coil_Area: 7.900000E+3
+Crone_Digital_PEM_Receiver: 407
+Current: 20
+Date: 2021-06-05
+File_Name: pp2124
+File_Notes: 
+Firmware_Release_Date: May 26, 2020
+Firmware_Version: 3.02
+Grid_Name: normetal
+Last_Group: 0
+Last_Reading: 7
+Line_Hole_Name: ste-21-24-w1
+Loop_Length: 450
+Loop_Name: east loop
+Loop_Width: 400
+MCU_ID: 17492
+Number_Of_Channels: 19
+Off_Time_Last_Channel: 20
+Operator_Name: guy
+Ramp_Length: 1500
+Ramp_Length_Index: 3
+Rejection_Threshold_Base_[pT]: 5E+2
+Sample: 6667
+Sensor_Number: 131
+Software_Release_Date: Nov 19, 2020
+Software_Version: 3.03
+Survey_Type: BH Z Probe
+Survey_Type_Index: 10
+Sync_Type: Crystal Clock
+Sync_Type_Index: 0
+Time_Base: 16.66 ms
+Time_Base_Index: 2
+Tool_Number: 0
+Tx_Delay: 500 
+ZTS_Offset: =Tx_Delay+Ramp_Length+ZTS_Adjust
+Units: Tesla/s
+Azimuth_Ref: 0.000000E+0
+Declination: 0.000000E+0
+Total_Readings:3
+$$
+
+name: 0,-,R1
+Clock_Time: 3279
+Control_Sensor: Magnetometer
+Date_Time: 2021-06-05,12:21:38
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 5
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 60
+ZTS_Offset: 2060
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: 4.443493E-5	4.428062E-5	4.410959E-5	4.390575E-5	4.363978E-5	4.323005E-5	4.250352E-5	4.108106E-5	3.833781E-5	3.383429E-5	2.782445E-5	2.122712E-5	1.510954E-5	1.018251E-5	6.634526E-6	4.278716E-6	2.791452E-6	1.876536E-6	1.313837E-6
+
+name: 0,-,R2
+Clock_Time: 3295
+Control_Sensor: Magnetometer
+Date_Time: 2021-06-05,12:21:54
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 6
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 60
+ZTS_Offset: 2060
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: 4.445158E-5	4.429712E-5	4.412228E-5	4.391535E-5	4.364370E-5	4.322318E-5	4.248198E-5	4.104627E-5	3.829177E-5	3.378391E-5	2.777965E-5	2.119767E-5	1.509863E-5	1.018505E-5	6.645365E-6	4.293647E-6	2.807198E-6	1.885381E-6	1.310926E-6
+
+name: 10,-,R1
+Clock_Time: 9602
+Control_Sensor: Magnetometer
+Date_Time: 2021-06-05,14:07:02
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: Z
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 7
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 60
+ZTS_Offset: 2060
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: 4.415248E-5	4.399651E-5	4.382376E-5	4.361726E-5	4.334533E-5	4.292689E-5	4.220020E-5	4.079508E-5	3.809038E-5	3.363421E-5	2.766915E-5	2.110953E-5	1.502326E-5	1.012104E-5	6.591967E-6	4.250609E-6	2.774728E-6	1.868011E-6	1.314394E-6
+

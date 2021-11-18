@@ -1,0 +1,99 @@
+name: pp
+Channel_Config: PP
+Channel_Config_Index: 0
+Channel_Number: -9	-8	-7	-6	-5	-4	-3	-2	-1	0	1	2	3	4	5	6	7	8	9
+Channel_Time: -90	-80	-70	-60	-50	-40	-30	-20	-10	0	10	20	30	40	50	60	70	80	90	100
+Client_Name: garibaldi
+Clock_Version: 1.10
+
+Coil_Area: 4000.000000
+Crone_Digital_PEM_Receiver: 402
+Current: 20
+Date: 10/18/2020
+File_Name: pp
+File_Notes: 
+Firmware_Version: 1.03
+Grid_Name: melville
+Last_Group: 0
+Last_Reading: 3
+Line_Hole_Name: 1
+Loop_Height: 200
+Loop_Name: melville west
+Loop_Width: 400
+Off_Time_Last_Channel: 20
+Operator_Name: norman
+Ramp_Length: 1500
+Ramp_Length_Index: 3
+Rejection_Threshold_Base_[pT]: 500.000000
+Released: May13,2019
+Sample: 20000
+Sensor_Number: 150
+Software_Version: 2.00
+Survey_Type: SF_Coil
+Survey_Type_Index: 0
+Sync_Type: Crystal
+Sync_Type_Index: 0
+Time_Base: 50 ms
+Time_Base_Index: 5
+Tool_Number: 0
+Tx_Delay: 500 
+ZTS_Offset: =Tx_Delay+Ramp_Length+ZTS_Adjust
+Units: Tesla/s
+Azimuth_Ref: 0.000000E+0
+Total_Readings:2
+$$
+
+name: 0E,-,R1
+Number_of_Stacks: 32
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+Control_Sensor: Magnetometer
+Date_Time: 10/18/2020,8:58:54 AM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 1
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 0
+ZTS_Offset: 2000
+Deleted: F
+dataZ: 1.110141E-5	1.107446E-5	1.104386E-5	1.100960E-5	1.096842E-5	1.091815E-5	1.084340E-5	1.070297E-5	1.036707E-5	9.636086E-6	8.390063E-6	6.725538E-6	4.925461E-6	3.284456E-6	1.993667E-6	1.095196E-6	5.373601E-7	2.225875E-7	6.358838E-8
+
+name: 10E,-,R1
+Number_of_Stacks: 32
+Reject(%): 0
+Roll: 0.000000
+Smart_Stacking: 2
+Control_Sensor: Magnetometer
+Date_Time: 10/18/2020,1:39:17 PM
+Good_Bad_Array: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 3
+Rejection_Threshold_Adjust: 2.000000
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100000
+Stacking_Limit_Multiplier: 1.000000
+Stacking_Roll_Threshold: 3.000000
+Streaming: On
+ZTS_Adjust: 0
+ZTS_Offset: 2000
+Deleted: F
+dataZ: 1.183204E-5	1.180464E-5	1.177361E-5	1.173916E-5	1.169931E-5	1.164818E-5	1.157310E-5	1.143679E-5	1.112005E-5	1.041994E-5	9.183619E-6	7.472614E-6	5.560737E-6	3.772536E-6	2.332387E-6	1.312471E-6	6.663068E-7	2.939352E-7	9.816373E-8
+

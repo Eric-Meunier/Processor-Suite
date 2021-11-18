@@ -191,7 +191,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
             self.dir_edit.setText('')
             self.dir_tree.collapseAll()
             self.move_dir_tree(self.file_sys_model.rootPath())
-            self.set_current_date()
+        self.set_current_date()
 
     def move_dir_tree(self, path):
         """

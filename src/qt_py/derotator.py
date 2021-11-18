@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import pyqtgraph as pg
 # from src.logger import Log
-from PySide2.QtCore import Signal, QEvent
+from PySide2.QtCore import Signal, QEvent, QSettings
 from PySide2.QtGui import QKeySequence
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QApplication, QShortcut)
 
@@ -27,88 +27,6 @@ class Derotator(QMainWindow, Ui_Derotator):
     accept_sig = Signal(object)
 
     def __init__(self, parent=None, darkmode=False):
-        def format_plots():
-            self.dip_ax.setLabel('top', 'Dip Angle (Degrees)', pen=pg.mkPen(self.foreground_color))
-            self.dip_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
-            self.dip_ax.setLimits(xMin=-90, xMax=0)
-            self.dip_ax.setXRange(-90, 0)
-            self.dev_ax.setLabel('top', 'Angle Deviation From PP Rotation Angle (Degrees)',
-                                 pen=pg.mkPen(self.foreground_color))
-            self.dev_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
-            self.mag_ax.setLabel("top", "Total Magnetic Field (pT)")
-            self.mag_ax.setLabel('left', 'Station', units=None)
-            self.mag_ax.getAxis("left").setWidth(30)
-            self.mag_ax.getAxis("right").setWidth(10)
-            self.rot_ax.setLabel('top', 'Rotation Angle', units='Degrees', pen=pg.mkPen(self.foreground_color))
-            self.rot_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
-            self.pp_ax.setLabel('top', 'Primary Pulse Response', units='nT/s', pen=pg.mkPen(self.foreground_color))
-            self.pp_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
-
-            # Format all axes
-            for ax in np.concatenate([self.x_view_axes, self.y_view_axes]):
-                ax.hideButtons()
-                ax.setMenuEnabled(False)
-                ax.invertY(True)
-                ax.setYLink(self.x_ax0)
-
-                # Add the mag plot into the profile plot
-                ax.showAxis("top")
-                ax.showAxis("right")
-                ax.getAxis("top").setHeight(40)
-                ax.getAxis("top").setStyle(showValues=True)
-                ax.getAxis("right").setStyle(showValues=False)
-                ax.getAxis("left").setStyle(showValues=False)
-                ax.getAxis('top').enableAutoSIPrefix(enable=False)
-                # ax.hideAxis("left")
-                ax.hideAxis("bottom")
-
-            # Use the first axes to set the label and tick labels
-            for ax in [self.x_ax0, self.y_ax0]:
-                ax.getAxis("left").setStyle(showValues=True)
-                ax.getAxis("left").setLabel("Station",
-                                            color=get_line_color("foreground", "mpl", self.darkmode),
-                                            pen=pg.mkPen(self.foreground_color))
-
-            # Disable the 'A' button and auto-scaling SI units
-            for ax in [self.dev_ax, self.dip_ax, self.mag_ax, self.rot_ax, self.pp_ax]:
-                # ax.showGrid(x=False, y=True, alpha=0.3)
-                ax.hideButtons()
-                ax.setMenuEnabled(False)
-                ax.invertY(True)
-                ax.setYLink(self.x_ax0)
-
-                # Add the mag plot into the profile plot
-                ax.showAxis("top")
-                ax.showAxis("right")
-                ax.getAxis("top").setHeight(40)
-                ax.getAxis("top").setStyle(showValues=True)
-                ax.getAxis("right").setStyle(showValues=False)
-                ax.getAxis("left").setStyle(showValues=True)
-                ax.getAxis("left").setLabel("Station",
-                                            color=get_line_color("foreground", "mpl", self.darkmode),
-                                            pen=pg.mkPen(self.foreground_color))
-                ax.getAxis('top').enableAutoSIPrefix(enable=False)
-                ax.hideAxis("bottom")
-
-            self.mag_ax.getAxis("left").setStyle(showValues=False)
-            self.mag_ax.getAxis("left").setLabel("")
-
-        def init_signals():
-            self.actionReverse_XY.triggered.connect(self.reverse_xy)
-            self.actionPEM_File.triggered.connect(self.export_pem_file)
-            self.actionStats.triggered.connect(self.export_stats)
-            self.actionShow_Scatter.triggered.connect(self.toggle_scatter)
-
-            self.button_box.accepted.connect(self.accept)
-            self.button_box.rejected.connect(self.close)
-
-            self.acc_btn.clicked.connect(self.rotate)
-            self.mag_btn.clicked.connect(self.rotate)
-            self.pp_btn.clicked.connect(self.rotate)
-            self.none_btn.clicked.connect(self.rotate)
-            self.unrotate_btn.clicked.connect(self.rotate)
-            self.soa_sbox.valueChanged.connect(self.rotate)
-
         super().__init__(parent)
         self.setupUi(self)
         self.installEventFilter(self)
@@ -273,12 +191,119 @@ class Derotator(QMainWindow, Ui_Derotator):
                                                     brush=pg.mkBrush(self.background_color),
                                                     size=symbol_size)
 
-        format_plots()
-        init_signals()
+        self.format_plots()
+        self.init_signals()
 
         self.profile_axes = np.concatenate([self.x_view_axes, self.y_view_axes])
         self.axes = np.concatenate([self.x_view_axes, self.y_view_axes, [self.dev_ax], [self.dip_ax], [self.mag_ax],
                                     [self.rot_ax], [self.pp_ax]])
+
+        self.load_settings()
+
+    def init_signals(self):
+        self.actionReverse_XY.triggered.connect(self.reverse_xy)
+        self.actionPEM_File.triggered.connect(self.export_pem_file)
+        self.actionStats.triggered.connect(self.export_stats)
+        self.actionShow_Scatter.triggered.connect(self.toggle_scatter)
+
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.close)
+
+        self.acc_btn.clicked.connect(self.rotate)
+        self.mag_btn.clicked.connect(self.rotate)
+        self.pp_btn.clicked.connect(self.rotate)
+        self.none_btn.clicked.connect(self.rotate)
+        self.unrotate_btn.clicked.connect(self.rotate)
+        self.soa_sbox.valueChanged.connect(self.rotate)
+
+    def format_plots(self):
+        self.dip_ax.setLabel('top', 'Dip Angle (Degrees)', pen=pg.mkPen(self.foreground_color))
+        self.dip_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
+        self.dip_ax.setLimits(xMin=-90, xMax=0)
+        self.dip_ax.setXRange(-90, 0)
+        self.dev_ax.setLabel('top', 'Angle Deviation From PP Rotation Angle (Degrees)',
+                             pen=pg.mkPen(self.foreground_color))
+        self.dev_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
+        self.mag_ax.setLabel("top", "Total Magnetic Field (pT)")
+        self.mag_ax.setLabel('left', 'Station', units=None)
+        self.mag_ax.getAxis("left").setWidth(30)
+        self.mag_ax.getAxis("right").setWidth(10)
+        self.rot_ax.setLabel('top', 'Rotation Angle', units='Degrees', pen=pg.mkPen(self.foreground_color))
+        self.rot_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
+        self.pp_ax.setLabel('top', 'Primary Pulse Response', units='nT/s', pen=pg.mkPen(self.foreground_color))
+        self.pp_ax.setLabel('left', 'Station', units=None, pen=pg.mkPen(self.foreground_color))
+
+        # Format all axes
+        for ax in np.concatenate([self.x_view_axes, self.y_view_axes]):
+            ax.hideButtons()
+            ax.setMenuEnabled(False)
+            ax.invertY(True)
+            ax.setYLink(self.x_ax0)
+
+            # Add the mag plot into the profile plot
+            ax.showAxis("top")
+            ax.showAxis("right")
+            ax.getAxis("top").setHeight(40)
+            ax.getAxis("top").setStyle(showValues=True)
+            ax.getAxis("right").setStyle(showValues=False)
+            ax.getAxis("left").setStyle(showValues=False)
+            ax.getAxis('top').enableAutoSIPrefix(enable=False)
+            # ax.hideAxis("left")
+            ax.hideAxis("bottom")
+
+        # Use the first axes to set the label and tick labels
+        for ax in [self.x_ax0, self.y_ax0]:
+            ax.getAxis("left").setStyle(showValues=True)
+            ax.getAxis("left").setLabel("Station",
+                                        color=get_line_color("foreground", "mpl", self.darkmode),
+                                        pen=pg.mkPen(self.foreground_color))
+
+        # Disable the 'A' button and auto-scaling SI units
+        for ax in [self.dev_ax, self.dip_ax, self.mag_ax, self.rot_ax, self.pp_ax]:
+            # ax.showGrid(x=False, y=True, alpha=0.3)
+            ax.hideButtons()
+            ax.setMenuEnabled(False)
+            ax.invertY(True)
+            ax.setYLink(self.x_ax0)
+
+            # Add the mag plot into the profile plot
+            ax.showAxis("top")
+            ax.showAxis("right")
+            ax.getAxis("top").setHeight(40)
+            ax.getAxis("top").setStyle(showValues=True)
+            ax.getAxis("right").setStyle(showValues=False)
+            ax.getAxis("left").setStyle(showValues=True)
+            ax.getAxis("left").setLabel("Station",
+                                        color=get_line_color("foreground", "mpl", self.darkmode),
+                                        pen=pg.mkPen(self.foreground_color))
+            ax.getAxis('top').enableAutoSIPrefix(enable=False)
+            ax.hideAxis("bottom")
+
+        self.mag_ax.getAxis("left").setStyle(showValues=False)
+        self.mag_ax.getAxis("left").setLabel("")
+
+    def save_settings(self):
+        settings = QSettings("Crone Geophysics", "PEMPro")
+        settings.beginGroup("derotator")
+
+        # Geometry
+        settings.setValue("windowGeometry", self.saveGeometry())
+
+        # Setting options
+        settings.setValue("actionShow_Scatter", self.actionSymbols.isChecked())
+
+        settings.endGroup()
+
+    def load_settings(self):
+        settings = QSettings("Crone Geophysics", "PEMPro")
+        settings.beginGroup("derotator")
+
+        # Geometry
+        if settings.value("windowGeometry"):
+            self.restoreGeometry(settings.value("windowGeometry"))
+
+        # Setting options
+        self.actionShow_Scatter.setChecked(settings.value("actionShow_Scatter", defaultValue=True, type=bool))
 
     def accept(self):
         self.accept_sig.emit(self.rotated_file)

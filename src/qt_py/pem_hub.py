@@ -3544,9 +3544,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 derotated = ""
         else:
             self.status_bar.showMessage("")
-            timebase = f"Timebase(s): {', '.join(natsort.os_sorted(np.unique([str(f.timebase) + 'ms' for f in pem_files])))}"
+            timebase = f"Timebases: {', '.join(natsort.os_sorted(np.unique([str(f.timebase) + 'ms' for f in pem_files])))}"
             zts = f"ZTS: {', '.join(np.unique(np.concatenate([f.data.ZTS.unique().astype(int).astype(str) for f in pem_files])))}"
-            survey_type = f"Survey Type(s): {', '.join(np.unique([f.get_survey_type() for f in pem_files]))}"
+            survey_type = f"Survey Types: {', '.join(np.unique([f.get_survey_type() for f in pem_files]))}"
             derotated = ""
             reading_groups = ""
             stacks = ""
@@ -3774,10 +3774,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         self.status_bar.showMessage(f"Process complete. {len(filt_list)} PEM files split.", 2000)
 
-    def scale_pem_coil_area(self, coil_area=None, selected=False):
+    def scale_pem_coil_area(self, selected=False):
         """
         Scales the data according to the coil area change
-        :param coil_area: int:  coil area to scale to
         :param selected: bool, True will only export selected rows.
         """
         pem_files, rows = self.get_pem_files(selected=selected)
@@ -3786,11 +3785,15 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        if not coil_area:
-            default = pem_files[0].coil_area
-            coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", value=default)
-            if not ok_pressed:
-                return
+        default = pem_files[0].coil_area
+        # TODO Add component specific coil areas for SQUID surveys?
+        # if all(["squid" in pem_file.get_survey_type() for pem_file in pem_files]):
+        #
+        #     coil_area, ok_pressed = QInputDialog.getItem(self, "Set Coil Areas", "Coil Area:", ["X"])
+        # else:
+        coil_area, ok_pressed = QInputDialog.getInt(self, "Set Coil Areas", "Coil Area:", value=default)
+        if not ok_pressed:
+            return
 
         with CustomProgressDialog('Scaling PEM File Coil Area...', 0, len(pem_files)) as dlg:
             for pem_file, row in zip(pem_files, rows):
@@ -4892,7 +4895,6 @@ class GPSWarningViewer(QMainWindow):
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setLayout(QVBoxLayout())
-        # self.scroll_area.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.scroll_area.setWidgetResizable(True)
         self.setCentralWidget(self.scroll_area)
 
@@ -4900,14 +4902,14 @@ class GPSWarningViewer(QMainWindow):
 
         self.widget = QWidget()
         self.widget.setLayout(QVBoxLayout())
+        self.widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.scroll_area.setWidget(self.widget)
-        # frame.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         for name, warnings in gps_warnings.items():  # Line and Loop warnings
             if warnings:
                 box = QGroupBox()
                 box.setLayout(QVBoxLayout())
-                # box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                box.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
                 box.setTitle(name)
                 box.setAlignment(Qt.AlignCenter)
 
@@ -4917,7 +4919,7 @@ class GPSWarningViewer(QMainWindow):
                         box.layout().addWidget(QLabel("None"))
                         continue
                     table = QTableWidget()
-                    # table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                    table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
                     table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
                     table.setEditTriggers(QAbstractItemView.NoEditTriggers)
                     df_to_table(warnings_df, table)
@@ -5262,7 +5264,8 @@ def main():
     # pem_files = pem_getter.get_pems(folder="Raw Boreholes\EB-21-68\RAW", number=1)
     # pem_files = pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0823.PEM")
     # pem_files = pem_getter.parse(r"C:\_Data\2021\Managem\Surface\Kokiak Aicha 2\RAW\600n_1112.dmp2")
-    pem_files = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-207\Final\_EM21-207 XYT.PEM")
+    # pem_files = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-207\Final\_EM21-207 XYT.PEM")
+    pem_files = pem_getter.parse(r"C:\_Data\2021\Managem\Surface\Kokiak Aicha 2\RAW\1000N.PEM")
     # pem_files = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-206\RAW\em21-206 xy_1030.PEM")
     # pem_files2 = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-206\RAW\em21-206 z_1030.PEM")
     # pem_files = pem_getter.parse(samples_folder.joinpath(r"Line GPS\800N.PEM"))

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1499</width>
-    <height>1000</height>
+    <height>1001</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -337,7 +337,7 @@
          </widget>
          <widget class="QFrame" name="middle_frame">
           <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
             <horstretch>0</horstretch>
             <verstretch>0</verstretch>
            </sizepolicy>
@@ -1205,7 +1205,7 @@ Warnings</string>
           </property>
           <property name="minimumSize">
            <size>
-            <width>0</width>
+            <width>400</width>
             <height>0</height>
            </size>
           </property>
@@ -1329,6 +1329,7 @@ Warnings</string>
      <addaction name="actionRename_Lines_Holes"/>
      <addaction name="actionRename_Suffixes"/>
      <addaction name="separator"/>
+     <addaction name="actionAuto_Name_Files"/>
      <addaction name="actionAuto_Name_Lines_Holes"/>
     </widget>
     <widget class="QMenu" name="menuReverse_Polarity">
@@ -1859,7 +1860,7 @@ Warnings</string>
   </action>
   <action name="actionRename_Lines_Holes">
    <property name="text">
-    <string>Lines/Hole Names</string>
+    <string>Lines/Holes</string>
    </property>
    <property name="toolTip">
     <string>Re-name all line/hole names.</string>
@@ -2259,6 +2260,14 @@ Warnings</string>
   <action name="actionRename_Suffixes">
    <property name="text">
     <string>Suffixes</string>
+   </property>
+  </action>
+  <action name="actionAuto_Name_Files">
+   <property name="text">
+    <string>Auto-Name Files</string>
+   </property>
+   <property name="shortcut">
+    <string>F2</string>
    </property>
   </action>
  </widget>

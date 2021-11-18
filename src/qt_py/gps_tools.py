@@ -1789,11 +1789,12 @@ if __name__ == '__main__':
     # # mw = CollarPicker(darkmode=darkmode)
     # file = r"C:\_Data\2021\TMC\Laurentia\GEN-21-09\GPS\Loop 09_0823.gpx"
     # # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
-    file = samples_folder.joinpath(r"Line GPS\KA800N_1027.txt")
-    pem_file = getter.parse(samples_folder.joinpath(r"Line GPS\800N.PEM"))
+    # file = samples_folder.joinpath(r"Line GPS\KA800N_1027.txt")
+    # pem_file = getter.parse(samples_folder.joinpath(r"Line GPS\800N.PEM"))
     # loop = TransmitterLoop(file)
-    # mw = ExcelTablePicker()
+    mw = ExcelTablePicker()
     # # mw = DADSelector()
+    file = samples_folder.joinpath(r"Segments\for Eastern Geophy-reflex.xlsx")
     # file = samples_folder.joinpath(r"Segments\BHEM-Belvais-2021-07-22.xlsx")
     # # file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
     # file = r"C:\_Data\2021\Eastern\Maritime Resources\Birchy 2\GPS\L5N.GPX"
@@ -1801,7 +1802,7 @@ if __name__ == '__main__':
     # # file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')
     # # line = SurveyLine(str(file))
 
-    mw = LoopAdder(pem_file, darkmode=darkmode)
+    # mw = LoopAdder(pem_file, darkmode=darkmode)
     # mw = LineAdder(pem_file, darkmode=darkmode)
     mw.open(file)
     mw.show()

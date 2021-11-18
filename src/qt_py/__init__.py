@@ -10,7 +10,8 @@ from PySide2.QtCore import QSizeF, Qt, Signal, QPointF
 from PySide2.QtGui import QKeySequence, QColor, QCursor, QPixmap, QIcon, QPalette, QIntValidator, QBrush
 from PySide2.QtWidgets import (QMessageBox, QWidget, QLabel, QFrame, QHBoxLayout, QVBoxLayout, QTabWidget, QMenu,
                                QAction, QComboBox, QLineEdit, QGroupBox, QGridLayout, QRadioButton, QTableWidget,
-                               QTableWidgetItem, QShortcut, QPushButton, QSizePolicy, QItemDelegate, QAbstractItemView)
+                               QTableWidgetItem, QShortcut, QPushButton, QSizePolicy, QItemDelegate, QAbstractItemView,
+                               QGraphicsDropShadowEffect)
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from pyproj import CRS
 from src.logger import logger, Log
@@ -343,6 +344,13 @@ class CustomProgressDialog(pg.ProgressDialog):
         self.setWindowFlags(Qt.FramelessWindowHint)
         self.setWindowTitle("Loading...")
         self.setWindowIcon(get_icon("conder.ico"))
+
+        # self.shadow = QGraphicsDropShadowEffect(self)
+        # self.shadow.setBlurRadius(20)
+        # self.shadow.setXOffset(0)
+        # self.shadow.setXOffset(0)
+        # self.shadow.setColor(QColor(0, 0, 0, 60))
+        # self.setGraphicsEffect(self.shadow)
 
         # parent = kwargs.get("parent")
         # if parent:

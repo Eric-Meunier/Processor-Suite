@@ -1,0 +1,207 @@
+name: pp
+Boot_Block_Release_Date: Mar 19, 2020
+Boot_Block_Version: 3.02
+Bootloader_Release_Date: Sep 24, 2019
+Bootloader_Version: 3.00
+Channel_Config: PP
+Channel_Config_Index: 0
+Channel_Number: -9	-8	-7	-6	-5	-4	-3	-2	-1	0	1	2	3	4	5	6	7	8	9
+Channel_Time: -90	-80	-70	-60	-50	-40	-30	-20	-10	0	10	20	30	40	50	60	70	80	90	100
+Client_Name: nantou exploration
+Clock_Version: 1.10
+Coil_Area: 4.000000E+3
+Crone_Digital_PEM_Receiver: 401
+Current: 9
+Date: 2/12/2021
+File_Name: pp
+File_Notes: 
+Firmware_Release_Date: May 26, 2020
+Firmware_Version: 3.02
+Grid_Name: perkoa south trend
+Last_Group: 0
+Last_Reading: 5
+Line_Hole_Name: tx
+Loop_Length: 2000
+Loop_Name: loop1
+Loop_Width: 2000
+MCU_ID: 17492
+Number_Of_Channels: 19
+Off_Time_Last_Channel: 20
+Operator_Name: denis ilboudo
+Ramp_Length: 1500
+Ramp_Length_Index: 3
+Rejection_Threshold_Base_[pT]: 5E+2
+Sample: 120000
+Sensor_Number: 167
+Software_Release_Date: Nov 19, 2020
+Software_Version: 3.03
+Survey_Type: SF Coil
+Survey_Type_Index: 0
+Sync_Type: Crystal Clock
+Sync_Type_Index: 0
+Time_Base: 300 ms
+Time_Base_Index: 8
+Tool_Number: 0
+Tx_Delay: 500 
+ZTS_Offset: =Tx_Delay+Ramp_Length+ZTS_Adjust
+Units: Tesla/s
+Azimuth_Ref: 0.000000E+0
+Declination: 0.000000E+0
+Total_Readings:5
+$$
+
+name: 0E,-,R1
+Clock_Time: 8616
+Control_Sensor: Magnetometer
+Date_Time: 2/12/2021,2:58:54 AM
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 1
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 0
+ZTS_Offset: 2000
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -3.518145E-5	-3.506597E-5	-3.493888E-5	-3.479288E-5	-3.462016E-5	-3.441311E-5	-3.414662E-5	-3.376671E-5	-3.313802E-5	-3.201340E-5	-3.010944E-5	-2.731393E-5	-2.381353E-5	-2.000089E-5	-1.622497E-5	-1.264425E-5	-9.272548E-6	-6.104326E-6	-3.204395E-6
+
+name: 0E,-,R2
+Clock_Time: 8690
+Control_Sensor: Magnetometer
+Date_Time: 2/12/2021,3:00:08 AM
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 2
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 0
+ZTS_Offset: 2000
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -3.517365E-5	-3.505786E-5	-3.492909E-5	-3.478685E-5	-3.462207E-5	-3.441889E-5	-3.414984E-5	-3.376171E-5	-3.312547E-5	-3.199199E-5	-3.007859E-5	-2.727466E-5	-2.376966E-5	-1.995661E-5	-1.618324E-5	-1.260438E-5	-9.232370E-6	-6.067391E-6	-3.175001E-6
+
+name: 0E,-,R3
+Clock_Time: 8714
+Control_Sensor: Magnetometer
+Date_Time: 2/12/2021,3:00:32 AM
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 3
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 0
+ZTS_Offset: 2000
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -3.517984E-5	-3.506032E-5	-3.492891E-5	-3.478317E-5	-3.461245E-5	-3.440510E-5	-3.413781E-5	-3.375734E-5	-3.312792E-5	-3.200023E-5	-3.009028E-5	-2.729080E-5	-2.379296E-5	-1.998555E-5	-1.621331E-5	-1.263312E-5	-9.260403E-6	-6.095992E-6	-3.201521E-6
+
+name: 30E,-,R1
+Clock_Time: 21712
+Control_Sensor: Magnetometer
+Date_Time: 2/12/2021,6:37:10 AM
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 4
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 0
+ZTS_Offset: 2000
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -3.492296E-5	-3.481327E-5	-3.469036E-5	-3.455472E-5	-3.440026E-5	-3.421951E-5	-3.400018E-5	-3.371698E-5	-3.330917E-5	-3.263429E-5	-3.143983E-5	-2.946007E-5	-2.661543E-5	-2.311405E-5	-1.933851E-5	-1.562815E-5	-1.212789E-5	-8.838869E-6	-5.753764E-6
+
+name: 30E,-,R2
+Clock_Time: 21737
+Control_Sensor: Magnetometer
+Date_Time: 2/12/2021,6:37:35 AM
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 5
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 0
+ZTS_Offset: 2000
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -3.495196E-5	-3.484158E-5	-3.471969E-5	-3.458372E-5	-3.442838E-5	-3.424882E-5	-3.403370E-5	-3.375600E-5	-3.334914E-5	-3.266964E-5	-3.146464E-5	-2.947336E-5	-2.662002E-5	-2.311349E-5	-1.933854E-5	-1.562782E-5	-1.212369E-5	-8.828557E-6	-5.742581E-6
+

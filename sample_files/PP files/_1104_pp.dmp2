@@ -1,0 +1,146 @@
+name: pp
+Boot_Block_Release_Date: Sep 24, 2021
+Boot_Block_Version: 4.01
+Bootloader_Release_Date: Sep 24, 2019
+Bootloader_Version: 3.00
+Channel_Config: PP
+Channel_Config_Index: 0
+Channel_Number: -9	-8	-7	-6	-5	-4	-3	-2	-1	0	1	2	3	4	5	6	7	8	9
+Channel_Time: -90	-80	-70	-60	-50	-40	-30	-20	-10	0	10	20	30	40	50	60	70	80	90	100
+Client_Name: clean air
+Clock_Version: 1.10
+Coil_Area: 4.000000E+3
+Crone_Digital_PEM_Receiver: 406
+Current: 19
+Date: 2021-11-04
+File_Name: pp
+File_Notes: 
+Firmware_Release_Date: Oct 06, 2021
+Firmware_Version: 4.01
+Grid_Name: escape lake
+Last_Group: 0
+Last_Reading: 3
+Line_Hole_Name: l1400n
+Loop_Length: 700
+Loop_Name: surface loop 1
+Loop_Width: 700
+MCU_ID: 17492
+Number_Of_Channels: 19
+Off_Time_Last_Channel: 20
+Operator_Name: keith
+Ramp_Length: 1500
+Ramp_Length_Index: 3
+Rejection_Threshold_Base_[pT]: 5.000000E+2
+Sample: 20000
+Sensor_Number: 135
+Software_Release_Date: Oct 05, 2021
+Software_Version: 4.01
+Survey_Type: SF Coil
+Survey_Type_Index: 0
+Sync_Type: Atomic Clock
+Sync_Type_Index: 7
+Time_Base: 50 ms
+Time_Base_Index: 5
+Tool_Number: 0
+Tx_Delay: 500 
+ZTS_Offset: =Tx_Delay+Ramp_Length+ZTS_Adjust
+Units: Tesla/s
+Azimuth_Ref: 0.000000E+0
+Declination: 0.000000E+0
+Tx_Atomic_Clock: 201
+Total_Readings:3
+$$
+
+name: 0E,-,R1
+Clock_Time: 6368
+Control_Sensor: Magnetometer
+Date_Time: 2021-11-04,12:15:25
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 1
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 30
+ZTS_Offset: 2030
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -1.367274E-4	-1.362914E-4	-1.358114E-4	-1.352663E-4	-1.346071E-4	-1.337374E-4	-1.323869E-4	-1.298113E-4	-1.246760E-4	-1.155702E-4	-1.019509E-4	-8.474633E-5	-6.606573E-5	-4.827702E-5	-3.314232E-5	-2.144042E-5	-1.310004E-5	-7.556051E-6	-4.094057E-6
+
+name: 0E,-,R2
+Clock_Time: 6407
+Control_Sensor: Magnetometer
+Date_Time: 2021-11-04,12:16:05
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 2
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 30
+ZTS_Offset: 2030
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -1.366783E-4	-1.362394E-4	-1.357525E-4	-1.351968E-4	-1.345299E-4	-1.336533E-4	-1.322889E-4	-1.296781E-4	-1.244739E-4	-1.152689E-4	-1.015478E-4	-8.427588E-5	-6.558288E-5	-4.783883E-5	-3.278084E-5	-2.116676E-5	-1.290536E-5	-7.424055E-6	-4.002283E-6
+
+name: 0E,-,R3
+Clock_Time: 15890
+Control_Sensor: Magnetometer
+Date_Time: 2021-11-04,14:54:08
+Good_Bad_Array: 
+GPS: 
+Group: 0
+Number_of_Components: 
+Number_of_Components_Index: 0
+Number_of_Readings: 1
+Number_of_Stacks: 32
+Overload: F
+RAD: 0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0	0.000000E+0
+Reading_Notes: 
+Reading_Number: 3
+Rejection_Threshold_Adjust: 2.0
+Settling_Time_[sec]: 
+Stability_Roll_Threshold: 0.100
+Stacking_Limit_Multiplier: 1.0
+Stacking_Roll_Threshold: 3.0
+Streaming: On
+Streaming_Rate: 10 kHz
+ZTS_Adjust: 30
+ZTS_Offset: 2030
+Number_of_Stacks_Acquired: 34
+Reject(%): 0
+Roll: 0.000000E+0
+Smart_Stacking: 2
+Deleted: F
+dataZ: -1.364922E-4	-1.360440E-4	-1.355525E-4	-1.349959E-4	-1.343329E-4	-1.334736E-4	-1.321672E-4	-1.297321E-4	-1.248989E-4	-1.162484E-4	-1.031256E-4	-8.629938E-5	-6.776843E-5	-4.989433E-5	-3.451031E-5	-2.249206E-5	-1.384953E-5	-8.058689E-6	-4.410175E-6
+
