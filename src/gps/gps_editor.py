@@ -34,6 +34,12 @@ def has_na(series):
 
 
 def parse_gps(file, gps_object):
+    """
+    Parse the GPS of a file, creating an instance of gps_object with the given GPS.
+    :param file: str, list, dict, BaseGPS object.
+    :param gps_object: BaseGPS object (TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments).
+    :return: BaseGPS object
+    """
     def get_init_gps():
         """
         Create the empty dataframe, and initialize the units, columns and error message.
@@ -189,6 +195,8 @@ def parse_gps(file, gps_object):
     if survey_line:
         # Replace empty station numbers with 0
         gps["Station"].replace("None", "0", inplace=True)
+        # Removes unwanted text operators occasionally add.
+        gps["Station"] = gps["Station"].map(lambda x: re.match("-?\d+[nsewNSEW]?", str(x)).group(0))
         gps['Station'] = gps['Station'].map(convert_station)
 
     return gps, units, error_gps, error_msg

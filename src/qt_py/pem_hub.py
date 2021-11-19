@@ -599,30 +599,37 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 for row in range(self.table.rowCount()):
                     self.table.item(row, 5).setText(self.loop_edit.text())
 
-        def auto_name_lines():
+        def auto_name(which):
             """
-            Automatically rename hole and line names.
-            For boreholes, applies upper() and removes "z" or "xy" since many operators tend to add that.
-            For surface, applies upper() and removes "L".
+            Automatically rename file or line names.
+            :param which: str, either "File" or "Line"
             :return: None
             """
             if not self.pem_files:
                 self.status_bar.showMessage(f"No PEM files opened.", 2000)
                 return
 
-            line_name_column = self.table_columns.index('Line/Hole')
+            # File is renamed in PEMFile auto_name_file(), don't want to trigger renaming again when text is set.
+            self.table.blockSignals(True)
+
+            if which == "File":
+                column = self.table_columns.index('File')
+            elif which == "Line":
+                column = self.table_columns.index('Line/Hole')
+            else:
+                raise ValueError(f"{which} is not a valid option.")
+
             for row in range(self.table.rowCount()):
                 pem_file = self.pem_files[row]
-                current_name = self.table.item(row, line_name_column).text()
-                if pem_file.is_borehole():
-                    new_name = re.sub(r"xy|XY|z|Z", "", current_name.upper()).strip()
+                if which == "File":
+                    new_path = pem_file.auto_name_file()
+                    self.table.item(row, column).setText(new_path.name)
+                    self.fill_pem_list()
                 else:
-                    new_name = re.sub(r"L", "", current_name.upper()).strip()
+                    new_name = pem_file.auto_name_line()
+                    self.table.item(row, column).setText(new_name)
 
-                name_item = QTableWidgetItem(new_name)
-                name_item.setTextAlignment(Qt.AlignCenter)
-                self.table.setItem(row, line_name_column, name_item)
-            
+            self.table.blockSignals(False)
             self.status_bar.showMessage(f"Renaming complete.", 1500)
 
         def toggle_pem_list_buttons():
@@ -806,7 +813,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.actionScale_All_Currents.triggered.connect(lambda: self.scale_pem_current(selected=False))
         self.actionChange_All_Coil_Areas.triggered.connect(lambda: self.scale_pem_coil_area(selected=False))
         # self.actionOffset_Mag.triggered.connect(lambda: self.mag_offset_lastchn(selected=False))
-        self.actionAuto_Name_Lines_Holes.triggered.connect(auto_name_lines)
+        self.actionAuto_Name_Files.triggered.connect(lambda: auto_name("File"))
+        self.actionAuto_Name_Lines_Holes.triggered.connect(lambda: auto_name("Line"))
 
         self.actionReverseX_Component.triggered.connect(
             lambda: self.reverse_component_data(comp='X', selected=False))
@@ -2342,6 +2350,22 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 os.chdir(str(path))
                 os.system('cmd /c "step"')
 
+        def autoname_files():
+            """
+            Auto name PEM and STP files in the directory.
+            :return: None
+            """
+            path = self.get_current_project_path()
+            pem_files = list(path.glob("*.PEM"))
+            step_files = list(path.glob("*.STP"))
+            files = np.concatenate([pem_files, step_files])
+            if not any(files):
+                self.status_bar.showMessage(f"No PEM or STP files found in {path}.", 1500)
+                return
+
+            for file in files:
+                file.auto_name_file()
+
         def create_delivery_folder():
             """
             Gather and copy PEM, STP, and PDF files to a deliverable folder and compress it to a .ZIP file.
@@ -2393,6 +2417,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         menu = QMenu()
         menu.addAction('Run Step', open_step)
         menu.addSeparator()
+        # menu.addAction('Auto=Name Files', autoname_files)
         menu.addAction('Create Delivery Folder', create_delivery_folder)
         menu.addAction('Rename Folder', rename)
         menu.exec_(self.project_tree.viewport().mapToGlobal(position))

@@ -24,26 +24,6 @@ logger = logging.getLogger(__name__)
 pd.options.mode.chained_assignment = None  # default='warn'
 
 
-def parse_file(filepath):
-    """
-    Helper function to simplify parsing either DMP, DMP2, or PEM files.
-    :param filepath: str or Path
-    :return: PEMFile object.
-    """
-    filepath = Path(filepath)
-    ext = filepath.suffix.lower()
-    if ext == ".dmp" or ext == ".dmp2":
-        dmp_parser = DMPParser()
-        pem_file, errors = dmp_parser.parse(filepath)
-    elif ext == ".pem":
-        pem_parser = PEMParser()
-        pem_file = pem_parser.parse(filepath)
-    else:
-        raise NotImplementedError(F"{ext.upper()} parsing not implemented.")
-
-    return pem_file
-
-
 def sort_data(data):
     # Sort the data frame
     df = data.reindex(index=natsort.order_by_index(
@@ -120,11 +100,10 @@ def process_angle(average_angle, angle):
         return angle
 
 
-class PEMFile:
+class StepFile:
     """
-    PEM file class
+    Step file class
     """
-
     def __init__(self):
         self.format = None
         self.units = None
@@ -171,10 +150,10 @@ class PEMFile:
         self.prepped_for_rotation = False
         self.legacy = False
 
-    def from_pem(self, tags, loop_coords, line_coords, notes, header, channel_table, data, filepath=None):
+    def from_step(self, tags, loop_coords, line_coords, notes, header, channel_table, data, filepath=None):
         """
-        Fill the information of the PEM file object from a parsed .PEM file.
-        :param tags: dict, tags section of the PEM file
+        Fill the information of the Step file object from a parsed .stp file.
+        :param tags: dict, tags section of the Step file
         :param loop_coords: list, loop coordinates
         :param line_coords: list, line/hole geometry coordinates
         :param notes: list, notes section
@@ -182,7 +161,7 @@ class PEMFile:
         :param channel_table: DataFrame of the channel times
         :param data: DataFrame of the data
         :param filepath: str, filepath of the file
-        :return: PEMFile object
+        :return: StepFile object
         """
         self.format = tags.get('Format')
         self.units = tags.get('Units')
@@ -241,77 +220,6 @@ class PEMFile:
             # self.geometry = BoreholeGeometry(self.collar, self.segments)
         else:
             self.line = SurveyLine(line_coords, crs=self.crs)
-
-        return self
-
-    def from_dmp(self, header, channel_table, data, filepath, notes=None):
-        """
-        Create a PEMFile object from the contents of a parsed .DMP file.
-        :param header: parsed dictionary of DMP header information
-        :param channel_table: parsed DataFrame of the channel table in the DMP file
-        :param data: parsed DataFrame of the data in the DMP file
-        :param filepath: Path object of the DMP file.
-        :param notes: parsed list of notes in the DMP file
-        :return: PEMFile object
-        """
-        self.format = header.get('Format')
-        self.units = header.get('Units')
-        self.operator = header.get('Operator')
-        self.probes = header.get('Probes')
-        self.current = header.get('Current')
-        self.loop_dimensions = header.get('Loop dimensions')
-
-        self.client = header.get('Client')
-        self.grid = header.get('Grid')
-        self.line_name = header.get('Line_name')
-        self.loop_name = header.get('Loop_name')
-        self.date = header.get('Date')
-        self.survey_type = header.get('Survey type')
-        self.convention = header.get('Convention')
-        self.sync = header.get('Sync')
-        self.timebase = header.get('Timebase')
-        self.ramp = header.get('Ramp')
-        # self.number_of_channels = header.get('Number of channels')
-        self.number_of_readings = header.get('Number of readings')
-        self.rx_number = header.get('Receiver number')
-        self.rx_software_version = header.get('Rx software version')
-        self.rx_software_version_date = header.get('Rx software version date')
-        self.rx_file_name = header.get('Rx file name')
-        self.normalized = header.get('Normalized')
-        self.primary_field_value = header.get('Primary field value')
-        self.coil_area = header.get('Coil area')
-        self.loop_polarity = header.get('Loop polarity')
-        self.channel_times = channel_table
-        self.number_of_channels = len(channel_table)
-
-        if notes:
-            self.notes = notes
-        else:
-            self.notes = []
-
-        self.data = sort_data(data)
-        # Add the deletion flag column
-        if 'Deleted' not in self.data.columns:
-            self.data.insert(13, 'Deleted', False)
-
-        # Add the overload column
-        if 'Overload' not in self.data.columns:
-            self.data.insert(14, 'Overload', False)
-
-        # Add the Timestamp column
-        if 'Timestamp' not in self.data.columns:
-            self.data.insert(15, 'Timestamp', None)
-
-        self.filepath = filepath.with_suffix('.PEM')
-
-        self.crs = self.get_crs()
-        self.loop = TransmitterLoop(None, crs=self.crs)
-        if self.is_borehole():
-            self.collar = BoreholeCollar(None, crs=self.crs)
-            self.segments = BoreholeSegments(None)
-            # self.geometry = BoreholeGeometry(self.collar, self.segments)
-        else:
-            self.line = SurveyLine(None, crs=self.crs)
 
         return self
 
@@ -496,7 +404,7 @@ class PEMFile:
 
     def get_crs(self):
         """
-        Return the PEMFile's CRS, or create one from the note in the PEM file if it exists.
+        Return the StepFile's CRS, or create one from the note in the Step file if it exists.
         :return: Proj CRS object
         """
 
@@ -515,7 +423,7 @@ class PEMFile:
                     crs = CRS.from_string(crs_str)
                     logger.info(f"{self.filepath.name} CRS is {crs.name}.")
                     return crs
-                # For older PEM files that used the <GEN> tag
+                # For older Step files that used the <GEN> tag
                 elif 'CRS:' in note:
                     crs_str = re.split('CRS: ', note)[-1]
                     s = crs_str.split()
@@ -672,10 +580,10 @@ class PEMFile:
     def get_roll_data(self, roll_type, soa=0):
 
         if not self.prepped_for_rotation:
-            raise ValueError(F"PEMFile must be prepped for de-rotation.")
+            raise ValueError(F"StepFile must be prepped for de-rotation.")
 
         if not all([self.has_xy(), self.is_borehole()]):
-            raise ValueError(F"PEMFile must be a borehole file with X and Y component readings.")
+            raise ValueError(F"StepFile must be a borehole file with X and Y component readings.")
 
         data = self.data[(self.data.Component == "X") | (self.data.Component == "Y")]
         data = data.drop_duplicates(subset="RAD_ID")
@@ -690,11 +598,11 @@ class PEMFile:
             roll_data = data.RAD_tool.map(lambda x: x.angle_used + soa).to_numpy()
         elif roll_type == "Measured_PP":
             if not self.has_all_gps():
-                raise ValueError(f"PEMFile must have all GPS for {roll_type} de-rotation.")
+                raise ValueError(f"StepFile must have all GPS for {roll_type} de-rotation.")
             roll_data = data.RAD_tool.map(lambda x: x.measured_pp_roll_angle).to_numpy()
         elif roll_type == "Cleaned_PP":
             if not self.has_all_gps():
-                raise ValueError(f"PEMFile must have all GPS for {roll_type} de-rotation.")
+                raise ValueError(f"StepFile must have all GPS for {roll_type} de-rotation.")
             roll_data = data.RAD_tool.map(lambda x: x.cleaned_pp_roll_angle).to_numpy()
         else:
             raise ValueError(f"{roll_type} is not a valid de-rotation method.")
@@ -835,7 +743,7 @@ class PEMFile:
 
     def get_file_name(self, suffix=True):
         """
-        Return the name of the PEMFile's file.
+        Return the name of the StepFile's file.
         :param suffix: Bool, include the extension or not.
         :return: str
         """
@@ -850,7 +758,7 @@ class PEMFile:
 
     def get_stations(self, component=None, converted=False, incl_deleted=True):
         """
-        Return a list of unique stations in the PEM file.
+        Return a list of unique stations in the Step file.
         :param component: str, only count stations for the given component. 'None' will consider all components.
         :param converted: bool, whether to convert the stations to Int.
         :param incl_deleted: bool, whether include readings which are flagged for deletion.
@@ -897,7 +805,7 @@ class PEMFile:
 
     def get_mag_dec(self):
         """
-        Calculate the magnetic declination for the PEM file.
+        Calculate the magnetic declination for the Step file.
         """
         crs = self.get_crs()
         if not crs:
@@ -1064,7 +972,7 @@ class PEMFile:
 
     def get_clipboard_info(self):
         """
-        Copies the information of the PEMFile to the clipboard for the purposes of filling out the geophysicssheet.
+        Copies the information of the StepFile to the clipboard for the purposes of filling out the geophysicssheet.
         """
         stations = self.get_stations(converted=True)
         survey_type = f"{self.get_survey_type()} {''.join(self.get_components())}"  # Differentiates Z and XY surveys
@@ -1365,7 +1273,7 @@ class PEMFile:
             new_name = f"{self.line_name.upper()} {''.join(self.get_components())}"
         else:
             new_name = re.sub(r"L", "", self.line_name.upper()).strip()
-        new_path = self.filepath.with_name(new_name).with_suffix(".PEM")
+        new_path = self.filepath.with_name(new_name).with_suffix(".stp")
         os.rename(str(self.filepath), str(new_path))
         self.filepath = new_path
         return self.filepath
@@ -1422,12 +1330,12 @@ class PEMFile:
 
     def to_string(self, legacy=False):
         """
-        Return the text format of the PEM file
+        Return the text format of the Step file
         :param legacy: bool, if True will strip newer features so it is compatible with Step (such as D5 RAD tool
         lines and remove Timestamp and Deleted values.
-        :return: str, Full text of the PEM file
+        :return: str, Full text of the Step file
         """
-        ps = PEMSerializer()
+        ps = StepSerializer()
         text = ps.serialize(self.copy(), legacy=legacy)
         return text
 
@@ -1456,7 +1364,7 @@ class PEMFile:
 
     def to_xyz(self):
         """
-        Create a str in XYZ format of the pem file's data
+        Create a str in XYZ format of the step file's data
         :return: str
         """
 
@@ -1476,7 +1384,7 @@ class PEMFile:
             return row
 
         df = pd.DataFrame(columns=['Easting', 'Northing', 'Elevation', 'Component', 'Station', 'c_Station'])
-        pem_data = self.get_data(sorted=True).dropna(subset=['Station'])
+        step_data = self.get_data(sorted=True).dropna(subset=['Station'])
 
         if self.is_borehole():
             gps = self.get_geometry().get_projection(stations=self.get_stations(converted=True))
@@ -1485,21 +1393,21 @@ class PEMFile:
         else:
             gps = self.get_line_gps(sorted=True).drop_duplicates('Station')
 
-        # assert not self.is_borehole(), 'Can only create XYZ file with surface PEM files.'
+        # assert not self.is_borehole(), 'Can only create XYZ file with surface Step files.'
         if gps.empty:
             raise Exception(f"Cannot create XYZ file with {self.filepath.name} because it has no GPS.")
 
         logger.info(f'Converting {self.filepath.name} to XYZ')
 
-        df['Component'] = pem_data.Component.copy()
-        df['Station'] = pem_data.Station.copy()
+        df['Component'] = step_data.Component.copy()
+        df['Station'] = step_data.Station.copy()
         df['c_Station'] = df.Station.map(convert_station)  # Used to find corresponding GPS
 
         # Add the GPS
         df = df.apply(get_station_gps, axis=1)
 
         # Create a dataframe of the readings with channel number as columns
-        channel_data = pd.DataFrame(pem_data.Reading.to_dict()).transpose()
+        channel_data = pd.DataFrame(step_data.Reading.to_dict()).transpose()
 
         # Merge the two data frames
         df = pd.concat([df, channel_data], axis=1).drop('c_Station', axis=1)
@@ -1508,23 +1416,23 @@ class PEMFile:
 
     def copy(self):
         """
-        Create a copy of the PEMFile object
-        :return: PEMFile object
+        Create a copy of the StepFile object
+        :return: StepFile object
         """
-        copy_pem = copy.deepcopy(self)
-        # Create a copy of the RAD Tool objects, otherwise a deepcopy of a PEMFile object still references the same
+        copy_step = copy.deepcopy(self)
+        # Create a copy of the RAD Tool objects, otherwise a deepcopy of a StepFile object still references the same
         # RADTool objects.
-        copy_pem.data.RAD_tool = copy_pem.data.RAD_tool.map(lambda x: copy.deepcopy(x))
-        return copy_pem
+        copy_step.data.RAD_tool = copy_step.data.RAD_tool.map(lambda x: copy.deepcopy(x))
+        return copy_step
 
     def save(self, processed=False, legacy=False, backup=False, rename=False, tag=''):
         """
-        Save the PEM file to a .PEM file with the same filepath it currently has.
+        Save the Step file to a .stp file with the same filepath it currently has.
         :param processed: bool, Average, split and de-rotate (if applicable) and save in a legacy format.
         :param legacy: bool, will save a legacy version which is compatible with Step.
-        :param backup: bool, if the save is for a backup. If so, it will save the PEM file in a [Backup] folder,
+        :param backup: bool, if the save is for a backup. If so, it will save the Step file in a [Backup] folder,
         and create the folder if it doesn't exist. The [Backup] folder will be located in the parent directory of the
-        PEMFile.
+        StepFile.
         :param tag: str, tag to be append to the file name. Used for pre-averaging and pre-splitting saves.
         """
 
@@ -1574,8 +1482,8 @@ class PEMFile:
 
     def average(self):
         """
-        Averages the data of the PEM file object. Uses a weighted average.
-        :return: PEM file object
+        Averages the data of the Step file object. Uses a weighted average.
+        :return: Step file object
         """
         if self.is_averaged():
             logger.info(f"{self.filepath.name} is already averaged.")
@@ -1585,7 +1493,7 @@ class PEMFile:
         def weighted_average(group):
             """
             Function to calculate the weighted average reading of a station-component group.
-            :param group: pandas DataFrame of PEM data for a station-component
+            :param group: pandas DataFrame of Step data for a station-component
             :return: pandas DataFrame of the averaged station-component.
             """
             # Take the first row as a new data frame
@@ -1614,8 +1522,8 @@ class PEMFile:
 
     def split(self):
         """
-        Remove the on-time channels of the PEM file object
-        :return: PEM file object with split data
+        Remove the on-time channels of the Step file object
+        :return: Step file object with split data
         """
         logger.info(f"Splitting channels for {self.filepath.name}.")
         if self.is_split():
@@ -1627,15 +1535,15 @@ class PEMFile:
         # Create a filter and update the channels table
         filt = ~self.channel_times.Remove.astype(bool)
         self.channel_times = self.channel_times[filt].reset_index(drop=True)
-        # Update the PEM file's number of channels attribute
+        # Update the Step file's number of channels attribute
         self.number_of_channels = len(self.channel_times)
 
         return self
 
     # def remove_channels(self, n: [int]):
     #     """
-    #     Remove n channels from the PEMFile
-    #     :return: PEM file object
+    #     Remove n channels from the StepFile
+    #     :return: Step file object
     #     """
     #     logger.info(f"Removing channel(s) {n} for {self.filepath.name}.")
     #
@@ -1646,7 +1554,7 @@ class PEMFile:
     #     # Create a filter and update the channels table
     #     self.channel_times.drop(n, inplace=True)
     #     self.channel_times.reset_index(drop=True, inplace=True)
-    #     # Update the PEM file's number of channels attribute
+    #     # Update the Step file's number of channels attribute
     #     self.number_of_channels = len(self.channel_times)
     #
     #     return self
@@ -1655,7 +1563,7 @@ class PEMFile:
         """
         Scale the data by a change in coil area
         :param coil_area: int: new coil area
-        :return: PEMFile object: self with data scaled
+        :return: StepFile object: self with data scaled
         """
         logger.info(f"Scaling coil area of {self.filepath.name} to {coil_area}.")
 
@@ -1676,7 +1584,7 @@ class PEMFile:
         """
         Scale the data by a change in current
         :param current: float, new current
-        :return: PEMFile object, self with data scaled
+        :return: StepFile object, self with data scaled
         """
         new_current = current
         assert isinstance(new_current, float), "New current is not type float"
@@ -1696,7 +1604,7 @@ class PEMFile:
         """
         Scale the data by a change in coil area
         :param factor: float
-        :return: PEMFile object, self with data scaled
+        :return: StepFile object, self with data scaled
         """
         assert isinstance(factor, float), "New coil area is not type float"
         # Scale the scale factor to account for compounding
@@ -1713,8 +1621,8 @@ class PEMFile:
     def mag_offset(self):
         """
         Subtract the last channel from the entire decay
-        This will remove all amplitude information from the PEM!
-        :return: PEMFile object, self with data scaled
+        This will remove all amplitude information from the Step!
+        :return: StepFile object, self with data scaled
         """
         def substract_mag(reading):
             off_time_data = np.delete(reading, self.channel_times.Remove)
@@ -1733,9 +1641,9 @@ class PEMFile:
 
     def change_suffix(self, new_suffix):
         """
-        Change the station suffix of all data in the PEMFile to new_suffix. Only applies to surface surveys.
+        Change the station suffix of all data in the StepFile to new_suffix. Only applies to surface surveys.
         :param new_suffix: str, either N, S, E, W
-        :return: PEMFile object
+        :return: StepFile object
         """
         assert new_suffix.upper() in ['N', 'E', 'S', 'W'], f"{new_suffix} is not a valid suffix."
         assert not self.is_borehole(), f"Suffixes only apply to surface surveys."
@@ -1788,12 +1696,12 @@ class PEMFile:
 
     def rotate(self, method='acc', soa=0):
         """
-        Rotate the XY data of the PEM file.
+        Rotate the XY data of the Step file.
         Formula: X' = Xcos(roll) - Ysin(roll), Y' = Xsin(roll) + Ycos(roll)
         :param method: str, Method of rotation, either 'acc' for accelerometer or 'mag' for magnetic, or 'unrotate' if
         the file has been de-rotated.
         :param soa: int, Sensor offset angle
-        :return: PEM file object with rotated data
+        :return: Step file object with rotated data
         """
         assert self.is_borehole(), f"{self.filepath.name} is not a borehole file."
 
@@ -1900,7 +1808,7 @@ class PEMFile:
             def weighted_average(group):
                 """
                 Function to calculate the weighted average reading of a station-component group.
-                :param group: pandas DataFrame of PEM data for a station-component
+                :param group: pandas DataFrame of Step data for a station-component
                 :return: np array, averaged reading
                 """
                 # Sum the number of stacks column
@@ -1963,7 +1871,7 @@ class PEMFile:
         else:
             include_pp = False
             if method == 'PP':
-                raise ValueError("Cannot perform PP rotation on a PEM file that doesn't have the necessary geometry.")
+                raise ValueError("Cannot perform PP rotation on a Step file that doesn't have the necessary geometry.")
 
         # Create a filter for X and Y data only
         xy_filt = (self.data.Component == 'X') | (self.data.Component == 'Y')
@@ -2005,9 +1913,9 @@ class PEMFile:
 
     def prep_rotation(self):
         """
-        Prepare the PEM file for probe de-rotation by updating the RAD tool objects with all calculations needed for
+        Prepare the Step file for probe de-rotation by updating the RAD tool objects with all calculations needed for
         any eligible de-rotation method.
-        :return: tuple, updated PEMFile object and data frame of ineligible stations.
+        :return: tuple, updated StepFile object and data frame of ineligible stations.
         """
         assert self.is_borehole(), f"{self.filepath.name} is not a borehole file."
         logger.info(f"Preparing for XY de-rotation for {self.filepath.name}.")
@@ -2085,7 +1993,7 @@ class PEMFile:
                     def get_cleaned_pp(row):
                         """
                         Calculate the cleaned PP value of a station
-                        :param row: PEM data DataFrame row
+                        :param row: Step data DataFrame row
                         :return: float, cleaned PP value
                         """
                         # Get the list of ch_times indexes so the cleaned_pp can be selected by index.
@@ -2286,18 +2194,18 @@ class PEMFile:
         return self, ineligible_data
 
 
-class PEMParser:
+class StepParser:
     """
-    Class for parsing PEM files into PEMFile objects
+    Class for parsing Step files into StepFile objects
     """
     def __init__(self):
         self.filepath = None
 
     def parse(self, filepath):
         """
-        Parses a PEM file to extract all information and creates a PEMFile object out of it.
-        :param filepath: string containing path to a PEM file
-        :return: A PEM_File object representing the data found inside of filename
+        Parses a Step file to extract all information and creates a StepFile object out of it.
+        :param filepath: string containing path to a Step file
+        :return: A Step_File object representing the data found inside of filename
         """
         def parse_tags(text):
             cols = [
@@ -2339,8 +2247,8 @@ class PEMParser:
 
         def parse_loop(text):
             """
-            Parse the loop section (<L> tags) of the PEM File
-            :param text: str, raw loop string from the PEM file
+            Parse the loop section (<L> tags) of the Step File
+            :param text: str, raw loop string from the Step file
             :return: list of everything in the <L> tag section
             """
             assert text, f'Error parsing the loop coordinates. No matches were found in {self.filepath.name}.'
@@ -2351,8 +2259,8 @@ class PEMParser:
 
         def parse_line(text):
             """
-            Parse the line section (<P> tags) of the PEM File
-            :param text: str, raw line string from the PEM file
+            Parse the line section (<P> tags) of the Step File
+            :param text: str, raw line string from the Step file
             :return: list of everything in the <P> tag section
             """
             assert text, f'Error parsing the line coordinates. No matches were found in {self.filepath.name}.'
@@ -2363,8 +2271,8 @@ class PEMParser:
 
         def parse_notes(file):
             """
-            Parse the notes of the PEM File, which are any lines with <GEN> or <HE> tags.
-            :param file: str of the .PEM file
+            Parse the notes of the Step File, which are any lines with <GEN> or <HE> tags.
+            :param file: str of the .stp file
             :return: list of notes
             """
             notes = re.findall(r'<GEN>.*|<HE\d>.*|<CRS>.*', file)
@@ -2377,8 +2285,8 @@ class PEMParser:
 
         def parse_header(text):
             """
-            Parse the header section of the PEM File, which is the client name down to the channel table.
-            :param text: str, raw header string from the PEM file
+            Parse the header section of the Step File, which is the client name down to the channel table.
+            :param text: str, raw header string from the Step file
             :return: dictionary of the header items
             """
             assert text, f'Error parsing the tags. No matches were found in {self.filepath.name}.'
@@ -2430,10 +2338,10 @@ class PEMParser:
 
         def parse_channel_times(text, units=None, num_channels=None, ramp=None):
             """
-            Create a DataFrame of the channel times from the PEM file.
-            :param text: str, channel times section in the PEM file, above the data section.
+            Create a DataFrame of the channel times from the Step file.
+            :param text: str, channel times section in the Step file, above the data section.
             :param units: str, nT/s or pT, used to know which channel is the ramp channel.
-            :param num_channels: int, number of channels indicated in the PEM file header. Used to make sure all
+            :param num_channels: int, number of channels indicated in the Step file header. Used to make sure all
             channels are accounted for.
             :return: DataFrame
             """
@@ -2441,7 +2349,7 @@ class PEMParser:
                 """
                 Channel times table data frame with channel start, end, center, width, and whether the channel is
                 to be removed when the file is split
-                :param channel_times: pandas Series, float of each channel time read from a PEM file header.
+                :param channel_times: pandas Series, float of each channel time read from a Step file header.
                 :return: pandas DataFrame
                 """
                 def find_last_off_time():
@@ -2468,7 +2376,7 @@ class PEMParser:
                 table['Width'] = table['End'] - table['Start']
                 table['Center'] = (table['Width'] / 2) + table['Start']
 
-                # PEM files seem to always have a repeating channel time as the third number, so the second row
+                # Step files seem to always have a repeating channel time as the third number, so the second row
                 # must be removed.
                 table.drop(1, inplace=True)
                 table.reset_index(drop=True, inplace=True)
@@ -2495,8 +2403,8 @@ class PEMParser:
 
         def parse_data(text):
             """
-            Parse the data section of the PEM file.
-            :param text: str, data section after the '$' in the PEM file
+            Parse the data section of the Step file.
+            :param text: str, data section after the '$' in the Step file
             :return: DataFrame of the data
             """
             cols = [
@@ -2520,7 +2428,7 @@ class PEMParser:
             def format_data(reading):
                 """
                 Format the data row so it is ready to be added to the data frame
-                :param reading: str of a reading in a PEM file
+                :param reading: str of a reading in a Step file
                 :return: list
                 """
                 data = reading.strip().split('\n')  # Strip because readings can have more than 1 new line between them.
@@ -2571,6 +2479,7 @@ class PEMParser:
             # Create a RAD tool ID number to be used for grouping up readings for probe rotation, since the CDR2
             # and CDR3 don't count reading numbers the same way.
             df['RAD_tool'] = df['RAD_tool'].map(lambda x: RADTool().from_match(x))
+            # Create and add the RAD ID column
             df.insert(list(df.columns).index('RAD_tool') + 1, 'RAD_ID', df['RAD_tool'].map(lambda x: x.id))
             df.drop_duplicates(subset="Reading", inplace=True)
             df['Reading'] = df['Reading'].map(lambda x: np.array(x.split(), dtype=float))
@@ -2645,685 +2554,38 @@ class PEMParser:
                                             ramp=header.get("Ramp"))
         data = parse_data(raw_data)
 
-        pem_file = PEMFile().from_pem(tags, loop_coords, line_coords, notes, header, channel_table, data,
-                                      filepath=filepath)
-        return pem_file
+        step_file = StepFile().from_step(tags, loop_coords, line_coords, notes, header, channel_table, data,
+                                         filepath=filepath)
+        return step_file
 
 
-class DMPParser:
-    def __init__(self):
-        """
-        Class that parses .DMP and .DMP2 files into PEMFile objects.
-        """
-        self.filepath = None
-        self.pp_file = False
-
-        self.data_columns = [
-            'Station',
-            'Component',
-            'Reading_index',
-            'Gain',
-            'Rx_type',
-            'ZTS',
-            'Coil_delay',
-            'Number_of_stacks',
-            'Readings_per_set',
-            'Reading_number',
-            'RAD_tool',
-            'Reading'
-        ]
-
-    def parse_dmp(self, filepath):
-        """
-        Create a PEMFile object by parsing a .DMP file.
-        :param filepath: str, filepath of the .DMP file
-        :return: PEMFile object
-        """
-
-        def parse_header(text, old_dmp=False):
-            """
-            Create the header dictionary that is found in PEM files from the contents of the .DMP file.
-            :param text: str or list, header section of the .DMP file.
-            :param old_dmp: bool, if the file is an old version of the DMP file which lacks two lines.
-            :return: dict
-            """
-            assert text, f'No header found in {self.filepath.name}.'
-
-            if isinstance(text, str):
-                text = text.strip().split('\n')
-            text = [t.strip() for t in text]
-
-            if old_dmp is True:
-                assert len(text) == 27, f'Incorrect number of lines found in the header of {self.filepath.name}'
-            else:
-                assert len(text) == 29, f'Incorrect number of lines found in the header of {self.filepath.name}'
-
-            if text[-1] == 'ZTS - Narrow':
-                self.pp_file = True
-            else:
-                self.pp_file = False
-
-            header = dict()
-            header['Format'] = str(210)
-            header['Units'] = 'pT' if 'flux' in text[6].lower() or 'squid' in text[6].lower() else 'nT/s'
-            header['Operator'] = text[11]
-            header['Probes'] = {'Probe number': '0', 'SOA': '0', 'Tool number': '0', 'Tool ID': '0'}
-            header['Current'] = float(text[12])
-            header['Loop dimensions'] = ' '.join(re.split(r'\D', text[13])) + ' 0'
-
-            header['Client'] = text[8]
-            header['Grid'] = text[9]
-            header['Line_name'] = text[7]
-            header['Loop_name'] = text[10]
-            header['Date'] = datetime.strptime(re.sub(r'\s+', '', text[14]), '%m/%d/%y').strftime('%B %d, %Y')
-            header['Survey type'] = re.sub('\s+', '_', text[6].casefold())
-            header['Convention'] = text[15]
-            header['Sync'] = text[18]
-            header['Timebase'] = float(text[16].split('ms')[0]) if 'ms' in text[16] else float(text[16].split()[0])
-            header['Ramp'] = float(text[17])
-            header['Number of channels'] = int(text[25])
-            header['Number of readings'] = int(text[24])
-            header['Receiver number'] = text[1].split()[-1]
-            header['Rx software version'] = text[2].split()[-1]
-            header['Rx software version date'] = re.sub(r'\s', '',
-                                                        re.sub('Released: ', '', text[3])) + f"s{text[26]}"
-            header['Rx file name'] = text[5]
-            header['Normalized'] = 'N' if text[19] == 'Norm.' else 'Normalized??'
-            header['Primary field value'] = text[23]
-            header['Coil area'] = float(text[20])
-            header['Coil delay'] = int(text[21])
-            header['Loop polarity'] = '+'
-
-            return header
-
-        def parse_channel_times(text, units=None, ramp=None):
-            """
-            Convert the channel table in the .DMP file to a PEM channel times table DataFrame
-            :param text: str or list, raw channel table information in the .DMP file
-            :param units: str, 'nT/s' or 'pT'
-            :return: DataFrame
-            """
-
-            def channel_table(channel_times, units, ramp):
-                """
-                Channel times table data frame with channel start, end, center, width, and whether the channel is
-                to be removed when the file is split
-                :param channel_times: numpy array with shape (, 2), float of each channel start and end time.
-                :param units: str
-                :param ramp: float, used for fluxgate survey's on-time channel selection.
-                :return: pandas DataFrame
-                """
-
-                def find_last_off_time():
-                    """
-                    Find where the next channel width is less than half the previous channel width, which indicates
-                    the start of the next on-time.
-                    :return: int: Row index of the last off-time channel
-                    """
-                    filt = ~table['Remove'].astype(bool)
-                    for index, row in table[filt][1:-1].iterrows():
-                        next_row = table.loc[index + 1]
-                        if row.Width > (next_row.Width * 2):
-                            return index + 1
-
-                # Create the channel times table
-                table = pd.DataFrame(columns=['Start', 'End', 'Center', 'Width', 'Remove'])
-                times = channel_times
-
-                # The first number to the second last number are the start times
-                table['Start'] = times[:, 0] / 10 ** 6  # Convert to seconds
-                # The second number to the last number are the end times
-                table['End'] = times[:, 1] / 10 ** 6  # Convert to seconds
-                table['Width'] = table['End'] - table['Start']
-                table['Center'] = (table['Width'] / 2) + table['Start']
-                table['Remove'] = False
-
-                if self.pp_file is False:
-                    # Configure which channels to remove for the first on-time
-                    table = get_split_table(table, units, ramp)
-
-                    # Configure each channel after the last off-time channel (only for full waveform)
-                    last_off_time_channel = find_last_off_time()
-                    if last_off_time_channel:
-                        table.loc[last_off_time_channel:, 'Remove'] = table.loc[last_off_time_channel:, 'Remove'].map(
-                            lambda x: True)
-                    # else:
-                    #     table['Remove'] = False
-                return table
-
-            assert text, f'No channel times found in {self.filepath.name}.'
-
-            text = text.strip().split('\n')
-            # text = np.array([t.strip().split() for t in text], dtype=float)
-            text = np.array(' '.join([t.strip() for t in text]).split(), dtype=float)
-
-            # elif isinstance(text, list):
-            #     text = np.array(text)
-
-            # Reshape the channel times to be 3 columns (channel number, start-time, end-time)
-            times = text.reshape((int(len(text) / 3), 3))
-
-            # Used to add the gap channel, but not sure if needed.
-            if self.pp_file is False:
-                # Find the index of the gap 0 channel
-                global ind_of_0  # global index since the 0 value must be inserted into the decays
-                ind_of_0 = list(times[:, 0]).index(1)
-                # Add the gap channel
-                times = np.insert(times, ind_of_0, [0., times[ind_of_0 - 1][2], 0.], axis=0)
-
-            # Remove the channel number column
-            times = np.delete(times, 0, axis=1)
-
-            table = channel_table(times, units, ramp)
-            return table
-
-        def parse_notes(text):
-            """
-            Return a list of notes from the .DMP file, excluding 'xxxxxxxxxxxxxxxx' entries.
-            :param text: str or list, raw test from the notes section of the .DMP file.
-            :return: list of notes
-            """
-            if isinstance(text, str):
-                text = text.split()
-
-            notes = []
-            for item in text:
-                # Get rid of the 'xxxxxxxxxxxxxxxx' notes
-                if 'xxx' not in item.lower():
-                    notes.append(item)
-            return notes
-
-        def parse_data(text, header):
-            """
-            Create the PEM file DataFrame of the data in the .DMP file
-            :param text: str, raw string of the data section of the .DMP file
-            :param header: dict, the parsed header section of the .DMP file
-            :return: DataFrame
-            """
-
-            def format_data(reading):
-                """
-                Format the data row so it is ready to be added to the data frame
-                :param reading: str of a reading in a PEM file
-                :return: list
-                """
-                contents = reading.split('\n')
-
-                head = contents[0].split()
-                station = head[0]
-                comp = head[1][0]
-                reading_index = re.search(r'\d+', head[1]).group()
-                zts = float(head[2]) + ramp
-                number_of_stacks = head[3]
-                readings_per_set = head[4]
-                reading_number = head[5]
-                rad_tool = contents[1]
-
-                # Used to add the gap channel, but not sure if needed.
-                # if self.pp_file is True:
-                #     decay = np.array(''.join(contents[2:]).split(), dtype=float) * 10 ** 9
-                # else:
-
-                # Add the 0 gap
-                if self.pp_file is False:
-                    decay = ' '.join(
-                        np.insert(np.array(''.join(contents[2:]).split(), dtype=float), ind_of_0, 0.0).astype(str)
-                    )
-                else:
-                    decay = ''.join(contents[2:])
-
-                return [station, comp, reading_index, gain, rx_type, zts, coil_delay, number_of_stacks,
-                        readings_per_set, reading_number, rad_tool, decay]
-
-            assert text, f'No data found in {self.filepath.name}.'
-
-            if isinstance(text, list):
-                text = '\n'.join(text)
-
-            # Reading variables that are sourced from outside the data section of the .DMP file
-            global rx_type, gain, coil_delay, ramp
-            rx_type = 'A'
-            gain = 0
-            coil_delay = header.get('Coil delay')
-            ramp = header.get('Ramp')
-
-            # Replace the spaces infront of station names with a tab character, to more easily split after
-            text = re.sub(r'\s{3,}(?P<station>[\w]{1,}\s[XYZ])', r'\t\g<station>', text.strip())
-            text = text.split('\t')
-
-            data = []
-            for reading in text:
-                # Parse the data row and create a Series object to be inserted in the data frame
-                # series = parse_row(reading)
-                data.append(format_data(reading))
-
-            df = pd.DataFrame(data, columns=self.data_columns)
-
-            # Convert the columns to their correct data types
-            df['RAD_tool'] = df['RAD_tool'].map(lambda x: RADTool().from_dmp(x))
-            df['RAD_ID'] = df['RAD_tool'].map(lambda x: x.id)
-
-            # Convert the decay units to nT/s or pT
-            factor = 1e9  # Always 1e9 for DMP files?
-            df.drop_duplicates(subset="Reading", inplace=True)
-            df['Reading'] = df['Reading'].map(lambda x: np.array(x.split(), dtype=float) * factor)
-            df[['Reading_index',
-                'Gain',
-                'Coil_delay',
-                'Number_of_stacks',
-                'Readings_per_set',
-                'Reading_number']] = df[['Reading_index',
-                                         'Gain',
-                                         'Coil_delay',
-                                         'Number_of_stacks',
-                                         'Readings_per_set',
-                                         'Reading_number']].astype(int)
-            df['ZTS'] = df['ZTS'].astype(float)
-            return df
-
-        if isinstance(filepath, str):
-            filepath = Path(filepath)
-
-        assert filepath.is_file(), f"{filepath.name} is not a file"
-        self.filepath = filepath
-        logger.info(f"Parsing {self.filepath.name}.")
-
-        # Read the contents of the file
-        with open(filepath, 'rt') as file:
-            contents = file.read()
-
-        # Split the content up into sections
-        # Splitting new .DMP files
-        if '&&' in contents:
-            logger.info(f"{self.filepath.name} is a new style DMP file.")
-            old_dmp = False
-            raw_header = re.split('&&', contents)[0].strip()
-            raw_channel_table = re.split('<<', re.split(r'\$\$', contents)[0])[1].strip()
-            raw_notes = re.split('<<', re.split('&&', contents)[1])[0].strip()  # The content between '&&' and '<<'
-            raw_data = re.split(r'\$\$', contents)[1].strip()
-
-            # Don't see any notes in old .DMP files so only included here
-            notes = parse_notes(raw_notes)
-
-        # Splitting old .DMP files
-        else:
-            logger.info(f"{self.filepath.name} is an old style DMP file.")
-            old_dmp = True
-            scontents = contents.split('\n')
-            num_ch = int(scontents[25].strip())
-
-            raw_header = scontents[:27]
-            raw_channel_table = '\n'.join(scontents[27:27 + math.ceil(num_ch / 2)]).strip()
-            raw_data = '\n'.join(scontents[27 + math.ceil(num_ch / 2):]).strip()
-
-            notes = []
-
-        if not raw_header:
-            raise ValueError(f'No header found in {self.filepath.name}.')
-        elif not raw_data:
-            raise ValueError(f'No data found in {self.filepath.name}.')
-
-        # Parse the sections into nearly what they should be in the PEM file
-        header = parse_header(raw_header, old_dmp=old_dmp)
-        channel_table = parse_channel_times(raw_channel_table, units=header.get('Units'), ramp=header.get("Ramp"))
-        data = parse_data(raw_data, header)
-
-        header_readings = int(header.get('Number of readings'))
-        if len(data) != header_readings:
-            logger.warning(f"{self.filepath.name}: Header claims {header_readings} readings but {len(data)} was found.")
-
-        pem_file = PEMFile().from_dmp(header, channel_table, data, self.filepath, notes=notes)
-        return pem_file, pd.DataFrame()  # Empty data_error data frame. Errors not implemented yet for .DMP files.
-
-    def parse_dmp2(self, filepath):
-        """
-        Create a PEMFile object by parsing a .DMP2 file.
-        :param filepath: str, filepath of the .DMP2 file
-        :return: PEMFile object
-        """
-
-        def parse_channel_times(units, ramp):
-            """
-            Convert the channel table in the .DMP file to a PEM channel times table DataFrame
-            :param units: str, 'nT/s' or 'pT'
-            :return: DataFrame
-            """
-
-            def channel_table(channel_times):
-                """
-                Channel times table data frame with channel start, end, center, width, and whether the channel is
-                to be removed when the file is split
-                :param channel_times: pandas Series, float of each channel time read from a PEM file header.
-                :return: pandas DataFrame
-                """
-
-                def find_last_off_time():
-                    """
-                    Find where the next channel width is less than half the previous channel width, which indicates
-                    the start of the next on-time.
-                    :return: int: Row index of the last off-time channel
-                    """
-                    filt = ~table['Remove'].astype(bool)
-                    for index, row in table[filt][1:-1].iterrows():
-                        next_row = table.loc[index + 1]
-                        if row.Width > (next_row.Width * 2):
-                            return index + 1
-
-                # Create the channel times table
-                table = pd.DataFrame(columns=['Start', 'End', 'Center', 'Width', 'Remove'])
-                # Convert the times to miliseconds
-                times = channel_times
-
-                # The first number to the second last number are the start times
-                table['Start'] = list(times[:-1])
-                # The second number to the last number are the end times
-                table['End'] = list(times[1:])
-                table['Width'] = table['End'] - table['Start']
-                table['Center'] = (table['Width'] / 2) + table['Start']
-                table['Remove'] = False
-
-                # If the file isn't a PP file
-                if not table.Width.max() < 1e-4:
-                    # Configure which channels to remove
-                    table = get_split_table(table, units, ramp)
-
-                    # Configure each channel after the last off-time channel (only for full waveform)
-                    last_off_time_channel = find_last_off_time()
-                    if last_off_time_channel:
-                        table.loc[last_off_time_channel:, 'Remove'] = table.loc[last_off_time_channel:, 'Remove'].map(
-                            lambda x: True)
-                return table
-
-            table = channel_table(header['Channel_times'] / 10 ** 6)  # Convert to seconds
-            header_channels = int(header['Number of channels'])
-            assert len(table) == header_channels or len(table) == header_channels + 1, \
-                f"{self.filepath.name}: Header claims {header_channels} channels but {len(table)} found."
-            return table
-
-        def parse_header(header_content):
-            """
-            Parse the header section of the DMP File
-            :param header_content: list of str of the header section of the .DMP2 file
-            :return: dict
-            """
-            header_content = header_content.split('\n')
-            # Remove blank lines
-            [header_content.remove(h) for h in reversed(header_content) if h == '']
-            ind, val = [h.split(':')[0].strip() for h in header_content], [h.split(':')[1].strip() for h in
-                                                                           header_content]
-
-            # Create a Series object
-            s = pd.Series(val, index=ind)
-
-            s['Channel_Number'] = np.array(s['Channel_Number'].split(), dtype=int)
-            s['Channel_Time'] = np.array(s['Channel_Time'].split(), dtype=float)
-
-            # Create the header dictionary
-            header = dict()
-            header['Format'] = '210'
-            header['Units'] = 'pT' if 'flux' in s['Survey_Type'].lower() or 'squid' in s[
-                'Survey_Type'].lower() else 'nT/s'
-            header['Operator'] = s['Operator_Name'].title()
-            header['Probes'] = {'Probe number': s['Sensor_Number'],
-                                'SOA': '0',
-                                'Tool number': s['Tool_Number'],
-                                'Tool ID': '0'}
-            header['Current'] = float(s['Current'])
-
-            header['Channel_times'] = s['Channel_Time']
-            header['Channel_numbers'] = s['Channel_Number']
-            header['Loop dimensions'] = f"{s['Loop_Length']} {s['Loop_Width']} 0"
-
-            header['Client'] = s['Client_Name']
-            header['Grid'] = s['Grid_Name']
-            header['Line_name'] = s['name']
-            header['Loop_name'] = s['Loop_Name']
-            header['Date'] = date_str
-
-            header['Survey type'] = re.sub(r'\s+', '_', s['Survey_Type'])
-            header['Convention'] = 'Metric'
-            header['Sync'] = re.sub(r'\s+', '-', s['Sync_Type'])
-            # Some DMP2 files can have just "Crystal" as sync type, which causes issues with Step.
-            if header['Sync'] == "Crystal":
-                header['Sync'] = "Crystal-Master"
-            header['Timebase'] = float(s['Time_Base'].split()[0])
-            header['Ramp'] = float(s['Ramp_Length'])
-            header['Number of channels'] = len(s['Channel_Time']) - 1
-            header['Number of readings'] = int(s['Total_Readings'])
-
-            header['Receiver number'] = s['Crone_Digital_PEM_Receiver']
-            header['Rx software version'] = s['Software_Version']
-            header['Rx software version date'] = re.sub(r'\s+', '', s['Software_Release_Date'])
-            header['Rx file name'] = re.sub(r'\s+', '_', s['File_Name'])
-            header['Normalized'] = 'N'
-            header['Primary field value'] = '1000'
-
-            coil_area = float(s['Coil_Area'])
-            if coil_area > 50000:
-                coil_area = coil_area / 10 ** 3  # For fluxgate files
-            header['Coil area'] = coil_area
-            header['Loop polarity'] = '+'
-            # TODO Find how notes are saved in .DMP2 files
-            # header['Notes'] = [note for note in s['File_Notes'].split('\n')]
-
-            return header
-
-        def parse_data(data_content, units=None):
-            """
-            Create a PEM file data frame from the contents of the .DMP2 file
-            :param data_content: list of str of the data section of the .DMP2 file
-            :param units: str, 'nT/s' or 'pT'
-            :return: DataFrame
-            """
-            def str_to_datetime(date_string):
-                """
-                Convert the timestamp string to a datetime object
-                :param date_string: str of the timestamp from the .DMP2 file.
-                :return: datetime object
-                """
-                if '-' in date_string:
-                    if 'AM' in date_string or 'PM' in date_string:
-                        fmt = '%Y-%m-%d,%I:%M:%S %p'
-                    else:
-                        fmt = '%Y-%m-%d,%H:%M:%S'
-                else:
-                    year = re.search(r'(\d+\W\d+\W)(\d+)', date_string).group(2)
-                    if len(year) == 2:
-                        year_fmt = 'y'
-                    else:
-                        year_fmt = 'Y'
-
-                    if 'AM' in date_string or 'PM' in date_string:
-                        fmt = f'%m/%d/%{year_fmt},%I:%M:%S %p'
-                    else:
-                        fmt = f'%m/%d/%{year_fmt},%H:%M:%S'
-                date_object = datetime.strptime(date_string, fmt)
-                return date_object
-
-            assert data_content, f'No data found in {self.filepath.name}.'
-
-            data_section = data_content.strip()
-            split_data = data_section.split('\n\n')
-
-            # Create a data frame out of the readings
-            df_data = []
-            for reading in split_data:
-                split_reading = reading.split('\n')
-
-                # Header information
-                arr = [re.split(r':\s?', d, maxsplit=1) for d in split_reading if
-                       not d.lower().startswith('data') and
-                       not d.lower().startswith('overload') and
-                       not d.lower().startswith('deleted')]
-
-                # Separate the decay reading, overload and deleted status that should be their own readings
-                decays = [x for x in split_reading if x.startswith('data')]
-                overloads = [x for x in split_reading if x.lower().startswith('overload')]
-                deletes = list(filter(lambda x: x.startswith('Deleted'), split_reading))[0].split(': ')[1].split(',')
-
-                # Iterate over each actual decay readings and create their own dictionary to be added to the df
-                for decay, overload, deleted in zip(decays, overloads, deletes):
-                    entry = dict(arr)  # The base information that is true for each reading
-                    decay_values = decay.split(': ')[1]
-                    if not decay_values:
-                        logger.warning(f"Empty decay found for {entry['name']}, reading number {entry['Reading_Number']}")
-                        continue
-                    entry['data'] = decay_values
-                    entry['Component'] = decay[4].upper()  # The component is the 4th character in the 'data' title
-
-                    entry['Overload'] = overload.split(': ')[1]
-                    entry['Deleted'] = deleted.strip()
-
-                    df_data.append(entry)
-
-            df = pd.DataFrame(df_data)
-            df.drop_duplicates(subset="data", inplace=True)
-            # Convert the columns to the correct data type
-            df[['Number_of_Readings',
-                'Number_of_Stacks',
-                'Reading_Number',
-                'ZTS_Offset']] = df[['Number_of_Readings',
-                                     'Number_of_Stacks',
-                                     'Reading_Number',
-                                     'ZTS_Offset']].astype(int)
-
-            # Convert the decays from Teslas to either nT or pT, depending on the survey type
-            factor = 10 ** 12 if units == 'pT' else 10 ** 9
-            df['data'] = df['data'].map(lambda x: np.array(x.split(), dtype=float) * factor)
-            if 'RAD' in df.columns.values:
-                df['RAD'] = df['RAD'].map(lambda x: RADTool().from_dmp(x))
-            else:
-                logger.warning(f"No RAD tool data found in {self.filepath.name}. Creating 0s instead.")
-                df['RAD'] = RADTool().from_dmp('0. 0. 0. 0. 0. 0. 0.')
-
-            pem_df = pd.DataFrame(columns=self.data_columns)
-            pem_df['Station'] = df['name'].map(lambda x: x.split(',')[0])
-            pem_df['Component'] = df['Component']
-            pem_df['Reading_index'] = df['name'].map(lambda x: x.split(',')[-1][1:]).astype(int)
-            pem_df['Gain'] = 0
-            pem_df['Rx_type'] = 'A'
-            pem_df['ZTS'] = df['ZTS_Offset']
-            pem_df['Coil_delay'] = 0
-            pem_df['Number_of_stacks'] = df['Number_of_Stacks']
-            pem_df['Readings_per_set'] = df['Number_of_Readings']
-            pem_df['Reading_number'] = df['Reading_Number']
-            pem_df['RAD_tool'] = df['RAD']
-            pem_df['Reading'] = df['data']
-            pem_df['RAD_ID'] = pem_df['RAD_tool'].map(lambda x: x.id)
-            pem_df['Deleted'] = df['Deleted'].map(lambda x: False if x.strip() == 'F' else True)
-            pem_df['Overload'] = df['Overload'].map(lambda x: False if x.strip() == 'F' else True)
-
-            # Set the overload readings to be deleted
-            overload_filt = pem_df.loc[:, 'Overload']
-            pem_df.loc[overload_filt, 'Deleted'] = True
-
-            pem_df['Timestamp'] = df['Date_Time'].map(str_to_datetime)
-
-            # Remove Inf readings
-            inf_filt = pem_df.Reading.map(lambda x: np.isinf(x).any())
-            inf_readings = pem_df[inf_filt]
-            if not inf_readings.empty:
-                logger.error(f"Following stations had Inf readings: "
-                             f"\n{inf_readings.loc[:, ['Station', 'Component', 'Reading_number']].to_string()}")
-
-            pem_df = pem_df[~inf_filt]
-            return pem_df, inf_readings
-
-        if isinstance(filepath, str):
-            filepath = Path(filepath)
-
-        assert filepath.is_file(), f"{filepath.name} does not exist."
-        self.filepath = filepath
-        logger.info(f"Parsing {self.filepath.name}.")
-
-        # Read the contents of the file
-        with open(filepath, 'rt') as file:
-            contents = file.read()
-            # Change the different occurences of header titles between DMP2 file versions so they are the same.
-            contents = re.sub('isDeleted', 'Deleted', contents)
-            if not re.search('Loop_Length', contents):
-                contents = re.sub('Loop_Height', 'Loop_Length', contents)
-            contents = re.sub('Released', 'Software_Release_Date', contents)
-
-            # Find the year of the date of the file, and if necessary convert the year format to %Y instead of %y
-            date = re.search(r'Date: (\d+\W\d+\W\d+)', contents).group(1)
-
-            # If date is separated with hyphens, the date format is Y-m-d instead of m-d-y
-            if '-' in date:
-                date_str = datetime.strptime(date, '%Y-%m-%d').strftime('%B %d, %Y')
-            else:
-                year = re.search(r'(\d+\W\d+\W)(\d+)', date).group(2)
-
-                # Replace the year to be 20xx
-                if len(year) < 4:
-                    Y = int(year) + 2000
-                    date = re.sub(r'(\d+\W\d+\W)(\d+)', f'\g<1>{Y}', date)
-
-                date_str = datetime.strptime(date, '%m/%d/%Y').strftime('%B %d, %Y')
-
-        # Split the file up into the header and data sections
-        scontents = contents.split('$$')
-        if not scontents[0].strip():
-            raise ValueError(f'No header found in {self.filepath.name}.')
-        elif not scontents[1].strip():
-            raise ValueError(f'No data found in {self.filepath.name}.')
-
-        header = parse_header(scontents[0])
-        data, data_errors = parse_data(scontents[1], units=header.get('Units'))
-        channel_table = parse_channel_times(header.get('Units'), header.get("Ramp"))
-        # notes = header['Notes']
-
-        pem_file = PEMFile().from_dmp(header, channel_table, data, self.filepath)
-        return pem_file, data_errors
-
-    def parse(self, filepath):
-        """
-        Parse a .DMP file, including .DMP2+.
-        :param filepath: str or Path object of the DMP file
-        :return: PEMFile object
-        """
-        if isinstance(filepath, str):
-            filepath = Path(filepath)
-        assert filepath.is_file(), f"{filepath} does not exist."
-
-        if filepath.suffix.lower() == '.dmp':
-            pem_file, inf_errors = self.parse_dmp(filepath)
-        elif filepath.suffix.lower() == '.dmp2':
-            pem_file, inf_errors = self.parse_dmp2(filepath)
-        else:
-            raise NotImplementedError(f"Parsing {filepath.suffix} files not implemented yet.")
-
-        return pem_file, inf_errors
-
-
-class PEMSerializer:
+class StepSerializer:
     """
-    Class for serializing PEM files to be saved
+    Class for serializing Step files to be saved
     """
-
     def __init__(self):
-        self.pem_file = None
+        self.step_file = None
 
     def serialize_tags(self):
         result = ""
-        xyp = ' '.join([self.pem_file.probes.get('Probe number'),
-                        self.pem_file.probes.get('SOA'),
-                        self.pem_file.probes.get('Tool number'),
-                        self.pem_file.probes.get('Tool ID')])
-        result += f"<FMT> {self.pem_file.format}\n"
-        result += f"<UNI> {'nanoTesla/sec' if self.pem_file.units == 'nT/s' else 'picoTesla'}\n"
-        result += f"<OPR> {self.pem_file.operator}\n"
+        xyp = ' '.join([self.step_file.probes.get('Probe number'),
+                        self.step_file.probes.get('SOA'),
+                        self.step_file.probes.get('Tool number'),
+                        self.step_file.probes.get('Tool ID')])
+        result += f"<FMT> {self.step_file.format}\n"
+        result += f"<UNI> {'nanoTesla/sec' if self.step_file.units == 'nT/s' else 'picoTesla'}\n"
+        result += f"<OPR> {self.step_file.operator}\n"
         result += f"<XYP> {xyp}\n"
-        result += f"<CUR> {self.pem_file.current}\n"
-        result += f"<TXS> {self.pem_file.loop_dimensions}"
+        result += f"<CUR> {self.step_file.current}\n"
+        result += f"<TXS> {self.step_file.loop_dimensions}"
 
         return result
 
     def serialize_loop_coords(self):
         result = '~ Transmitter Loop Co-ordinates:'
-        loop = self.pem_file.get_loop_gps()
-        units_code = self.pem_file.loop.get_units_code()
-        assert units_code, f"No units code for the loop of {self.pem_file.get_file_name()}."
+        loop = self.step_file.get_loop_gps()
+        units_code = self.step_file.loop.get_units_code()
+        assert units_code, f"No units code for the loop of {self.step_file.get_file_name()}."
         if loop.empty:
             result += '\n<L00>\n''<L01>\n''<L02>\n''<L03>'
         else:
@@ -3337,9 +2599,9 @@ class PEMSerializer:
     def serialize_line_coords(self):
         def serialize_station_coords():
             result = '~ Hole/Profile Co-ordinates:'
-            line = self.pem_file.get_line_gps()
-            units_code = self.pem_file.line.get_units_code()
-            assert units_code, f"No units code for the line of {self.pem_file.get_file_name()}."
+            line = self.step_file.get_line_gps()
+            units_code = self.step_file.line.get_units_code()
+            assert units_code, f"No units code for the line of {self.step_file.get_file_name()}."
             if line.empty:
                 result += '\n<P00>\n''<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>'
             else:
@@ -3352,10 +2614,10 @@ class PEMSerializer:
 
         def serialize_collar_coords():
             result = '~ Hole/Profile Co-ordinates:'
-            collar = self.pem_file.get_collar_gps()
+            collar = self.step_file.get_collar_gps()
             collar.reset_index(drop=True, inplace=True)
-            units_code = self.pem_file.collar.get_units_code()
-            assert units_code, f"No units code for the collar of {self.pem_file.get_file_name()}."
+            units_code = self.step_file.collar.get_units_code()
+            assert units_code, f"No units code for the collar of {self.step_file.get_file_name()}."
             if collar.empty:
                 result += '\n<P00>'
             else:
@@ -3367,10 +2629,10 @@ class PEMSerializer:
 
         def serialize_segments():
             result = ''
-            segs = self.pem_file.get_segments()
+            segs = self.step_file.get_segments()
             segs.reset_index(drop=True, inplace=True)
-            units_code = self.pem_file.segments.get_units_code()
-            assert units_code, f"No units code for the segments of {self.pem_file.get_file_name()}."
+            units_code = self.step_file.segments.get_units_code()
+            assert units_code, f"No units code for the segments of {self.step_file.get_file_name()}."
             if segs.empty:
                 result += '\n<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>'
             else:
@@ -3380,7 +2642,7 @@ class PEMSerializer:
                     result += '\n' + row
             return result
 
-        if self.pem_file.is_borehole():
+        if self.step_file.is_borehole():
             return serialize_collar_coords() + \
                    serialize_segments()
         else:
@@ -3388,10 +2650,10 @@ class PEMSerializer:
 
     def serialize_notes(self):
         results = []
-        if not self.pem_file.notes:
+        if not self.step_file.notes:
             return ''
         else:
-            for line in self.pem_file.notes:
+            for line in self.step_file.notes:
                 if line not in results:
                     results.append(line)
         return '\n'.join(results) + '\n'
@@ -3407,7 +2669,7 @@ class PEMSerializer:
             times.append(table.iloc[-1].End)
             return times
 
-        survey_type = self.pem_file.get_survey_type()
+        survey_type = self.step_file.get_survey_type()
         if survey_type == 'Surface Induction':
             survey_str = 'Surface'
         elif survey_type == 'Borehole Induction':
@@ -3421,35 +2683,35 @@ class PEMSerializer:
         else:
             raise ValueError(f"{survey_type} is not a valid survey type.")
 
-        result_list = [str(self.pem_file.client),
-                       str(self.pem_file.grid),
-                       str(self.pem_file.line_name),
-                       str(self.pem_file.loop_name),
-                       str(self.pem_file.date),
+        result_list = [str(self.step_file.client),
+                       str(self.step_file.grid),
+                       str(self.step_file.line_name),
+                       str(self.step_file.loop_name),
+                       str(self.step_file.date),
                        ' '.join([survey_str,
-                                 str(self.pem_file.convention),
-                                 str(self.pem_file.sync),
-                                 str(self.pem_file.timebase),
-                                 str(int(self.pem_file.ramp)),
-                                 str(self.pem_file.number_of_channels - 1),
-                                 str(int(self.pem_file.number_of_readings))]),
-                       ' '.join([str(self.pem_file.rx_number),
-                                 str(self.pem_file.rx_software_version),
-                                 str(self.pem_file.rx_software_version_date),
-                                 str(self.pem_file.rx_file_name),
-                                 str(self.pem_file.normalized),
-                                 str(self.pem_file.primary_field_value),
-                                 str(int(self.pem_file.coil_area))])]
+                                 str(self.step_file.convention),
+                                 str(self.step_file.sync),
+                                 str(self.step_file.timebase),
+                                 str(int(self.step_file.ramp)),
+                                 str(self.step_file.number_of_channels - 1),
+                                 str(int(self.step_file.number_of_readings))]),
+                       ' '.join([str(self.step_file.rx_number),
+                                 str(self.step_file.rx_software_version),
+                                 str(self.step_file.rx_software_version_date),
+                                 str(self.step_file.rx_file_name),
+                                 str(self.step_file.normalized),
+                                 str(self.step_file.primary_field_value),
+                                 str(int(self.step_file.coil_area))])]
 
-        if self.pem_file.loop_polarity is not None:
-            result_list[-1] += ' ' + self.pem_file.loop_polarity
+        if self.step_file.loop_polarity is not None:
+            result_list[-1] += ' ' + self.step_file.loop_polarity
 
         result = '\n'.join(result_list) + '\n\n'
 
         times_per_line = 7
         cnt = 0
 
-        times = get_channel_times(self.pem_file.channel_times)
+        times = get_channel_times(self.step_file.channel_times)
         channel_times = [f'{time:9.6f}' for time in times]
 
         for i in range(0, len(channel_times), times_per_line):
@@ -3462,11 +2724,10 @@ class PEMSerializer:
 
     def serialize_data(self, legacy=False):
         """
-        Print the data to text for a PEM file format.
+        Print the data to text for a Step file format.
         :param legacy: bool, will remove the timestamp and deleted status if True.
         :return: string
         """
-
         def serialize_reading(reading):
             reading_header = [reading['Station'],
                               reading['Component'] + 'R' + f"{reading['Reading_index']:g}",
@@ -3503,26 +2764,26 @@ class PEMSerializer:
 
             return result + '\n'
 
-        df = self.pem_file.get_data(sorted=True)
+        df = self.step_file.get_data(sorted=True)
 
         # Remove deleted readings
         filt = ~df.Deleted.astype(bool)
         df = df[filt]
         if df.empty:
-            logger.warning(f"No valid data found to print in {self.pem_file.filepath.name}.")
+            logger.warning(f"No valid data found to print in {self.step_file.filepath.name}.")
             return ""
         else:
             return ''.join(df.apply(serialize_reading, axis=1))
 
-    def serialize(self, pem_file, legacy=False):
+    def serialize(self, step_file, legacy=False):
         """
-        Create a string of a PEM file to be printed to a text file.
-        :param pem_file: PEM_File object
+        Create a string of a Step file to be printed to a text file.
+        :param step_file: Step_File object
         :param legacy: bool, if True will strip newer features so it is compatible with Step (such as D5 RAD tool
         lines and remove Timestamp and Deleted values.
-        :return: A string in PEM file format containing the data found inside of pem_file
+        :return: A string in Step file format containing the data found inside of step_file
         """
-        self.pem_file = pem_file
+        self.step_file = step_file
 
         result = self.serialize_tags() + '\n'
         result += self.serialize_loop_coords() + '\n'
@@ -3536,159 +2797,37 @@ class PEMSerializer:
 
 class RADTool:
     """
-    Class that represents the RAD Tool reading in a PEM survey
+    Class that represents the RAD Tool reading in a Step fiel.
     """
-
     def __init__(self):
         self.D = None
-        self.Hx = None
-        self.gx = None
-        self.Hy = None
-        self.gy = None
-        self.Hz = None
-        self.gz = None
-        self.T = None
-
         self.x = None
         self.y = None
         self.z = None
-        self.roll_angle = None
-        self.dip = None
-        self.R = None
-        self.angle_used = None  # Roll angle - SOA
+        self.total_field = None
 
-        self.derotated = False
-        self.rotation_type = None
         self.id = None
-
-        # PP rotation stats
-        self.azimuth = None
-        self.dip = None
-        self.x_pos = None
-        self.y_pos = None
-        self.z_pos = None
-        self.ppx_theory = None
-        self.ppy_theory = None
-        self.ppz_theory = None
-        self.ppx_raw = None
-        self.ppy_raw = None
-        self.ppx_cleaned = None
-        self.ppy_cleaned = None
-        self.ppxy_theory = None
-        self.ppxy_cleaned = None
-        self.ppxy_measured = None
-        self.cleaned_pp_roll_angle = None
-        self.measured_pp_roll_angle = None
-
-        self.acc_dip = None
-        self.mag_dip = None
-        self.pp_dip = None
-
-        self.acc_roll_angle = None
-        self.mag_roll_angle = None
 
     def from_match(self, match):
         """
-        Create the RADTool object using the string parsed from PEMParser
-        :param match: str, Full string parsed from PEMParser
+        Create the RADTool object using the string parsed from StepParser.
+        :param match: str, Full string parsed from StepParser
         :return RADTool object
         """
         match = match.split()
-        self.D = match[0]
+        self.D = match[0]  # Always D4
         match[1:] = np.array(match[1:])
 
-        if self.D == 'D7':
-            if len(match) == 8:
-                self.derotated = False
-                self.Hx = float(match[1])
-                self.gx = float(match[2])
-                self.Hy = float(match[3])
-                self.gy = float(match[4])
-                self.Hz = float(match[5])
-                self.gz = float(match[6])
-                self.T = float(match[7])
-
-                self.id = ''.join([
-                    str(self.Hx),
-                    str(self.gx),
-                    str(self.Hy),
-                    str(self.gy),
-                    str(self.Hz),
-                    str(self.gz),
-                    str(self.T)
-                ])
-
-            elif len(match) == 11:
-                self.derotated = True
-                self.Hx = float(match[1])
-                self.gx = float(match[2])
-                self.Hy = float(match[3])
-                self.gy = float(match[4])
-                self.Hz = float(match[5])
-                self.gz = float(match[6])
-                self.roll_angle = float(match[7])
-                self.dip = float(match[8])
-                self.R = match[9]
-                self.angle_used = float(match[10])
-
-                self.id = ''.join([
-                    str(self.Hx),
-                    str(self.gx),
-                    str(self.Hy),
-                    str(self.gy),
-                    str(self.Hz),
-                    str(self.gz),
-                    str(self.roll_angle),
-                    str(self.dip),
-                    self.R,
-                    str(self.angle_used),
-                ])
-            else:
-                raise Exception(f"D7 RAD tool had {len(match)} items (should have 8 or 11).")
-
-        elif self.D == 'D5':
-            self.x = float(match[1])
-            self.y = float(match[2])
-            self.z = float(match[3])
-            self.roll_angle = float(match[4])
-            self.dip = float(match[5])
-            if len(match) == 6:
-                self.derotated = False
-
-                self.id = ''.join([
-                    str(self.x),
-                    str(self.y),
-                    str(self.z),
-                    str(self.roll_angle),
-                    str(self.dip)
-                ])
-
-            elif len(match) == 8:
-                self.R = match[6]
-                self.angle_used = float(match[7])
-                self.derotated = True
-
-                self.id = ''.join([
-                    str(self.x),
-                    str(self.y),
-                    str(self.z),
-                    str(self.roll_angle),
-                    str(self.dip),
-                    str(self.R),
-                    str(self.angle_used)
-                ])
-
-            else:
-                raise ValueError(f'{len(match)} long D5 RAD tool match passed. Should be length of 6 or 8.')
-
-        else:
-            raise ValueError(f'{self.D} is an invalid RAD tool D value. D value must be D5 or D7.')
+        self.x = float(match[1])
+        self.y = float(match[2])
+        self.z = float(match[3])
+        self.total_field = float(match[4])
 
         return self
 
     def from_dict(self, dict):
         """
-        Use the keys and values of a dictionary to create the RADTool object
+        Use the keys and values of a dictionary to create the RADTool object.
         :param dict: dictionary with keys being the RADTool object's attributes.
         :return: RADTool object
         """
@@ -3697,290 +2836,60 @@ class RADTool:
         for key, value in dict.items():
             self.__setattr__(key, value)
             self.id += str(value)
-        self.derotated = True if self.angle_used is not None else False
 
         return self
-
-    def from_dmp(self, text):
-        """
-        Create the RADTool object from the RAD line in a .DMP file.
-        :param text: str or list of RAD tool line items in the .DMP file
-        :return: RADTool object
-        """
-        if not isinstance(text, list):
-            text = text.split()
-
-        self.D = 'D7'
-        self.Hx = float(text[0])
-        self.gx = float(text[1])
-        self.Hy = float(text[2])
-        self.gy = float(text[3])
-        self.Hz = float(text[4])
-        self.gz = float(text[5])
-        if len(text) > 6:
-            self.T = float(text[6])
-        else:
-            self.T = 0.0
-
-        self.id = ''.join([
-            str(self.Hx),
-            str(self.gx),
-            str(self.Hy),
-            str(self.gy),
-            str(self.Hz),
-            str(self.gz),
-            str(self.T),
-        ])
-
-        return self
-
-    def get_azimuth(self, allow_negative=False):
-        """
-        Calculate the azimuth of the RAD tool object. Must be D7.
-        :param allow_negative: bool, allow negative azimuth values or only allow values within 0 - 360.
-        :return: float, azimuth
-        """
-        if not self.has_tool_values():
-            return None
-
-        g = math.sqrt(sum([self.gx ** 2, self.gy ** 2, self.gz ** 2]))
-        numer = ((self.Hz * self.gy) - (self.Hy * self.gz)) * g
-        denumer = self.Hx * (self.gy ** 2 + self.gz ** 2) - (self.Hy * self.gx * self.gy) - (
-                    self.Hz * self.gx * self.gz)
-
-        azimuth = math.degrees(math.atan2(numer, denumer))
-        if not allow_negative:
-            if azimuth < 0:
-                azimuth = 360 + azimuth
-        return azimuth
-
-    def get_dip(self):
-        """
-        Calculate the dip of the RAD tool object. Must be D7.
-        :return: float, dip
-        """
-        if not self.has_tool_values():
-            return None
-
-        try:
-            dip = math.degrees(math.acos(self.gx / math.sqrt((self.gx ** 2) + (self.gy ** 2) + (self.gz ** 2)))) - 90
-        except ZeroDivisionError:
-            logger.error(f"Attempted division by 0.")
-            dip = None
-        return dip
-
-    def get_acc_roll(self, allow_negative=False):
-        """
-        Calculate the roll angle as measured by the accelerometer. Must be D7.
-        :param allow_negative: bool, allow negative roll values or only allow values within 0 - 360.
-        :return: float, roll angle
-        """
-        if not self.has_tool_values():
-            return None
-
-        x, y, z = self.gx, self.gy, self.gz
-
-        theta = math.atan2(y, z)
-        cc_roll_angle = 360 - math.degrees(theta) if y < 0 else math.degrees(theta)
-        roll_angle = 360 - cc_roll_angle if y > 0 else cc_roll_angle
-        if roll_angle >= 360:
-            roll_angle = roll_angle - 360
-        if allow_negative:
-            if roll_angle < 0:
-                roll_angle = roll_angle + 360
-
-        return roll_angle
-
-    def get_mag_roll(self, allow_negative=False):
-        """
-        Calculate the roll angle as measured by the magnetometer. Must be D7.
-        :param allow_negative: bool, allow negative roll values or only allow values within 0 - 360.
-        :return: float, roll angle
-        """
-        if not self.has_tool_values():
-            return None
-
-        x, y, z = self.Hx, self.Hy, self.Hz
-
-        theta = math.atan2(-y, -z)
-        cc_roll_angle = math.degrees(theta)
-        roll_angle = 360 - cc_roll_angle if y < 0 else cc_roll_angle
-        if roll_angle > 360:
-            roll_angle = roll_angle - 360
-        if allow_negative:
-            if roll_angle < 0:
-                roll_angle = -roll_angle
-
-        return roll_angle
-
-    def get_mag(self):
-        """
-        Calculate and return the magnetic field strength (total field) in units of nT
-        :return: float
-        """
-        if not self.has_tool_values():
-            return None
-
-        x, y, z = self.Hx, self.Hy, self.Hz
-        mag_strength = math.sqrt(sum([x ** 2, y ** 2, z ** 2])) * (10 ** 5)
-        return mag_strength
-
-    def has_tool_values(self):
-        if all([self.Hx, self.gx, self.Hy, self.gy, self.Hz, self.gz]):
-            return True
-        else:
-            return False
-
-    def is_derotated(self):
-        return True if self.angle_used is not None else False
 
     def to_string(self, legacy=False):
         """
-        Create a string for PEM serialization
+        Create a string for Step serialization
         :param legacy: bool, if True, return D5 values instead of D7 for compatibility with Step.
         :return: str
         """
         # If the input D value is already D5
-        if self.D == 'D5':
-            result = [self.D]
-            if self.rotation_type is None:
-                result.append(f"{self.x:g}")
-                result.append(f"{self.y:g}")
-                result.append(f"{self.z:g}")
-
-            elif self.rotation_type == 'acc' or self.rotation_type.lower() == 'pp':
-                result.append(f"{self.gx:g}")
-                result.append(f"{self.gy:g}")
-                result.append(f"{self.gz:g}")
-
-            elif self.rotation_type == 'mag':
-                result.append(f"{self.Hx:g}")
-                result.append(f"{self.Hy:g}")
-                result.append(f"{self.Hz:g}")
-
-            result.append(f"{self.roll_angle:g}")
-            result.append(f"{self.dip:g}")
-
-            # Files output with otool don't have an "R" or angle used value.
-            if self.R is not None and self.angle_used is not None:
-                result.append(self.R)
-                result.append(f"{self.angle_used:g}")
-
-        else:
-            # Create the D5 RAD tool line that is compatible with Step (just for borehole XY).
-            if legacy:
-                if self.is_derotated():
-                    if self.rotation_type == 'mag':  # Only mag de-rotation uses the mag values. Everything is acc.
-                        x, y, z = f"{self.Hx:g}", f"{self.Hy:g}", f"{self.Hz:g}"
-                    else:
-                        x, y, z = f"{self.gx:g}", f"{self.gy:g}", f"{self.gz:g}"
-
-                    # For de-rotated XY RADs
-                    if all([self.roll_angle, self.dip, self.angle_used, self.R]):
-                        result = [
-                            'D5',
-                            x,
-                            y,
-                            z,
-                            f"{self.roll_angle:g}",
-                            f"{self.dip:g}",
-                            self.R,
-                            f"{self.angle_used:g}"
-                        ]
-
-                # For rotated and Z RADs
-                else:
-                    result = [
-                        'D7',
-                        f"{self.Hx:g}",
-                        f"{self.gx:g}",
-                        f"{self.Hy:g}",
-                        f"{self.gy:g}",
-                        f"{self.Hz:g}",
-                        f"{self.gz:g}",
-                        f"{self.T:g}" if self.T is not None else '0'
-                    ]
-
-            # Non legacy
-            else:
-                if self.D == 'D7' or self.D == 'D6':
-                    result = [
-                        self.D,
-                        f"{self.Hx:g}",
-                        f"{self.gx:g}",
-                        f"{self.Hy:g}",
-                        f"{self.gy:g}",
-                        f"{self.Hz:g}",
-                        f"{self.gz:g}",
-                    ]
-
-                    if self.R is not None and self.angle_used is not None:
-                        if self.rotation_type == 'acc':
-                            result.append(f"{self.acc_roll_angle:g}")
-                        elif self.rotation_type == 'mag':
-                            result.append(f"{self.mag_roll_angle:g}")
-                        elif self.rotation_type == 'pp_raw':
-                            result.append(f"{self.measured_pp_roll_angle:g}")
-                        elif self.rotation_type == 'pp_cleaned':
-                            result.append(f"{self.cleaned_pp_roll_angle:g}")
-                        elif self.rotation_type == "soa":
-                            result.append(f"{self.angle_used:g}")
-                        else:
-                            if self.roll_angle is None:
-                                raise Exception(f"The RAD tool object has been de-rotated, yet no roll_angle exists.")
-
-                            result.append(f"{self.roll_angle:g}")
-
-                        result.append(f"{self.get_dip():g}")
-                        result.append(self.R)
-                        result.append(f"{self.angle_used:g}")
-                    else:
-                        if self.T is not None:
-                            result.append(f"{self.T:g}")
-                        else:
-                            result.append(f"0")
-
-                else:
-                    raise ValueError('RADTool D value is neither "D5" nor "D7"')
+        result = list(self.D)
+        result.append(f"{self.x:g}")
+        result.append(f"{self.y:g}")
+        result.append(f"{self.z:g}")
+        result.append(f"{self.total_field:g}")
 
         return ' '.join(result)
 
 
-class PEMGetter:
+class StepGetter:
     """
-    Class to get a list of PEM files from a testing directory. Used for testing.
+    Class to get a list of Step files from a testing directory. Used for testing.
     """
     def __init__(self):
-        self.pem_parser = PEMParser()
+        self.step_parser = StepParser()
 
-    def get_pems(self, folder=None, number=None, selection=None, file=None, random=False,
+    def get_steps(self, folder=None, number=None, selection=None, file=None, random=False,
                  incl=None):
         """
-        Retrieve a list of PEMFiles
+        Retrieve a list of StepFiles
         :param folder: str, folder from which to retrieve files
         :param number: int, number of files to selected
         :param selection: int, index of file to select
         :param file: str, name the specific to open
         :param random: bool, select random files. If no number is passed, randomly selects the number too.
         :param incl: str, text to include in the file name.
-        :return: list of PEMFile objects.
+        :return: list of StepFile objects.
         """
 
-        def add_pem(filepath):
+        def add_step(filepath):
             """
-            Parse and add the PEMFile to the list of pem_files.
-            :param filepath: Path object of the PEMFile
+            Parse and add the StepFile to the list of step_files.
+            :param filepath: Path object of the StepFile
             """
             if not filepath.exists():
                 raise ValueError(f"File {filepath} does not exists.")
 
             logger.info(f'Getting File {filepath}.')
             try:
-                pem_file = self.pem_parser.parse(filepath)
+                step_file = self.step_parser.parse(filepath)
             except Exception:
                 return
             else:
-                pem_files.append(pem_file)
+                step_files.append(step_file)
 
         sample_files_dir = Path(__file__).parents[2].joinpath('sample_files')
 
@@ -3989,13 +2898,13 @@ class PEMGetter:
             if not sample_files_dir.exists():
                 raise ValueError(f"Folder {folder} does not exist.")
 
-        pem_files = []
+        step_files = []
 
-        # Pool of available files is all PEMFiles in PEMGetter files directory.
+        # Pool of available files is all StepFiles in StepGetter files directory.
         if incl is not None:
-            available_files = list(sample_files_dir.rglob(f'*{incl}*.PEM'))
+            available_files = list(sample_files_dir.rglob(f'*{incl}*.stp'))
         else:
-            available_files = list(sample_files_dir.rglob(f'*.PEM'))
+            available_files = list(sample_files_dir.rglob(f'*.stp'))
         # print(f"Available files: {', '.join([str(a) for a in available_files])}")
 
         if random:
@@ -4008,105 +2917,51 @@ class PEMGetter:
             random_selection = choices(available_files, k=number)
 
             for file in random_selection:
-                add_pem(file)
+                add_step(file)
 
         else:
             if number:
                 for file in available_files[:number]:
                     filepath = sample_files_dir.joinpath(file)
-                    add_pem(filepath)
-                    # pem_files.append((pem_file, None))  # Empty second item for ri_files
+                    add_step(filepath)
+                    # step_files.append((step_file, None))  # Empty second item for ri_files
 
             elif selection is not None and not selection > len(available_files):
                 filepath = sample_files_dir.joinpath(available_files[selection])
-                add_pem(filepath)
-                # pem_files.append((pem_file, None))  # Empty second item for ri_files
+                add_step(filepath)
+                # step_files.append((step_file, None))  # Empty second item for ri_files
 
             elif file is not None:
                 filepath = sample_files_dir.joinpath(file)
-                add_pem(filepath)
+                add_step(filepath)
 
             else:
                 for file in available_files:
                     filepath = sample_files_dir.joinpath(file)
-                    add_pem(filepath)
-                    # pem_files.append((pem_file, None))  # Empty second item for ri_files
+                    add_step(filepath)
+                    # step_files.append((step_file, None))  # Empty second item for ri_files
 
-        pem_list = '\n'.join([str(f.filepath) for f in pem_files])
-        if not pem_list:
-            raise ValueError(f"No PEM files found in {sample_files_dir}.")
-        logger.info(f"Collected PEM files: {pem_list}")
-        return pem_files
+        step_list = '\n'.join([str(f.filepath) for f in step_files])
+        if not step_list:
+            raise ValueError(f"No Step files found in {sample_files_dir}.")
+        return step_files
 
     def parse(self, filepath):
         if not Path(filepath).is_file():
             raise FileNotFoundError(f"{filepath} does not exist.")
 
-        pem_file = parse_file(filepath)
-        return pem_file
+        step_file = StepParser.parse(filepath)
+        return step_file
 
 
 if __name__ == '__main__':
-    import time
-    import timeit
-
     sample_folder = Path(__file__).parents[2].joinpath("sample_files")
 
-    pg = PEMGetter()
+    file = sample_folder.joinpath(r"Step files\XY.STP")
+    step_file = StepParser().parse(file)
 
-    pem_file = pg.parse(sample_folder.joinpath(r"Line GPS\800N.PEM"))
-    txt_file = sample_folder.joinpath(r"Line GPS\KA800N_1027.txt")
-    line = SurveyLine(txt_file)
-    line.get_warnings(stations=pem_file.get_stations(converted=True, incl_deleted=False))
+    print(step_file.get_components())
+    print(step_file.auto_name_file())
+    print(step_file.get_file_name())
+    # print(step_file.to_string(legacy=True))
 
-    # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
-    # file = r"C:\_Data\2021\TMC\Laurentia\STE-21-50-W3\RAW\ste-21-50w3xy_0819.dmp2"
-    # pem_files = pg.parse(r"C:\_Data\2021\TMC\Laurentia\STE-21-70\Final\STE-21-70 XYT.PEM")
-    # pem_files = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-264-21\RAW\xy_1002.PEM")
-    # pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\SAN-0251-21\RAW\xy_1019.PEM")
-    # file = r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW\l35eb2_0.PEM817.dmp2"
-    # pem_file, errors = dmpparser.parse(file)
-    # print(pem_file.to_string())
-
-    # pem_files = pg.get_pems(random=True, number=1)
-    # pem_files = pg.get_pems(folder="Raw Boreholes", file=r"EB-21-52\Final\z.PEM")
-    # pem_files = pg.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")
-    # pem_files = pg.get_pems(folder="Raw Surface", subfolder=r"Loop 1\Final\Perkoa South", file="11200E.PEM")
-    # pem_files = pg.get_pems(folder="Raw Boreholes", file="em21-155 z_0415.PEM")
-
-    # pem_file = pem_files[0]
-    # pem_file, _ = pem_file.prep_rotation()
-    # pem_file.get_theory_pp()
-    # pem_file.get_theory_data()
-    # pem_file.get_reversed_components()
-    # pem_file.rotate(method="unrotate")
-    # pem_file.filepath = pem_file.filepath.with_name(pem_file.filepath.stem + "(unrotated)" + ".PEM")
-    # pem_file.save()
-
-    # pem_file = pg.get_pems(client='PEM Rotation', file='_BX-081 XY.PEM')[0]
-    # pem_file.get_dad()
-    # pem_file = pg.get_pems(client='Kazzinc', number=1)[0]
-    # pem_file.to_xyz()
-    # pem_file, _ = pem_file.prep_rotation()
-    # pem_file.mag_offset()
-    # pem_file = pem_file.rotate(method='acc', soa=0)
-    # pem_file = pem_file.rotate(method='unrotate', soa=10)
-    # pem_file = pem_file.rotate(method="pp", soa=1)
-    # rotated_pem = prep_pem.rotate('pp')
-
-    # pem_file = pemparser.parse(r'C:\_Data\2020\Eastern\Egypt Road\__ER-19-02\RAW\XY29_29.PEM')
-    # pem_file = dparser.parse(r'C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\xy03_03.DMP')
-    # pem_file = dparser.parse_dmp2(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 850_16.dmp2')
-    # pem_file.save(legacy=True)
-
-    # file = str(Path(__file__).parents[2].joinpath('sample_files/DMP files/DMP2 New/BR-32 Surface/l4200e.dmp2'))
-    # pem_file = dparser.parse_dmp2(file)
-    # pem_file.get_suffix_warnings()
-    # pem_file.save(processed=False)
-    # pem_file2 = pemparser.parse(file.filepath)
-    # pem_file2.save(processed=True)
-
-    # out = str(Path(__file__).parents[2].joinpath(
-    # 'sample_files/test results/f'{file.filepath.stem} - test conversion.pem')
-    # print(file.to_string(), file=open(out, 'w'))
-    # os.startfile(pem_file.filepath)

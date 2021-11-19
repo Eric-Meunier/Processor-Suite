@@ -2267,7 +2267,7 @@ Warnings</string>
     <string>Auto-Name Files</string>
    </property>
    <property name="shortcut">
-    <string>F2</string>
+    <string>F3</string>
    </property>
   </action>
  </widget>
