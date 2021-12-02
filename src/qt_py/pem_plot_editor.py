@@ -281,12 +281,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             stations = self.pem_file.get_stations(converted=True)
             self.box_select_profile_plot((stations.min(), stations.max()), start=False)
 
-        def profile_channel_selection_changed(value):
-            self.min_ch_sbox.setMaximum(
-                min(self.max_ch_sbox.value(), self.pem_file.get_number_of_channels(incl_ontime=False)))
-            self.max_ch_sbox.setMinimum(max(0, self.min_ch_sbox.value()))
-            self.plot_profiles()
-
         # Actions
         self.select_all_action.activated.connect(select_all_stations)
 
@@ -317,8 +311,10 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.link_x_cbox.toggled.connect(self.link_decay_x)
 
         # Spinboxes
-        self.min_ch_sbox.valueChanged.connect(profile_channel_selection_changed)
-        self.max_ch_sbox.valueChanged.connect(profile_channel_selection_changed)
+        self.min_ch_sbox.valueChanged.connect(self.profile_channel_selection_changed)
+        self.min_ch_sbox.valueChanged.connect(lambda: self.plot_profiles("all"))
+        self.max_ch_sbox.valueChanged.connect(self.profile_channel_selection_changed)
+        self.max_ch_sbox.valueChanged.connect(lambda: self.plot_profiles("all"))
 
         self.auto_clean_std_sbox.valueChanged.connect(self.update_auto_clean_lines)
         self.auto_clean_window_sbox.valueChanged.connect(self.update_auto_clean_lines)
@@ -487,26 +483,24 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Scroll through channels in the single profile plot
         if event.type() == QEvent.GraphicsSceneWheel:
             if keyboard.is_pressed("CTRL"):
-                # self.min_ch_sbox.blockSignals(True)
-                # self.max_ch_sbox.blockSignals(True)
+                self.min_ch_sbox.blockSignals(True)  # Prevent plotting to occur multiple times
+                self.max_ch_sbox.blockSignals(True)  # Prevent plotting to occur multiple times
 
                 y = event.delta()
                 if y < 0:
                     # Increase channel numbers
-                    self.min_ch_sbox.blockSignals(True)  # Only block min ch spin box, so it doesn't pass the max.
-                    self.max_ch_sbox.setValue(self.max_ch_sbox.value() + 1)  # Profile plotting is done here
+                    self.max_ch_sbox.setValue(self.max_ch_sbox.value() + 1)
                     self.min_ch_sbox.setValue(self.min_ch_sbox.value() + 1)
-                    self.min_ch_sbox.blockSignals(False)
                 else:
                     # Decrease channel numbers
-                    self.max_ch_sbox.blockSignals(True)
-                    self.min_ch_sbox.setValue(self.min_ch_sbox.value() - 1)  # Profile plotting is done here
+                    self.min_ch_sbox.setValue(self.min_ch_sbox.value() - 1)
                     self.max_ch_sbox.setValue(self.max_ch_sbox.value() - 1)
-                    self.max_ch_sbox.blockSignals(False)
+                self.plot_profiles("all")
+                # Manually trigger this signal slot, so plotting doesn't occur again
+                self.profile_channel_selection_changed(None)
 
-                # self.plot_profiles("all")
-                # self.min_ch_sbox.blockSignals(False)
-                # self.max_ch_sbox.blockSignals(False)
+                self.min_ch_sbox.blockSignals(False)
+                self.max_ch_sbox.blockSignals(False)
             else:
                 self.pyqtgraphWheelEvent(event)  # Change currently selected station
             return True
@@ -605,13 +599,13 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         num_offtime_channels = self.pem_file.get_number_of_channels(incl_ontime=False)
         self.auto_clean_window_sbox.setMaximum(num_offtime_channels)
         self.auto_clean_window_sbox.setValue(int(num_offtime_channels / 2))
-        self.min_ch_sbox.setMaximum(num_offtime_channels)
-        self.max_ch_sbox.setMaximum(num_offtime_channels)
+        self.min_ch_sbox.setMaximum(num_offtime_channels - 1)
+        self.max_ch_sbox.setMaximum(num_offtime_channels - 1)
 
         self.max_ch_sbox.blockSignals(True)
         self.min_ch_sbox.blockSignals(True)
         self.max_ch_sbox.setValue(num_offtime_channels)
-        self.min_ch_sbox.setValue(int(num_offtime_channels / 2))
+        self.min_ch_sbox.setValue(num_offtime_channels - 5)
         self.max_ch_sbox.blockSignals(False)
         self.min_ch_sbox.blockSignals(False)
 
@@ -910,6 +904,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                                                     name="PP Theory")
                     ax.addItem(pp_plot_item)
 
+            # Use the actual channel numbers for the Y axis of the profile plots so it matches with decay plots
+            ch_offset = self.pem_file.channel_times[~self.pem_file.channel_times.Remove.astype(bool)].index[1] - 1
+
             # Since toggling the self.actionSplit_Profiles needs to call plot_profiles(), there's no point in plotting
             # both the split profiles and single profile.
             if self.actionSplit_Profile.isChecked():
@@ -921,7 +918,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                     if i == 0:
                         ax.setLabel('left', f"PP channel", units=self.units)
                     else:
-                        ax.setLabel('left', f"Channel {bounds[0]} to {bounds[1]}", units=self.units)
+                        ax.setLabel('left', f"Channel {bounds[0]} to {bounds[1]}",
+                                    units=self.units)
 
                     # Plot the data
                     for channel in range(bounds[0], bounds[1] + 1):
@@ -936,7 +934,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 # Plot the single profile ax
                 min_ch, max_ch = self.min_ch_sbox.value(), self.max_ch_sbox.value()
                 ax = axes[0]
-                for channel in range(min_ch, max_ch):
+                for channel in range(min_ch, max_ch + 1):
                     ax.setLabel('left', f"Channel {'PP' if min_ch == 0 else min_ch} to {max_ch}", units=self.units)
                     data = profile_data[profile_data.Deleted == False].loc[:, channel]
                     plot_lines(data, ax)
@@ -1779,6 +1777,16 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
                 # Update the plots
                 self.refresh_plots(components=selected_data.Component.unique())
+
+    def profile_channel_selection_changed(self, value):
+        """
+        When the channel selection spin boxes for the single profile plot are changed.
+        Prevents the maximum channel to be smaller than the minimum, and vise-versa.
+        :param value: Int
+        :return: None
+        """
+        self.min_ch_sbox.setMaximum(self.max_ch_sbox.value())
+        self.max_ch_sbox.setMinimum(self.min_ch_sbox.value())
 
     def data_edited(self):
         """
