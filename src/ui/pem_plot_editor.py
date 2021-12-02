@@ -39,6 +39,10 @@ class Ui_PEMPlotEditor(object):
         self.actionSplit_Profile.setObjectName(u"actionSplit_Profile")
         self.actionSplit_Profile.setCheckable(True)
         self.actionSplit_Profile.setChecked(True)
+        self.actionShow_Station_Cursor = QAction(PEMPlotEditor)
+        self.actionShow_Station_Cursor.setObjectName(u"actionShow_Station_Cursor")
+        self.actionShow_Station_Cursor.setCheckable(True)
+        self.actionShow_Station_Cursor.setChecked(True)
         self.centralwidget = QWidget(PEMPlotEditor)
         self.centralwidget.setObjectName(u"centralwidget")
         self.horizontalLayout_3 = QHBoxLayout(self.centralwidget)
@@ -300,15 +304,16 @@ class Ui_PEMPlotEditor(object):
 
         self.gridLayout.addWidget(self.max_ch_sbox, 0, 3, 1, 1)
 
-        self.min_ch_sbox = QSpinBox(self.groupBox_4)
-        self.min_ch_sbox.setObjectName(u"min_ch_sbox")
-
-        self.gridLayout.addWidget(self.min_ch_sbox, 0, 1, 1, 1)
-
         self.label_5 = QLabel(self.groupBox_4)
         self.label_5.setObjectName(u"label_5")
 
         self.gridLayout.addWidget(self.label_5, 0, 2, 1, 1)
+
+        self.min_ch_sbox = QSpinBox(self.groupBox_4)
+        self.min_ch_sbox.setObjectName(u"min_ch_sbox")
+        self.min_ch_sbox.setButtonSymbols(QAbstractSpinBox.UpDownArrows)
+
+        self.gridLayout.addWidget(self.min_ch_sbox, 0, 1, 1, 1)
 
 
         self.verticalLayout_11.addWidget(self.groupBox_4)
@@ -449,6 +454,7 @@ class Ui_PEMPlotEditor(object):
         self.menuFile.addAction(self.actionUn_Delete_All)
         self.menuFile.addAction(self.actionReset_File)
         self.menuView.addAction(self.actionSplit_Profile)
+        self.menuView.addAction(self.actionShow_Station_Cursor)
 
         self.retranslateUi(PEMPlotEditor)
 
@@ -484,6 +490,7 @@ class Ui_PEMPlotEditor(object):
 #endif // QT_CONFIG(shortcut)
         self.actionUn_Delete_All.setText(QCoreApplication.translate("PEMPlotEditor", u"Un-Delete All", None))
         self.actionSplit_Profile.setText(QCoreApplication.translate("PEMPlotEditor", u"Split Profile", None))
+        self.actionShow_Station_Cursor.setText(QCoreApplication.translate("PEMPlotEditor", u"Show Station Cursor", None))
         self.label.setText(QCoreApplication.translate("PEMPlotEditor", u"Decay Options", None))
         self.groupBox_5.setTitle(QCoreApplication.translate("PEMPlotEditor", u"View", None))
         self.plot_ontime_decays_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Plot On-Time", None))
@@ -509,8 +516,8 @@ class Ui_PEMPlotEditor(object):
         self.show_scatter_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Show Scatter", None))
         self.groupBox_4.setTitle(QCoreApplication.translate("PEMPlotEditor", u"Channels", None))
         self.max_ch_sbox.setPrefix(QCoreApplication.translate("PEMPlotEditor", u"Ch ", None))
-        self.min_ch_sbox.setPrefix(QCoreApplication.translate("PEMPlotEditor", u"Ch ", None))
         self.label_5.setText(QCoreApplication.translate("PEMPlotEditor", u"-", None))
+        self.min_ch_sbox.setPrefix(QCoreApplication.translate("PEMPlotEditor", u"Ch ", None))
         self.groupBox_3.setTitle(QCoreApplication.translate("PEMPlotEditor", u"Edit", None))
         self.change_comp_profile_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Components", None))
         self.change_profile_suffix_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Suffixes", None))

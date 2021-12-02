@@ -224,6 +224,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.profile_axes = np.concatenate([self.x_layout_axes, self.y_layout_axes, self.z_layout_axes])
         self.mag_profile_axes = [self.mag_x_ax, self.mag_y_ax, self.mag_z_ax]
 
+        self.station_cursors = []  # For easy toggling of the station cursors lines/text
         self.active_profile_axes = []
 
         # Configure each axes, including the mag plots. Axes linking is done during update_()
@@ -255,6 +256,10 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             ax.addItem(hover_v_line_text, ignoreBounds=True)
             ax.addItem(selected_v_line, ignoreBounds=True)
 
+            self.station_cursors.append(hover_v_line)
+            self.station_cursors.append(hover_v_line_text)
+            self.station_cursors.append(selected_v_line)
+
             # Connect the mouse moved signal
             ax.scene().sigMouseMoved.connect(self.profile_mouse_moved)
 
@@ -281,6 +286,10 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             stations = self.pem_file.get_stations(converted=True)
             self.box_select_profile_plot((stations.min(), stations.max()), start=False)
 
+        def toggle_station_cursor():
+            for item in self.station_cursors:
+                item.show() if self.actionShow_Station_Cursor.isChecked() else item.hide()
+
         # Actions
         self.select_all_action.activated.connect(select_all_stations)
 
@@ -292,6 +301,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Required or else the plots don't align correctly.
         self.actionSplit_Profile.triggered.connect(lambda: self.plot_profiles())
         self.actionSplit_Profile.triggered.connect(lambda: self.reset_range(decays=False, profiles=True))
+        self.actionShow_Station_Cursor.triggered.connect(toggle_station_cursor)
 
         # Shortcuts
         self.actionSave_Screenshot.triggered.connect(self.save_img)
