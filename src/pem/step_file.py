@@ -1274,6 +1274,11 @@ class StepFile:
         else:
             new_name = re.sub(r"L", "", self.line_name.upper()).strip()
         new_path = self.filepath.with_name(new_name).with_suffix(".stp")
+        if new_path == self.filepath:
+            return self.filepath
+
+        if new_path.is_file():
+            os.remove(str(new_path))
         os.rename(str(self.filepath), str(new_path))
         self.filepath = new_path
         return self.filepath
@@ -2434,6 +2439,7 @@ class StepParser:
                 data = reading.strip().split('\n')  # Strip because readings can have more than 1 new line between them.
                 head = data[0].split()
 
+                # TODO Parse SQUID stp files from Managem
                 station = head[0]
                 comp = head[1][0]
                 reading_index = re.search(r'\d+', head[1]).group()
@@ -2572,7 +2578,8 @@ class StepSerializer:
                         self.step_file.probes.get('SOA'),
                         self.step_file.probes.get('Tool number'),
                         self.step_file.probes.get('Tool ID')])
-        result += f"<FMT> {self.step_file.format}\n"
+        result += f"<FMT> 230\n"  # Force 230, as sometimes 210 is entered and causes issues with Maxwell
+        # result += f"<FMT> {self.step_file.format}\n"
         result += f"<UNI> {'nanoTesla/sec' if self.step_file.units == 'nT/s' else 'picoTesla'}\n"
         result += f"<OPR> {self.step_file.operator}\n"
         result += f"<XYP> {xyp}\n"

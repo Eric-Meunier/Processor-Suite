@@ -610,10 +610,9 @@ class Derotator(QMainWindow, Ui_Derotator):
 
                 ax.plot(x=x, y=y,
                         pen=pg.mkPen(self.foreground_color, width=0.8))
-                        # pen=pg.mkPen((0, 0, 0, 200), width=0.8))
 
-            profile_data = processed_pem.get_profile_data(component, converted=True, incl_deleted=False)
-            if profile_data.empty:
+            component_profile_data = profile_data[self.profile_data.Component == component]
+            if component_profile_data.empty:
                 raise ValueError(f'Profile data for {self.pem_file.filepath.name} is empty.')
 
             for i, bounds in enumerate(channel_bounds):
@@ -635,7 +634,7 @@ class Derotator(QMainWindow, Ui_Derotator):
 
                 # Plot the data
                 for ch in range(bounds[0], bounds[1] + 1):
-                    data = profile_data.iloc[:, ch]
+                    data = component_profile_data.iloc[:, ch]
                     plot_lines(data, ax)
 
         def plot_deviation():
@@ -722,6 +721,7 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         raw_pem = pem_file.copy()  # Needed otherwise the returned PEMFile will be averaged and split
         processed_pem = pem_file.copy()
+        profile_data = processed_pem.get_profile_data(converted=True, incl_deleted=False)
 
         # Split the data if it isn't already split
         if not processed_pem.is_split():

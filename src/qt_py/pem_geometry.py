@@ -52,11 +52,10 @@ def smooth_azimuth(azimuth):
     return smooth_az
 
 
-def dad_to_seg(df, units='m'):
+def dad_to_seg(df):
     """
     Create a segment data frame from a DAD data frame. DAD data is split into 1m intervals.
     :param df: pandas pd.DataFrame with Depth, Azimuth, Dip columns
-    :param units: str, units of the segments, either 'm' or 'ft'
     :return: pandas pd.DataFrame with Azimuth, Dip, segment length, unit, and depth columns
     """
     # Interpolate the DAD to 1m segments
@@ -70,7 +69,7 @@ def dad_to_seg(df, units='m'):
     df = pd.DataFrame(zip(i_depth, i_azimuth, i_dip), columns=df.columns)
 
     # Create the segment data frame
-    seg = df.head(0).copy()
+    seg = df.head(1).copy()
     depth_count, az_count, dip_count = 0, 0, 0
 
     # Calculate the iterative differences in depth, azimuth, and dip going down the hole
@@ -459,7 +458,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         i_dip = np.interp(xi, dip_depth, dip)
         dad_df = pd.DataFrame({'Depth': xi, 'Azimuth': i_az, 'Dip': i_dip})
 
-        seg = dad_to_seg(dad_df, units=self.pem_file.get_gps_units())
+        seg = dad_to_seg(dad_df)
         self.accepted_sig.emit(seg)
         plt.close(self.figure)
         plt.close(self.polar_figure)

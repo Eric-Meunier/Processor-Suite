@@ -366,13 +366,14 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
 
     def open_gps_files(self, files):
         """
-        Open GPS files
-        :param files: list or str, filepath(s) of GPS files
+        Open GPS files.
+        :param files: list or str, filepath(s) of GPS files.
+        :return: CRS object
         """
         def merge_files(files, collar=False):
             """
-            Merge contents of files into one data frame
-            :param files: list of str, filepaths of text file or GPX files
+            Merge contents of files into one data frame.
+            :param files: list of str, filepaths of text file or GPX files.
             :param collar: bool, if the files are for a collar, which will return a dict if an Excel file is passed.
             :return: str
             """
@@ -393,7 +394,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         current_tab = self.tabs.currentWidget()
         if current_tab == self.geometry_tab:
             file = files[0]  # Only accepts the first file for adding collars.
-            self.add_collar(file)
+            crs = self.add_collar(file)
             return
 
         try:
@@ -504,6 +505,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 logger.critical(f"{e}.")
                 self.error.showMessage(f"Error adding borehole collar: {str(e)}.")
 
+        crs = None
         if isinstance(file, Path):
             if file.suffix in [".xlsx", ".xls", ".csv"]:
                 self.picker = ExcelTablePicker(darkmode=self.darkmode)
@@ -511,11 +513,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.picker.accept_sig.connect(accept_collar)
             else:
                 self.picker = CollarPicker(self.pem_file, darkmode=self.darkmode)
-                self.picker.open(file)
+                crs = self.picker.open(file)
                 self.picker.accept_sig.connect(accept_collar)
         else:
             print(F"add_color, non-file was passed.")  # Testing if this ever happens
             accept_collar(file)
+        return crs
 
     def fill_info_tab(self):
         """

@@ -227,10 +227,9 @@ class DBPlotter(QMainWindow):
             name = Path(file).name
             logger.info(f"Parsing file {name}.")
             str_contents = read_file(file, as_list=False)
-            # For files with spaces
-            str_contents = re.sub(r" (\w)", r"\g<1>", str_contents)
-            str_contents = re.sub(r"  ", r" ", str_contents)
-            str_contents = re.sub(r" ([/:])", r"\g<1>", str_contents)
+            # For files with extra spaces
+            str_contents = re.sub(r" {2,}", " ", str_contents)
+            # str_contents = re.sub(r"\|", " ", str_contents)
 
             # Try to create a DBPlot for each 'read' command found
             reads = re.split(r'read ', str_contents)
@@ -538,9 +537,10 @@ if __name__ == '__main__':
 
     # files = str(Path(samples_folder).joinpath('CM 252.txt'))
     # files = str(Path(samples_folder).joinpath('Date error/0511_May11Dampingbox232Voltage.txt'))
+    files = str(Path(samples_folder).joinpath('Date error/1113_DX233-20211113.log'))
     # files = str(Path(samples_folder).joinpath('0724_238-20210724 (no data error).log'))
     # files = str(Path(samples_folder).joinpath('1110_Nov10DB228Current.txt'))
-    files = str(Path(samples_folder).joinpath(r'Extra spaces\1108_CM 252 11,08.txt'))
+    # files = str(Path(samples_folder).joinpath(r'Extra spaces\1108_CM 252 11,08.txt'))
     mw.open(files)
     mw.show()
 

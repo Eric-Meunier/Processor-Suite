@@ -5,6 +5,7 @@ import re
 import sys
 from pathlib import Path
 
+import pandas as pd
 import geopandas as gpd
 import gpxpy
 import matplotlib as mpl
@@ -23,7 +24,6 @@ from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, Q
                                QItemDelegate)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
-from pandas import DataFrame, read_excel, read_csv, read_table
 from pyproj import CRS
 from pyqtgraph.graphicsItems.ROI import Handle
 from scipy import spatial
@@ -35,6 +35,7 @@ from src.gps.gps_editor import BoreholeCollar, BoreholeGeometry
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
 from src.qt_py import (get_icon, get_line_color, NonScientific, PlanMapAxis, TableSelector, CRSSelector,
                        CustomProgressDialog)
+from src.qt_py.gps_tools import DADSelector
 from src.qt_py.map_widgets import TileMapViewer
 from src.qt_py.pem_geometry import dad_to_seg
 from src.ui.grid_planner import Ui_GridPlanner
@@ -127,7 +128,7 @@ class HoleWidget(QWidget):
     plot_hole_sig = Signal()
     remove_sig = Signal()
 
-    def __init__(self, properties, plot_widget, name='', darkmode=False):
+    def __init__(self, properties, plot_widget, name='', parent=None, darkmode=False):
         """
         Widget representing a hole as tab in Loop Planner.
         :param properties: dict, properties of a previous hole to be used as a starting point.
@@ -135,28 +136,21 @@ class HoleWidget(QWidget):
         :param name: str, name of the hole.
         """
         super().__init__()
+        self.parent = parent
         self.darkmode = darkmode
         self.setLayout(QFormLayout())
+        self.message = QMessageBox()
         self.plan_view = plot_widget
-        self.projection = DataFrame()
+        self.projection = pd.DataFrame()
         self.segments = None
         self.section_length = None
         self.loop = None
+        self.dad = pd.DataFrame()
 
         self.hole_color = get_line_color("foreground", "pyqt", self.darkmode)
         self.selection_color = get_line_color("teal", "pyqt", self.darkmode) if self.darkmode else selection_color
         self.foreground_color = get_line_color("foreground", "pyqt", self.darkmode)
         self.background_color = get_line_color("background", "pyqt", self.darkmode)
-
-        # if not properties:
-        #     properties = {
-        #         'easting': 599709,
-        #         'northing': 4829107,
-        #         'elevation': 0,
-        #         'azimuth': 0,
-        #         'dip': 60,
-        #         'length': 400,
-        #     }
 
         # Create all the inner widget items
         self.show_cbox = QCheckBox("Show in plan map")
@@ -170,7 +164,8 @@ class HoleWidget(QWidget):
         self.dad_geometry_rbtn = QRadioButton()
         self.hole_name_edit = QLineEdit(name)
         self.remove_btn = QPushButton(get_icon("remove2.png"), "")
-        self.init_ui(properties)
+        self.dad_file_edit = QLineEdit()
+        self.add_dad_file_btn = QPushButton('...')
 
         # Hole collar
         self.hole_collar = pg.ScatterPlotItem(clickable=True,
@@ -206,10 +201,11 @@ class HoleWidget(QWidget):
         self.plan_view.addItem(self.hole_name, ignoreBounds=True)
         self.plan_view.addItem(self.section_extent_line)
 
+        self.init_signals()
+        self.init_ui(properties)
+
         self.get_hole_projection()
         self.draw_hole()
-
-        self.init_signals()
 
     def init_ui(self, properties):
         self.hole_easting_edit.setMaximum(1e9)
@@ -253,13 +249,17 @@ class HoleWidget(QWidget):
         self.layout().addRow(self.show_cbox)
         self.manual_geometry_rbtn.setChecked(True)
 
+        azimuth = properties.get('azimuth')
+        dip = properties.get('dip')
+        length = properties.get('length')
+
         # Manual geometry frame
         manual_geometry_frame = QFrame()
         manual_geometry_frame.setLayout(QFormLayout())
         manual_geometry_frame.setContentsMargins(0, 0, 0, 0)
-        self.hole_azimuth_edit.setValue(float(properties.get('azimuth')))
-        self.hole_dip_edit.setValue(float(properties.get('dip')))
-        self.hole_length_edit.setValue(float(properties.get('length')))
+        self.hole_azimuth_edit.setValue(azimuth[0])
+        self.hole_dip_edit.setValue(dip[0])
+        self.hole_length_edit.setValue(length[-1])
         manual_geometry_frame.layout().addRow('Azimuth', self.hole_azimuth_edit)
         manual_geometry_frame.layout().addRow('Dip', self.hole_dip_edit)
         manual_geometry_frame.layout().addRow('Length', self.hole_length_edit)
@@ -268,10 +268,6 @@ class HoleWidget(QWidget):
         dad_geometry_frame = QFrame()
         dad_geometry_frame.setLayout(QHBoxLayout())
         dad_geometry_frame.setContentsMargins(0, 0, 0, 0)
-        self.dad_file_edit = QLineEdit()
-        self.dad_file_edit.setEnabled(False)
-        self.dad_file_edit.setReadOnly(True)
-        self.add_dad_file_btn = QPushButton('...')
         # self.add_dad_file_btn.setEnabled(False)
         self.add_dad_file_btn.setMaximumWidth(23)
         dad_geometry_frame.layout().addWidget(QLabel('DAD File'))
@@ -297,6 +293,14 @@ class HoleWidget(QWidget):
         name_frame.layout().addWidget(self.hole_name_edit)
         name_frame.layout().addWidget(self.remove_btn)
         self.layout().addRow(name_frame)
+
+        if len(azimuth) > 1:
+            df = pd.DataFrame([length, azimuth, dip]).T
+            df.columns = ["Depth", "Azimuth", "Dip"]
+            self.add_dad(df)
+            self.dad_geometry_rbtn.click()
+            # TODO Can add filepath here
+        self.dad_file_edit.setReadOnly(True)
 
     def init_signals(self):
         def toggle_geometry():
@@ -332,7 +336,7 @@ class HoleWidget(QWidget):
         self.dad_geometry_rbtn.toggled.connect(toggle_geometry)
 
         # Buttons
-        self.add_dad_file_btn.clicked.connect(self.get_dad_file)
+        self.add_dad_file_btn.clicked.connect(self.open_dad_file)
 
         # Editing
         self.hole_name_edit.textChanged.connect(self.name_changed_sig.emit)
@@ -392,14 +396,21 @@ class HoleWidget(QWidget):
 
     def get_properties(self):
         """Return a dictionary of hole properties"""
+        azimuth = re.sub(r"\n", ", ", self.dad.Azimuth.to_string(index=False)) if self.dad_geometry_rbtn.isChecked() \
+            else self.hole_azimuth_edit.value()
+        dip = re.sub(r"\n", ", ", self.dad.Dip.to_string(index=False)) if self.dad_geometry_rbtn.isChecked() \
+            else self.hole_dip_edit.value()
+        length = re.sub(r"\n", ", ", self.dad.Depth.to_string(index=False)) if self.dad_geometry_rbtn.isChecked() \
+            else self.hole_length_edit.value()
+
         return {
             'name': self.hole_name_edit.text(),
             'easting': self.hole_easting_edit.value(),
             'northing': self.hole_northing_edit.value(),
             'elevation': self.hole_elevation_edit.value(),
-            'azimuth': self.hole_azimuth_edit.value(),
-            'dip': self.hole_dip_edit.value(),
-            'length': self.hole_length_edit.value(),
+            'azimuth': azimuth,
+            'dip': dip,
+            'length': length,
         }
 
     def get_hole_projection(self):
@@ -419,9 +430,9 @@ class HoleWidget(QWidget):
             length = float(self.hole_length_edit.value())
             azimuth = float(self.hole_azimuth_edit.value())
             dip = float(self.hole_dip_edit.value())
-            df = DataFrame({'Depth': [z, length],
-                            'Azimuth': [azimuth] * 2,
-                            'Dip': [dip] * 2})
+            df = pd.DataFrame({'Depth': [z, length],
+                               'Azimuth': [azimuth] * 2,
+                               'Dip': [dip] * 2})
             segments = dad_to_seg(df)
         # Using a DAD file
         else:
@@ -511,63 +522,72 @@ class HoleWidget(QWidget):
         proj['Easting'], proj['Northing'] = converted_gdf.map(lambda p: p.x), converted_gdf.map(lambda p: p.y)
         return proj
 
-    def get_dad_file(self):
+    def open_dad_file(self):
         """
         Open a DAD file through the file dialog
         """
-        def open_dad_file(filepath):
+        def open_dad_df(filepath):
             """
             Parse a depth-azimuth-dip file. Can be extentions xlsx, xls, csv, txt, dad.
             :param filepath: str, filepath of the DAD file
             """
-            try:
-                if filepath.endswith('xlsx') or filepath.endswith('xls'):
-                    df = read_excel(filepath,
-                                    # delim_whitespace=True,
-                                    usecols=[0, 1, 2],
-                                    names=['Depth', 'Azimuth', 'Dip'],
-                                    header=None,
-                                    dtype=float)
-                else:
-                    df = read_csv(filepath,
-                                  delim_whitespace=True,
-                                  usecols=[0, 1, 2],
-                                  names=['Depth', 'Azimuth', 'Dip'],
-                                  header=None,
-                                  dtype=float)
-            except Exception as e:
-                logger.error(f"The following error occurred trying to read {Path(filepath).name}:{str(e)}")
-                self.message.critical(self, 'Import Error',
-                                      f"The following error occurred trying to read {Path(filepath).name}:{str(e)}")
+            if filepath.endswith('xlsx') or filepath.endswith('xls'):
+                # Use the DAD selector
+                def accept_file(df):
+                    try:
+                        df = df.apply(pd.to_numeric)
+                    except Exception as e:
+                        logger.error(f'Error plotting {filepath.name}. {str(e)}.')
+                        self.message.critical(self, 'Error',
+                                              f'The following error occurred attempting to plot {filepath.name}: '
+                                              f'\n{str(e)}.')
+                    else:
+                        self.add_dad(df)
 
+                filepath = Path(filepath)
+                global selector
+                selector = DADSelector()
+                selector.accept_sig.connect(accept_file)
+                selector.open(filepath)
             else:
-                if all([d == float for d in df.dtypes]):
-                    # Update the dad file path
-                    self.dad_file_edit.setText(filepath)
-                    # Flip the dip so down is positive
-                    df.Dip = df.Dip * -1
-                    # Create a BoreholeSegment object from the DAD file, to more easily calculate the projection
-                    self.segments = dad_to_seg(df.dropna())
-                    self.get_hole_projection()
-                    self.draw_hole()
-                    self.plot_hole_sig.emit()
+                df = pd.read_csv(filepath,
+                                 delim_whitespace=True,
+                                 usecols=[0, 1, 2],
+                                 names=['Depth', 'Azimuth', 'Dip'],
+                                 header=None,
+                                 dtype=float)
+                # TODO Maybe make this an option in a import settings menu
+                df.Dip = df.Dip * -1  # Flip the dip so down is positive
 
-                    self.window().status_bar.showMessage(f"DAD file imported successfully.", 1000)
+                self.add_dad(df)
 
-                else:
-                    logger.error(f'Data in {Path(filepath).name} is not float. Make sure there is no header row.')
-                    self.message.information(self, 'Error',
-                                             'Data returned is not float. Make sure there is no header row.')
-
-        file_name, file_type = QFileDialog.getOpenFileName(self, 'Open File',
+        default_path = str(self.parent.project_dir) if self.parent else ""
+        file_name, file_type = QFileDialog.getOpenFileName(self, 'Open File', default_path,
                                                            filter='Depth-azimuth-dip file (*.dad);; '
                                                                   'Comma-separated file (*.csv);; '
                                                                   'Text file (*.txt);; '
                                                                   'Excel file (*.xlsx);; '
-                                                                  'Excel file (*.xls)'
-                                                           )
+                                                                  'Excel file (*.xls);;')
         if file_name != '':
-            open_dad_file(file_name)
+            # Update the dad file path
+            self.dad_file_edit.setText(file_name)
+            open_dad_df(file_name)
+
+    def add_dad(self, df):
+        """
+        Set the hole geometry DAD information
+        :param df: DataFrame from a DAD file.
+        :return: None
+        """
+        self.dad = df  # Save the data frame for when get_properties() is called.
+
+        # Create a BoreholeSegment object from the DAD file, to more easily calculate the projection
+        self.segments = dad_to_seg(df.dropna())
+        self.get_hole_projection()
+        self.draw_hole()
+        self.plot_hole_sig.emit()
+
+        self.parent.status_bar.showMessage(f"DAD file imported successfully.", 1000)
 
     def draw_hole(self):
         """
@@ -805,7 +825,7 @@ class LoopWidget(QWidget):
         :return: dataframe
         """
         # Get the loop data
-        loop = DataFrame([[c.x(), c.y(), 0] for c in self.get_loop_coords()],
+        loop = pd.DataFrame([[c.x(), c.y(), 0] for c in self.get_loop_coords()],
                          columns=['Easting', 'Northing', 'Elevation'])
         loop = loop.append(loop.iloc[0])  # Close the loop
 
@@ -1189,16 +1209,16 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         self.plot_hole()
 
-    def add_hole(self, name="Hole", easting=599709, northing=4829107, elevation=0, azimuth=0, dip=60, length=400):
+    def add_hole(self, name="Hole", easting=599709, northing=4829107, elevation=0, azimuth=[0], dip=[60], length=[400]):
         """
         Create tab for a new hole
         :param name: str, name of the hole
         :param easting: str or float
         :param northing: str or float
         :param elevation: str or float
-        :param azimuth: str or float
-        :param dip: str or float
-        :param length: str or float
+        :param azimuth: list
+        :param dip: list
+        :param length: list
         :return: None
         """
         def name_changed(widget):
@@ -1230,7 +1250,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             ind = self.hole_widgets.index(widget)
             self.remove_hole(ind)
 
-        if not name:
+        if not name:  # When a hole is added manually (not loaded in with open_project())
             name, ok_pressed = QInputDialog.getText(self, "Add Hole", "Hole name:", QLineEdit.Normal, "")
             if not ok_pressed:
                 return
@@ -1244,17 +1264,13 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             else:
                 properties = dict()
 
-            # Set the property values from the init
-            prop_names = ["easting", "northing", "elevation", "azimuth", "dip", "length"]
-            for i, value in enumerate([easting, northing, elevation, azimuth, dip, length]):
-                try:
-                    properties[prop_names[i]] = float(value)
-                except ValueError:
-                    self.message.critical(self, "Error", f"{prop_names[i].title()} must be a number.")
-                    return
+            # Set the property values from the init. Name isn't necessary here as it's added with keyword arg.
+            prop_names = ["name", "easting", "northing", "elevation", "azimuth", "dip", "length"]
+            for i, value in enumerate([name, easting, northing, elevation, azimuth, dip, length]):
+                properties[prop_names[i]] = value
 
             # Create the hole widget for the tab
-            hole_widget = HoleWidget(properties, self.plan_view, name=name, darkmode=self.darkmode)
+            hole_widget = HoleWidget(properties, self.plan_view, name=name, parent=self, darkmode=self.darkmode)
             self.hole_widgets.append(hole_widget)
             hole_widget.name_changed_sig.connect(lambda: name_changed(hole_widget))
             hole_widget.hole_collar.sigClicked.connect(lambda: hole_clicked(hole_widget))
@@ -1649,7 +1665,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
         if not isinstance(file, Path):
             file = Path(file)
         logger.info(f"Opening {file.name}.")
-        content = read_table(file, header=None, delim_whitespace=True)
+        content = pd.read_table(file, header=None, delim_whitespace=True)
         if content.empty:
             logger.warning(f"No coordinates found in {file.name}.")
             return
@@ -1723,36 +1739,45 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
             self.crs_selector.epsg_rbtn.click()
 
             with CustomProgressDialog("Opening Project...", 0, len(holes) + len(loops)) as dlg:
-                try:
-                    for hole in holes:
-                        if dlg.wasCanceled():
-                            break
+                # try:
+                for hole in holes:
+                    if dlg.wasCanceled():
+                        break
 
-                        properties = dict()
-                        for line in hole.split():
-                            key, value = line.split(":")
-                            if key != "name":
-                                value = float(value)
-                            properties[key] = value
+                    properties = dict()
+                    for line in hole.split("\n"):
+                        if not line:  # The last line of the document is blank
+                            continue
 
-                        self.add_hole(**properties)
+                        key = line.split(":")[0]
+                        value = line.split(":")[1]
 
-                        dlg += 1
+                        if key in ["azimuth", "dip", "length"]:
+                            properties[key] = np.array(value.split(", "), dtype=float)
+                        else:
+                            if key == "name":
+                                properties[key] = value
+                            else:
+                                properties[key] = float(value)
 
-                    for loop in loops:
-                        if dlg.wasCanceled():
-                            break
+                    self.add_hole(**properties)
 
-                        name = re.search(r"name:(.*)\n", loop).group(1)
-                        # angle = re.search(r"angle:(.*)\n", loop).group(1)
-                        coord_str = [re.sub(r"c\d+:", "", line).split(",") for line in loop.split("\n")[1:-1]]
-                        coords = [QPointF(float(c[0].strip()), float(c[1].strip())) for c in coord_str]
+                    dlg += 1
 
-                        self.add_loop(name=name, coords=coords)
+                for loop in loops:
+                    if dlg.wasCanceled():
+                        break
 
-                        dlg += 1
-                except Exception as e:
-                    self.error.showMessage(str(e))
+                    name = re.search(r"name:(.*)\n", loop).group(1)
+                    # angle = re.search(r"angle:(.*)\n", loop).group(1)
+                    coord_str = [re.sub(r"c\d+:", "", line).split(",") for line in loop.split("\n")[1:-1]]
+                    coords = [QPointF(float(c[0].strip()), float(c[1].strip())) for c in coord_str]
+
+                    self.add_loop(name=name, coords=coords)
+
+                    dlg += 1
+                # except Exception as e:
+                #     self.error.showMessage(str(e))
 
             self.plan_view.autoRange()
 
@@ -2361,7 +2386,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
                 station = station[2]
                 line_list.append([name, easting, northing, station])
 
-        df = DataFrame(line_list, columns=['Line_name', 'Easting', 'Northing', 'Station'])
+        df = pd.DataFrame(line_list, columns=['Line_name', 'Easting', 'Northing', 'Station'])
         return df
 
     def get_grid_corner_coords(self):
@@ -2411,7 +2436,7 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
 
         if not epsg:
             self.message.critical(self, 'Invalid CRS', 'Input CRS is invalid.')
-            return DataFrame()
+            return pd.DataFrame()
         else:
             crs = CRS.from_epsg(epsg)
 
@@ -2453,12 +2478,12 @@ class GridPlanner(SurveyPlanner, Ui_GridPlanner):
 
         if not epsg:
             self.message.critical(self, 'Invalid CRS', 'Input CRS is invalid.')
-            return DataFrame()
+            return pd.DataFrame()
         else:
             crs = CRS.from_epsg(epsg)
 
         # Get the loop data
-        loop = DataFrame(self.get_loop_coords(), columns=['Easting', 'Northing'])
+        loop = pd.DataFrame(self.get_loop_coords(), columns=['Easting', 'Northing'])
         loop = loop.append(loop.iloc[0])  # Close the loop
 
         # Create point objects for each coordinate
@@ -2712,7 +2737,6 @@ class PolyLoop(pg.PolyLineROI):
             Reimplement in order to set the hover pen to the same color as the current loop pen color, and disable rotating
             the segment.
             """
-
             # Used internally by pg.PolyLineROI
             def __init__(self, *args, **kwds):
                 self._parentHovering = False

@@ -665,14 +665,23 @@ class TableSelector(QWidget):
                 print(f"Inserting row at {row + 1}.")
                 table.insertRow(row + 1)
 
+        def delete_row(y_coord):
+            table = self.tabs.currentWidget()
+            row = table.rowAt(y_coord)
+            table.removeRow(row)
+
         y_coord = event.pos().y()
         menu = QMenu(self)
         add_row_above_action = QAction('Add Row Above', self)
         add_row_above_action.triggered.connect(lambda: add_row(y_coord, direction="up"))
         add_row_below_action = QAction('Add Row Below', self)
         add_row_below_action.triggered.connect(lambda: add_row(y_coord, direction="down"))
+        delete_row_action = QAction('Delete Row', self)
+        delete_row_action.triggered.connect(lambda: delete_row(y_coord))
         menu.addAction(add_row_above_action)
         menu.addAction(add_row_below_action)
+        menu.addSeparator()
+        menu.addAction(delete_row_action)
         menu.popup(QCursor.pos())
 
     def open(self, filepath):

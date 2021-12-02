@@ -747,18 +747,16 @@ class PEMFile:
         else:
             return len(self.channel_times[~self.channel_times.Remove.astype(bool)])
 
-    def get_profile_data(self, component, averaged=False, converted=False, ontime=True, incl_deleted=False):
+    def get_profile_data(self, averaged=False, converted=False, ontime=True, incl_deleted=False):
         """
         Transform the readings in the data in a manner to be plotted as a profile
-        :param component: str, used to filter the profile data and only keep the given component
         :param averaged: bool, average the readings of the profile
         :param converted: bool, convert the station names to int
         :param ontime: bool, keep the on-time channels
         :param incl_deleted: bool, include readings that are flagged as deleted
         :return: pandas DataFrame object with Station as the index, and channels as columns.
         """
-        comp_filt = self.data['Component'] == component.upper()
-        data = self.data[comp_filt]
+        data = self.data
 
         if not incl_deleted:
             data = data[~data.Deleted.astype(bool)]
@@ -766,6 +764,7 @@ class PEMFile:
         if ontime is False:
             data.Reading = data.Reading.map(lambda x: x[~self.channel_times.Remove.astype(bool)])
 
+        # Transform the data to profile format
         profile = pd.DataFrame.from_dict(dict(zip(data.Reading.index, data.Reading.values))).T
 
         if converted is True:
@@ -774,10 +773,16 @@ class PEMFile:
             stations = data.Station
 
         profile.insert(0, 'Station', stations)
+        # Insert the Component and Deleted columns
+        profile.insert(1, 'Component', data.Component)
+        profile.insert(2, 'Deleted', data.Deleted)
         profile.set_index('Station', drop=True, inplace=True)
 
         if averaged is True:
-            profile = profile.groupby('Station').mean()
+            profile.drop(columns=["Deleted"], inplace=True)  # No need to keep the Deleted column for averaged data.
+            profile = profile.groupby(['Station', 'Component'],
+                                      group_keys=False,
+                                      as_index=False).mean()
 
         # Sort the data frame to prevent issues with plotting
         profile.sort_index(inplace=True)
@@ -1334,12 +1339,12 @@ class PEMFile:
         pp_ch_num = self.channel_times[self.channel_times.Remove == False].iloc[0].name
 
         if not theory_pp_data.empty:
+            profile_data = self.get_profile_data(averaged=True,
+                                                 converted=True,
+                                                 ontime=True,
+                                                 incl_deleted=True)
             for component in self.get_components():
-                pp_data = self.get_profile_data(component,
-                                                averaged=True,
-                                                converted=True,
-                                                ontime=True,
-                                                incl_deleted=True).loc[:, pp_ch_num]
+                pp_data = profile_data[profile_data.Component == component].loc[:, pp_ch_num]
 
                 # Only include common stations. PP represents the measured data, XYZ are theoretical.
                 df = pd.concat([pp_data, theory_pp_data], axis=1).rename({pp_ch_num: 'PP'}, axis=1).dropna(axis=0)
@@ -1365,7 +1370,12 @@ class PEMFile:
             new_name = f"{self.line_name.upper()} {''.join(self.get_components())}"
         else:
             new_name = re.sub(r"L", "", self.line_name.upper()).strip()
-        new_path = self.filepath.with_name(new_name).with_suffix(".PEM")
+        new_path = self.filepath.with_name(new_name.upper()).with_suffix(".PEM")
+        if new_path == self.filepath:
+            return self.filepath
+
+        if new_path.is_file():
+            os.remove(str(new_path))
         os.rename(str(self.filepath), str(new_path))
         self.filepath = new_path
         return self.filepath
@@ -1381,7 +1391,7 @@ class PEMFile:
             new_name = re.sub(r"xy|XY|z|Z", "", self.line_name.upper()).strip()
         else:
             new_name = re.sub(r"L", "", self.line_name.upper()).strip()
-        self.line_name = new_name
+        self.line_name = new_name.upper()
         return self.line_name
 
     def set_crs(self, crs):

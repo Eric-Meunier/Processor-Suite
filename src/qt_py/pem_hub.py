@@ -39,6 +39,7 @@ from src import __version__, app_data_dir
 from src.dxf.pem_dxf import PEMDXFDrawing
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, PEMGetter
+from src.pem.step_file import StepFile, StepParser
 from src.pem.pem_plotter import PEMPrinter
 from src.qt_py import (icons_path, get_extension_icon, get_icon, CustomProgressDialog, read_file, light_palette,
                        dark_palette, get_line_color, CRSSelector, df_to_table, clear_table)
@@ -1637,7 +1638,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
     def add_gps_files(self, gps_files):
         """
-        Adds GPS information from the gps_files to the PEMFile object
+        Adds GPS information from the gps_files to the selected PEMFile object. Will add GPS according to which tab
+        of the PEMInfoWidget is currently selected.
         :param gps_files: list or str, filepaths of text file or GPX files
         """
         pem_info_widget = self.stackedWidget.currentWidget()
@@ -2363,8 +2365,22 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.status_bar.showMessage(f"No PEM or STP files found in {path}.", 1500)
                 return
 
-            for file in files:
-                file.auto_name_file()
+            for pem_filepath in pem_files:
+                try:
+                    file = PEMParser().parse(pem_filepath).auto_name_file()
+                except FileExistsError:
+                    self.message.critical(self, "File Exists Error", f"A file with the same name already exists.")
+                except FileNotFoundError:
+                    self.message.information(self, "File Not Found", f"{pem_filepath} does not exist.")
+            for step_filepath in step_files:
+                try:
+                    file = StepParser().parse(step_filepath).auto_name_file()
+                except FileExistsError:
+                    self.message.critical(self, "File Exists Error", f"A file with the same name already exists.")
+                except FileNotFoundError:
+                    self.message.information(self, "File Not Found", f"{step_filepath} does not exist.")
+            self.fill_pem_list()
+            self.status_bar.showMessage("Renaming complete.", 1000)
 
         def create_delivery_folder():
             """
@@ -2374,11 +2390,11 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                                                            text=self.project_dir.parent.name)
             if ok_pressed and folder_name:
                 path = self.get_current_project_path()
-                zip_path = path.joinpath(folder_name.strip())
-                if zip_path.exists():
+                folder_path = path.joinpath(folder_name.strip())
+                if folder_path.exists():
                     response = self.message.question(self, "Existing Directory",
-                                                     f"Folder '{folder_name}' already exists. Copy and overwrite files "
-                                                     f"to this folder?", self.message.Yes, self.message.No)
+                                                     f"Folder '{folder_name}' already exists. Overwrite files "
+                                                     f"in this folder?", self.message.Yes, self.message.No)
                     if response == self.message.No:
                         return
 
@@ -2390,14 +2406,15 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     self.status_bar.showMessage(f"No processed files found in {path}.", 1500)
                     return
 
-                logger.debug(f"Delivery folder path: {str(zip_path)}")
-                zip_path.mkdir(exist_ok=True)
+                logger.debug(f"Delivery folder path: {str(folder_path)}")
+                folder_path.mkdir(exist_ok=True)
 
                 for file in files:
-                    logger.debug(f"Moving {file} to {zip_path.joinpath(file.name)}.")
-                    shutil.copyfile(file, zip_path.joinpath(file.name))
+                    logger.debug(f"Moving {file} to {folder_path.joinpath(file.name)}.")
+                    shutil.copyfile(file, folder_path.joinpath(file.name))
 
-                shutil.make_archive(str(zip_path), 'zip', str(zip_path))
+                shutil.make_archive(str(folder_path), 'zip', str(folder_path))
+                shutil.rmtree(str(folder_path))  # Remove the folder, only keep the .zip.
                 self.status_bar.showMessage(f"{folder_name}.zip created successfully.", 1500)
 
         def rename():
@@ -2415,11 +2432,12 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     self.message.critical(self, "Access Denied", "Access was defined.")
 
         menu = QMenu()
-        menu.addAction('Run Step', open_step)
+        menu.addAction(get_icon("rename"), 'Rename Folder', rename)
         menu.addSeparator()
-        # menu.addAction('Auto=Name Files', autoname_files)
-        menu.addAction('Create Delivery Folder', create_delivery_folder)
-        menu.addAction('Rename Folder', rename)
+        menu.addAction(get_icon("crone_logo"), 'Run Step', open_step)
+        menu.addSeparator()
+        menu.addAction('Auto-Name Files', autoname_files)
+        menu.addAction(get_icon("add"), 'Create Delivery Folder', create_delivery_folder)
         menu.exec_(self.project_tree.viewport().mapToGlobal(position))
 
     def move_dir_tree(self, dir_path, start_up=False):
@@ -5270,7 +5288,7 @@ class MagDeclinationCalculator(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    # mw = PEMHub(app)
+    mw = PEMHub(app)
 
     pem_getter = PEMGetter()
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
@@ -5290,7 +5308,6 @@ def main():
     # pem_files = pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0823.PEM")
     # pem_files = pem_getter.parse(r"C:\_Data\2021\Managem\Surface\Kokiak Aicha 2\RAW\600n_1112.dmp2")
     # pem_files = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-207\Final\_EM21-207 XYT.PEM")
-    pem_files = pem_getter.parse(r"C:\_Data\2021\Managem\Surface\Kokiak Aicha 2\RAW\1000N.PEM")
     # pem_files = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-206\RAW\em21-206 xy_1030.PEM")
     # pem_files2 = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-206\RAW\em21-206 z_1030.PEM")
     # pem_files = pem_getter.parse(samples_folder.joinpath(r"Line GPS\800N.PEM"))
@@ -5304,7 +5321,7 @@ def main():
     # channel_viewer = ChannelTimeViewer(pem_files)
     # channel_viewer.show()
 
-    gps_warning_viewer = GPSWarningViewer(pem_files)
+    # gps_warning_viewer = GPSWarningViewer(pem_files)
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
     # mw.open_project_dir()
     # mw.show()
@@ -5370,7 +5387,7 @@ def main():
 
     """"""
 
-    # mw.show()
+    mw.show()
     # mw.open_pdf_plot_printer(selected=False)
     app.exec_()
 

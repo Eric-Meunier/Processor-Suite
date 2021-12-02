@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import pylineclip as lc
 from PySide2.QtCore import Qt, Signal, QEvent, QTimer, QPointF, QRectF, QSettings
-from PySide2.QtGui import QColor, QFont, QTransform, QBrush, QPen, QKeySequence
+from PySide2.QtGui import QColor, QFont, QTransform, QBrush, QPen, QKeySequence, QCursor
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QLabel, QApplication, QWidget,
                                QInputDialog, QPushButton, QShortcut, QVBoxLayout)
 from scipy import spatial, signal
@@ -31,6 +31,10 @@ logger = logging.getLogger(__name__)
 pd.options.mode.chained_assignment = None  # default='warn'
 
 # TODO Change auto clean to have a start and end channel
+# TODO Toggle decay plots (double click?)
+# TODO Disable auto cleaning and auto-cleaning lines for PP files (shouldn't be needed with new PP viewer)
+# TODO update profile channel numbers to reflect actual channel number for non-split files
+# Scoll through single profile plot
 
 
 class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
@@ -70,6 +74,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.fallback_file = None
         self.units = None
 
+        self.profile_data = pd.DataFrame()
+        self.channel_bounds = None
+        self.theory_data = pd.DataFrame()
         self.stations = np.array([])
         self.mag_df = None
         self.current_component = "X"
@@ -250,10 +257,13 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Connect the mouse moved signal
             ax.scene().sigMouseMoved.connect(self.profile_mouse_moved)
-            ax.scene().sigMouseClicked.connect(self.profile_plot_clicked)
 
             if ax != self.profile_axes[0]:
                 ax.setXLink(self.profile_axes[0])
+
+        # Mouse click signal will be emitted for each axes per click if connected to each profile axes.
+        for ax in [self.x_ax, self.y_ax, self.z_ax]:
+            ax.scene().sigMouseClicked.connect(self.profile_plot_clicked)
 
         self.load_settings()  # Checking the checkboxes emits the signals, so load settings before connecting signals.
         self.init_signals()
@@ -473,15 +483,37 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         elif event.key() == Qt.Key_Escape:
             self.clear_selection()
 
-    def eventFilter(self, watched, event):
+    def eventFilter(self, source, event):
+        # Scroll through channels in the single profile plot
         if event.type() == QEvent.GraphicsSceneWheel:
-            # print(f"Wheel event")
-            self.pyqtgraphWheelEvent(event)
+            if keyboard.is_pressed("CTRL"):
+                # self.min_ch_sbox.blockSignals(True)
+                # self.max_ch_sbox.blockSignals(True)
+
+                y = event.delta()
+                if y < 0:
+                    # Increase channel numbers
+                    self.min_ch_sbox.blockSignals(True)  # Only block min ch spin box, so it doesn't pass the max.
+                    self.max_ch_sbox.setValue(self.max_ch_sbox.value() + 1)  # Profile plotting is done here
+                    self.min_ch_sbox.setValue(self.min_ch_sbox.value() + 1)
+                    self.min_ch_sbox.blockSignals(False)
+                else:
+                    # Decrease channel numbers
+                    self.max_ch_sbox.blockSignals(True)
+                    self.min_ch_sbox.setValue(self.min_ch_sbox.value() - 1)  # Profile plotting is done here
+                    self.max_ch_sbox.setValue(self.max_ch_sbox.value() - 1)
+                    self.max_ch_sbox.blockSignals(False)
+
+                # self.plot_profiles("all")
+                # self.min_ch_sbox.blockSignals(False)
+                # self.max_ch_sbox.blockSignals(False)
+            else:
+                self.pyqtgraphWheelEvent(event)  # Change currently selected station
             return True
         elif event.type() == QEvent.Close:
             event.accept()
             self.deleteLater()
-        return super().eventFilter(watched, event)
+        return super().eventFilter(source, event)
 
     def closeEvent(self, e):
         self.save_settings()
@@ -490,21 +522,12 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.deleteLater()
         e.accept()
 
-    def pyqtgraphWheelEvent(self, evt):
-        y = evt.delta()
+    def pyqtgraphWheelEvent(self, event):
+        y = event.delta()
         if y < 0:
             self.cycle_station('down')
         else:
             self.cycle_station('up')
-
-    # def dragEnterEvent(self, e):
-    #     urls = [url.toLocalFile() for url in e.mimeData().urls()]
-    #     if all([url.lower().endswith('pem') for url in urls]):
-    #         e.accept()
-    #
-    # def dropEvent(self, e):
-    #     urls = [url.toLocalFile() for url in e.mimeData().urls()]
-    #     self.open(urls[0])
 
     def save_img(self):
         """Save an image of the window """
@@ -532,6 +555,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         self.fallback_file = pem_file.copy()
         self.pem_file = pem_file
+        self.data_edited()  # Update the profile and theory data
 
         file_info = ' | '.join([f"Timebase: {self.pem_file.timebase:.2f}ms",
                                 f"{self.pem_file.get_survey_type()} Survey",
@@ -619,22 +643,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.reset_range()
 
         self.show()
-
-    # def open_file_dialog(self):
-    #     """
-    #     Open PEM files through the file dialog.
-    #     """
-    #     default_path = None
-    #     if self.parent:
-    #         default_path = self.parent.project_dir_edit.text()
-    #
-    #     files = QFileDialog.getOpenFileNames(self, 'Open File',
-    #                                          default_path,
-    #                                          filter='PEM files (*.pem)')
-    #     if files[0] != '':
-    #         file = files[0][0]
-    #         if file.lower().endswith('.pem'):
-    #             self.open(file)
 
     def save(self):
         """
@@ -860,7 +868,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                     continue
                 ax.clearPlots()
 
-        def plot_lin(profile_data, theory_data, axes):
+        def plot_lin(profile_data, axes):
             def plot_lines(df, ax):
                 """
                 Plot the lines on the pyqtgraph ax
@@ -870,13 +878,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 df_avg = df.groupby('Station').mean()
                 x, y = df_avg.index.to_numpy(), df_avg.to_numpy()
 
-                # TODO Try and add all the lines and cycle through instead for single axis
-                # line = pg.PlotCurveItem(x=x, y=y, pen=pg.mkPen(self.foreground_color, width=1.))
-                line = ax.plot(x=x, y=y, pen=pg.mkPen(self.foreground_color, width=1.))
-                # if not self.actionSplit_Profile.isChecked():
-                #     self.component_profile_plot_items[self.current_component].append(line)
-                # else:
-                #     ax.addItem(line)
+                ax.plot(x=x, y=y, pen=pg.mkPen(self.foreground_color, width=1.))
 
             def plot_scatters(df, ax):
                 """
@@ -912,7 +914,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             # both the split profiles and single profile.
             if self.actionSplit_Profile.isChecked():
                 # Plot the split profile axes
-                for i, bounds in enumerate(channel_bounds):
+                for i, bounds in enumerate(self.channel_bounds):
                     ax = axes[i + 1]  # axes[0] is the single profile ax
 
                     # Set the Y-axis labels
@@ -923,30 +925,30 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
                     # Plot the data
                     for channel in range(bounds[0], bounds[1] + 1):
-                        data = profile_data.iloc[:, channel]
+                        data = profile_data[profile_data.Deleted == False].loc[:, channel]
                         plot_lines(data, ax)
                         if self.show_scatter_cbox.isChecked():
                             plot_scatters(data, ax)
                         ax.autoRange()  # Is there ever a reason not to auto range the profile axes?
 
-                plot_theory_pp(theory_data, axes[1])
+                plot_theory_pp(self.theory_data, axes[1])
             else:
                 # Plot the single profile ax
                 min_ch, max_ch = self.min_ch_sbox.value(), self.max_ch_sbox.value()
                 ax = axes[0]
                 for channel in range(min_ch, max_ch):
                     ax.setLabel('left', f"Channel {'PP' if min_ch == 0 else min_ch} to {max_ch}", units=self.units)
-                    data = profile_data.iloc[:, channel]
+                    data = profile_data[profile_data.Deleted == False].loc[:, channel]
                     plot_lines(data, ax)
                     if self.show_scatter_cbox.isChecked():
                         plot_scatters(data, ax)
                     ax.autoRange()  # Is there ever a reason not to auto range the profile axes?
                 # Only plot the theoretical value if the PP is plotted.
                 if min_ch == 0:
-                    plot_theory_pp(theory_data, ax)
+                    plot_theory_pp(self.theory_data, ax)
 
         file = copy.deepcopy(self.pem_file)
-        file.data = file.data.loc[~file.data.Deleted.astype(bool)]
+        file.data = file.data.loc[~file.data.Deleted.astype(bool)]  # Remove deleted data for the profile plots.
         self.update_()
         self.number_of_readings.setText(f"{len(file.data)} reading(s)")
 
@@ -957,18 +959,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         clear_plots(components)
 
-        # Calculate the lin plot axes channel bounds (for split profile plots only)
-        channel_bounds = file.get_channel_bounds()
-
-        theory_data = self.pem_file.get_theory_pp()
-        # theory_data_2 = self.pem_file.get_theory_data()
-
         for component in components:
-            profile_data = file.get_profile_data(component,
-                                                 averaged=False,
-                                                 converted=True,
-                                                 ontime=False,
-                                                 incl_deleted=True).dropna()
+            profile_data = self.profile_data[self.profile_data.Component == component]
             # For nearest station calculation
             self.component_stations[component] = self.pem_file.get_stations(component=component, converted=True)
 
@@ -983,7 +975,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             else:
                 axes = self.z_layout_axes
 
-            plot_lin(profile_data, theory_data, axes)
+            plot_lin(profile_data, axes)
 
     def plot_decays(self, station, preserve_selection=False):
         """
@@ -1694,6 +1686,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         :return: None
         """
         self.pem_file.data.loc[:, 'Deleted'] = self.pem_file.data.loc[:, 'Deleted'].map(lambda x: False)
+        self.data_edited()
         self.refresh_plots()
 
     def change_decay_component_dialog(self, source=None):
@@ -1729,6 +1722,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
+            self.data_edited()
             self.refresh_plots(components=[old_comp, new_component], preserve_selection=True)
 
     def change_suffix_dialog(self, source=None):
@@ -1760,6 +1754,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         # Update the data in the pem file object
         self.pem_file.data.iloc[selected_data.index] = selected_data
+        self.data_edited()
         self.refresh_plots()
 
     def change_station(self):
@@ -1780,10 +1775,27 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 selected_data.loc[:, 'Station'] = re.sub(r"-?\d+", str(new_station), original_number)
                 # Update the data in the pem file object
                 self.pem_file.data.iloc[selected_data.index] = selected_data
+                self.data_edited()
 
                 # Update the plots
-                self.plot_profiles(components=selected_data.Component.unique())
-                self.plot_decays(self.selected_station)
+                self.refresh_plots(components=selected_data.Component.unique())
+
+    def data_edited(self):
+        """
+        Signal slot, when PEM data is modified, update the data used for profile plotting.
+        Removing the calculation of the profile data out of plot_profiles() helps speed up plotting when cycling thorugh
+        channels in the single profile plot.
+        :return: None
+        """
+        pem_file = self.pem_file.copy()
+        # Calculate the lin plot axes channel bounds (for split profile plots only)
+        self.channel_bounds = pem_file.get_channel_bounds()
+        self.theory_data = pem_file.get_theory_pp()
+
+        self.profile_data = pem_file.get_profile_data(averaged=False,
+                                                      converted=True,
+                                                      ontime=False,
+                                                      incl_deleted=True).dropna()
 
     def shift_stations(self):
         """
@@ -1809,6 +1821,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             selected_data.loc[:, 'Station'] = selected_data.loc[:, 'Station'].map(shift)
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
+            self.data_edited()
 
             # Update the plots
             self.refresh_plots(components=selected_data.Component.unique())
@@ -1829,6 +1842,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
+            self.data_edited()
             self.refresh_plots(components=selected_data.Component.unique(), preserve_selection=True)
 
     def remove_stations(self):
@@ -1842,6 +1856,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
+            self.data_edited()
             self.refresh_plots(components=selected_data.Component.unique(), preserve_selection=True)
 
     def cycle_profile_component(self):
@@ -2006,10 +2021,10 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         # Update the data
         self.pem_file.data.update(cleaned_data)
+        self.data_edited()
 
         # Plot the new data
-        self.plot_profiles(components='all')
-        self.plot_decays(self.selected_station)
+        self.refresh_plots(components="all")
 
         # Reset the range for only the profile axes.
         self.reset_range(decays=False, profiles=True)
@@ -2042,6 +2057,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Rename the stations
         repeats.Station = repeats.Station.map(auto_rename_repeats)
         self.pem_file.data.loc[repeats.index] = repeats
+        self.data_edited()
 
         # Plot the new data
         self.refresh_plots(components='all', preserve_selection=False)
@@ -2857,22 +2873,22 @@ if __name__ == '__main__':
     # PP drift testing
     # pem_file = pem_g.parse(samples_folder.joinpath(r"Test PEMS\pp (40 us drift).dmp"))
 
-    pp_viewer = PPViewer(darkmode=darkmode)
-    # pp_viewer.setWindowState(pp_viewer.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
-    # pp_viewer.setWindowFlags(Qt.WindowStaysOnTopHint)
-    pp_viewer.show()
-    pp_files = samples_folder.joinpath("PP files").glob("*.*")
-    for pp_file in list(pp_files)[:1]:
-        print(F"PP file: {pp_file}")
-        pem_file = pem_g.parse(pp_file)
-        pp_viewer.open(pem_file)
+    # pp_viewer = PPViewer(darkmode=darkmode)
+    # # pp_viewer.setWindowState(pp_viewer.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
+    # # pp_viewer.setWindowFlags(Qt.WindowStaysOnTopHint)
+    # pp_viewer.show()
+    # pp_files = samples_folder.joinpath("PP files").glob("*.*")
+    # for pp_file in list(pp_files)[:1]:
+    #     print(F"PP file: {pp_file}")
+    #     pem_file = pem_g.parse(pp_file)
+    #     pp_viewer.open(pem_file)
         # pp_viewer.activateWindow()
         # app.processEvents()
         # input("Press Enter to continue...")
 
     # pem_file = pem_g.parse(samples_folder.joinpath(r"Test PEMS\pp (eastern drift).dmp2"))
 
-    # pem_file = pem_g.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-211\RAW\em21-211 xy_1021.pem")
+    pem_file = pem_g.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-211\RAW\em21-211 xy_1021.pem")
     # pem_file = pem_g.parse(r"C:\_Data\2021\Managem\Surface\Kokiak Aicha\RAW\600n.PEM")
     # pem_file.prep_rotation()
     # pem_file.rotate()
@@ -2884,8 +2900,8 @@ if __name__ == '__main__':
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\1200E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]
 
-    # editor = PEMPlotEditor(darkmode=darkmode)
-    # editor.open(pem_file)
+    editor = PEMPlotEditor(darkmode=darkmode)
+    editor.open(pem_file)
     # editor.actionSplit_Profile.trigger()
     # editor.auto_clean()
 

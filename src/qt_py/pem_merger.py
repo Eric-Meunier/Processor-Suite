@@ -568,17 +568,16 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         else:
             color = self.pf2_color
 
+        profile_data = pem_file.get_profile_data(averaged=False,
+                                                 converted=True,
+                                                 ontime=False,
+                                                 incl_deleted=False)
         for component in components:
-            profile_data = pem_file.get_profile_data(component,
-                                                     averaged=False,
-                                                     converted=True,
-                                                     ontime=False,
-                                                     incl_deleted=False)
-
-            if profile_data.empty:
+            component_profile_data = profile_data[profile_data.Component == component]
+            if component_profile_data.empty:
                 continue
 
-            profile_data.apply(plot_lines)
+            component_profile_data.apply(plot_lines)
 
     def get_ax(self, channel, axes):
         """

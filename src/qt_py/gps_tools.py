@@ -986,12 +986,12 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
     def open(self, gps):
         """
         Add the data frame to GPSAdder. Adds the data to the table and plots it.
-        :param gps: Union (filepath, dataframe), file to open
+        :param gps: filepath or dataframe
         """
         def get_df(gps):
             df = pd.DataFrame()
             try:
-                df, _, _ = read_gps(gps)
+                df, gdf, crs = read_gps(gps)
                 # Convert NaNs to "0"
                 df = df.replace(to_replace=np.nan, value="0")
                 df = df.replace(to_replace="nan", value="0")  # In some dataframes, the NaN is just a "nan" string
@@ -999,11 +999,12 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
             except ValueError as e:
                 self.show()
                 self.message.critical(self, f"Parsing Error", str(e))
-            return df
+            else:
+                return df, crs
 
         self.setWindowTitle(f'Collar Picker - {self.pem_file.filepath.name}')
         gpx_errors = []
-        df = get_df(gps)
+        df, crs = get_df(gps)
 
         if df.empty:
             logger.critical(f"No GPS found to Collar Picker.")
@@ -1018,6 +1019,7 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
             error_str = '\n'.join(gpx_errors)
             self.message.warning(self, "Parsing Errors", f"The following errors occurred parsing the GPS file: "
                                                          f"{error_str}")
+        return crs
 
     def plot_table(self, preserve_limits=False):
         """
