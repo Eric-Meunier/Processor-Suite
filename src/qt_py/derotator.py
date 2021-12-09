@@ -44,6 +44,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.pem_file = None
         self.rotated_file = None
         self.rotation_note = None
+        self.profile_data = pd.DataFrame()
         self.soa = self.soa_sbox.value()
         self.message = QMessageBox()
 
@@ -290,7 +291,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         settings.setValue("windowGeometry", self.saveGeometry())
 
         # Setting options
-        settings.setValue("actionShow_Scatter", self.actionSymbols.isChecked())
+        settings.setValue("actionShow_Scatter", self.actionShow_Scatter.isChecked())
 
         settings.endGroup()
 
@@ -305,15 +306,15 @@ class Derotator(QMainWindow, Ui_Derotator):
         # Setting options
         self.actionShow_Scatter.setChecked(settings.value("actionShow_Scatter", defaultValue=True, type=bool))
 
+    def closeEvent(self, e):
+        self.save_settings()
+        self.deleteLater()
+        e.accept()
+
     def accept(self):
         self.accept_sig.emit(self.rotated_file)
         self.close()
         self.deleteLater()
-
-    def eventFilter(self, watched, event):
-        if event.type() == QEvent.Close:  # Close the viewboxes when the window is closed
-            self.deleteLater()
-        return super().eventFilter(watched, event)
 
     def toggle_scatter(self):
         scatters = [self.acc_dev_scatter, self.mag_dev_scatter, self.dip_scatter, self.mag_scatter,
@@ -494,6 +495,30 @@ class Derotator(QMainWindow, Ui_Derotator):
             self.pp_ax.addItem(self.theory_pp_curve)
             self.pp_ax.addItem(self.theory_pp_scatter)
 
+        def set_default_soa():
+            """
+            Set the SOA using the mean deviation between the accelerometer and measured PP values.
+            :return: None
+            """
+            if not pem_file.has_d7():
+                return
+            acc_df = pem_file.get_roll_data("Acc", self.soa)
+            measured_pp_df = pem_file.get_roll_data("Measured_PP", self.soa)
+            acc_deviation = measured_pp_df.Angle - acc_df.Angle
+            if all(acc_deviation < 0):
+                acc_deviation = acc_deviation + 360
+
+            # Calculate the average deviation for the curve line
+            acc_dev_df = pd.DataFrame([acc_deviation, acc_df.Station]).T
+            acc_avg_df = acc_dev_df.groupby("Station", as_index=False).mean()
+
+            # Set the SOA to the mean accelerometer deviation
+            soa = acc_avg_df.Angle.mean()
+            self.soa = (soa if soa < 180 else 360 - soa) * - 1
+            self.soa_sbox.blockSignals(True)
+            self.soa_sbox.setValue(self.soa)
+            self.soa_sbox.blockSignals(False)
+
         while isinstance(pem_file, list):
             pem_file = pem_file[0]
 
@@ -535,13 +560,8 @@ class Derotator(QMainWindow, Ui_Derotator):
 
                 if not self.pem_file.has_d7():
                     self.unrotate_btn.setEnabled(False)
-        # try:
+
         self.pem_file, ineligible_stations = self.pem_file.prep_rotation()
-        # except Exception as e:
-        #     # Common exception will be that there is no eligible data
-        #     logger.error(str(e))
-        #     self.message.information(self, 'Error', str(e))
-        # else:
         self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")
 
         # Disable the PP values tab if there's no PP information. Also disable PP de-rotation
@@ -577,6 +597,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         for ax in [self.dev_ax, self.dip_ax, self.mag_ax, self.rot_ax, self.pp_ax]:
             ax.setLimits(yMin=stations.min() - 1, yMax=stations.max() + 1)
 
+        set_default_soa()
         self.rotate()
         if self.pem_file.has_d7():
             plot_mag()
@@ -592,13 +613,11 @@ class Derotator(QMainWindow, Ui_Derotator):
         Plot the PEM file in a LIN plot style, with both components in separate plots
         :param pem_file: PEMFile object
         """
-
         def clear_plots():
             for ax in np.concatenate([self.x_view_axes, self.y_view_axes]):
                 ax.clear()
 
         def plot_lin(component):
-
             def plot_lines(df, ax):
                 """
                 Plot the lines on the pyqtgraph ax for a given channel
@@ -611,7 +630,8 @@ class Derotator(QMainWindow, Ui_Derotator):
                 ax.plot(x=x, y=y,
                         pen=pg.mkPen(self.foreground_color, width=0.8))
 
-            component_profile_data = profile_data[self.profile_data.Component == component]
+            component_profile_data = self.profile_data[self.profile_data.Component == component].drop(
+                columns=["Component", "Deleted"]).set_index('Station', drop=True)
             if component_profile_data.empty:
                 raise ValueError(f'Profile data for {self.pem_file.filepath.name} is empty.')
 
@@ -721,7 +741,7 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         raw_pem = pem_file.copy()  # Needed otherwise the returned PEMFile will be averaged and split
         processed_pem = pem_file.copy()
-        profile_data = processed_pem.get_profile_data(converted=True, incl_deleted=False)
+        self.profile_data = processed_pem.get_profile_data(converted=True, incl_deleted=False)
 
         # Split the data if it isn't already split
         if not processed_pem.is_split():
@@ -740,16 +760,16 @@ class Derotator(QMainWindow, Ui_Derotator):
         rotation_data.Station = rotation_data.Station.astype(float)
         rotation_data.sort_values("Station", inplace=True)
 
+        if pem_file.has_all_gps() and pem_file.ramp > 0:
+            plot_deviation()
+
         plot_lin('X')
         plot_lin('Y')
         plot_rotation()
 
-        if pem_file.has_all_gps() and pem_file.ramp > 0:
-            plot_deviation()
-
     def rotate(self):
         """
-        Rotate and plot the data, always using the original PEMFile
+        Rotate and plot the data, always using the original PEMFile.
         """
         method = self.get_method()
         if method == "unrotate":
@@ -814,10 +834,13 @@ def main():
     #     d.open(pem_file)
 
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="SAN-225G-18 Tool - Mag (PEMPro).PEM")
-    pem_files = pem_g.get_pems(folder="Rotation Testing", file="_SAN-225G-18 XYZ.PEM")
+    # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_SAN-225G-18 XYZ.PEM")
+    pem_files = pem_g.get_pems(folder="Rotation Testing", file="_BX-081 XY.PEM")
+    # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_MRC-067 XY.PEM")
+    # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_MX-198 XY.PEM")
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM")
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
-    # pem_files = pem_g.get_pems(folder="TMC", subfolder=r"131-21-37\DATA", file="131-21-37 XY.PEM")
+    # pem_files = pem_g.get_pems(folder="TMC", file=r"131-21-37\DATA\131-21-37 XY.PEM")
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_SAN-0246-19 XY (Cross bug).PEM")
     mw = Derotator(darkmode=darkmode)
     mw.open(pem_files)

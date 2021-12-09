@@ -74,6 +74,7 @@ logger = logging.getLogger(__name__)
 # TODO to remove loop edge effects, remove the primary field (or a percentage of it) from the readings, which is the PP
 # TODO Add component specific coil area scaling (for SQUID).
 # TODO Add scroll wheel channel-scrolling for single plot in plot editor.
+# TODO Auto-calculate SOA in derotator.
 
 
 # Keep a list of widgets so they don't get garbage collected
@@ -1210,8 +1211,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         self.derotate_action.setDisabled(True)
                     else:
                         self.derotate_action.setDisabled(False)
-                    if pem_file.is_derotated() and pem_file.has_d7():
-                        self.right_click_menu.addAction(self.revert_xy_rotation_action)
+                        if pem_file.is_derotated() and pem_file.has_d7():
+                            self.right_click_menu.addAction(self.revert_xy_rotation_action)
                 self.right_click_menu.addAction(self.get_geometry_action)
                 self.right_click_menu.addSeparator()
 

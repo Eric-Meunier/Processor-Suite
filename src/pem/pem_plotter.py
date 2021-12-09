@@ -576,7 +576,7 @@ class ProfilePlotter:
     :param hide_gaps: bool, to hide plotted lines where there are gaps in the data
     :return: Matplotlib Figure object
     """
-    def __init__(self, pem_file, figure, x_min=None, x_max=None, hide_gaps=True):
+    def __init__(self, pem_file, profile_data, figure, x_min=None, x_max=None, hide_gaps=True):
         if isinstance(pem_file, str) and os.path.isfile(pem_file):
             pem_file = PEMParser().parse(pem_file)
 
@@ -587,6 +587,7 @@ class ProfilePlotter:
 
         plt.style.use('default')
         self.pem_file = pem_file
+        self.profile_data = profile_data
         self.figure = figure
 
         self.x_min = x_min
@@ -841,9 +842,8 @@ class LINPlotter(ProfilePlotter):
      :param hide_gaps: bool, to hide plotted lines where there are gaps in the data
      :return: Matplotlib Figure object
      """
-
-    def __init__(self, pem_file, figure, x_min=None, x_max=None, hide_gaps=True):
-        super().__init__(pem_file, figure, x_min=x_min, x_max=x_max, hide_gaps=hide_gaps)
+    def __init__(self, pem_file, profile_data, figure, x_min=None, x_max=None, hide_gaps=True):
+        super().__init__(pem_file, profile_data, figure, x_min=x_min, x_max=x_max, hide_gaps=hide_gaps)
         self.figure.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.885)
 
     def plot(self, component):
@@ -862,7 +862,8 @@ class LINPlotter(ProfilePlotter):
                     ax.set_ylabel(f"Channel {channel_bounds[i][0]} - {channel_bounds[i][1]}\n({units})")
 
         logger.info(f"Plotting LIN for {self.pem_file.filepath.name}, {component} component.")
-        profile = self.pem_file.get_profile_data(component, converted=True)
+        component_profile_data = self.profile_data[self.profile_data.Component == component]
+        component_profile_data = component_profile_data.drop(columns=["Component"]).set_index('Station', drop=True)
         channel_bounds = self.pem_file.get_channel_bounds()
         for i, group in enumerate(channel_bounds):
             # Starting offset used for channel annotations
@@ -870,8 +871,8 @@ class LINPlotter(ProfilePlotter):
             ax = self.figure.axes[i]
 
             for ch in range(group[0], group[1] + 1):
-                stations = profile.index.values
-                data = profile.loc[:, ch].to_numpy()
+                stations = component_profile_data.index.values
+                data = component_profile_data.loc[:, ch].to_numpy()
 
                 # Interpolate the X and Y data and mask gaps
                 interp_stations, interp_data = self.get_interp_data(stations, data)
@@ -904,13 +905,11 @@ class LOGPlotter(ProfilePlotter):
      :param hide_gaps: bool, to hide plotted lines where there are gaps in the data
      :return: Matplotlib Figure object
      """
-
-    def __init__(self, pem_file, figure, x_min=None, x_max=None, hide_gaps=True):
-        super().__init__(pem_file, figure, x_min=x_min, x_max=x_max, hide_gaps=hide_gaps)
+    def __init__(self, pem_file, profile_data, figure, x_min=None, x_max=None, hide_gaps=True):
+        super().__init__(pem_file, profile_data, figure, x_min=x_min, x_max=x_max, hide_gaps=hide_gaps)
         self.figure.subplots_adjust(left=0.135, bottom=0.07, right=0.958, top=0.885)
 
     def plot(self, component):
-
         def add_ylabels():
             if self.pem_file.is_fluxgate():
                 if float(self.pem_file.current) == 1.:
@@ -925,11 +924,12 @@ class LOGPlotter(ProfilePlotter):
         ax = self.figure.axes[0]
         # Starting offset used for channel annotations
         offset = 100
-        profile = self.pem_file.get_profile_data(component, converted=True)
+        component_profile_data = self.profile_data[self.profile_data.Component == component]
+        component_profile_data = component_profile_data.drop(columns=["Component"]).set_index('Station', drop=True)
 
         for ch in range(self.pem_file.number_of_channels):
-            stations = profile.index.values
-            data = profile.loc[:, ch].to_numpy()
+            stations = component_profile_data.index.values
+            data = component_profile_data.loc[:, ch].to_numpy()
 
             # Interpolate the X and Y data and mask gaps
             interp_stations, interp_data = self.get_interp_data(stations, data)
@@ -963,9 +963,8 @@ class STEPPlotter(ProfilePlotter):
      :param hide_gaps: bool, to hide plotted lines where there are gaps in the data
      :return: Matplotlib Figure object
      """
-
     def __init__(self, pem_file, ri_file, figure, x_min=None, x_max=None, hide_gaps=True):
-        super().__init__(pem_file, figure, x_min=x_min, x_max=x_max, hide_gaps=hide_gaps)
+        super().__init__(pem_file, None, figure, x_min=x_min, x_max=x_max, hide_gaps=hide_gaps)
         if isinstance(ri_file, str) and os.path.isfile(ri_file):
             ri_file = RIFile().open(ri_file)
         self.ri_file = ri_file
@@ -1016,7 +1015,6 @@ class STEPPlotter(ProfilePlotter):
             ax.yaxis.set_major_formatter(ticker.FormatStrFormatter('%d'))  # Prevent scientific notation
 
     def plot(self, component):
-
         def add_ylabel():
             units = 'pT' if self.pem_file.is_fluxgate() else 'nT/s'
             channels = [re.findall('\d+', key)[0] for key in ri_profile if re.match('Ch', key)]
@@ -1124,7 +1122,6 @@ class RotnAnnotation(text.Annotation):
     :param ax: Axes object
     :param kwargs: text object kwargs
     """
-
     def __init__(self, label_str, label_xy, p, pa=None, ax=None, hole_collar=False, **kwargs):
         self.ax = ax or plt.gca()
         self.p = p
@@ -3015,8 +3012,9 @@ class PEMPrinter:
             # Saving the LIN plots
             if self.print_lin_plots is True:
                 for pem_file in pem_files:
+                    profile_data = pem_file.get_profile_data(converted=True, averaged=True, ontime=False)
                     # Create the LINPlotter instance
-                    lin_plotter = LINPlotter(pem_file, self.portrait_fig,
+                    lin_plotter = LINPlotter(pem_file, profile_data, self.portrait_fig,
                                              x_min=x_min,
                                              x_max=x_max,
                                              hide_gaps=self.hide_gaps)
@@ -3046,8 +3044,9 @@ class PEMPrinter:
             # Saving the LOG plots
             if self.print_log_plots is True:
                 for pem_file in pem_files:
+                    profile_data = pem_file.get_profile_data(converted=True, averaged=True, ontime=False)
                     # Create the LOGPlotter instance
-                    log_plotter = LOGPlotter(pem_file, self.portrait_fig,
+                    log_plotter = LOGPlotter(pem_file, profile_data, self.portrait_fig,
                                              x_min=x_min,
                                              x_max=x_max,
                                              hide_gaps=self.hide_gaps)

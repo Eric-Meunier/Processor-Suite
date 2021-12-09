@@ -1281,6 +1281,8 @@ class StepFile:
             os.remove(str(new_path))
         os.rename(str(self.filepath), str(new_path))
         self.filepath = new_path
+        # For the time being, until Step is fixed, re-save the file so that <FMT> is set to 230.
+        self.save()
         return self.filepath
 
     def auto_name_line(self):
@@ -1333,7 +1335,7 @@ class StepFile:
                 if not self.line.df.empty:
                     self.line = self.line.to_epsg(epsg_code)
 
-    def to_string(self, legacy=False):
+    def to_string(self, legacy=True):
         """
         Return the text format of the Step file
         :param legacy: bool, if True will strip newer features so it is compatible with Step (such as D5 RAD tool
@@ -1341,7 +1343,7 @@ class StepFile:
         :return: str, Full text of the Step file
         """
         ps = StepSerializer()
-        text = ps.serialize(self.copy(), legacy=legacy)
+        text = ps.serialize(self.copy(), legacy=True)
         return text
 
     def to_headerdf(self):
@@ -2439,10 +2441,14 @@ class StepParser:
                 data = reading.strip().split('\n')  # Strip because readings can have more than 1 new line between them.
                 head = data[0].split()
 
-                # TODO Parse SQUID stp files from Managem
                 station = head[0]
                 comp = head[1][0]
-                reading_index = re.search(r'\d+', head[1]).group()
+                # Fluxgate surveys have no reading index, so we will add 1 as the reading index
+                reading_index_search = re.search(r'\d+', head[1])
+                if reading_index_search:
+                    reading_index = reading_index_search.group()
+                else:
+                    reading_index = "1"
                 gain = head[2]
                 rx_type = head[3]
                 zts = head[4]
@@ -2572,23 +2578,32 @@ class StepSerializer:
     def __init__(self):
         self.step_file = None
 
-    def serialize_tags(self):
+    def serialize_tags(self, fluxgate=False):
+        format_boilerplate = "~ data format"
+        units_boilerplate = "~ actually %, and originally pT" if fluxgate else "~ data units"
+        operator_boilerplate = "~ operator's name"
+        probe_boilerplate = "~ probe #, SOA, tool or RAD #, tool id"
+        current_boilerplate = "~ peak current in loop"
+        loop_size_boilerplate = "~ loop size (x y units) (units: 0 = m, 1 = ft)"
+
         result = ""
         xyp = ' '.join([self.step_file.probes.get('Probe number'),
                         self.step_file.probes.get('SOA'),
                         self.step_file.probes.get('Tool number'),
                         self.step_file.probes.get('Tool ID')])
-        result += f"<FMT> 230\n"  # Force 230, as sometimes 210 is entered and causes issues with Maxwell
+        # Force 230, as sometimes 210 is entered and causes issues with Maxwell
+        result += f"<FMT> {'230':<37}{format_boilerplate}\n"
         # result += f"<FMT> {self.step_file.format}\n"
-        result += f"<UNI> {'nanoTesla/sec' if self.step_file.units == 'nT/s' else 'picoTesla'}\n"
-        result += f"<OPR> {self.step_file.operator}\n"
-        result += f"<XYP> {xyp}\n"
-        result += f"<CUR> {self.step_file.current}\n"
-        result += f"<TXS> {self.step_file.loop_dimensions}"
+        result += f"<UNI> {'nanoTesla/sec' if self.step_file.units == 'nT/s' else 'picoTesla':<37}{units_boilerplate}\n"
+        result += f"<OPR> {self.step_file.operator:<37}{operator_boilerplate}\n"
+        result += f"<XYP> {xyp:<37}{probe_boilerplate}\n"
+        result += f"<CUR> {self.step_file.current:<37}{current_boilerplate}\n"
+        result += f"<TXS> {self.step_file.loop_dimensions:<37}{loop_size_boilerplate}"
 
         return result
 
     def serialize_loop_coords(self):
+        loop_boilerplate = ["~ x y z units", "~ units=0: m", "~ units=1: ft"]
         result = '~ Transmitter Loop Co-ordinates:'
         loop = self.step_file.get_loop_gps()
         units_code = self.step_file.loop.get_units_code()
@@ -2597,9 +2612,11 @@ class StepSerializer:
             result += '\n<L00>\n''<L01>\n''<L02>\n''<L03>'
         else:
             loop.reset_index(inplace=True)
-            for row in loop.itertuples():
+            for i, row in enumerate(loop.itertuples()):
                 tag = f"<L{row.Index:02d}>"
                 row = f"{tag} {row.Easting:.2f} {row.Northing:.2f} {row.Elevation:.2f} {units_code}"
+                if i < len(loop_boilerplate):
+                    row = f"{row:<43}{loop_boilerplate[i]}"
                 result += '\n' + row
         return result
 
@@ -2610,12 +2627,22 @@ class StepSerializer:
             units_code = self.step_file.line.get_units_code()
             assert units_code, f"No units code for the line of {self.step_file.get_file_name()}."
             if line.empty:
-                result += '\n<P00>\n''<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>'
+                rows = ['<P01>',
+                        '<P02>',
+                        '<P03>',
+                        '<P04>',
+                        '<P05>']
+                for i, row in enumerate(rows):
+                    if i < len(profile_boilerplate):
+                        row = f"{row:<43}{profile_boilerplate[i]}"
+                    result += '\n' + row
             else:
                 line.reset_index(inplace=True)
-                for row in line.itertuples():
+                for i, row in enumerate(line.itertuples()):
                     tag = f"<P{row.Index:02d}>"
                     row = f"{tag} {row.Easting:.2f} {row.Northing:.2f} {row.Elevation:.2f} {units_code} {row.Station}"
+                    if i < len(profile_boilerplate):
+                        row = f"{row:<43}{profile_boilerplate[i]}"
                     result += '\n' + row
             return result
 
@@ -2626,11 +2653,12 @@ class StepSerializer:
             units_code = self.step_file.collar.get_units_code()
             assert units_code, f"No units code for the collar of {self.step_file.get_file_name()}."
             if collar.empty:
-                result += '\n<P00>'
+                result += '\n' + f"{'<P00>:<43'}{profile_boilerplate[0]}"
             else:
                 for row in collar.itertuples():
                     tag = f"<P{row.Index:02d}>"
                     row = f"{tag} {row.Easting:.2f} {row.Northing:.2f} {row.Elevation:.2f} {units_code}"
+                    row = f"{row:<43}{profile_boilerplate[0]}"
                     result += '\n' + row
             return result
 
@@ -2641,13 +2669,33 @@ class StepSerializer:
             units_code = self.step_file.segments.get_units_code()
             assert units_code, f"No units code for the segments of {self.step_file.get_file_name()}."
             if segs.empty:
-                result += '\n<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>'
+                rows = ['<P01>',
+                        '<P02>',
+                        '<P03>',
+                        '<P04>',
+                        '<P05>']
+                for i, row in enumerate(rows):
+                    if i < len(profile_boilerplate) - 1:
+                        row = f"{row:<43}{profile_boilerplate[i - 1]}"  # -1 since the first item is added to collar
+                    result += '\n' + row
             else:
-                for row in segs.itertuples():
+                for i, row in enumerate(segs.itertuples()):
                     tag = f"<P{row.Index + 1:02d}>"
                     row = f"{tag} {row.Azimuth:.2f} {row.Dip:.2f} {row[3]:.2f} {units_code} {row.Depth:.2f}"
+                    if i < len(profile_boilerplate) - 1:
+                        row = f"{row:<43}{profile_boilerplate[i - 1]}"  # -1 since the first item is added to collar
                     result += '\n' + row
             return result
+
+        profile_boilerplate = ["~ 4 or 5 numbers:  X Y Z Units Stn",
+                               "~  Units=0 (m) or 1 (ft).",
+                               "~ Surface: Stn -ve for West & South.",
+                               "~ BH: after <P00> for collar coords,",
+                               "~  can define hole segments with:",
+                               "~  Az Dip Length Units Depth",
+                               "~  Dip +ve down. Units =2(m) =3(ft).",
+                               "~  Depth: Length sum to segment end.",
+                               "~ BH: Stn and Depth are optional."]
 
         if self.step_file.is_borehole():
             return serialize_collar_coords() + \
@@ -2729,14 +2777,16 @@ class StepSerializer:
         result += '$'
         return result
 
-    def serialize_data(self, legacy=False):
+    def serialize_data(self, legacy=False, fluxgate=False):
         """
         Print the data to text for a Step file format.
         :param legacy: bool, will remove the timestamp and deleted status if True.
+        :param fluxgate: Bool, if the step file is for a fluxgate survey, where the reading index will be ignored.
         :return: string
         """
         def serialize_reading(reading):
             reading_header = [reading['Station'],
+                              reading['Component'] if fluxgate else
                               reading['Component'] + 'R' + f"{reading['Reading_index']:g}",
                               f"{reading['Gain']:g}",
                               reading['Rx_type'],
@@ -2754,7 +2804,7 @@ class StepSerializer:
                                        ])
 
             result = ' '.join(reading_header) + '\n'
-            rad = reading['RAD_tool'].to_string(legacy=legacy)
+            rad = reading['RAD_tool'].to_string()
             result += rad + '\n'
 
             readings_per_line = 7
@@ -2791,14 +2841,15 @@ class StepSerializer:
         :return: A string in Step file format containing the data found inside of step_file
         """
         self.step_file = step_file
+        is_fluxgate = step_file.is_fluxgate()
 
-        result = self.serialize_tags() + '\n'
+        result = self.serialize_tags(fluxgate=is_fluxgate) + '\n'
         result += self.serialize_loop_coords() + '\n'
         result += self.serialize_line_coords() + '\n'
         result += self.serialize_notes()
         result += '~\n'
         result += self.serialize_header() + '\n'
-        result += self.serialize_data(legacy=legacy)
+        result += self.serialize_data(legacy=legacy, fluxgate=is_fluxgate)
         return result
 
 
@@ -2846,14 +2897,14 @@ class RADTool:
 
         return self
 
-    def to_string(self, legacy=False):
+    def to_string(self):
         """
         Create a string for Step serialization
-        :param legacy: bool, if True, return D5 values instead of D7 for compatibility with Step.
         :return: str
         """
         # If the input D value is already D5
-        result = list(self.D)
+        result = list()
+        result.append(self.D)
         result.append(f"{self.x:g}")
         result.append(f"{self.y:g}")
         result.append(f"{self.z:g}")
@@ -2964,11 +3015,17 @@ class StepGetter:
 if __name__ == '__main__':
     sample_folder = Path(__file__).parents[2].joinpath("sample_files")
 
-    file = sample_folder.joinpath(r"Step files\XY.STP")
-    step_file = StepParser().parse(file)
+    # file = sample_folder.joinpath(r"Step files\XY.STP")
+    # file = sample_folder.joinpath(r"Step files\Surface Induction\10200E.STP")
+    # file = sample_folder.joinpath(r"Step files\Borehole Fluxgate\TK-21-49 XYZ.stp")
+    # file = sample_folder.joinpath(r"Step files\Surface Fluxgate\0N.STP")
+    for file in sample_folder.joinpath("Step Files").rglob("*.stp"):
+        step_file = StepParser().parse(file)
 
-    print(step_file.get_components())
-    print(step_file.auto_name_file())
-    print(step_file.get_file_name())
+        # print(step_file.get_components())
+        # print(step_file.auto_name_file())
+        print(step_file.get_file_name())
+
+        # print(step_file.to_string())
     # print(step_file.to_string(legacy=True))
 

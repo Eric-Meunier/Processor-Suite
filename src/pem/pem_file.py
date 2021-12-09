@@ -2,6 +2,7 @@ import copy
 import logging
 import math
 import re
+import time
 import os
 from datetime import datetime
 from pathlib import Path
@@ -18,10 +19,13 @@ from src.pem import convert_station
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
 # from src.logger import Log
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
+from src import timeit
 
 logger = logging.getLogger(__name__)
 
 pd.options.mode.chained_assignment = None  # default='warn'
+
+# TODO Auto-name DMP files and PP files. For PP files, name should just be Date + Receiver + 'PP'
 
 
 def parse_file(filepath):
@@ -124,7 +128,6 @@ class PEMFile:
     """
     PEM file class
     """
-
     def __init__(self):
         self.format = None
         self.units = None
@@ -776,7 +779,7 @@ class PEMFile:
         # Insert the Component and Deleted columns
         profile.insert(1, 'Component', data.Component)
         profile.insert(2, 'Deleted', data.Deleted)
-        profile.set_index('Station', drop=True, inplace=True)
+        # profile.set_index('Station', drop=True, inplace=True)
 
         if averaged is True:
             profile.drop(columns=["Deleted"], inplace=True)  # No need to keep the Deleted column for averaged data.
@@ -1344,7 +1347,8 @@ class PEMFile:
                                                  ontime=True,
                                                  incl_deleted=True)
             for component in self.get_components():
-                pp_data = profile_data[profile_data.Component == component].loc[:, pp_ch_num]
+                pp_data = profile_data[profile_data.Component == component].set_index(
+                    'Station', drop=True).loc[:, pp_ch_num]
 
                 # Only include common stations. PP represents the measured data, XYZ are theoretical.
                 df = pd.concat([pp_data, theory_pp_data], axis=1).rename({pp_ch_num: 'PP'}, axis=1).dropna(axis=0)
@@ -1823,6 +1827,7 @@ class PEMFile:
         self.soa += soa
         logger.info(f"De-rotating data of {self.filepath.name} using {method} with SOA {self.soa}.")
 
+        # @timeit
         def rotate_group(group, method, soa):
             """
             Rotate the data for a given reading.
@@ -2084,13 +2089,11 @@ class PEMFile:
             reading from X and Y components, and the RAD tool values for all readings must all be the same.
             :return: pandas DataFrame: group with the RAD_tool objects updated and ready for rotation.
             """
-
             def calculate_angles(rad):
                 """
                 Calculate the roll angle for each available method and add it to the RAD tool object.
                 :param rad: RADTool object
                 """
-
                 def calculate_pp_angles():
                     def get_cleaned_pp(row):
                         """
@@ -2229,7 +2232,7 @@ class PEMFile:
                     # Update the new_rad with the de-rotation information
                     new_info = {'acc_roll_angle': roll_angle,
                                 'acc_dip': dip}
-
+                    # print(new_info)
                     for key, value in new_info.items():
                         setattr(rad, key, value)
 
@@ -2241,7 +2244,8 @@ class PEMFile:
 
                     theta = math.atan2(-y, -z)
                     cc_roll_angle = math.degrees(theta)
-                    roll_angle = 360 - cc_roll_angle if y < 0 else cc_roll_angle
+                    roll_angle = cc_roll_angle if y < 0 else cc_roll_angle
+                    roll_angle -= 180  # Mag rotation always seems to be backwards, don't know why.
                     if roll_angle > 360:
                         roll_angle = roll_angle - 360
                     elif roll_angle < 0:
@@ -2253,9 +2257,33 @@ class PEMFile:
                     # Update the new_rad with the de-rotation information
                     new_info = {'mag_roll_angle': roll_angle,
                                 'mag_dip': dip}
-
+                    # print(new_info)
                     for key, value in new_info.items():
                         setattr(rad, key, value)
+
+                # def calculate_mag_angles():
+                #     if rad.D == 'D5':
+                #         x, y, z = rad.x, rad.y, rad.z
+                #     else:
+                #         x, y, z = rad.Hx, rad.Hy, rad.Hz
+                #
+                #     theta = math.atan2(-y, -z)
+                #     cc_roll_angle = math.degrees(theta)
+                #     roll_angle = 360 - cc_roll_angle if y < 0 else cc_roll_angle
+                #     if roll_angle > 360:
+                #         roll_angle = roll_angle - 360
+                #     elif roll_angle < 0:
+                #         roll_angle = -roll_angle
+                #
+                #     # Calculate the dip
+                #     dip = -90.  # The dip is assumed to be 90°
+                #
+                #     # Update the new_rad with the de-rotation information
+                #     new_info = {'mag_roll_angle': roll_angle,
+                #                 'mag_dip': dip}
+                #
+                #     for key, value in new_info.items():
+                #         setattr(rad, key, value)
 
                 calculate_pp_angles()
                 calculate_acc_angles()
@@ -3310,26 +3338,34 @@ class PEMSerializer:
     """
     Class for serializing PEM files to be saved
     """
-
     def __init__(self):
         self.pem_file = None
 
     def serialize_tags(self):
+        format_boilerplate = "~ data format"
+        units_boilerplate = "~ data units"
+        operator_boilerplate = "~ operator's name"
+        probe_boilerplate = "~ probe #, SOA, tool or RAD #, tool id"
+        current_boilerplate = "~ peak current in loop"
+        loop_size_boilerplate = "~ loop size (x y units) (units: 0 = m, 1 = ft)"
+
         result = ""
         xyp = ' '.join([self.pem_file.probes.get('Probe number'),
                         self.pem_file.probes.get('SOA'),
                         self.pem_file.probes.get('Tool number'),
                         self.pem_file.probes.get('Tool ID')])
-        result += f"<FMT> {self.pem_file.format}\n"
-        result += f"<UNI> {'nanoTesla/sec' if self.pem_file.units == 'nT/s' else 'picoTesla'}\n"
-        result += f"<OPR> {self.pem_file.operator}\n"
-        result += f"<XYP> {xyp}\n"
-        result += f"<CUR> {self.pem_file.current}\n"
-        result += f"<TXS> {self.pem_file.loop_dimensions}"
+        # Force 230, as sometimes 210 is entered and causes issues with Maxwell
+        result += f"<FMT> {self.pem_file.format:<37}{format_boilerplate}\n"
+        result += f"<UNI> {'nanoTesla/sec' if self.pem_file.units == 'nT/s' else 'picoTesla':<37}{units_boilerplate}\n"
+        result += f"<OPR> {self.pem_file.operator:<37}{operator_boilerplate}\n"
+        result += f"<XYP> {xyp:<37}{probe_boilerplate}\n"
+        result += f"<CUR> {self.pem_file.current:<37}{current_boilerplate}\n"
+        result += f"<TXS> {self.pem_file.loop_dimensions:<37}{loop_size_boilerplate}"
 
         return result
 
     def serialize_loop_coords(self):
+        loop_boilerplate = ["~ x y z units", "~ units=0: m", "~ units=1: ft"]
         result = '~ Transmitter Loop Co-ordinates:'
         loop = self.pem_file.get_loop_gps()
         units_code = self.pem_file.loop.get_units_code()
@@ -3338,9 +3374,11 @@ class PEMSerializer:
             result += '\n<L00>\n''<L01>\n''<L02>\n''<L03>'
         else:
             loop.reset_index(inplace=True)
-            for row in loop.itertuples():
+            for i, row in enumerate(loop.itertuples()):
                 tag = f"<L{row.Index:02d}>"
                 row = f"{tag} {row.Easting:.2f} {row.Northing:.2f} {row.Elevation:.2f} {units_code}"
+                if i < len(loop_boilerplate):
+                    row = f"{row:<43}{loop_boilerplate[i]}"
                 result += '\n' + row
         return result
 
@@ -3351,12 +3389,22 @@ class PEMSerializer:
             units_code = self.pem_file.line.get_units_code()
             assert units_code, f"No units code for the line of {self.pem_file.get_file_name()}."
             if line.empty:
-                result += '\n<P00>\n''<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>'
+                rows = ['<P01>',
+                        '<P02>',
+                        '<P03>',
+                        '<P04>',
+                        '<P05>']
+                for i, row in enumerate(rows):
+                    if i < len(profile_boilerplate):
+                        row = f"{row:<43}{profile_boilerplate[i]}"
+                    result += '\n' + row
             else:
                 line.reset_index(inplace=True)
-                for row in line.itertuples():
+                for i, row in enumerate(line.itertuples()):
                     tag = f"<P{row.Index:02d}>"
                     row = f"{tag} {row.Easting:.2f} {row.Northing:.2f} {row.Elevation:.2f} {units_code} {row.Station}"
+                    if i < len(profile_boilerplate):
+                        row = f"{row:<43}{profile_boilerplate[i]}"
                     result += '\n' + row
             return result
 
@@ -3367,11 +3415,12 @@ class PEMSerializer:
             units_code = self.pem_file.collar.get_units_code()
             assert units_code, f"No units code for the collar of {self.pem_file.get_file_name()}."
             if collar.empty:
-                result += '\n<P00>'
+                result += '\n' + f"{'<P00>:<43'}{profile_boilerplate[0]}"
             else:
                 for row in collar.itertuples():
                     tag = f"<P{row.Index:02d}>"
                     row = f"{tag} {row.Easting:.2f} {row.Northing:.2f} {row.Elevation:.2f} {units_code}"
+                    row = f"{row:<43}{profile_boilerplate[0]}"
                     result += '\n' + row
             return result
 
@@ -3382,13 +3431,33 @@ class PEMSerializer:
             units_code = self.pem_file.segments.get_units_code()
             assert units_code, f"No units code for the segments of {self.pem_file.get_file_name()}."
             if segs.empty:
-                result += '\n<P01>\n''<P02>\n''<P03>\n''<P04>\n''<P05>'
+                rows = ['<P01>',
+                        '<P02>',
+                        '<P03>',
+                        '<P04>',
+                        '<P05>']
+                for i, row in enumerate(rows):
+                    if i < len(profile_boilerplate) - 1:
+                        row = f"{row:<43}{profile_boilerplate[i - 1]}"  # -1 since the first item is added to collar
+                    result += '\n' + row
             else:
-                for row in segs.itertuples():
+                for i, row in enumerate(segs.itertuples()):
                     tag = f"<P{row.Index + 1:02d}>"
                     row = f"{tag} {row.Azimuth:.2f} {row.Dip:.2f} {row[3]:.2f} {units_code} {row.Depth:.2f}"
+                    if i < len(profile_boilerplate) - 1:
+                        row = f"{row:<43}{profile_boilerplate[i - 1]}"  # -1 since the first item is added to collar
                     result += '\n' + row
             return result
+
+        profile_boilerplate = ["~ 4 or 5 numbers:  X Y Z Units Stn",
+                               "~  Units=0 (m) or 1 (ft).",
+                               "~ Surface: Stn -ve for West & South.",
+                               "~ BH: after <P00> for collar coords,",
+                               "~  can define hole segments with:",
+                               "~  Az Dip Length Units Depth",
+                               "~  Dip +ve down. Units =2(m) =3(ft).",
+                               "~  Depth: Length sum to segment end.",
+                               "~ BH: Stn and Depth are optional."]
 
         if self.pem_file.is_borehole():
             return serialize_collar_coords() + \
@@ -3476,7 +3545,6 @@ class PEMSerializer:
         :param legacy: bool, will remove the timestamp and deleted status if True.
         :return: string
         """
-
         def serialize_reading(reading):
             reading_header = [reading['Station'],
                               reading['Component'] + 'R' + f"{reading['Reading_index']:g}",
@@ -3503,7 +3571,6 @@ class PEMSerializer:
             reading_spacing = 12
             count = 0
 
-            # channel_readings = [f'{r:<8g}' for r in reading['Reading']]
             channel_readings = [f'{r:10.3f}' for r in reading['Reading']]
 
             for i in range(0, len(channel_readings), readings_per_line):
@@ -3533,6 +3600,7 @@ class PEMSerializer:
         :return: A string in PEM file format containing the data found inside of pem_file
         """
         self.pem_file = pem_file
+        is_fluxgate = self.pem_file.is_fluxgate()
 
         result = self.serialize_tags() + '\n'
         result += self.serialize_loop_coords() + '\n'
@@ -4058,16 +4126,15 @@ class PEMGetter:
 
 if __name__ == '__main__':
     import time
-    import timeit
 
     sample_folder = Path(__file__).parents[2].joinpath("sample_files")
 
     pg = PEMGetter()
 
-    pem_file = pg.parse(sample_folder.joinpath(r"Line GPS\800N.PEM"))
-    txt_file = sample_folder.joinpath(r"Line GPS\KA800N_1027.txt")
-    line = SurveyLine(txt_file)
-    line.get_warnings(stations=pem_file.get_stations(converted=True, incl_deleted=False))
+    pem_file = pg.parse(r"C:\_Data\2021\Eastern\Sterling\SP-21-040\RAW\xy_1205.PEM")
+    # txt_file = sample_folder.joinpath(r"Line GPS\KA800N_1027.txt")
+    # line = SurveyLine(txt_file)
+    # line.get_warnings(stations=pem_file.get_stations(converted=True, incl_deleted=False))
 
     # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
     # file = r"C:\_Data\2021\TMC\Laurentia\STE-21-50-W3\RAW\ste-21-50w3xy_0819.dmp2"
@@ -4090,6 +4157,7 @@ if __name__ == '__main__':
     # pem_file.get_theory_data()
     # pem_file.get_reversed_components()
     # pem_file.rotate(method="unrotate")
+    # pem_file.rotate(method="unrotate")
     # pem_file.filepath = pem_file.filepath.with_name(pem_file.filepath.stem + "(unrotated)" + ".PEM")
     # pem_file.save()
 
@@ -4099,7 +4167,7 @@ if __name__ == '__main__':
     # pem_file.to_xyz()
     # pem_file, _ = pem_file.prep_rotation()
     # pem_file.mag_offset()
-    # pem_file = pem_file.rotate(method='acc', soa=0)
+    pem_file = pem_file.rotate(method='acc', soa=0)
     # pem_file = pem_file.rotate(method='unrotate', soa=10)
     # pem_file = pem_file.rotate(method="pp", soa=1)
     # rotated_pem = prep_pem.rotate('pp')

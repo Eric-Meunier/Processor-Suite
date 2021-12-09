@@ -227,8 +227,9 @@ class DBPlotter(QMainWindow):
             name = Path(file).name
             logger.info(f"Parsing file {name}.")
             str_contents = read_file(file, as_list=False)
-            # For files with extra spaces
-            str_contents = re.sub(r" {2,}", " ", str_contents)
+            # For files with extra spaces. Doesn't work.
+            # str_contents = re.sub(r" {2,}", "\|", str_contents)
+            # str_contents = re.sub(r" ", "", str_contents)
             # str_contents = re.sub(r"\|", " ", str_contents)
 
             # Try to create a DBPlot for each 'read' command found

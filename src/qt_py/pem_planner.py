@@ -1209,7 +1209,7 @@ class LoopPlanner(SurveyPlanner, Ui_LoopPlanner):
 
         self.plot_hole()
 
-    def add_hole(self, name="Hole", easting=599709, northing=4829107, elevation=0, azimuth=[0], dip=[60], length=[400]):
+    def add_hole(self, name=None, easting=599709, northing=4829107, elevation=0, azimuth=[0], dip=[60], length=[400]):
         """
         Create tab for a new hole
         :param name: str, name of the hole

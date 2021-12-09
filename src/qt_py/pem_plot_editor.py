@@ -34,6 +34,8 @@ pd.options.mode.chained_assignment = None  # default='warn'
 # TODO Toggle decay plots (double click?)
 # TODO Disable auto cleaning and auto-cleaning lines for PP files (shouldn't be needed with new PP viewer)
 # TODO update profile channel numbers to reflect actual channel number for non-split files
+# TODO Add scaling (current, coil area...) so we can see how it matches up to the theoretical PP.
+# TODO Calculate PP theoretical fit?
 # Scoll through single profile plot
 
 
@@ -395,6 +397,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         # Setting options
         settings.setValue("actionSplit_Profile", self.actionSplit_Profile.isChecked())
+        settings.setValue("actionShow_Station_Cursor", self.actionShow_Station_Cursor.isChecked())
         settings.setValue("plot_ontime_decays_cbox", self.plot_ontime_decays_cbox.isChecked())
         settings.setValue("plot_auto_clean_lines_cbox", self.plot_auto_clean_lines_cbox.isChecked())
         settings.setValue("link_x_cbox", self.link_x_cbox.isChecked())
@@ -416,6 +419,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Setting options
         self.actionSplit_Profile.setChecked(
             settings.value("actionSplit_Profile", defaultValue=True, type=bool))
+        self.actionShow_Station_Cursor.setChecked(
+            settings.value("actionShow_Station_Cursor", defaultValue=True, type=bool))
         self.plot_ontime_decays_cbox.setChecked(
             settings.value("plot_ontime_decays_cbox", defaultValue=True, type=bool))
         self.plot_auto_clean_lines_cbox.setChecked(
@@ -933,24 +938,26 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
                     # Plot the data
                     for channel in range(bounds[0], bounds[1] + 1):
-                        data = profile_data[profile_data.Deleted == False].loc[:, channel]
+                        data = profile_data.loc[:, channel]
                         plot_lines(data, ax)
                         if self.show_scatter_cbox.isChecked():
                             plot_scatters(data, ax)
-                        ax.autoRange()  # Is there ever a reason not to auto range the profile axes?
 
+                    ax.autoRange()  # Is there ever a reason not to auto range the profile axes?
                 plot_theory_pp(self.theory_data, axes[1])
+                axes[1].autoRange()  # Auto range again after the PP line is added
             else:
                 # Plot the single profile ax
                 min_ch, max_ch = self.min_ch_sbox.value(), self.max_ch_sbox.value()
                 ax = axes[0]
                 for channel in range(min_ch, max_ch + 1):
                     ax.setLabel('left', f"Channel {'PP' if min_ch == 0 else min_ch} to {max_ch}", units=self.units)
-                    data = profile_data[profile_data.Deleted == False].loc[:, channel]
+                    data = profile_data.loc[:, channel]
                     plot_lines(data, ax)
                     if self.show_scatter_cbox.isChecked():
                         plot_scatters(data, ax)
-                    ax.autoRange()  # Is there ever a reason not to auto range the profile axes?
+
+                ax.autoRange()  # Is there ever a reason not to auto range the profile axes?
                 # Only plot the theoretical value if the PP is plotted.
                 if min_ch == 0:
                     plot_theory_pp(self.theory_data, ax)
@@ -968,7 +975,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         clear_plots(components)
 
         for component in components:
-            profile_data = self.profile_data[self.profile_data.Component == component]
+            filt = (self.profile_data.Component == component) & (self.profile_data.Deleted == False)
+            profile_data = self.profile_data[filt].set_index("Station", drop=True)
+
             # For nearest station calculation
             self.component_stations[component] = self.pem_file.get_stations(component=component, converted=True)
 
@@ -1694,7 +1703,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         :return: None
         """
         self.pem_file.data.loc[:, 'Deleted'] = self.pem_file.data.loc[:, 'Deleted'].map(lambda x: False)
-        self.data_edited()
         self.refresh_plots()
 
     def change_decay_component_dialog(self, source=None):
@@ -1730,7 +1738,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
-            self.data_edited()
             self.refresh_plots(components=[old_comp, new_component], preserve_selection=True)
 
     def change_suffix_dialog(self, source=None):
@@ -1762,7 +1769,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         # Update the data in the pem file object
         self.pem_file.data.iloc[selected_data.index] = selected_data
-        self.data_edited()
         self.refresh_plots()
 
     def change_station(self):
@@ -1783,9 +1789,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 selected_data.loc[:, 'Station'] = re.sub(r"-?\d+", str(new_station), original_number)
                 # Update the data in the pem file object
                 self.pem_file.data.iloc[selected_data.index] = selected_data
-                self.data_edited()
-
-                # Update the plots
                 self.refresh_plots(components=selected_data.Component.unique())
 
     def profile_channel_selection_changed(self, value):
@@ -1839,9 +1842,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             selected_data.loc[:, 'Station'] = selected_data.loc[:, 'Station'].map(shift)
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
-            self.data_edited()
-
-            # Update the plots
             self.refresh_plots(components=selected_data.Component.unique())
 
     def flip_decays(self, source=None):
@@ -1860,7 +1860,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
-            self.data_edited()
             self.refresh_plots(components=selected_data.Component.unique(), preserve_selection=True)
 
     def remove_stations(self):
@@ -1874,7 +1873,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Update the data in the pem file object
             self.pem_file.data.iloc[selected_data.index] = selected_data
-            self.data_edited()
             self.refresh_plots(components=selected_data.Component.unique(), preserve_selection=True)
 
     def cycle_profile_component(self):
@@ -2039,9 +2037,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         # Update the data
         self.pem_file.data.update(cleaned_data)
-        self.data_edited()
-
-        # Plot the new data
         self.refresh_plots(components="all")
 
         # Reset the range for only the profile axes.
@@ -2075,14 +2070,12 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Rename the stations
         repeats.Station = repeats.Station.map(auto_rename_repeats)
         self.pem_file.data.loc[repeats.index] = repeats
-        self.data_edited()
-
-        # Plot the new data
         self.refresh_plots(components='all', preserve_selection=False)
 
         self.message.information(self, 'Auto-rename results', f"{len(repeats)} reading(s) automatically renamed.")
 
     def refresh_plots(self, components='all', preserve_selection=False):
+        self.data_edited()
         self.plot_profiles(components=components)
         self.plot_decays(self.selected_station, preserve_selection=preserve_selection)
 

@@ -573,7 +573,8 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
                                                  ontime=False,
                                                  incl_deleted=False)
         for component in components:
-            component_profile_data = profile_data[profile_data.Component == component]
+            component_profile_data = profile_data[profile_data.Component == component].drop(
+                columns=["Component", "Deleted"]).set_index('Station', drop=True)
             if component_profile_data.empty:
                 continue
 
