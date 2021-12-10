@@ -94,6 +94,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.component_stations = {}
         self.nearest_decay = None
         self.mag_curves = []
+        self.last_offtime_channel = None  # For auto-clean lines
 
         self.active_ax = None
         self.active_ax_ind = None
@@ -610,6 +611,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.change_profile_suffix_btn.setEnabled(False)
             self.change_decay_suffix_btn.setEnabled(False)
 
+        self.max_ch_sbox.blockSignals(True)
+        self.min_ch_sbox.blockSignals(True)
+        self.coil_area_sbox.blockSignals(True)
         self.auto_clean_std_sbox.blockSignals(True)
         self.auto_clean_window_sbox.blockSignals(True)
 
@@ -627,22 +631,18 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 self.auto_clean_std_sbox.setValue(1.5)
 
         # Set the channel max for the single profile plot and auto clean box
-        num_offtime_channels = self.pem_file.get_number_of_channels(incl_ontime=False)
-        self.auto_clean_window_sbox.setMaximum(num_offtime_channels)
-        self.auto_clean_window_sbox.setValue(int(num_offtime_channels / 2))
-        self.min_ch_sbox.setMaximum(num_offtime_channels - 1)
-        self.max_ch_sbox.setMaximum(num_offtime_channels - 1)
-
-        self.max_ch_sbox.blockSignals(True)
-        self.min_ch_sbox.blockSignals(True)
-        self.coil_area_sbox.blockSignals(True)
-        self.max_ch_sbox.setValue(num_offtime_channels)
-        self.min_ch_sbox.setValue(num_offtime_channels - 5)
+        self.last_offtime_channel = self.pem_file.get_offtime_channels().index[-1]
+        self.auto_clean_window_sbox.setMaximum(self.last_offtime_channel + 1)
+        self.auto_clean_window_sbox.setValue(int(self.last_offtime_channel / 2))
+        # self.min_ch_sbox.setMaximum(1)
+        self.max_ch_sbox.setMaximum(self.last_offtime_channel)
+        self.max_ch_sbox.setValue(self.last_offtime_channel)
+        self.min_ch_sbox.setValue(self.last_offtime_channel - 5)
         self.coil_area_sbox.setValue(self.pem_file.coil_area)
+
         self.max_ch_sbox.blockSignals(False)
         self.min_ch_sbox.blockSignals(False)
         self.coil_area_sbox.blockSignals(False)
-
         self.auto_clean_std_sbox.blockSignals(False)
         self.auto_clean_window_sbox.blockSignals(False)
 
@@ -1196,7 +1196,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Ignore deleted data when calculating median
             existing_data = self.decay_data[comp_filt][~self.decay_data[comp_filt].Deleted.astype(bool)]
-            median_data = pd.DataFrame.from_records(existing_data.Reading.reset_index(drop=True))
+            # Excludes next on-time data
+            median_data = pd.DataFrame.from_records(
+                existing_data.Reading.reset_index(drop=True)).iloc[:, :self.last_offtime_channel + 1]
             if median_data.empty:
                 continue
 
@@ -1208,23 +1210,22 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             std = np.array([self.auto_clean_std_sbox.value()] * window_size)
 
-            off_time_median_data = median_data.loc[:,
-                                   ~self.pem_file.channel_times.Remove.reset_index(drop=True).astype(bool)]
+            # Doesn't include next on-time data, if applicable.
+            # median_data = median_data.loc[:,
+            #                        ~self.pem_file.channel_times.Remove.reset_index(drop=True).astype(bool)]
             if not self.plot_ontime_decays_cbox.isChecked():
-                off_time_median_data.rename(dict(zip(off_time_median_data.columns,
-                                                     range(len(off_time_median_data.columns)))),
-                                            inplace=True,
-                                            axis=1)  # Resets for the X axis values when not plotting on-time
-            off_time_median = off_time_median_data.median().to_numpy()
+                median_data.rename(dict(zip(median_data.columns,
+                                            range(len(median_data.columns)))),
+                                   inplace=True,
+                                   axis=1)  # Resets for the X axis values when not plotting on-time
+            off_time_median = median_data.median().to_numpy()
             if self.pem_file.number_of_channels > 10:
                 # off_time_median = signal.savgol_filter(off_time_median, 5, 3)
                 off_time_median = signal.medfilt(off_time_median, 3)
-            limits_data = off_time_median_data.loc[:, len(off_time_median_data.columns) - window_size:]
 
-            thresh_line_1.setData(x=list(limits_data.columns[-window_size:]),
-                                  y=off_time_median[-window_size:] + std)
-            thresh_line_2.setData(x=list(limits_data.columns[-window_size:]),
-                                  y=off_time_median[-window_size:] - std)
+            x = list(range(self.last_offtime_channel - window_size + 1, self.last_offtime_channel + 1))
+            thresh_line_1.setData(x=x, y=off_time_median[-window_size:] + std)
+            thresh_line_2.setData(x=x, y=off_time_median[-window_size:] - std)
 
     def highlight_lines(self):
         """
@@ -2918,16 +2919,13 @@ if __name__ == '__main__':
 
     # pem_file = pem_g.parse(samples_folder.joinpath(r"Test PEMS\pp (eastern drift).dmp2"))
 
-    pem_file = pem_g.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-211\RAW\em21-211 xy_1021.pem")
-    # pem_file = pem_g.parse(r"C:\_Data\2021\Managem\Surface\Kokiak Aicha\RAW\600n.PEM")
-    # pem_file.prep_rotation()
-    # pem_file.rotate()
     # pem_file = pem_g.get_pems(folder="Raw Boreholes", file=r"SR-15-04 Z.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Boreholes", file="em21-155 z_0415.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\800E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\1200E.PEM")[0]
+    pem_file = pem_g.get_pems(folder="Raw Surface", file=r"JHadid\RAW\400n.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]
 
     editor = PEMPlotEditor(darkmode=darkmode)

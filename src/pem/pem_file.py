@@ -755,6 +755,9 @@ class PEMFile:
         else:
             return len(self.channel_times[~self.channel_times.Remove.astype(bool)])
 
+    def get_offtime_channels(self):
+        return self.channel_times[~self.channel_times.Remove.astype(bool)]
+
     def get_profile_data(self, averaged=False, converted=False, ontime=True, incl_deleted=False):
         """
         Transform the readings in the data in a manner to be plotted as a profile

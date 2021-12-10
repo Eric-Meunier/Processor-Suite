@@ -507,19 +507,22 @@ class Derotator(QMainWindow, Ui_Derotator):
             acc_deviation = measured_pp_df.Angle - acc_df.Angle
             if all(acc_deviation < 0):
                 acc_deviation = acc_deviation + 360
-            print(acc_deviation)
 
-            # Calculate the average deviation for the curve line
-            acc_dev_df = pd.DataFrame([acc_deviation, acc_df.Station]).T
+            # Calculate the average deviation for the curve line. Only consider the 2nd half as it is less affected by
+            # geometry error
+            acc_dev_df = pd.DataFrame([acc_deviation, acc_df.Station]).T.iloc[int(len(acc_deviation) / 2):]
             acc_avg_df = acc_dev_df.groupby("Station", as_index=False).mean()
 
             # Set the SOA to the mean accelerometer deviation
             soa = acc_avg_df.Angle.mean()
-            print(f"Mean SOA: {soa}")
-            self.soa = (soa if soa < 180 else 360 - soa) * -1
+            self.soa = (soa if soa < 180 else (360 - soa) * -1)
             self.soa_sbox.blockSignals(True)
             self.soa_sbox.setValue(self.soa)
             self.soa_sbox.blockSignals(False)
+
+            if self.soa > 20:
+                self.message.warning(self, "High SOA Value", f"An SOA value of {self.soa:.0f} was used. The XY data may"
+                                                             f" be backwards from normal convention.")
 
         while isinstance(pem_file, list):
             pem_file = pem_file[0]
@@ -831,7 +834,7 @@ def main():
 
     ref = []
     pem_files = samples_folder.joinpath("Rotation Testing").glob("*.PEM")
-    for pem_file in list(pem_files)[3:4]:
+    for pem_file in list(pem_files)[30:40]:
         pem = PEMParser().parse(pem_file)
         d = Derotator(darkmode=darkmode)
         ref.append(d)

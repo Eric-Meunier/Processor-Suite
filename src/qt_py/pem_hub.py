@@ -68,13 +68,10 @@ logger = logging.getLogger(__name__)
 # TODO Log recently opened files.
 # TODO Could add std plot to the right of decay plots
 # TODO Add a Recent projects list, below project GPS, which will be a history of recently clicked folders.
-# TODO Show/hide single profile plot instead of plotting every time when selecting channels in PlotEditor.
 # TODO Add old PEM parsing
 # TODO When plotting PP files, set them all as the same station, and color code by timestamp. Also add plot of °----(drift number here)---° showing drift.
 # TODO to remove loop edge effects, remove the primary field (or a percentage of it) from the readings, which is the PP
 # TODO Add component specific coil area scaling (for SQUID).
-# TODO Add scroll wheel channel-scrolling for single plot in plot editor.
-# TODO Auto-calculate SOA in derotator.
 
 
 # Keep a list of widgets so they don't get garbage collected
