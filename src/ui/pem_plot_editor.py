@@ -3,13 +3,16 @@
 ################################################################################
 ## Form generated from reading UI file 'pem_plot_editor.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 5.14.2
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
+from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
+    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
+    QPixmap, QRadialGradient)
 from PySide2.QtWidgets import *
 
 from pyqtgraph import GraphicsLayoutWidget
@@ -19,7 +22,7 @@ class Ui_PEMPlotEditor(object):
     def setupUi(self, PEMPlotEditor):
         if not PEMPlotEditor.objectName():
             PEMPlotEditor.setObjectName(u"PEMPlotEditor")
-        PEMPlotEditor.resize(1126, 867)
+        PEMPlotEditor.resize(1116, 847)
         PEMPlotEditor.setDocumentMode(False)
         self.actionSave = QAction(PEMPlotEditor)
         self.actionSave.setObjectName(u"actionSave")
@@ -161,6 +164,45 @@ class Ui_PEMPlotEditor(object):
 
 
         self.verticalLayout_4.addWidget(self.groupBox_6)
+
+        self.groupBox_2 = QGroupBox(self.frame_7)
+        self.groupBox_2.setObjectName(u"groupBox_2")
+        self.groupBox_2.setAlignment(Qt.AlignCenter)
+        self.verticalLayout_12 = QVBoxLayout(self.groupBox_2)
+        self.verticalLayout_12.setObjectName(u"verticalLayout_12")
+        self.label_3 = QLabel(self.groupBox_2)
+        self.label_3.setObjectName(u"label_3")
+
+        self.verticalLayout_12.addWidget(self.label_3)
+
+        self.auto_clean_std_sbox = QDoubleSpinBox(self.groupBox_2)
+        self.auto_clean_std_sbox.setObjectName(u"auto_clean_std_sbox")
+        self.auto_clean_std_sbox.setDecimals(1)
+        self.auto_clean_std_sbox.setMinimum(0.100000000000000)
+        self.auto_clean_std_sbox.setSingleStep(1.000000000000000)
+
+        self.verticalLayout_12.addWidget(self.auto_clean_std_sbox)
+
+        self.label_4 = QLabel(self.groupBox_2)
+        self.label_4.setObjectName(u"label_4")
+
+        self.verticalLayout_12.addWidget(self.label_4)
+
+        self.auto_clean_window_sbox = QSpinBox(self.groupBox_2)
+        self.auto_clean_window_sbox.setObjectName(u"auto_clean_window_sbox")
+        self.auto_clean_window_sbox.setMinimum(2)
+        self.auto_clean_window_sbox.setValue(5)
+
+        self.verticalLayout_12.addWidget(self.auto_clean_window_sbox)
+
+        self.auto_clean_btn = QPushButton(self.groupBox_2)
+        self.auto_clean_btn.setObjectName(u"auto_clean_btn")
+        self.auto_clean_btn.setFocusPolicy(Qt.NoFocus)
+
+        self.verticalLayout_12.addWidget(self.auto_clean_btn)
+
+
+        self.verticalLayout_4.addWidget(self.groupBox_2)
 
         self.verticalSpacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
@@ -321,92 +363,78 @@ class Ui_PEMPlotEditor(object):
         self.groupBox_3 = QGroupBox(self.frame)
         self.groupBox_3.setObjectName(u"groupBox_3")
         self.groupBox_3.setAlignment(Qt.AlignCenter)
-        self.verticalLayout_9 = QVBoxLayout(self.groupBox_3)
-        self.verticalLayout_9.setObjectName(u"verticalLayout_9")
-        self.verticalLayout_9.setContentsMargins(9, 9, 9, 9)
+        self.gridLayout_2 = QGridLayout(self.groupBox_3)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.gridLayout_2.setContentsMargins(9, 9, 9, 9)
+        self.coil_area_sbox = QSpinBox(self.groupBox_3)
+        self.coil_area_sbox.setObjectName(u"coil_area_sbox")
+        self.coil_area_sbox.setMinimum(1)
+        self.coil_area_sbox.setMaximum(100000)
+        self.coil_area_sbox.setSingleStep(10)
+
+        self.gridLayout_2.addWidget(self.coil_area_sbox, 0, 1, 1, 1)
+
+        self.label_6 = QLabel(self.groupBox_3)
+        self.label_6.setObjectName(u"label_6")
+
+        self.gridLayout_2.addWidget(self.label_6, 0, 0, 1, 1)
+
         self.change_comp_profile_btn = QPushButton(self.groupBox_3)
         self.change_comp_profile_btn.setObjectName(u"change_comp_profile_btn")
         self.change_comp_profile_btn.setEnabled(False)
         self.change_comp_profile_btn.setFocusPolicy(Qt.NoFocus)
 
-        self.verticalLayout_9.addWidget(self.change_comp_profile_btn)
+        self.gridLayout_2.addWidget(self.change_comp_profile_btn, 2, 0, 1, 2)
 
         self.change_profile_suffix_btn = QPushButton(self.groupBox_3)
         self.change_profile_suffix_btn.setObjectName(u"change_profile_suffix_btn")
         self.change_profile_suffix_btn.setEnabled(False)
         self.change_profile_suffix_btn.setFocusPolicy(Qt.NoFocus)
 
-        self.verticalLayout_9.addWidget(self.change_profile_suffix_btn)
+        self.gridLayout_2.addWidget(self.change_profile_suffix_btn, 3, 0, 1, 2)
 
         self.shift_station_profile_btn = QPushButton(self.groupBox_3)
         self.shift_station_profile_btn.setObjectName(u"shift_station_profile_btn")
         self.shift_station_profile_btn.setEnabled(False)
         self.shift_station_profile_btn.setFocusPolicy(Qt.NoFocus)
 
-        self.verticalLayout_9.addWidget(self.shift_station_profile_btn)
+        self.gridLayout_2.addWidget(self.shift_station_profile_btn, 4, 0, 1, 2)
 
         self.flip_profile_btn = QPushButton(self.groupBox_3)
         self.flip_profile_btn.setObjectName(u"flip_profile_btn")
         self.flip_profile_btn.setEnabled(False)
         self.flip_profile_btn.setFocusPolicy(Qt.NoFocus)
 
-        self.verticalLayout_9.addWidget(self.flip_profile_btn)
+        self.gridLayout_2.addWidget(self.flip_profile_btn, 5, 0, 1, 2)
 
         self.line = QFrame(self.groupBox_3)
         self.line.setObjectName(u"line")
         self.line.setFrameShape(QFrame.HLine)
         self.line.setFrameShadow(QFrame.Sunken)
 
-        self.verticalLayout_9.addWidget(self.line)
+        self.gridLayout_2.addWidget(self.line, 6, 0, 1, 2)
 
         self.remove_profile_btn = QPushButton(self.groupBox_3)
         self.remove_profile_btn.setObjectName(u"remove_profile_btn")
         self.remove_profile_btn.setEnabled(False)
         self.remove_profile_btn.setFocusPolicy(Qt.NoFocus)
 
-        self.verticalLayout_9.addWidget(self.remove_profile_btn)
+        self.gridLayout_2.addWidget(self.remove_profile_btn, 7, 0, 1, 2)
+
+        self.label_7 = QLabel(self.groupBox_3)
+        self.label_7.setObjectName(u"label_7")
+
+        self.gridLayout_2.addWidget(self.label_7, 1, 0, 1, 1)
+
+        self.soa_sbox = QSpinBox(self.groupBox_3)
+        self.soa_sbox.setObjectName(u"soa_sbox")
+        self.soa_sbox.setMinimum(-359)
+        self.soa_sbox.setMaximum(359)
+
+        self.gridLayout_2.addWidget(self.soa_sbox, 1, 1, 1, 1)
 
 
         self.verticalLayout_11.addWidget(self.groupBox_3)
-
-        self.groupBox_2 = QGroupBox(self.frame)
-        self.groupBox_2.setObjectName(u"groupBox_2")
-        self.groupBox_2.setAlignment(Qt.AlignCenter)
-        self.verticalLayout_12 = QVBoxLayout(self.groupBox_2)
-        self.verticalLayout_12.setObjectName(u"verticalLayout_12")
-        self.label_3 = QLabel(self.groupBox_2)
-        self.label_3.setObjectName(u"label_3")
-
-        self.verticalLayout_12.addWidget(self.label_3)
-
-        self.auto_clean_std_sbox = QDoubleSpinBox(self.groupBox_2)
-        self.auto_clean_std_sbox.setObjectName(u"auto_clean_std_sbox")
-        self.auto_clean_std_sbox.setDecimals(1)
-        self.auto_clean_std_sbox.setMinimum(0.100000000000000)
-        self.auto_clean_std_sbox.setSingleStep(1.000000000000000)
-
-        self.verticalLayout_12.addWidget(self.auto_clean_std_sbox)
-
-        self.label_4 = QLabel(self.groupBox_2)
-        self.label_4.setObjectName(u"label_4")
-
-        self.verticalLayout_12.addWidget(self.label_4)
-
-        self.auto_clean_window_sbox = QSpinBox(self.groupBox_2)
-        self.auto_clean_window_sbox.setObjectName(u"auto_clean_window_sbox")
-        self.auto_clean_window_sbox.setMinimum(2)
-        self.auto_clean_window_sbox.setValue(5)
-
-        self.verticalLayout_12.addWidget(self.auto_clean_window_sbox)
-
-        self.auto_clean_btn = QPushButton(self.groupBox_2)
-        self.auto_clean_btn.setObjectName(u"auto_clean_btn")
-        self.auto_clean_btn.setFocusPolicy(Qt.NoFocus)
-
-        self.verticalLayout_12.addWidget(self.auto_clean_btn)
-
-
-        self.verticalLayout_11.addWidget(self.groupBox_2)
 
         self.verticalSpacer_2 = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
@@ -418,7 +446,7 @@ class Ui_PEMPlotEditor(object):
         PEMPlotEditor.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(PEMPlotEditor)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1126, 21))
+        self.menubar.setGeometry(QRect(0, 0, 1116, 21))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
         self.menuView = QMenu(self.menubar)
@@ -510,6 +538,10 @@ class Ui_PEMPlotEditor(object):
         self.change_decay_suffix_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Suffix", None))
         self.change_station_decay_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Station", None))
         self.flip_decay_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"+/-", None))
+        self.groupBox_2.setTitle(QCoreApplication.translate("PEMPlotEditor", u"Cleaning", None))
+        self.label_3.setText(QCoreApplication.translate("PEMPlotEditor", u"Threshold Value", None))
+        self.label_4.setText(QCoreApplication.translate("PEMPlotEditor", u"Window Size", None))
+        self.auto_clean_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Auto-Clean", None))
         self.label_2.setText(QCoreApplication.translate("PEMPlotEditor", u"Profile Options", None))
         self.groupBox.setTitle(QCoreApplication.translate("PEMPlotEditor", u"View", None))
         self.plot_mag_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Plot Mag", None))
@@ -519,15 +551,13 @@ class Ui_PEMPlotEditor(object):
         self.label_5.setText(QCoreApplication.translate("PEMPlotEditor", u"-", None))
         self.min_ch_sbox.setPrefix(QCoreApplication.translate("PEMPlotEditor", u"Ch ", None))
         self.groupBox_3.setTitle(QCoreApplication.translate("PEMPlotEditor", u"Edit", None))
+        self.label_6.setText(QCoreApplication.translate("PEMPlotEditor", u"Coil Area:", None))
         self.change_comp_profile_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Components", None))
         self.change_profile_suffix_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Suffixes", None))
         self.shift_station_profile_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Stations", None))
         self.flip_profile_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"+/-", None))
         self.remove_profile_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Del", None))
-        self.groupBox_2.setTitle(QCoreApplication.translate("PEMPlotEditor", u"Cleaning", None))
-        self.label_3.setText(QCoreApplication.translate("PEMPlotEditor", u"Threshold Value", None))
-        self.label_4.setText(QCoreApplication.translate("PEMPlotEditor", u"Window Size", None))
-        self.auto_clean_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Auto-Clean", None))
+        self.label_7.setText(QCoreApplication.translate("PEMPlotEditor", u"SOA:", None))
         self.menuFile.setTitle(QCoreApplication.translate("PEMPlotEditor", u"File", None))
         self.menuView.setTitle(QCoreApplication.translate("PEMPlotEditor", u"View", None))
     # retranslateUi

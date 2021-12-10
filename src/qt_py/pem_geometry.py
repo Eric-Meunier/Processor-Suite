@@ -1281,8 +1281,7 @@ if __name__ == '__main__':
     samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     pg = PEMGetter()
-    pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0261-21\RAW\xy1310_1013.PEM")
-    # files = pg.get_pems(folder='PEM Rotation', file='_PU-340 XY.PEM')
+    pem_file = pg.get_pems(folder='Rotation Testing', file='_PU-340 XY.PEM')
     # files = pg.get_pems(folder='Raw Boreholes', number=1, random=True, incl='xy')
     # files = pg.get_pems(file=r"Raw Boreholes\HOLE STE-21-02\RAW\ste-21-02 xy.pem")
     # pem_file = pg.get_pems(folder='Segments', file=r'_BX-081 XY.PEM')[0]
@@ -1294,7 +1293,8 @@ if __name__ == '__main__':
     # dad = samples_folder.joinpath(r"Raw Boreholes\GEN-21-06\RAW\gyro.csv")
     # dad = samples_folder.joinpath(r"Segments\test dad.csv")
     # dad = samples_folder.joinpath(r"Segments\BHEM-Belvais-2021-07-22.xlsx")
-    dad = r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0261-21\GPS\SAN261.xlsx"
+    dad = samples_folder.joinpath(r"DAD files\ELR21-059Agyro.dad")
+    # dad = r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0261-21\GPS\SAN261.xlsx"
     win.open_dad_file(dad)
 
     # df = pd.read_csv(dad,

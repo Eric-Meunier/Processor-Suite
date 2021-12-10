@@ -500,13 +500,14 @@ class Derotator(QMainWindow, Ui_Derotator):
             Set the SOA using the mean deviation between the accelerometer and measured PP values.
             :return: None
             """
-            if not pem_file.has_d7():
+            if not pem_file.has_d7() or not self.pem_file.has_all_gps():
                 return
             acc_df = pem_file.get_roll_data("Acc", self.soa)
             measured_pp_df = pem_file.get_roll_data("Measured_PP", self.soa)
             acc_deviation = measured_pp_df.Angle - acc_df.Angle
             if all(acc_deviation < 0):
                 acc_deviation = acc_deviation + 360
+            print(acc_deviation)
 
             # Calculate the average deviation for the curve line
             acc_dev_df = pd.DataFrame([acc_deviation, acc_df.Station]).T
@@ -514,7 +515,8 @@ class Derotator(QMainWindow, Ui_Derotator):
 
             # Set the SOA to the mean accelerometer deviation
             soa = acc_avg_df.Angle.mean()
-            self.soa = (soa if soa < 180 else 360 - soa) * - 1
+            print(f"Mean SOA: {soa}")
+            self.soa = (soa if soa < 180 else 360 - soa) * -1
             self.soa_sbox.blockSignals(True)
             self.soa_sbox.setValue(self.soa)
             self.soa_sbox.blockSignals(False)
@@ -814,6 +816,8 @@ class Derotator(QMainWindow, Ui_Derotator):
 def main():
     from src.pem.pem_file import PEMParser
     from src.qt_py import dark_palette
+    from src import samples_folder
+
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     darkmode = True
@@ -825,25 +829,27 @@ def main():
     pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
     pg.setConfigOption('foreground', "w" if darkmode else (53, 53, 53))
 
-    pem_g = PEMGetter()
-    parser = PEMParser()
-    # parser = DMPParser()
-    # pem_files = get_pems(folder="Raw Boreholes", random=True, number=6)
-    # for pem_file in pem_files:
-    #     d = Derotator()
-    #     d.open(pem_file)
+    ref = []
+    pem_files = samples_folder.joinpath("Rotation Testing").glob("*.PEM")
+    for pem_file in list(pem_files)[3:4]:
+        pem = PEMParser().parse(pem_file)
+        d = Derotator(darkmode=darkmode)
+        ref.append(d)
+        d.open(pem)
+        app.processEvents()
+        # input()
 
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="SAN-225G-18 Tool - Mag (PEMPro).PEM")
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_SAN-225G-18 XYZ.PEM")
-    pem_files = pem_g.get_pems(folder="Rotation Testing", file="_BX-081 XY.PEM")
+    # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_BX-081 XY.PEM")
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_MRC-067 XY.PEM")
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_MX-198 XY.PEM")
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM")
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
     # pem_files = pem_g.get_pems(folder="TMC", file=r"131-21-37\DATA\131-21-37 XY.PEM")
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_SAN-0246-19 XY (Cross bug).PEM")
-    mw = Derotator(darkmode=darkmode)
-    mw.open(pem_files)
+    # mw = Derotator(darkmode=darkmode)
+    # mw.open(pem_files)
 
     # mw.export_stats()
 

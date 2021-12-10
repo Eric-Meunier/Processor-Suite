@@ -292,6 +292,16 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             for item in self.station_cursors:
                 item.show() if self.actionShow_Station_Cursor.isChecked() else item.hide()
 
+        def coil_area_changed():
+            self.pem_file.scale_coil_area(self.coil_area_sbox.value())
+            self.refresh_plots(components="all", preserve_selection=True)
+
+        def soa_changed():
+            soa_delta = self.soa_sbox.value() - self.pem_file.soa
+
+            self.pem_file.rotate(method=None, soa=soa_delta)
+            self.refresh_plots(components="all", preserve_selection=True)
+
         # Actions
         self.select_all_action.activated.connect(select_all_stations)
 
@@ -327,7 +337,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.min_ch_sbox.valueChanged.connect(lambda: self.plot_profiles("all"))
         self.max_ch_sbox.valueChanged.connect(self.profile_channel_selection_changed)
         self.max_ch_sbox.valueChanged.connect(lambda: self.plot_profiles("all"))
-
+        self.coil_area_sbox.valueChanged.connect(coil_area_changed)
+        self.soa_sbox.valueChanged.connect(soa_changed)
         self.auto_clean_std_sbox.valueChanged.connect(self.update_auto_clean_lines)
         self.auto_clean_window_sbox.valueChanged.connect(self.update_auto_clean_lines)
 
@@ -579,6 +590,10 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Plot the mag profile if available. Disable the plot mag button if it's not applicable.
         if all([self.pem_file.is_borehole(), self.pem_file.has_xy(), self.pem_file.has_d7()]):
             self.mag_df = self.pem_file.get_mag(average=True)
+            self.soa_sbox.blockSignals(True)
+            self.soa_sbox.setEnabled(True)
+            self.soa_sbox.setValue(self.pem_file.soa)
+            self.soa_sbox.blockSignals(False)
             if self.mag_df.Mag.any():
                 self.plot_mag_cbox.setEnabled(True)
                 self.plot_mag()
@@ -586,6 +601,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 self.plot_mag_cbox.setEnabled(False)
         else:
             self.plot_mag_cbox.setEnabled(False)
+            self.soa_sbox.setEnabled(False)
         # Manually toggle mag plots incase they may have been disabled in the previous step.
         self.toggle_mag_plots()
 
@@ -619,10 +635,13 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         self.max_ch_sbox.blockSignals(True)
         self.min_ch_sbox.blockSignals(True)
+        self.coil_area_sbox.blockSignals(True)
         self.max_ch_sbox.setValue(num_offtime_channels)
         self.min_ch_sbox.setValue(num_offtime_channels - 5)
+        self.coil_area_sbox.setValue(self.pem_file.coil_area)
         self.max_ch_sbox.blockSignals(False)
         self.min_ch_sbox.blockSignals(False)
+        self.coil_area_sbox.blockSignals(False)
 
         self.auto_clean_std_sbox.blockSignals(False)
         self.auto_clean_window_sbox.blockSignals(False)

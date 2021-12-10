@@ -40,12 +40,12 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.parent = parent
         self.darkmode = darkmode
 
-        self.blue_color = QColor(get_line_color("blue", "mpl", self.darkmode, alpha=255))
-        self.red_color = QColor(get_line_color("red", "mpl", self.darkmode, alpha=255))
-        self.single_red_color = QColor(get_line_color("single_red", "mpl", self.darkmode, alpha=255))
-        self.gray_color = QColor(get_line_color("gray", "mpl", self.darkmode, alpha=255))
-        self.foreground_color = QColor(get_line_color("foreground", "mpl", self.darkmode, alpha=255))
-        self.background_color = QColor(get_line_color("background", "mpl", self.darkmode, alpha=255))
+        self.blue_color = QColor(get_line_color("blue", "mpl", self.darkmode))
+        self.red_color = QColor(get_line_color("red", "mpl", self.darkmode))
+        self.single_red_color = QColor(get_line_color("single_red", "mpl", self.darkmode))
+        self.gray_color = QColor(get_line_color("gray", "mpl", self.darkmode))
+        self.foreground_color = QColor(get_line_color("foreground", "mpl", self.darkmode))
+        self.background_color = QColor(get_line_color("background", "mpl", self.darkmode))
 
         self.pem_file = None
         self.ri_file = None
@@ -662,24 +662,24 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
                 self.line_table.item(row, elevation_column).setForeground(self.single_red_color)
             else:
                 # Can immediately reset colow for elevation since it isn't affected by anything else
-                self.line_table.item(row, elevation_column).setForeground(QBrush())
+                self.line_table.item(row, elevation_column).setForeground(self.foreground_color)
 
             # Color sorting errors
             if table_value > sorted_value:
                 # Only change the foreground color if it's not a duplicate, for better contrast
                 if row not in duplicates.index:
-                    self.line_table.item(row, self.station_column).setForeground(self.background_color)
+                    self.line_table.item(row, self.station_column).setForeground(self.foreground_color)
                 self.line_table.item(row, self.station_column).setBackground(self.blue_color)
             elif table_value < sorted_value:
                 # Only change the foreground color if it's not a duplicate, for better contrast
                 if row not in duplicates.index:
-                    self.line_table.item(row, self.station_column).setForeground(self.background_color)
+                    self.line_table.item(row, self.station_column).setForeground(self.foreground_color)
                 self.line_table.item(row, self.station_column).setBackground(self.red_color)
             else:
                 # Prevent duplicates to be reset
                 if row not in duplicates.index:
-                    self.line_table.item(row, self.station_column).setForeground(QBrush())  # Reset the background
-                self.line_table.item(row, self.station_column).setBackground(QBrush())  # Reset the background
+                    self.line_table.item(row, self.station_column).setForeground(self.foreground_color)  # Reset
+                self.line_table.item(row, self.station_column).setBackground(QBrush())  # Reset
 
         self.line_table.blockSignals(False)
 

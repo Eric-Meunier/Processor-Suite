@@ -9,6 +9,8 @@ app_data_dir.mkdir(exist_ok=True)
 app_temp_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro/temp")
 app_temp_dir.mkdir(exist_ok=True)
 
+samples_folder = Path(__file__).parents[1].joinpath("sample_files")
+
 
 def timeit(method):
     """

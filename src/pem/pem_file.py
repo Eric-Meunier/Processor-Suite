@@ -157,6 +157,9 @@ class PEMFile:
         self.loop_polarity = None
         self.channel_times = None
 
+        self.original_coil_area = None  # For notes.
+        self.original_current = None  # For notes.
+
         self.notes = None
         self.data = None
         self.filepath = None
@@ -193,6 +196,7 @@ class PEMFile:
         self.probes = tags.get('Probes')
         self.soa = float(self.probes.get("SOA"))
         self.current = tags.get('Current')
+        self.original_current = self.current
         self.loop_dimensions = tags.get('Loop dimensions')
 
         self.client = header.get('Client')
@@ -214,6 +218,7 @@ class PEMFile:
         self.normalized = header.get('Normalized')
         self.primary_field_value = header.get('Primary field value')
         self.coil_area = header.get('Coil area')
+        self.original_coil_area = self.coil_area
         self.loop_polarity = header.get('Loop polarity')
         self.channel_times = channel_table
         self.number_of_channels = len(channel_table)
@@ -1683,7 +1688,11 @@ class PEMFile:
         logger.info(f"{self.filepath.name} coil area scaled to {new_coil_area} from {old_coil_area}.")
 
         self.coil_area = new_coil_area
-        self.notes.append(f'<HE3> Data scaled by coil area change of {old_coil_area}/{new_coil_area}')
+
+        for note in self.notes:
+            if "Data scaled by coil area change of" in note:
+                self.notes.remove(note)
+        self.notes.append(f'<HE3> Data scaled by coil area change of {self.original_coil_area}/{new_coil_area}')
         return self
 
     def scale_current(self, current):
@@ -1701,9 +1710,12 @@ class PEMFile:
         scale_factor = float(new_current / old_current)
 
         self.data.Reading = self.data.Reading * scale_factor  # Vectorized
-
         self.current = new_current
-        self.notes.append(f'<HE3> Data scaled by current change of {new_current}A/{old_current}A')
+
+        for note in self.notes:
+            if "Data scaled by current change of" in note:
+                self.notes.remove(note)
+        self.notes.append(f'<HE3> Data scaled by current change of {new_current}A/{self.original_current}A')
         return self
 
     def scale_by_factor(self, factor):
@@ -1818,12 +1830,6 @@ class PEMFile:
         if method == "unrotate":
             assert self.is_derotated(), f"{self.filepath.name} has not been de-rotated."
             assert self.has_d7(), f"{self.filepath.name} RAD tool values must be D7."
-        # else:
-        #     if method is not None:
-        #         # assert self.prepped_for_rotation, f"{self.filepath.name} has not been prepped for rotation."
-        #         if not self.prepped_for_rotation:
-        #             logger.info(f"{self.filepath.name} has not been prepped for rotation.")
-        #             self.prep_rotation()
         self.soa += soa
         logger.info(f"De-rotating data of {self.filepath.name} using {method} with SOA {self.soa}.")
 
@@ -1884,7 +1890,7 @@ class PEMFile:
                         dip = rad.dip
                         derotated = True
                     else:
-                        roll_angle = soa
+                        roll_angle = 0
                         r = None
                         dip = None
                         derotated = False
@@ -1892,9 +1898,10 @@ class PEMFile:
                     new_info = {'roll_angle': roll_angle,
                                 'dip': dip,
                                 'R': r,
-                                'angle_used': soa,
+                                'angle_used': roll_angle + self.soa,  # For derotated files, same as angle_used + soa
                                 'derotated': derotated,
                                 'rotation_type': 'soa'}
+                    # print(new_info)
 
                 elif method == 'unrotate':
                     new_info = {'roll_angle': None,
@@ -1926,9 +1933,6 @@ class PEMFile:
                                               weights=weights)
                 return averaged_reading
 
-            # print(f"Rotating station {group.iloc[0].Station}")
-            # if group.iloc[0].Station == "400" or group.iloc[0].Station == "220":
-            #     print("Stopping here")
             # Create a new RADTool object ready for de-rotating
             rad = group.iloc[0]['RAD_tool']  # Why do some RADs have no acc angle value?
             new_rad = get_new_rad(method)
@@ -1936,6 +1940,8 @@ class PEMFile:
                 roll_angle = rad.angle_used
                 roll = -math.radians(roll_angle)
                 new_rad.angle_used = None
+            elif method is None:
+                roll = math.radians(soa)
             else:
                 roll_angle = new_rad.angle_used  # Roll angle used for de-rotation
                 roll = math.radians(roll_angle)
@@ -3954,7 +3960,7 @@ class RADTool:
                         x, y, z = f"{self.gx:g}", f"{self.gy:g}", f"{self.gz:g}"
 
                     # For de-rotated XY RADs
-                    if all([self.roll_angle, self.dip, self.angle_used, self.R]):
+                    if all([att is not None for att in [self.roll_angle, self.dip, self.angle_used, self.R]]):
                         result = [
                             'D5',
                             x,
@@ -4021,6 +4027,7 @@ class RADTool:
                 else:
                     raise ValueError('RADTool D value is neither "D5" nor "D7"')
 
+        print(result)
         return ' '.join(result)
 
 
@@ -4131,7 +4138,8 @@ if __name__ == '__main__':
 
     pg = PEMGetter()
 
-    pem_file = pg.parse(r"C:\_Data\2021\Eastern\Sterling\SP-21-040\RAW\xy_1205.PEM")
+    # pem_file = pg.parse(r"C:\_Data\2021\Eastern\Sterling\SP-21-040\RAW\xy_1205.PEM")
+    pem_file = pg.parse(r"C:\_Data\2021\Nantou BF\Borehole\_PX21002\RAW\xy-px21002_1206.PEM")
     # txt_file = sample_folder.joinpath(r"Line GPS\KA800N_1027.txt")
     # line = SurveyLine(txt_file)
     # line.get_warnings(stations=pem_file.get_stations(converted=True, incl_deleted=False))
@@ -4167,7 +4175,7 @@ if __name__ == '__main__':
     # pem_file.to_xyz()
     # pem_file, _ = pem_file.prep_rotation()
     # pem_file.mag_offset()
-    pem_file = pem_file.rotate(method='acc', soa=0)
+    pem_file = pem_file.rotate(method=None, soa=2)
     # pem_file = pem_file.rotate(method='unrotate', soa=10)
     # pem_file = pem_file.rotate(method="pp", soa=1)
     # rotated_pem = prep_pem.rotate('pp')

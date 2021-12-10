@@ -122,7 +122,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.crs_selector.setAlignment(Qt.AlignCenter)
         self.pem_list_filter = PathFilter('PEM', parent=self)
         self.gps_list_filter = PathFilter('GPS', parent=self)
-        self.unpacker = Unpacker(parent=self, darkmode=self.darkmode)
+        self.unpacker = Unpacker(parent=self)
         self.selection_files_label = QLabel()
         self.selection_components_label = QLabel()
         self.selection_timebase_label = QLabel()
@@ -990,6 +990,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             project_dir: str
             if Path(project_dir).is_dir():
                 self.move_dir_tree(project_dir, start_up=True)
+
+        # Set darkmode before opening PEMFiles, or the darkmode of the PIWs won't be correct.
+        self.set_dark_mode()
 
         # Files
         last_opened_pems = settings.value("last_opened_files")
@@ -3556,7 +3559,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.color_table_by_values()
         else:
             logger.error(f"PEMFile ID {id(pem_file)} is not in the table.")
-            raise IndexError(f"PEMFile ID {id(pem_file)} is not in the table.")
+            # raise IndexError(f"PEMFile ID {id(pem_file)} is not in the table.")
 
     def update_selection_text(self):
         """
@@ -3713,6 +3716,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.selection_survey_label.setStyleSheet(f'color: {text_color}')
         self.selection_derotation_label.setStyleSheet(f'color: {text_color}')
 
+        self.unpacker.darkmode = self.darkmode
         for piw in self.pem_info_widgets:
             piw.darkmode = self.darkmode
 

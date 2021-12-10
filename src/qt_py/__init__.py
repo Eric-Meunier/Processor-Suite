@@ -690,8 +690,8 @@ class TableSelector(QWidget):
         :return: None
         """
         filepath = Path(filepath)
-
-        if filepath.suffix == '.xlsx' or filepath.suffix == '.xls':
+        file_suffix = filepath.suffix.lower()
+        if file_suffix == '.xlsx' or file_suffix == '.xls':
             content = pd.read_excel(filepath,
                                     header=None,
                                     sheet_name=None)
@@ -702,7 +702,7 @@ class TableSelector(QWidget):
                 self.tables.append(table)
                 self.tabs.addTab(table, str(sheet))
         else:
-            if filepath.suffix == '.txt' or filepath.suffix == '.dad':
+            if file_suffix == '.txt' or file_suffix == '.dad':
                 content = pd.read_csv(filepath,
                                       delim_whitespace=True,
                                       header=None)
