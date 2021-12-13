@@ -72,6 +72,7 @@ logger = logging.getLogger(__name__)
 # TODO When plotting PP files, set them all as the same station, and color code by timestamp. Also add plot of °----(drift number here)---° showing drift.
 # TODO to remove loop edge effects, remove the primary field (or a percentage of it) from the readings, which is the PP
 # TODO Add component specific coil area scaling (for SQUID).
+# TODO Add "Open today's data" button for PEMs list.
 
 
 # Keep a list of widgets so they don't get garbage collected

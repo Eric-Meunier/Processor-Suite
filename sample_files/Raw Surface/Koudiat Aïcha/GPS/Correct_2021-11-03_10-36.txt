@@ -1,0 +1,477 @@
+Searching for base files...
+ 
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr12950.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto2950.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr12960.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto2960.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr12970.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto2970.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr12980.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto2980.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr12990.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto2990.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr13000.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto3000.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr13010.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto3010.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr13020.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto3020.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr13030.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto3030.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr13040.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto3040.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr13050.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto3050.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr13060.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto3060.21n.Z downloaded.
+Successfully found or downloaded 24 of 24 files.
+Search complete.
+ 
+--------Base Data Details:--------------------
+Using reference position from base provider: 
+  Name: SOPAC, IFRANE SEISMIC STATION Daily
+  Position: 33°30'50.11992"N,  5°07'31.94206"W,  1,709.52 m
+Source: C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily
+  ifr12950.21d.Z
+    Local time: 2021-10-21 7:59:42 PM to 2021-10-22 7:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr12960.21d.Z
+    Local time: 2021-10-22 7:59:42 PM to 2021-10-23 7:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr12970.21d.Z
+    Local time: 2021-10-23 7:59:42 PM to 2021-10-24 7:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr12980.21d.Z
+    Local time: 2021-10-24 7:59:42 PM to 2021-10-25 7:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr12990.21d.Z
+    Local time: 2021-10-25 7:59:42 PM to 2021-10-26 7:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr13000.21d.Z
+    Local time: 2021-10-26 7:59:42 PM to 2021-10-27 7:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr13010.21d.Z
+    Local time: 2021-10-27 7:59:42 PM to 2021-10-28 7:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr13020.21d.Z
+    Local time: 2021-10-28 7:59:42 PM to 2021-10-29 7:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr13030.21d.Z
+    Local time: 2021-10-29 7:59:42 PM to 2021-10-30 7:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr13040.21d.Z
+    Local time: 2021-10-30 7:59:42 PM to 2021-10-31 7:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr13050.21d.Z
+    Local time: 2021-10-31 7:59:42 PM to 2021-11-01 7:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr13060.21d.Z
+    Local time: 2021-11-01 7:59:42 PM to 2021-11-02 7:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+ 
+--------Coverage Details:--------------------
+Rover file: KA0N_1031.SSF
+  Local time: 2021-10-31 8:23:19 AM to 2021-10-31 9:15:04 AM
+100% total coverage
+  100% coverage by ifr13040.21d.Z
+ 
+Rover file: KA0N_1101.SSF
+  Local time: 2021-10-31 8:23:19 AM to 2021-11-01 8:19:25 AM
+100% total coverage
+  16% coverage by ifr13040.21d.Z
+  84% coverage by ifr13050.21d.Z
+ 
+Rover file: KA200N_1031.SSF
+  Local time: 2021-10-30 8:36:16 AM to 2021-10-31 8:22:54 AM
+100% total coverage
+  15% coverage by ifr13030.21d.Z
+  85% coverage by ifr13040.21d.Z
+ 
+Rover file: KA200N_1101.SSF
+  Local time: 2021-10-30 8:36:16 AM to 2021-11-01 9:26:04 AM
+100% total coverage
+  12% coverage by ifr13030.21d.Z
+  66% coverage by ifr13040.21d.Z
+  22% coverage by ifr13050.21d.Z
+ 
+Rover file: KA200N_1102.SSF
+  Local time: 2021-10-30 8:36:16 AM to 2021-11-02 7:56:39 AM
+100% total coverage
+  9% coverage by ifr13030.21d.Z
+  51% coverage by ifr13040.21d.Z
+  17% coverage by ifr13050.21d.Z
+  23% coverage by ifr13060.21d.Z
+ 
+Rover file: KA400N_1029.SSF
+  Local time: 2021-10-29 6:19:27 AM to 2021-10-29 8:58:41 AM
+100% total coverage
+  100% coverage by ifr13020.21d.Z
+ 
+Rover file: KA400N_1030.SSF
+  Local time: 2021-10-29 6:19:27 AM to 2021-10-30 8:26:56 AM
+100% total coverage
+  41% coverage by ifr13020.21d.Z
+  59% coverage by ifr13030.21d.Z
+ 
+Rover file: KA600N_1028.SSF
+  Local time: 2021-10-26 8:42:16 AM to 2021-10-28 9:34:01 AM
+100% total coverage
+  8% coverage by ifr12990.21d.Z
+  21% coverage by ifr13000.21d.Z
+  71% coverage by ifr13010.21d.Z
+ 
+Rover file: KA600N_1029.SSF
+  Local time: 2021-10-26 8:42:16 AM to 2021-10-29 6:06:33 AM
+100% total coverage
+  7% coverage by ifr12990.21d.Z
+  18% coverage by ifr13000.21d.Z
+  62% coverage by ifr13010.21d.Z
+  13% coverage by ifr13020.21d.Z
+ 
+Rover file: KA800N_1025.SSF
+  Local time: 2021-10-25 7:12:45 AM to 2021-10-25 9:38:14 AM
+100% total coverage
+  100% coverage by ifr12980.21d.Z
+ 
+Rover file: KA800N_1026.SSF
+  Local time: 2021-10-25 7:12:45 AM to 2021-10-26 8:40:20 AM
+100% total coverage
+  36% coverage by ifr12980.21d.Z
+  64% coverage by ifr12990.21d.Z
+ 
+Rover file: KA800N_1027.SSF
+  Local time: 2021-10-25 7:12:45 AM to 2021-10-27 7:56:44 AM
+100% total coverage
+  30% coverage by ifr12980.21d.Z
+  52% coverage by ifr12990.21d.Z
+  18% coverage by ifr13000.21d.Z
+ 
+Rover file: KA1000N_1024.SSF
+  Local time: 2021-10-24 4:52:28 AM to 2021-10-24 9:12:17 AM
+100% total coverage
+  100% coverage by ifr12970.21d.Z
+ 
+Rover file: KA1000N_1025.SSF
+  Local time: 2021-10-24 4:52:28 AM to 2021-10-25 7:08:17 AM
+100% total coverage
+  62% coverage by ifr12970.21d.Z
+  38% coverage by ifr12980.21d.Z
+ 
+Rover file: KA1000N_1027.SSF
+  Local time: 2021-10-24 4:52:28 AM to 2021-10-27 6:21:17 AM
+100% total coverage
+  50% coverage by ifr12970.21d.Z
+  31% coverage by ifr12980.21d.Z
+  20% coverage by ifr13000.21d.Z
+ 
+Rover file: KA1200N_1023.SSF
+  Local time: 2021-10-23 6:21:29 AM to 2021-10-23 9:08:26 AM
+100% total coverage
+  100% coverage by ifr12960.21d.Z
+ 
+Rover file: KOKAIKLOOP1_1023.SSF
+  Local time: 2021-10-22 5:45:20 AM to 2021-10-22 8:11:58 AM
+100% total coverage
+  100% coverage by ifr12950.21d.Z
+ 
+--------------------------------------------------
+Differentially correcting...
+  Differential correction settings:
+    Use smart automatic filtering: On
+    Re-correct real-time positions: On
+    Output positions: Corrected and uncorrected
+
+--------------------------------------------------
+Processing rover file, KA0N_1031.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA0N_1031.cor
+    Carrier processing...
+        Selected 253 positions for post-processing
+        Corrected 247 positions
+        Failed to correct 6 positions
+              6 of these were due to missing base data
+    Code processing...
+        Selected 253 positions for post-processing
+        Corrected 253 positions
+    Chose 221 code solutions over the carrier solutions
+        221 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, KA0N_1101.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA0N_1101.cor
+    Carrier processing...
+        Selected 856 positions for post-processing
+        Corrected 849 positions
+        Failed to correct 7 positions
+              7 of these were due to missing base data
+    Code processing...
+        Selected 856 positions for post-processing
+        Corrected 856 positions
+    Chose 786 code solutions over the carrier solutions
+        786 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, KA200N_1031.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA200N_1031.cor
+    Carrier processing...
+        Selected 983 positions for post-processing
+        Corrected 899 positions
+        Failed to correct 84 positions
+              43 of these were due to missing base data
+            41 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 983 positions for post-processing
+        Corrected 983 positions
+    Chose 810 code solutions over the carrier solutions
+        810 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, KA200N_1101.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA200N_1101.cor
+    Carrier processing...
+        Selected 1284 positions for post-processing
+        Corrected 1193 positions
+        Failed to correct 91 positions
+              50 of these were due to missing base data
+            41 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 1284 positions for post-processing
+        Corrected 1284 positions
+    Chose 1076 code solutions over the carrier solutions
+        1076 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, KA200N_1102.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA200N_1102.cor
+    Carrier processing...
+        Selected 1737 positions for post-processing
+        Corrected 1634 positions
+        Failed to correct 103 positions
+              62 of these were due to missing base data
+            41 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 1737 positions for post-processing
+        Corrected 1737 positions
+    Chose 1488 code solutions over the carrier solutions
+        1488 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, KA400N_1029.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA400N_1029.cor
+    Carrier processing...
+        Selected 1210 positions for post-processing
+        Corrected 793 positions
+        Failed to correct 417 positions
+              246 of these were due to missing base data
+            172 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 1210 positions for post-processing
+        Corrected 1210 positions
+    Chose 756 code solutions over the carrier solutions
+        756 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, KA400N_1030.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA400N_1030.cor
+    Carrier processing...
+        Selected 2250 positions for post-processing
+        Corrected 1565 positions
+        Failed to correct 685 positions
+              427 of these were due to missing base data
+            259 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 2250 positions for post-processing
+        Corrected 2250 positions
+    Chose 1488 code solutions over the carrier solutions
+        1488 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, KA600N_1028.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA600N_1028.cor
+    Carrier processing...
+        Selected 3769 positions for post-processing
+        Corrected 2611 positions
+        Failed to correct 1158 positions
+              853 of these were due to missing base data
+            305 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 3769 positions for post-processing
+        Corrected 3768 positions
+        Failed to correct 1 positions
+    Chose 2411 code solutions over the carrier solutions
+        2411 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, KA600N_1029.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA600N_1029.cor
+    Carrier processing...
+        Selected 4522 positions for post-processing
+        Corrected 3038 positions
+        Failed to correct 1484 positions
+              1159 of these were due to missing base data
+            325 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 4522 positions for post-processing
+        Corrected 4428 positions
+        Failed to correct 94 positions
+    Chose 2831 code solutions over the carrier solutions
+        2831 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, KA800N_1025.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA800N_1025.cor
+    Carrier processing...
+        Selected 1791 positions for post-processing
+        Corrected 699 positions
+        Failed to correct 1092 positions
+              883 of these were due to missing base data
+            209 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 1791 positions for post-processing
+        Corrected 1567 positions
+        Failed to correct 224 positions
+    Chose 641 code solutions over the carrier solutions
+        641 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, KA800N_1026.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA800N_1026.cor
+    Carrier processing...
+        Selected 2851 positions for post-processing
+        Corrected 1737 positions
+        Failed to correct 1114 positions
+              901 of these were due to missing base data
+            213 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 2851 positions for post-processing
+        Corrected 2627 positions
+        Failed to correct 224 positions
+    Chose 1520 code solutions over the carrier solutions
+        1520 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, KA800N_1027.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA800N_1027.cor
+    Carrier processing...
+        Selected 3479 positions for post-processing
+        Corrected 2249 positions
+        Failed to correct 1230 positions
+              981 of these were due to missing base data
+            249 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 3479 positions for post-processing
+        Corrected 3255 positions
+        Failed to correct 224 positions
+    Chose 1969 code solutions over the carrier solutions
+        1969 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, KA1000N_1024.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA1000N_1024.cor
+    Carrier processing...
+        Selected 1632 positions for post-processing
+        Corrected 1352 positions
+        Failed to correct 280 positions
+              196 of these were due to missing base data
+            84 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 1632 positions for post-processing
+        Corrected 1632 positions
+    Chose 1213 code solutions over the carrier solutions
+        1213 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, KA1000N_1025.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA1000N_1025.cor
+    Carrier processing...
+        Selected 2524 positions for post-processing
+        Corrected 1996 positions
+        Failed to correct 528 positions
+              333 of these were due to missing base data
+            195 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 2524 positions for post-processing
+        Corrected 2523 positions
+        Failed to correct 1 positions
+    Chose 1817 code solutions over the carrier solutions
+        1817 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, KA1000N_1027.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA1000N_1027.cor
+    Carrier processing...
+        Selected 3033 positions for post-processing
+        Corrected 2494 positions
+        Failed to correct 539 positions
+              344 of these were due to missing base data
+            195 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 3033 positions for post-processing
+        Corrected 3032 positions
+        Failed to correct 1 positions
+    Chose 2284 code solutions over the carrier solutions
+        2284 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, KA1200N_1023.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA1200N_1023.cor
+    Carrier processing...
+        Selected 811 positions for post-processing
+        Corrected 793 positions
+        Failed to correct 18 positions
+              11 of these were due to missing base data
+            6 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 811 positions for post-processing
+        Corrected 810 positions
+        Failed to correct 1 positions
+    Chose 690 code solutions over the carrier solutions
+        690 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, KOKAIKLOOP1_1023.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KOKAIKLOOP1_1023.cor
+    Carrier processing...
+        Selected 4566 positions for post-processing
+        Corrected 4542 positions
+        Failed to correct 24 positions
+              15 of these were due to missing base data
+            9 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 4566 positions for post-processing
+        Corrected 4566 positions
+    Chose 3355 code solutions over the carrier solutions
+        3355 code solutions were of higher quality
+ 
+--------------------------------------------------
+Differential Correction Summary:
+    17 files processed.  In these files:
+        36781 (97.95%) of 37551 selected positions were code corrected by post-processing
+        28691 (76.41%) of 37551 selected positions were carrier corrected by post-processing
+        25356 (88.38%) of code positions chosen over carrier, as they were of higher quality
+
+    Estimated accuracies for 36781 corrected positions are as follows:
+            Range	Percentage
+            ----------	----------
+              0-5cm	     -
+             5-15cm	     -
+            15-30cm	 0.01%
+            30-50cm	63.51%
+             0.5-1m	27.65%
+               1-2m	 6.21%
+               2-5m	 2.25%
+                >5m	 0.37%
+
+Differential correction complete.
+ 

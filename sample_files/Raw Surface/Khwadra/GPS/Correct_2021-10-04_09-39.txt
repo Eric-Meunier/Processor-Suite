@@ -1,0 +1,94 @@
+Searching for base files...
+ 
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/rinex/2021/276/ouca2760.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, OUCA Daily\auto2760.21n.Z downloaded.
+Successfully found or downloaded 1 of 2 files.
+Search complete.
+ 
+--------------------------------------------------
+Searching for base files...
+ 
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/276/08/rabt276i.21d.Z.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, Rabat, EMI, hourly\auto2760.21n.Z downloaded.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/archive/garner/rinex/2021/276/auto2760.21g.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/276/09/rabt276j.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/276/10/rabt276k.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/276/11/rabt276l.21d.Z.
+Unable to transfer files.
+Unable to download file from url ftp://garner.ucsd.edu/pub/nrtdata/2021/276/12/rabt276m.21d.Z.
+Successfully found or downloaded 1 of 7 files.
+Search complete.
+ 
+--------------------------------------------------
+Searching for base files...
+ 
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr12760.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto2760.21n.Z downloaded.
+Successfully found or downloaded 2 of 2 files.
+Search complete.
+ 
+--------Base Data Details:--------------------
+Using reference position from base provider: 
+  Name: SOPAC, IFRANE SEISMIC STATION Daily
+  Position: 33°30'50.11992"N,  5°07'31.94206"W,  1,709.52 m
+Source: C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily
+  ifr12760.21d.Z
+    Local time: 2021-10-02 7:59:42 PM to 2021-10-03 7:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+ 
+--------Coverage Details:--------------------
+Rover file: MANLOOP1.SSF
+  Local time: 2021-10-03 4:54:47 AM to 2021-10-03 8:56:57 AM
+100% total coverage
+  100% coverage by ifr12760.21d.Z
+ 
+--------------------------------------------------
+Differentially correcting...
+  Differential correction settings:
+    Use smart automatic filtering: On
+    Re-correct real-time positions: On
+    Output positions: Corrected and uncorrected
+
+--------------------------------------------------
+Processing rover file, MANLOOP1.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\Khwadra\GPS\MANLOOP1.cor
+    Carrier processing...
+        Selected 4553 positions for post-processing
+        Corrected 4531 positions
+        Failed to correct 22 positions
+              2 of these were due to missing base data
+            20 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 4553 positions for post-processing
+        Corrected 4553 positions
+    Chose 3507 code solutions over the carrier solutions
+        3507 code solutions were of higher quality
+ 
+--------------------------------------------------
+Differential Correction Summary:
+    1 file processed.  In this file:
+        4553 (100.00%) of 4553 selected positions were code corrected by post-processing
+        4531 (99.52%) of 4553 selected positions were carrier corrected by post-processing
+        3507 (77.40%) of code positions chosen over carrier, as they were of higher quality
+
+    Estimated accuracies for 4553 corrected positions are as follows:
+            Range	Percentage
+            ----------	----------
+              0-5cm	     -
+             5-15cm	     -
+            15-30cm	     -
+            30-50cm	92.55%
+             0.5-1m	 7.27%
+               1-2m	 0.18%
+               2-5m	     -
+                >5m	     -
+
+Differential correction complete.
+ 

@@ -1,0 +1,95 @@
+Export Version 5.90-65535  5.90-65535 Started.
+Using Export Setup: Crone MSL
+The following files in C:\_Data\2021\Managem\Surface\JHadid\GPS will be exported:
+    JH0N_1123.cor
+    JH200N_1124.cor
+    JH400N_1125.cor
+    JH600N_1125.cor
+    JH600N_1126.cor
+    JH800N_1127.cor
+    JH1000N_1128.cor
+    JH1200N_1129.cor
+    JH1400N_1130.cor
+    JHLOOP1_1123.cor
+
+Reading file JH0N_1123.cor
+1006 position(s) read.
+A total of 20 feature(s) read or created.
+  20 point feature(s) read.
+File JH0N_1123.cor read successfully
+
+Reading file JH200N_1124.cor
+1399 position(s) read.
+A total of 27 feature(s) read or created.
+  27 point feature(s) read.
+File JH200N_1124.cor read successfully
+
+Reading file JH400N_1125.cor
+1467 position(s) read.
+A total of 29 feature(s) read or created.
+  29 point feature(s) read.
+File JH400N_1125.cor read successfully
+
+Reading file JH600N_1125.cor
+544 position(s) read.
+A total of 10 feature(s) read or created.
+  10 point feature(s) read.
+File JH600N_1125.cor read successfully
+
+Reading file JH600N_1126.cor
+1498 position(s) read.
+A total of 29 feature(s) read or created.
+  29 point feature(s) read.
+File JH600N_1126.cor read successfully
+
+Reading file JH800N_1127.cor
+1471 position(s) read.
+A total of 29 feature(s) read or created.
+  29 point feature(s) read.
+File JH800N_1127.cor read successfully
+
+Reading file JH1000N_1128.cor
+1558 position(s) read.
+A total of 28 feature(s) read or created.
+  28 point feature(s) read.
+File JH1000N_1128.cor read successfully
+
+Reading file JH1200N_1129.cor
+2553 position(s) read.
+A total of 27 feature(s) read or created.
+  27 point feature(s) read.
+File JH1200N_1129.cor read successfully
+
+Reading file JH1400N_1130.cor
+1872 position(s) read.
+A total of 20 feature(s) read or created.
+  20 point feature(s) read.
+File JH1400N_1130.cor read successfully
+
+Reading file JHLOOP1_1123.cor
+4335 position(s) read.
+A total of 86 feature(s) read or created.
+  86 point feature(s) read.
+File JHLOOP1_1123.cor read successfully
+
+10 input file(s) read.
+17703 position(s) read.
+A total of 305 feature(s) read or created.
+  305 point feature(s) read.
+305 feature(s) exported.
+11 output file(s) written to C:\_Data\2021\Managem\Surface\JHadid\GPS
+    c:\_data\2021\managem\surface\jhadid\gps\.txt
+    c:\_data\2021\managem\surface\jhadid\gps\jh0n_1123.txt
+    c:\_data\2021\managem\surface\jhadid\gps\jh200n_1124.txt
+    c:\_data\2021\managem\surface\jhadid\gps\jh400n_1125.txt
+    c:\_data\2021\managem\surface\jhadid\gps\jh600n_1125.txt
+    c:\_data\2021\managem\surface\jhadid\gps\jh600n_1126.txt
+    c:\_data\2021\managem\surface\jhadid\gps\jh800n_1127.txt
+    c:\_data\2021\managem\surface\jhadid\gps\jh1000n_1128.txt
+    c:\_data\2021\managem\surface\jhadid\gps\jh1200n_1129.txt
+    c:\_data\2021\managem\surface\jhadid\gps\jh1400n_1130.txt
+    c:\_data\2021\managem\surface\jhadid\gps\jhloop1_1123.txt
+
+The file C:\_Data\2021\Managem\Surface\JHadid\GPS\JH0N_1123.log contains information on the settings used.
+
+The file C:\ProgramData\Trimble\GPS Pathfinder Office\Config\\expfiles.txt contains a list of the files created.

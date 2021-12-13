@@ -1,0 +1,7 @@
+Device: GIS Datalogger on Windows Mobile
+
+Receive operation Completed.
+1 File(s) Successfully Transferred.
+Details are as follows:
+
+12:33:50 PM 11/17/2021	Received File C:\Scott\2021\MangagemGroup\Kokiak Aicha\Nov17\GPS\KA1000E.SSF from Default. Completed.	

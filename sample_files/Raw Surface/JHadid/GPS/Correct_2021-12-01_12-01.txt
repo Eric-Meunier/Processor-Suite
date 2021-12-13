@@ -1,0 +1,298 @@
+Searching for base files...
+ 
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr13260.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto3260.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr13270.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto3270.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr13280.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto3280.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr13290.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto3290.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr13300.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto3300.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr13310.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto3310.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr13320.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto3320.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr13330.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto3330.21n.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\ifr13340.21d.Z downloaded.
+File C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily\auto3340.21n.Z downloaded.
+Successfully found or downloaded 18 of 18 files.
+Search complete.
+ 
+--------Base Data Details:--------------------
+Using reference position from base provider: 
+  Name: SOPAC, IFRANE SEISMIC STATION Daily
+  Position: 33°30'50.11992"N,  5°07'31.94206"W,  1,709.52 m
+Source: C:\Users\Eric\Documents\GNSS Projects\Default\base\SOPAC, IFRANE SEISMIC STATION Daily
+  ifr13260.21d.Z
+    Local time: 2021-11-21 6:59:42 PM to 2021-11-22 6:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr13270.21d.Z
+    Local time: 2021-11-22 6:59:42 PM to 2021-11-23 6:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr13280.21d.Z
+    Local time: 2021-11-23 6:59:42 PM to 2021-11-24 6:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr13290.21d.Z
+    Local time: 2021-11-24 6:59:42 PM to 2021-11-25 6:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr13300.21d.Z
+    Local time: 2021-11-25 6:59:42 PM to 2021-11-26 6:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr13310.21d.Z
+    Local time: 2021-11-26 6:59:42 PM to 2021-11-27 6:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr13320.21d.Z
+    Local time: 2021-11-27 6:59:42 PM to 2021-11-28 6:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr13330.21d.Z
+    Local time: 2021-11-28 6:59:42 PM to 2021-11-29 6:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+  ifr13340.21d.Z
+    Local time: 2021-11-29 6:59:42 PM to 2021-11-30 6:59:12 PM
+    Position: 33°30'50.15880"N, 5°07'31.87920"W, 1,708.85 m, 0.04 m Antenna height
+    Distance from base provider: 2.02m
+ 
+--------Coverage Details:--------------------
+Rover file: JH0N_1123.SSF
+  Local time: 2021-11-23 5:39:33 AM to 2021-11-23 8:35:20 AM
+100% total coverage
+  100% coverage by ifr13270.21d.Z
+ 
+Rover file: JH200N_1124.SSF
+  Local time: 2021-11-24 3:54:00 AM to 2021-11-24 7:49:16 AM
+100% total coverage
+  100% coverage by ifr13280.21d.Z
+ 
+Rover file: JH400N_1125.SSF
+  Local time: 2021-11-24 7:58:59 AM to 2021-11-25 7:00:22 AM
+100% total coverage
+  13% coverage by ifr13280.21d.Z
+  87% coverage by ifr13290.21d.Z
+ 
+Rover file: JH600N_1125.SSF
+  Local time: 2021-11-25 7:11:01 AM to 2021-11-25 8:41:53 AM
+100% total coverage
+  100% coverage by ifr13290.21d.Z
+ 
+Rover file: JH600N_1126.SSF
+  Local time: 2021-11-25 7:11:01 AM to 2021-11-26 7:38:55 AM
+100% total coverage
+  34% coverage by ifr13290.21d.Z
+  66% coverage by ifr13300.21d.Z
+ 
+Rover file: JH800N_1127.SSF
+  Local time: 2021-11-26 7:39:11 AM to 2021-11-27 8:23:07 AM
+100% total coverage
+  6% coverage by ifr13300.21d.Z
+  94% coverage by ifr13310.21d.Z
+ 
+Rover file: JH1000N_1128.SSF
+  Local time: 2021-11-28 3:43:02 AM to 2021-11-28 8:27:09 AM
+100% total coverage
+  100% coverage by ifr13320.21d.Z
+ 
+Rover file: JH1200N_1129.SSF
+  Local time: 2021-11-29 3:31:17 AM to 2021-11-29 8:37:37 AM
+100% total coverage
+  100% coverage by ifr13330.21d.Z
+ 
+Rover file: JH1400N_1130.SSF
+  Local time: 2021-11-30 3:45:16 AM to 2021-11-30 6:55:58 AM
+100% total coverage
+  100% coverage by ifr13340.21d.Z
+ 
+Rover file: JHLOOP1_1123.SSF
+  Local time: 2021-11-22 3:35:03 AM to 2021-11-22 6:14:00 AM
+100% total coverage
+  100% coverage by ifr13260.21d.Z
+ 
+--------------------------------------------------
+Differentially correcting...
+  Differential correction settings:
+    Use smart automatic filtering: On
+    Re-correct real-time positions: On
+    Output positions: Corrected and uncorrected
+
+--------------------------------------------------
+Processing rover file, JH0N_1123.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\JHadid\GPS\JH0N_1123.cor
+    Carrier processing...
+        Selected 1006 positions for post-processing
+        Corrected 980 positions
+        Failed to correct 26 positions
+              11 of these were due to missing base data
+            15 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 1006 positions for post-processing
+        Corrected 1006 positions
+    Chose 921 code solutions over the carrier solutions
+        921 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, JH200N_1124.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\JHadid\GPS\JH200N_1124.cor
+    Carrier processing...
+        Selected 1399 positions for post-processing
+        Corrected 1370 positions
+        Failed to correct 29 positions
+              19 of these were due to missing base data
+            10 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 1399 positions for post-processing
+        Corrected 1399 positions
+    Chose 1179 code solutions over the carrier solutions
+        1179 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, JH400N_1125.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\JHadid\GPS\JH400N_1125.cor
+    Carrier processing...
+        Selected 1467 positions for post-processing
+        Corrected 1454 positions
+        Failed to correct 13 positions
+              9 of these were due to missing base data
+            4 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 1467 positions for post-processing
+        Corrected 1467 positions
+    Chose 1347 code solutions over the carrier solutions
+        1347 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, JH600N_1125.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\JHadid\GPS\JH600N_1125.cor
+    Carrier processing...
+        Selected 544 positions for post-processing
+        Corrected 512 positions
+        Failed to correct 32 positions
+              21 of these were due to missing base data
+            11 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 544 positions for post-processing
+        Corrected 544 positions
+    Chose 491 code solutions over the carrier solutions
+        491 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, JH600N_1126.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\JHadid\GPS\JH600N_1126.cor
+    Carrier processing...
+        Selected 1498 positions for post-processing
+        Corrected 1449 positions
+        Failed to correct 49 positions
+              31 of these were due to missing base data
+            18 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 1498 positions for post-processing
+        Corrected 1498 positions
+    Chose 1398 code solutions over the carrier solutions
+        1398 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, JH800N_1127.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\JHadid\GPS\JH800N_1127.cor
+    Carrier processing...
+        Selected 1471 positions for post-processing
+        Corrected 1448 positions
+        Failed to correct 23 positions
+              20 of these were due to missing base data
+            3 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 1471 positions for post-processing
+        Corrected 1471 positions
+    Chose 1265 code solutions over the carrier solutions
+        1265 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, JH1000N_1128.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\JHadid\GPS\JH1000N_1128.cor
+    Carrier processing...
+        Selected 1558 positions for post-processing
+        Corrected 1462 positions
+        Failed to correct 96 positions
+              56 of these were due to missing base data
+            40 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 1558 positions for post-processing
+        Corrected 1558 positions
+    Chose 1298 code solutions over the carrier solutions
+        1298 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, JH1200N_1129.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\JHadid\GPS\JH1200N_1129.cor
+    Carrier processing...
+        Selected 2553 positions for post-processing
+        Corrected 1524 positions
+        Failed to correct 1029 positions
+              561 of these were due to missing base data
+            468 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 2553 positions for post-processing
+        Corrected 2507 positions
+        Failed to correct 46 positions
+    Chose 1494 code solutions over the carrier solutions
+        1494 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, JH1400N_1130.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\JHadid\GPS\JH1400N_1130.cor
+    Carrier processing...
+        Selected 1872 positions for post-processing
+        Corrected 1717 positions
+        Failed to correct 155 positions
+              84 of these were due to missing base data
+            71 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 1872 positions for post-processing
+        Corrected 1872 positions
+    Chose 1336 code solutions over the carrier solutions
+        1336 code solutions were of higher quality
+ 
+--------------------------------------------------
+Processing rover file, JHLOOP1_1123.SSF ...
+...to output file, C:\_Data\2021\Managem\Surface\JHadid\GPS\JHLOOP1_1123.cor
+    Carrier processing...
+        Selected 4335 positions for post-processing
+        Corrected 4296 positions
+        Failed to correct 39 positions
+              10 of these were due to missing base data
+            29 of these were due to insufficient satellites for position fix
+    Code processing...
+        Selected 4335 positions for post-processing
+        Corrected 4335 positions
+    Chose 3494 code solutions over the carrier solutions
+        3494 code solutions were of higher quality
+ 
+--------------------------------------------------
+Differential Correction Summary:
+    10 files processed.  In these files:
+        17657 (99.74%) of 17703 selected positions were code corrected by post-processing
+        16212 (91.58%) of 17703 selected positions were carrier corrected by post-processing
+        14223 (87.73%) of code positions chosen over carrier, as they were of higher quality
+
+    Estimated accuracies for 17657 corrected positions are as follows:
+            Range	Percentage
+            ----------	----------
+              0-5cm	     -
+             5-15cm	     -
+            15-30cm	 0.01%
+            30-50cm	79.02%
+             0.5-1m	18.81%
+               1-2m	 1.92%
+               2-5m	 0.22%
+                >5m	 0.02%
+
+Differential correction complete.
+ 

@@ -1,0 +1,95 @@
+Export Version 5.90-65535  5.90-65535 Started.
+Using Export Setup: Crone MSL
+The following files in C:\_Data\2021\Managem\Surface\Khwadra\GPS will be exported:
+    KHW600N_1007.SSF
+    KHW600N_1008.SSF
+    KHW800N_1005.SSF
+    KHW800N_1006.SSF
+    KHW800N_1007.SSF
+    KHW800N_1008.SSF
+    KHW1000N_1004.SSF
+    KHW1000N_1005.SSF
+    KHW1000N_1006.SSF
+    MANLOOP1.SSF
+
+Reading file KHW600N_1007.SSF
+873 position(s) read.
+A total of 13 feature(s) read or created.
+  13 point feature(s) read.
+File KHW600N_1007.SSF read successfully
+
+Reading file KHW600N_1008.SSF
+1730 position(s) read.
+A total of 30 feature(s) read or created.
+  30 point feature(s) read.
+File KHW600N_1008.SSF read successfully
+
+Reading file KHW800N_1005.SSF
+947 position(s) read.
+A total of 13 feature(s) read or created.
+  13 point feature(s) read.
+File KHW800N_1005.SSF read successfully
+
+Reading file KHW800N_1006.SSF
+1357 position(s) read.
+A total of 21 feature(s) read or created.
+  21 point feature(s) read.
+File KHW800N_1006.SSF read successfully
+
+Reading file KHW800N_1007.SSF
+1623 position(s) read.
+A total of 26 feature(s) read or created.
+  26 point feature(s) read.
+File KHW800N_1007.SSF read successfully
+
+Reading file KHW800N_1008.SSF
+2500 position(s) read.
+A total of 35 feature(s) read or created.
+  35 point feature(s) read.
+File KHW800N_1008.SSF read successfully
+
+Reading file KHW1000N_1004.SSF
+416 position(s) read.
+A total of 5 feature(s) read or created.
+  5 point feature(s) read.
+File KHW1000N_1004.SSF read successfully
+
+Reading file KHW1000N_1005.SSF
+2111 position(s) read.
+A total of 5 feature(s) read or created.
+  5 point feature(s) read.
+File KHW1000N_1005.SSF read successfully
+
+Reading file KHW1000N_1006.SSF
+2720 position(s) read.
+A total of 17 feature(s) read or created.
+  17 point feature(s) read.
+File KHW1000N_1006.SSF read successfully
+
+Reading file MANLOOP1.SSF
+4553 position(s) read.
+A total of 90 feature(s) read or created.
+  90 point feature(s) read.
+File MANLOOP1.SSF read successfully
+
+10 input file(s) read.
+18830 position(s) read.
+A total of 255 feature(s) read or created.
+  255 point feature(s) read.
+255 feature(s) exported.
+11 output file(s) written to C:\_Data\2021\Managem\Surface\Khwadra\GPS
+    c:\_data\2021\managem\surface\khwadra\gps\.txt
+    c:\_data\2021\managem\surface\khwadra\gps\khw600n_1007.txt
+    c:\_data\2021\managem\surface\khwadra\gps\khw600n_1008.txt
+    c:\_data\2021\managem\surface\khwadra\gps\khw800n_1005.txt
+    c:\_data\2021\managem\surface\khwadra\gps\khw800n_1006.txt
+    c:\_data\2021\managem\surface\khwadra\gps\khw800n_1007.txt
+    c:\_data\2021\managem\surface\khwadra\gps\khw800n_1008.txt
+    c:\_data\2021\managem\surface\khwadra\gps\khw1000n_1004.txt
+    c:\_data\2021\managem\surface\khwadra\gps\khw1000n_1005.txt
+    c:\_data\2021\managem\surface\khwadra\gps\khw1000n_1006.txt
+    c:\_data\2021\managem\surface\khwadra\gps\manloop1.txt
+
+The file C:\_Data\2021\Managem\Surface\Khwadra\GPS\KHW600N_1007.log contains information on the settings used.
+
+The file C:\ProgramData\Trimble\GPS Pathfinder Office\Config\\expfiles.txt contains a list of the files created.

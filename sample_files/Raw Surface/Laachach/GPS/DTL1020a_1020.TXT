@@ -1,0 +1,7 @@
+Device: GIS Datalogger on Windows Mobile
+
+Receive operation Completed.
+1 File(s) Successfully Transferred.
+Details are as follows:
+
+3:55:28 PM 10/20/2021	Received File C:\Scott\2021\MangagemGroup\LaachachGrid\Oct20\GPS\LAA0N.SSF from Default. Completed.	

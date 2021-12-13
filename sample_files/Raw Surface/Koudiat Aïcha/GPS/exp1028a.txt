@@ -1,0 +1,47 @@
+Export Version 5.90-65535  5.90-65535 Started.
+Using Export Setup: Crone MSL
+The following files in C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS will be exported:
+    KA600N_1028.SSF
+    KA800N_1026.SSF
+    KA800N_1027.SSF
+    KA1000N_1027.SSF
+
+Reading file KA600N_1028.SSF
+3769 position(s) read.
+A total of 38 feature(s) read or created.
+  38 point feature(s) read.
+File KA600N_1028.SSF read successfully
+
+Reading file KA800N_1026.SSF
+2851 position(s) read.
+A total of 32 feature(s) read or created.
+  32 point feature(s) read.
+File KA800N_1026.SSF read successfully
+
+Reading file KA800N_1027.SSF
+3479 position(s) read.
+A total of 42 feature(s) read or created.
+  42 point feature(s) read.
+File KA800N_1027.SSF read successfully
+
+Reading file KA1000N_1027.SSF
+3033 position(s) read.
+A total of 42 feature(s) read or created.
+  42 point feature(s) read.
+File KA1000N_1027.SSF read successfully
+
+4 input file(s) read.
+13132 position(s) read.
+A total of 154 feature(s) read or created.
+  154 point feature(s) read.
+154 feature(s) exported.
+5 output file(s) written to C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS
+    c:\_data\2021\managem\surface\kokiak aicha\gps\.txt
+    c:\_data\2021\managem\surface\kokiak aicha\gps\ka600n_1028.txt
+    c:\_data\2021\managem\surface\kokiak aicha\gps\ka800n_1026.txt
+    c:\_data\2021\managem\surface\kokiak aicha\gps\ka800n_1027.txt
+    c:\_data\2021\managem\surface\kokiak aicha\gps\ka1000n_1027.txt
+
+The file C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA600N_1028.log contains information on the settings used.
+
+The file C:\ProgramData\Trimble\GPS Pathfinder Office\Config\\expfiles.txt contains a list of the files created.

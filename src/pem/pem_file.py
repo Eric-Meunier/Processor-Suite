@@ -164,11 +164,11 @@ class PEMFile:
         self.data = None
         self.filepath = None
 
-        self.loop = None
-        self.collar = None
-        self.segments = None
+        self.loop = TransmitterLoop(None)
+        self.collar = BoreholeCollar(None)
+        self.segments = BoreholeSegments(None)
         # self.geometry = None
-        self.line = None
+        self.line = SurveyLine(None)
         self.crs = None
 
         self.total_scale_factor = 0.
@@ -1402,7 +1402,7 @@ class PEMFile:
         if self.is_borehole():
             new_name = re.sub(r"xy|XY|z|Z", "", self.line_name.upper()).strip()
         else:
-            new_name = re.sub(r"L", "", self.line_name.upper()).strip()
+            new_name = re.sub(r"L|LINE", "", self.line_name.upper()).strip()
         self.line_name = new_name.upper()
         return self.line_name
 

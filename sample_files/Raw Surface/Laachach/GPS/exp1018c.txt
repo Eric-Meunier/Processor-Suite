@@ -1,0 +1,79 @@
+Export Version 5.90-65535  5.90-65535 Started.
+Using Export Setup: Crone MSL
+The following files in C:\_Data\2021\Managem\Surface\Laachach\GPS will be exported:
+    LAA400N_1018.SSF
+    LAA600N_1017.SSF
+    LAA600N_1018.SSF
+    LAA800E_1017.SSF
+    LAA1000E_1016.SSF
+    LAA1200N_1015.SSF
+    LAA1200N_1016.SSF
+    LAACHACHLOOP1_1015.SSF
+
+Reading file LAA400N_1018.SSF
+955 position(s) read.
+A total of 16 feature(s) read or created.
+  16 point feature(s) read.
+File LAA400N_1018.SSF read successfully
+
+Reading file LAA600N_1017.SSF
+453 position(s) read.
+A total of 9 feature(s) read or created.
+  9 point feature(s) read.
+File LAA600N_1017.SSF read successfully
+
+Reading file LAA600N_1018.SSF
+1381 position(s) read.
+A total of 24 feature(s) read or created.
+  24 point feature(s) read.
+File LAA600N_1018.SSF read successfully
+
+Reading file LAA800E_1017.SSF
+1267 position(s) read.
+A total of 24 feature(s) read or created.
+  24 point feature(s) read.
+File LAA800E_1017.SSF read successfully
+
+Reading file LAA1000E_1016.SSF
+1007 position(s) read.
+A total of 20 feature(s) read or created.
+  20 point feature(s) read.
+File LAA1000E_1016.SSF read successfully
+
+Reading file LAA1200N_1015.SSF
+719 position(s) read.
+A total of 13 feature(s) read or created.
+  13 point feature(s) read.
+File LAA1200N_1015.SSF read successfully
+
+Reading file LAA1200N_1016.SSF
+972 position(s) read.
+A total of 18 feature(s) read or created.
+  18 point feature(s) read.
+File LAA1200N_1016.SSF read successfully
+
+Reading file LAACHACHLOOP1_1015.SSF
+4130 position(s) read.
+A total of 82 feature(s) read or created.
+  82 point feature(s) read.
+File LAACHACHLOOP1_1015.SSF read successfully
+
+8 input file(s) read.
+10884 position(s) read.
+A total of 206 feature(s) read or created.
+  206 point feature(s) read.
+206 feature(s) exported.
+9 output file(s) written to C:\_Data\2021\Managem\Surface\Laachach\GPS
+    c:\_data\2021\managem\surface\laachach\gps\.txt
+    c:\_data\2021\managem\surface\laachach\gps\laa400n_1018.txt
+    c:\_data\2021\managem\surface\laachach\gps\laa600n_1017.txt
+    c:\_data\2021\managem\surface\laachach\gps\laa600n_1018.txt
+    c:\_data\2021\managem\surface\laachach\gps\laa800e_1017.txt
+    c:\_data\2021\managem\surface\laachach\gps\laa1000e_1016.txt
+    c:\_data\2021\managem\surface\laachach\gps\laa1200n_1015.txt
+    c:\_data\2021\managem\surface\laachach\gps\laa1200n_1016.txt
+    c:\_data\2021\managem\surface\laachach\gps\laachachloop1_1015.txt
+
+The file C:\_Data\2021\Managem\Surface\Laachach\GPS\LAA400N_1018.log contains information on the settings used.
+
+The file C:\ProgramData\Trimble\GPS Pathfinder Office\Config\\expfiles.txt contains a list of the files created.

@@ -158,10 +158,9 @@ class TileMapViewer(MapboxViewer):
 
     def plot_pems(self):
         def plot_loop():
-            loop = pem_file.loop.to_latlon().get_loop_gps(closed=True).dropna()
-            if loop.empty:
-                logger.warning(f"No loop GPS in {pem_file.filepath.name}")
+            if pem_file.get_loop_gps().empty:
                 return
+            loop = pem_file.loop.to_latlon().get_loop_gps(closed=True).dropna()
 
             if loop.to_string() not in self.loops:
                 self.loops.append(loop.to_string())
@@ -178,10 +177,9 @@ class TileMapViewer(MapboxViewer):
                                                            text=loop.index))
 
         def plot_line():
-            line = pem_file.line.to_latlon().get_line_gps().dropna()
-            if line.empty:
-                logger.warning(f"No line GPS in {pem_file.filepath.name}")
+            if pem_file.get_line_gps().empty:
                 return
+            line = pem_file.line.to_latlon().get_line_gps().dropna()
 
             if line.to_string() not in self.lines:
                 self.lines.append(line.to_string())
@@ -200,8 +198,8 @@ class TileMapViewer(MapboxViewer):
         def plot_hole():
             geometry = BoreholeGeometry(pem_file.collar, pem_file.segments)
             proj = geometry.get_projection(latlon=True)
-            if proj.empty:
-                logger.warning(f"Hole projection is empty for {pem_file.filepath.name}")
+            if proj.empty or pem_file.get_collar_gps().empty:
+                return
             collar = pem_file.collar.to_latlon().get_collar_gps().dropna()
 
             if not proj.empty and proj.to_string() not in self.holes:
