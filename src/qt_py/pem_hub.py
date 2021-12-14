@@ -271,6 +271,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.refresh_pem_list_btn.setIcon(get_icon("refresh.png"))
         self.filter_pem_list_btn.setIcon(get_icon("filter.png"))
         self.add_pem_btn.setIcon(get_icon("add_square.png"))
+        self.add_today_pem_btn.setIcon(get_icon("calendar.png"))
         self.remove_pem_btn.setIcon(get_icon("remove.png"))
         self.refresh_gps_list_btn.setIcon(get_icon("refresh.png"))
         self.filter_gps_list_btn.setIcon(get_icon("filter.png"))
@@ -663,17 +664,26 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             """
             os.startfile(str(self.project_dir.joinpath(item.text())))
 
-        def add_pem_list_files():
+        def add_pem_list_files(today=False):
             """
-            Signal slot, open the selected PEM files in to the PEM list
+            Signal slot, open the selected PEM files in to the PEM list.
+            :param today: bool, open all files with today's date.
             """
-            selected_files = [Path(self.project_dir, i.text()) for i in self.pem_list.selectedItems()]
+            if today is True:
+                date = datetime.date.today()
+                date_str = date.strftime('%m%d')
+                todays_pem_files = list(Path(self.project_dir).rglob(f"*_{date_str}*.pem"))
+                todays_dmp_files = list(Path(self.project_dir).rglob(f"*_{date_str}*.dmp*"))
+                self.add_pem_files(todays_pem_files)
+                self.add_dmp_files(todays_dmp_files)
+            else:
+                selected_files = [Path(self.project_dir, i.text()) for i in self.pem_list.selectedItems()]
 
-            pem_filepaths = [j for j in selected_files if j.suffix.lower() == '.pem']
-            dmp_filepaths = [k for k in selected_files if k.suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4']]
+                pem_filepaths = [j for j in selected_files if j.suffix.lower() == '.pem']
+                dmp_filepaths = [k for k in selected_files if k.suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4']]
 
-            self.add_dmp_files(dmp_filepaths)
-            self.add_pem_files(pem_filepaths)
+                self.add_dmp_files(dmp_filepaths)
+                self.add_pem_files(pem_filepaths)
 
         def add_gps_list_files():
             """
@@ -774,7 +784,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.pem_list.itemDoubleClicked.connect(open_list_file)
         self.gps_list.itemDoubleClicked.connect(open_list_file)
 
-        self.add_pem_btn.clicked.connect(add_pem_list_files)
+        self.add_pem_btn.clicked.connect(lambda: add_pem_list_files(today=False))
+        self.add_today_pem_btn.clicked.connect(lambda: add_pem_list_files(today=True))
         self.add_gps_btn.clicked.connect(add_gps_list_files)
         self.remove_pem_btn.clicked.connect(remove_pem_list_files)
         self.remove_gps_btn.clicked.connect(remove_gps_list_files)

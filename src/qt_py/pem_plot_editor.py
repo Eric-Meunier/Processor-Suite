@@ -30,13 +30,10 @@ will not intersect the area of the QRectF.
 logger = logging.getLogger(__name__)
 pd.options.mode.chained_assignment = None  # default='warn'
 
-# TODO Change auto clean to have a start and end channel
 # TODO Toggle decay plots (double click?)
 # TODO Disable auto cleaning and auto-cleaning lines for PP files (shouldn't be needed with new PP viewer)
 # TODO update profile channel numbers to reflect actual channel number for non-split files
-# TODO Add scaling (current, coil area...) so we can see how it matches up to the theoretical PP.
 # TODO Calculate PP theoretical fit?
-# Scoll through single profile plot
 
 
 class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
@@ -633,7 +630,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Set the channel max for the single profile plot and auto clean box
         self.last_offtime_channel = self.pem_file.get_offtime_channels().index[-1]
         self.auto_clean_window_sbox.setMaximum(self.last_offtime_channel + 1)
-        self.auto_clean_window_sbox.setValue(int(self.last_offtime_channel / 2))
+        self.auto_clean_window_sbox.setValue(int(self.last_offtime_channel / 4))
         # self.min_ch_sbox.setMaximum(1)
         self.max_ch_sbox.setMaximum(self.last_offtime_channel)
         self.max_ch_sbox.setValue(self.last_offtime_channel)
@@ -1196,11 +1193,17 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             # Ignore deleted data when calculating median
             existing_data = self.decay_data[comp_filt][~self.decay_data[comp_filt].Deleted.astype(bool)]
+            if existing_data.empty:
+                thresh_line_1.hide()
+                thresh_line_2.hide()
+                continue
+            else:
+                thresh_line_1.show()
+                thresh_line_2.show()
+
             # Excludes next on-time data
             median_data = pd.DataFrame.from_records(
                 existing_data.Reading.reset_index(drop=True)).iloc[:, :self.last_offtime_channel + 1]
-            if median_data.empty:
-                continue
 
             median = median_data.median(axis=0).to_numpy()
             if self.pem_file.number_of_channels > 10:

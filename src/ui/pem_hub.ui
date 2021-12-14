@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1499</width>
-    <height>1001</height>
+    <height>789</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -821,6 +821,29 @@ Warnings</string>
                          </size>
                         </property>
                        </spacer>
+                      </item>
+                      <item>
+                       <widget class="QPushButton" name="add_today_pem_btn">
+                        <property name="maximumSize">
+                         <size>
+                          <width>23</width>
+                          <height>23</height>
+                         </size>
+                        </property>
+                        <property name="toolTip">
+                         <string>Open today's files</string>
+                        </property>
+                        <property name="statusTip">
+                         <string>Open today's files</string>
+                        </property>
+                        <property name="text">
+                         <string/>
+                        </property>
+                        <property name="icon">
+                         <iconset>
+                          <normaloff>icons/calendar.png</normaloff>icons/calendar.png</iconset>
+                        </property>
+                       </widget>
                       </item>
                       <item>
                        <widget class="QPushButton" name="add_pem_btn">

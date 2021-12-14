@@ -4030,7 +4030,7 @@ class RADTool:
                 else:
                     raise ValueError('RADTool D value is neither "D5" nor "D7"')
 
-        print(result)
+        # print(result)
         return ' '.join(result)
 
 

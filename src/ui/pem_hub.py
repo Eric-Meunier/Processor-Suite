@@ -3,21 +3,24 @@
 ################################################################################
 ## Form generated from reading UI file 'pem_hub.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 5.14.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
+from PySide2.QtCore import (QCoreApplication, QMetaObject, QObject, QPoint,
+    QRect, QSize, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QLinearGradient, QPalette, QPainter, QPixmap,
+    QRadialGradient)
 from PySide2.QtWidgets import *
 
 
 class Ui_PEMHub(object):
     def setupUi(self, PEMHub):
-        if not PEMHub.objectName():
+        if PEMHub.objectName():
             PEMHub.setObjectName(u"PEMHub")
-        PEMHub.resize(1499, 1001)
+        PEMHub.resize(1499, 789)
         sizePolicy = QSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -571,6 +574,15 @@ class Ui_PEMHub(object):
 
         self.verticalLayout_4.addItem(self.verticalSpacer_2)
 
+        self.add_today_pem_btn = QPushButton(self.frame)
+        self.add_today_pem_btn.setObjectName(u"add_today_pem_btn")
+        self.add_today_pem_btn.setMaximumSize(QSize(23, 23))
+        icon29 = QIcon()
+        icon29.addFile(u"icons/calendar.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.add_today_pem_btn.setIcon(icon29)
+
+        self.verticalLayout_4.addWidget(self.add_today_pem_btn)
+
         self.add_pem_btn = QPushButton(self.frame)
         self.add_pem_btn.setObjectName(u"add_pem_btn")
         self.add_pem_btn.setEnabled(False)
@@ -581,9 +593,9 @@ class Ui_PEMHub(object):
         self.add_pem_btn.setSizePolicy(sizePolicy9)
         self.add_pem_btn.setMinimumSize(QSize(0, 0))
         self.add_pem_btn.setMaximumSize(QSize(23, 23))
-        icon29 = QIcon()
-        icon29.addFile(u"icons/add_square.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.add_pem_btn.setIcon(icon29)
+        icon30 = QIcon()
+        icon30.addFile(u"icons/add_square.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.add_pem_btn.setIcon(icon30)
         self.add_pem_btn.setIconSize(QSize(20, 20))
         self.add_pem_btn.setFlat(True)
 
@@ -596,9 +608,9 @@ class Ui_PEMHub(object):
         self.remove_pem_btn.setSizePolicy(sizePolicy9)
         self.remove_pem_btn.setMinimumSize(QSize(0, 0))
         self.remove_pem_btn.setMaximumSize(QSize(23, 23))
-        icon30 = QIcon()
-        icon30.addFile(u"icons/remove.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.remove_pem_btn.setIcon(icon30)
+        icon31 = QIcon()
+        icon31.addFile(u"icons/remove.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.remove_pem_btn.setIcon(icon31)
         self.remove_pem_btn.setIconSize(QSize(20, 20))
         self.remove_pem_btn.setFlat(True)
 
@@ -676,7 +688,7 @@ class Ui_PEMHub(object):
         self.add_gps_btn.setSizePolicy(sizePolicy9)
         self.add_gps_btn.setMinimumSize(QSize(0, 0))
         self.add_gps_btn.setMaximumSize(QSize(23, 23))
-        self.add_gps_btn.setIcon(icon29)
+        self.add_gps_btn.setIcon(icon30)
         self.add_gps_btn.setIconSize(QSize(20, 20))
         self.add_gps_btn.setFlat(True)
 
@@ -689,7 +701,7 @@ class Ui_PEMHub(object):
         self.remove_gps_btn.setSizePolicy(sizePolicy9)
         self.remove_gps_btn.setMinimumSize(QSize(0, 0))
         self.remove_gps_btn.setMaximumSize(QSize(23, 23))
-        self.remove_gps_btn.setIcon(icon30)
+        self.remove_gps_btn.setIcon(icon31)
         self.remove_gps_btn.setIconSize(QSize(20, 20))
         self.remove_gps_btn.setFlat(True)
 
@@ -745,22 +757,22 @@ class Ui_PEMHub(object):
         self.menuFile.setToolTipsVisible(True)
         self.menuExport_Files = QMenu(self.menuFile)
         self.menuExport_Files.setObjectName(u"menuExport_Files")
-        icon31 = QIcon()
-        icon31.addFile(u"icons/export.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.menuExport_Files.setIcon(icon31)
+        icon32 = QIcon()
+        icon32.addFile(u"icons/export.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.menuExport_Files.setIcon(icon32)
         self.menuPEM = QMenu(self.menubar)
         self.menuPEM.setObjectName(u"menuPEM")
         self.menuPEM.setToolTipsVisible(True)
         self.menuRename = QMenu(self.menuPEM)
         self.menuRename.setObjectName(u"menuRename")
-        icon32 = QIcon()
-        icon32.addFile(u"icons/rename.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.menuRename.setIcon(icon32)
+        icon33 = QIcon()
+        icon33.addFile(u"icons/rename.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.menuRename.setIcon(icon33)
         self.menuReverse_Polarity = QMenu(self.menuPEM)
         self.menuReverse_Polarity.setObjectName(u"menuReverse_Polarity")
-        icon33 = QIcon()
-        icon33.addFile(u"icons/reverse.png", QSize(), QIcon.Normal, QIcon.Off)
-        self.menuReverse_Polarity.setIcon(icon33)
+        icon34 = QIcon()
+        icon34.addFile(u"icons/reverse.png", QSize(), QIcon.Normal, QIcon.Off)
+        self.menuReverse_Polarity.setIcon(icon34)
         self.menuGPS = QMenu(self.menubar)
         self.menuGPS.setObjectName(u"menuGPS")
         self.menuGPS.setToolTipsVisible(True)
@@ -1376,6 +1388,13 @@ class Ui_PEMHub(object):
         self.filter_pem_list_btn.setStatusTip(QCoreApplication.translate("PEMHub", u"Filter", None))
 #endif // QT_CONFIG(statustip)
         self.filter_pem_list_btn.setText("")
+#if QT_CONFIG(tooltip)
+        self.add_today_pem_btn.setToolTip(QCoreApplication.translate("PEMHub", u"Open today's files", None))
+#endif // QT_CONFIG(tooltip)
+#if QT_CONFIG(statustip)
+        self.add_today_pem_btn.setStatusTip(QCoreApplication.translate("PEMHub", u"Open today's files", None))
+#endif // QT_CONFIG(statustip)
+        self.add_today_pem_btn.setText("")
 #if QT_CONFIG(tooltip)
         self.add_pem_btn.setToolTip(QCoreApplication.translate("PEMHub", u"Add the selected PEM files to the project", None))
 #endif // QT_CONFIG(tooltip)
