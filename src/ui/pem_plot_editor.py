@@ -3,16 +3,16 @@
 ################################################################################
 ## Form generated from reading UI file 'pem_plot_editor.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.14.2
+## Created by: Qt User Interface Compiler version 5.14.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import (QCoreApplication, QDate, QDateTime, QMetaObject,
-    QObject, QPoint, QRect, QSize, QTime, QUrl, Qt)
+from PySide2.QtCore import (QCoreApplication, QMetaObject, QObject, QPoint,
+    QRect, QSize, QUrl, Qt)
 from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
-    QFontDatabase, QIcon, QKeySequence, QLinearGradient, QPalette, QPainter,
-    QPixmap, QRadialGradient)
+    QFontDatabase, QIcon, QLinearGradient, QPalette, QPainter, QPixmap,
+    QRadialGradient)
 from PySide2.QtWidgets import *
 
 from pyqtgraph import GraphicsLayoutWidget
@@ -20,7 +20,7 @@ from pyqtgraph import GraphicsLayoutWidget
 
 class Ui_PEMPlotEditor(object):
     def setupUi(self, PEMPlotEditor):
-        if not PEMPlotEditor.objectName():
+        if PEMPlotEditor.objectName():
             PEMPlotEditor.setObjectName(u"PEMPlotEditor")
         PEMPlotEditor.resize(1116, 847)
         PEMPlotEditor.setDocumentMode(False)
@@ -374,64 +374,76 @@ class Ui_PEMPlotEditor(object):
 
         self.gridLayout_2.addWidget(self.coil_area_sbox, 0, 1, 1, 1)
 
-        self.label_6 = QLabel(self.groupBox_3)
-        self.label_6.setObjectName(u"label_6")
+        self.flip_profile_btn = QPushButton(self.groupBox_3)
+        self.flip_profile_btn.setObjectName(u"flip_profile_btn")
+        self.flip_profile_btn.setEnabled(False)
+        self.flip_profile_btn.setFocusPolicy(Qt.NoFocus)
 
-        self.gridLayout_2.addWidget(self.label_6, 0, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.flip_profile_btn, 7, 0, 1, 2)
 
         self.change_comp_profile_btn = QPushButton(self.groupBox_3)
         self.change_comp_profile_btn.setObjectName(u"change_comp_profile_btn")
         self.change_comp_profile_btn.setEnabled(False)
         self.change_comp_profile_btn.setFocusPolicy(Qt.NoFocus)
 
-        self.gridLayout_2.addWidget(self.change_comp_profile_btn, 2, 0, 1, 2)
+        self.gridLayout_2.addWidget(self.change_comp_profile_btn, 4, 0, 1, 2)
 
-        self.change_profile_suffix_btn = QPushButton(self.groupBox_3)
-        self.change_profile_suffix_btn.setObjectName(u"change_profile_suffix_btn")
-        self.change_profile_suffix_btn.setEnabled(False)
-        self.change_profile_suffix_btn.setFocusPolicy(Qt.NoFocus)
+        self.label_6 = QLabel(self.groupBox_3)
+        self.label_6.setObjectName(u"label_6")
 
-        self.gridLayout_2.addWidget(self.change_profile_suffix_btn, 3, 0, 1, 2)
+        self.gridLayout_2.addWidget(self.label_6, 0, 0, 1, 1)
 
         self.shift_station_profile_btn = QPushButton(self.groupBox_3)
         self.shift_station_profile_btn.setObjectName(u"shift_station_profile_btn")
         self.shift_station_profile_btn.setEnabled(False)
         self.shift_station_profile_btn.setFocusPolicy(Qt.NoFocus)
 
-        self.gridLayout_2.addWidget(self.shift_station_profile_btn, 4, 0, 1, 2)
+        self.gridLayout_2.addWidget(self.shift_station_profile_btn, 6, 0, 1, 2)
 
-        self.flip_profile_btn = QPushButton(self.groupBox_3)
-        self.flip_profile_btn.setObjectName(u"flip_profile_btn")
-        self.flip_profile_btn.setEnabled(False)
-        self.flip_profile_btn.setFocusPolicy(Qt.NoFocus)
+        self.change_profile_suffix_btn = QPushButton(self.groupBox_3)
+        self.change_profile_suffix_btn.setObjectName(u"change_profile_suffix_btn")
+        self.change_profile_suffix_btn.setEnabled(False)
+        self.change_profile_suffix_btn.setFocusPolicy(Qt.NoFocus)
 
-        self.gridLayout_2.addWidget(self.flip_profile_btn, 5, 0, 1, 2)
-
-        self.line = QFrame(self.groupBox_3)
-        self.line.setObjectName(u"line")
-        self.line.setFrameShape(QFrame.HLine)
-        self.line.setFrameShadow(QFrame.Sunken)
-
-        self.gridLayout_2.addWidget(self.line, 6, 0, 1, 2)
+        self.gridLayout_2.addWidget(self.change_profile_suffix_btn, 5, 0, 1, 2)
 
         self.remove_profile_btn = QPushButton(self.groupBox_3)
         self.remove_profile_btn.setObjectName(u"remove_profile_btn")
         self.remove_profile_btn.setEnabled(False)
         self.remove_profile_btn.setFocusPolicy(Qt.NoFocus)
 
-        self.gridLayout_2.addWidget(self.remove_profile_btn, 7, 0, 1, 2)
+        self.gridLayout_2.addWidget(self.remove_profile_btn, 9, 0, 1, 2)
 
         self.label_7 = QLabel(self.groupBox_3)
         self.label_7.setObjectName(u"label_7")
 
-        self.gridLayout_2.addWidget(self.label_7, 1, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.label_7, 3, 0, 1, 1)
 
         self.soa_sbox = QSpinBox(self.groupBox_3)
         self.soa_sbox.setObjectName(u"soa_sbox")
         self.soa_sbox.setMinimum(-359)
         self.soa_sbox.setMaximum(359)
 
-        self.gridLayout_2.addWidget(self.soa_sbox, 1, 1, 1, 1)
+        self.gridLayout_2.addWidget(self.soa_sbox, 3, 1, 1, 1)
+
+        self.line = QFrame(self.groupBox_3)
+        self.line.setObjectName(u"line")
+        self.line.setFrameShape(QFrame.HLine)
+        self.line.setFrameShadow(QFrame.Sunken)
+
+        self.gridLayout_2.addWidget(self.line, 8, 0, 1, 2)
+
+        self.calculate_coil_area_btn = QPushButton(self.groupBox_3)
+        self.calculate_coil_area_btn.setObjectName(u"calculate_coil_area_btn")
+
+        self.gridLayout_2.addWidget(self.calculate_coil_area_btn, 1, 0, 1, 2)
+
+        self.line_4 = QFrame(self.groupBox_3)
+        self.line_4.setObjectName(u"line_4")
+        self.line_4.setFrameShape(QFrame.HLine)
+        self.line_4.setFrameShadow(QFrame.Sunken)
+
+        self.gridLayout_2.addWidget(self.line_4, 2, 0, 1, 2)
 
 
         self.verticalLayout_11.addWidget(self.groupBox_3)
@@ -551,13 +563,14 @@ class Ui_PEMPlotEditor(object):
         self.label_5.setText(QCoreApplication.translate("PEMPlotEditor", u"-", None))
         self.min_ch_sbox.setPrefix(QCoreApplication.translate("PEMPlotEditor", u"Ch ", None))
         self.groupBox_3.setTitle(QCoreApplication.translate("PEMPlotEditor", u"Edit", None))
-        self.label_6.setText(QCoreApplication.translate("PEMPlotEditor", u"Coil Area:", None))
-        self.change_comp_profile_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Components", None))
-        self.change_profile_suffix_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Suffixes", None))
-        self.shift_station_profile_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Stations", None))
         self.flip_profile_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"+/-", None))
+        self.change_comp_profile_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Components", None))
+        self.label_6.setText(QCoreApplication.translate("PEMPlotEditor", u"Coil Area:", None))
+        self.shift_station_profile_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Stations", None))
+        self.change_profile_suffix_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Suffixes", None))
         self.remove_profile_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Del", None))
         self.label_7.setText(QCoreApplication.translate("PEMPlotEditor", u"SOA:", None))
+        self.calculate_coil_area_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Calculate", None))
         self.menuFile.setTitle(QCoreApplication.translate("PEMPlotEditor", u"File", None))
         self.menuView.setTitle(QCoreApplication.translate("PEMPlotEditor", u"View", None))
     # retranslateUi

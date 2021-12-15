@@ -288,6 +288,7 @@ class PEMFile:
         self.normalized = header.get('Normalized')
         self.primary_field_value = header.get('Primary field value')
         self.coil_area = header.get('Coil area')
+        self.original_coil_area = header.get('Coil area')
         self.loop_polarity = header.get('Loop polarity')
         self.channel_times = channel_table
         self.number_of_channels = len(channel_table)
@@ -1361,14 +1362,21 @@ class PEMFile:
                 # Only include common stations. PP represents the measured data, XYZ are theoretical.
                 df = pd.concat([pp_data, theory_pp_data], axis=1).rename({pp_ch_num: 'PP'}, axis=1).dropna(axis=0)
                 theory_pp = df.loc[:, component].to_numpy()
-                pp = df.loc[:, 'PP'].to_numpy()
+                measured_pp = df.loc[:, 'PP'].to_numpy()
 
-                diff = sum(np.abs(theory_pp - pp))
-                reversed_diff = sum(np.abs(theory_pp - (pp * -1)))
-                # print(f"Component: {component}\nDiff: {diff}\nReversed Diff: {reversed_diff}\n")
-                if abs(reversed_diff) < abs(diff):
+                diff = np.abs(theory_pp - measured_pp)
+                reversed_diff = np.abs(theory_pp - (measured_pp * -1))
+
+                # Find how many diff values are greater in the flipped array than in the original. If more than half the
+                # array is larger in the original, than it is probably incorrect.
+                if len(np.where(reversed_diff > diff)) > len(diff) * 0.5:
                     logger.info(f"{self.filepath.name} {component} component may be reversed.")
                     reversed_components.append(component)
+
+                # print(f"Component: {component}\nDiff: {diff}\nReversed Diff: {reversed_diff}\n")
+                # if abs(reversed_diff) < abs(diff):
+                #     logger.info(f"{self.filepath.name} {component} component may be reversed.")
+                #     reversed_components.append(component)
         return reversed_components
 
     def auto_name_file(self):
@@ -1676,26 +1684,25 @@ class PEMFile:
     def scale_coil_area(self, coil_area):
         """
         Scale the data by a change in coil area
-        :param coil_area: int: new coil area
+        :param coil_area: float, new coil area
         :return: PEMFile object: self with data scaled
         """
         logger.info(f"Scaling coil area of {self.filepath.name} to {coil_area}.")
 
         new_coil_area = coil_area
-        assert isinstance(new_coil_area, int), "New coil area is not type int"
         old_coil_area = float(self.coil_area)
 
         scale_factor = float(old_coil_area / new_coil_area)
 
         self.data.Reading = self.data.Reading * scale_factor  # Vectorized
-        logger.info(f"{self.filepath.name} coil area scaled to {new_coil_area} from {old_coil_area}.")
+        logger.info(f"{self.filepath.name} coil area scaled to {new_coil_area:.1f} from {old_coil_area:.1f}.")
 
         self.coil_area = new_coil_area
 
         for note in self.notes:
             if "Data scaled by coil area change of" in note:
                 self.notes.remove(note)
-        self.notes.append(f'<HE3> Data scaled by coil area change of {self.original_coil_area}/{new_coil_area}')
+        self.notes.append(f'<HE3> Data scaled by coil area change of {self.original_coil_area:.1f}/{new_coil_area:.1f}')
         return self
 
     def scale_current(self, current):
@@ -1706,7 +1713,7 @@ class PEMFile:
         """
         new_current = current
         assert isinstance(new_current, float), "New current is not type float"
-        logger.info(f"Performing current change for {self.filepath.name} to {current}.")
+        logger.info(f"Performing current change for {self.filepath.name:.2f} to {current:.2f}.")
 
         old_current = float(self.current)
 
@@ -1718,7 +1725,7 @@ class PEMFile:
         for note in self.notes:
             if "Data scaled by current change of" in note:
                 self.notes.remove(note)
-        self.notes.append(f'<HE3> Data scaled by current change of {new_current}A/{self.original_current}A')
+        self.notes.append(f'<HE3> Data scaled by current change of {new_current:.2f}A/{self.original_current:.2f}A')
         return self
 
     def scale_by_factor(self, factor):
@@ -1732,11 +1739,11 @@ class PEMFile:
         scaled_factor = factor / (1 + self.total_scale_factor)
 
         self.data.Reading = self.data.Reading * (1 + scaled_factor)  # Vectorized
-        logger.info(f"{self.filepath.name} data scaled by factor of {(1 + scaled_factor)}.")
+        logger.info(f"{self.filepath.name} data scaled by factor of {(1 + scaled_factor):.2f}.")
 
         self.total_scale_factor += factor
 
-        self.notes.append(f'<HE3> Data scaled by factor of {1 + factor}')
+        self.notes.append(f'<HE3> Data scaled by factor of {1 + factor:.2f}')
         return self
 
     def mag_offset(self):
@@ -4142,7 +4149,8 @@ if __name__ == '__main__':
     pg = PEMGetter()
 
     # pem_file = pg.parse(r"C:\_Data\2021\Eastern\Sterling\SP-21-040\RAW\xy_1205.PEM")
-    pem_file = pg.parse(r"C:\_Data\2021\Nantou BF\Borehole\_PX21002\RAW\xy-px21002_1206.PEM")
+    # pem_file = pg.parse(r"C:\_Data\2021\Nantou BF\Borehole\_PX21002\RAW\xy-px21002_1206.PEM")
+    pem_file = pg.parse(r"C:\_Data\2021\TMC\Senc Resources\Loop 11\RAW\700e_1210.PEM")
     # txt_file = sample_folder.joinpath(r"Line GPS\KA800N_1027.txt")
     # line = SurveyLine(txt_file)
     # line.get_warnings(stations=pem_file.get_stations(converted=True, incl_deleted=False))
@@ -4166,7 +4174,7 @@ if __name__ == '__main__':
     # pem_file, _ = pem_file.prep_rotation()
     # pem_file.get_theory_pp()
     # pem_file.get_theory_data()
-    # pem_file.get_reversed_components()
+    pem_file.get_reversed_components()
     # pem_file.rotate(method="unrotate")
     # pem_file.rotate(method="unrotate")
     # pem_file.filepath = pem_file.filepath.with_name(pem_file.filepath.stem + "(unrotated)" + ".PEM")
@@ -4178,7 +4186,7 @@ if __name__ == '__main__':
     # pem_file.to_xyz()
     # pem_file, _ = pem_file.prep_rotation()
     # pem_file.mag_offset()
-    pem_file = pem_file.rotate(method=None, soa=2)
+    # pem_file = pem_file.rotate(method=None, soa=2)
     # pem_file = pem_file.rotate(method='unrotate', soa=10)
     # pem_file = pem_file.rotate(method="pp", soa=1)
     # rotated_pem = prep_pem.rotate('pp')

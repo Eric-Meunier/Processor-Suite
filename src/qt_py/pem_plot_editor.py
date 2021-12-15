@@ -300,6 +300,35 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.pem_file.rotate(method=None, soa=soa_delta)
             self.refresh_plots(components="all", preserve_selection=True)
 
+        def calculate_coil_area():
+            """
+            Automatically calculate the theoretical PP fit with the measure PP, and calculate the scaling to apply to
+            the coil area to correct for the difference. Only for PEM files with all GPS.
+            :return: None
+            """
+            if not self.pem_file.has_all_gps():
+                return
+
+            scalings = []
+            for component in self.pem_file.get_components():
+                # Profile data is already split, so use index 0 for the PP channel.
+                measured_pp = self.profile_data[self.profile_data.Component == component].groupby(
+                    "Station", as_index=False).mean().loc[:, 0].reset_index(drop=True)
+                theory_pp = self.theory_data.loc[:, component]
+
+                scaling = (measured_pp - theory_pp) / measured_pp
+                mean_scaling = np.mean(scaling)
+                scalings.append(mean_scaling)
+                print(f"Mean scaling for {component} component: {mean_scaling * 100:.2f}%")
+
+            # Scale using the coil area as it gives a baseline to reference with other surveys using the same gear
+            total_mean_scaling = np.mean(scalings)
+            new_coil_area = self.pem_file.coil_area + (self.pem_file.coil_area * total_mean_scaling)
+            self.coil_area_sbox.setValue(new_coil_area)
+            self.message.information(self, "New Coil Area", f"Coil area set to {new_coil_area:.1f} "
+                                                            f"({self.pem_file.coil_area * total_mean_scaling:.1f}).")
+            # self.pem_file.scale_coil_area(self.pem_file.coil_area + new_coil_area)
+
         # Actions
         self.select_all_action.activated.connect(select_all_stations)
 
@@ -347,6 +376,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.flip_decay_btn.clicked.connect(lambda: self.flip_decays(source='decay'))
         self.zoom_to_offtime_btn.clicked.connect(self.zoom_to_offtime)
 
+        self.calculate_coil_area_btn.clicked.connect(calculate_coil_area)
         self.change_comp_profile_btn.clicked.connect(lambda: self.change_decay_component_dialog(source='profile'))
         self.change_profile_suffix_btn.clicked.connect(lambda: self.change_suffix_dialog(source='profile'))
         self.flip_profile_btn.clicked.connect(lambda: self.flip_decays(source='profile'))
@@ -626,6 +656,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 self.auto_clean_std_sbox.setValue(2)
             else:
                 self.auto_clean_std_sbox.setValue(1.5)
+
+        if not self.pem_file.has_all_gps():
+            self.calculate_coil_area_btn.setEnabled(False)
 
         # Set the channel max for the single profile plot and auto clean box
         self.last_offtime_channel = self.pem_file.get_offtime_channels().index[-1]
@@ -2928,7 +2961,8 @@ if __name__ == '__main__':
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\800E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\1200E.PEM")[0]
-    pem_file = pem_g.get_pems(folder="Raw Surface", file=r"JHadid\RAW\400n.PEM")[0]
+    # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"JHadid\RAW\400n.PEM")[0]
+    pem_file = pem_g.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-230\RAW\em21-230z_1206.PEM")
     # pem_file = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]
 
     editor = PEMPlotEditor(darkmode=darkmode)
