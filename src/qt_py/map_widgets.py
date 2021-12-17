@@ -384,7 +384,7 @@ class Map3DViewer(QMainWindow):
                 self.map_figure.add_trace(go.Scatter3d(x=loop.Easting,
                                                        y=loop.Northing,
                                                        z=loop.Elevation,
-                                                       legendgroup=pem_file.loop_name,
+                                                       # legendgroup=pem_file.loop_name,
                                                        mode='lines',
                                                        name=f"Loop {pem_file.loop_name}",
                                                        text=loop.index))
@@ -398,7 +398,7 @@ class Map3DViewer(QMainWindow):
                 self.map_figure.add_trace(go.Scatter3d(x=line.Easting,
                                                        y=line.Northing,
                                                        z=line.Elevation,
-                                                       legendgroup=pem_file.loop_name,
+                                                       # legendgroup=pem_file.loop_name,
                                                        mode='lines+markers',
                                                        name=pem_file.line_name,
                                                        text=line.Station
@@ -429,7 +429,7 @@ class Map3DViewer(QMainWindow):
                                                        y=proj.Northing,
                                                        z=proj.Elevation,
                                                        mode='lines+markers',
-                                                       legendgroup=pem_file.loop_name,
+                                                       # legendgroup=pem_file.loop_name,
                                                        name=pem_file.line_name,
                                                        text=proj['Relative_depth']
                                                        ))
@@ -439,7 +439,7 @@ class Map3DViewer(QMainWindow):
                 self.map_figure.add_trace(go.Scatter3d(x=collar.Easting,
                                                        y=collar.Northing,
                                                        z=collar.Elevation,
-                                                       legendgroup=pem_file.loop_name,
+                                                       # legendgroup=pem_file.loop_name,
                                                        name=pem_file.line_name,
                                                        text=pem_file.line_name
                                                        ))

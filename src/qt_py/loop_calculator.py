@@ -123,15 +123,15 @@ class LoopCalculator(QMainWindow, Ui_LoopCalculator):
 
         # Legend must be added before thecurves
         self.plot_widget_legend = self.plot_widget.addLegend(pen=pg.mkPen(self.foreground_color),
-                                                   brush=pg.mkBrush(self.background_color),
-                                                   labelTextSize="8pt",
-                                                   verSpacing=-1)
+                                                             brush=pg.mkBrush(self.background_color),
+                                                             labelTextSize="8pt",
+                                                             verSpacing=-1)
         self.plot_widget_legend.setParent(self.plot_widget)
 
         self.plan_widget_legend = self.plan_widget.addLegend(pen=pg.mkPen(self.foreground_color),
-                                                   brush=pg.mkBrush(self.background_color),
-                                                   labelTextSize="8pt",
-                                                   verSpacing=-1)
+                                                             brush=pg.mkBrush(self.background_color),
+                                                             labelTextSize="8pt",
+                                                             verSpacing=-1)
         self.plan_widget_legend.setParent(self.plan_widget)
 
         # Format the mag response plot
@@ -155,7 +155,7 @@ class LoopCalculator(QMainWindow, Ui_LoopCalculator):
         h_line2 = pg.InfiniteLine(pos=-200000, angle=0, pen=pg.mkPen(self.pink_color, style=Qt.DashLine, width=1.25))
         # Add a legend entry for these lines
         h_line_legend_item = pg.PlotDataItem(pen=pg.mkPen(self.pink_color, style=Qt.DotLine, width=1.25),
-                                              name="Overload Limit")
+                                             name="Overload Limit")
         self.plot_widget.addItem(self.station_line, ignoreBounds=True)
         self.plot_widget.addItem(h_line, ignoreBounds=True)
         self.plot_widget.addItem(h_line2, ignoreBounds=True)
@@ -291,10 +291,10 @@ class LoopCalculator(QMainWindow, Ui_LoopCalculator):
         max_current = min([current_by_voltage, current_by_inductance, current_by_power, 30])
 
         self.max_voltage_label.setText(f"(Maximum induced voltage: {max_voltage})")
-        self.max_current_voltage_label.setText(f"{current_by_voltage:.1f}V")
-        self.max_current_inductance_label.setText(f"{current_by_inductance:.1f}V")
-        self.max_current_power_label.setText(f"{current_by_power:.1f}V")
-        self.max_current_label.setText(f"{max_current:.1f}V")
+        self.max_current_voltage_label.setText(f"{current_by_voltage:.1f}A")
+        self.max_current_inductance_label.setText(f"{current_by_inductance:.1f}A")
+        self.max_current_power_label.setText(f"{current_by_power:.1f}A")
+        self.max_current_label.setText(f"{max_current:.1f}A")
 
     def calculate_mag(self):
         """

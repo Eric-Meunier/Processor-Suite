@@ -361,9 +361,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         # Spinboxes
         self.min_ch_sbox.valueChanged.connect(self.profile_channel_selection_changed)
-        self.min_ch_sbox.valueChanged.connect(lambda: self.plot_profiles("all"))
         self.max_ch_sbox.valueChanged.connect(self.profile_channel_selection_changed)
-        self.max_ch_sbox.valueChanged.connect(lambda: self.plot_profiles("all"))
         self.coil_area_sbox.valueChanged.connect(coil_area_changed)
         self.soa_sbox.valueChanged.connect(soa_changed)
         self.auto_clean_std_sbox.valueChanged.connect(self.update_auto_clean_lines)
@@ -543,15 +541,17 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 y = event.delta()
                 if y < 0:
                     # Increase channel numbers
-                    self.max_ch_sbox.setValue(self.max_ch_sbox.value() + 1)
-                    self.min_ch_sbox.setValue(self.min_ch_sbox.value() + 1)
+                    if self.max_ch_sbox.value() != self.max_ch_sbox.maximum():
+                        self.max_ch_sbox.setValue(self.max_ch_sbox.value() + 1)
+                        self.min_ch_sbox.setValue(self.min_ch_sbox.value() + 1)
                 else:
-                    # Decrease channel numbers
-                    self.min_ch_sbox.setValue(self.min_ch_sbox.value() - 1)
-                    self.max_ch_sbox.setValue(self.max_ch_sbox.value() - 1)
+                    if self.min_ch_sbox.value() != self.min_ch_sbox.minimum():
+                        # Decrease channel numbers
+                        self.min_ch_sbox.setValue(self.min_ch_sbox.value() - 1)
+                        self.max_ch_sbox.setValue(self.max_ch_sbox.value() - 1)
                 self.plot_profiles("all")
                 # Manually trigger this signal slot, so plotting doesn't occur again
-                self.profile_channel_selection_changed(None)
+                self.profile_channel_selection_changed(plot_profile=False)
 
                 self.min_ch_sbox.blockSignals(False)
                 self.max_ch_sbox.blockSignals(False)
@@ -661,13 +661,14 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.calculate_coil_area_btn.setEnabled(False)
 
         # Set the channel max for the single profile plot and auto clean box
-        self.last_offtime_channel = self.pem_file.get_offtime_channels().index[-1]
+        off_time_channels = self.pem_file.get_offtime_channels()
+        self.last_offtime_channel = off_time_channels.index[-1]
         self.auto_clean_window_sbox.setMaximum(self.last_offtime_channel + 1)
         self.auto_clean_window_sbox.setValue(int(self.last_offtime_channel / 4))
         # self.min_ch_sbox.setMaximum(1)
-        self.max_ch_sbox.setMaximum(self.last_offtime_channel)
-        self.max_ch_sbox.setValue(self.last_offtime_channel)
-        self.min_ch_sbox.setValue(self.last_offtime_channel - 5)
+        self.max_ch_sbox.setMaximum(len(off_time_channels) - 1)
+        self.max_ch_sbox.setValue(len(off_time_channels) - 1)
+        self.min_ch_sbox.setValue(len(off_time_channels) - 6)
         self.coil_area_sbox.setValue(self.pem_file.coil_area)
 
         self.max_ch_sbox.blockSignals(False)
@@ -1847,15 +1848,18 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 self.pem_file.data.iloc[selected_data.index] = selected_data
                 self.refresh_plots(components=selected_data.Component.unique())
 
-    def profile_channel_selection_changed(self, value):
+    def profile_channel_selection_changed(self, plot_profile=True):
         """
         When the channel selection spin boxes for the single profile plot are changed.
         Prevents the maximum channel to be smaller than the minimum, and vise-versa.
-        :param value: Int
+        :param plot_profile: Bool, replot the profiles (False on open())
         :return: None
         """
         self.min_ch_sbox.setMaximum(self.max_ch_sbox.value())
         self.max_ch_sbox.setMinimum(self.min_ch_sbox.value())
+
+        if plot_profile is True:
+            self.plot_profiles("all")
 
     def data_edited(self):
         """

@@ -1941,7 +1941,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         Open an instance of PDFPlotPrinter, which has all the options for printing plots.
         :param selected: bool, False will pass all opened PEM files, True will only pass selected PEM files
         """
-
         if not self.pem_files:
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
@@ -4466,8 +4465,9 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
             try:
                 printer = PEMPrinter(**plot_kwargs)
             except RuntimeError:
-                self.message.critical(self, "Error", F"An error has occurred. Please re-start the program.")
-                return
+                self.message.critical(self, "Error", F"An error has occurred. Trying again...")
+                self.print_pdfs()
+                # return
 
             else:
                 try:

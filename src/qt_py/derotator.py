@@ -305,6 +305,7 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         # Setting options
         self.actionShow_Scatter.setChecked(settings.value("actionShow_Scatter", defaultValue=True, type=bool))
+        self.toggle_scatter()
 
     def closeEvent(self, e):
         self.save_settings()
@@ -524,6 +525,17 @@ class Derotator(QMainWindow, Ui_Derotator):
                 self.message.warning(self, "High SOA Value", f"An SOA value of {self.soa:.0f} was used. The XY data may"
                                                              f" be backwards from normal convention.")
 
+        def check_verticality():
+            """
+            Add a warning and set the mag de-rotation as default if the hole is near vertical (> 85°)
+            :return: None
+            """
+            mean_dip = pem_file.get_dip(average=True).Dip.mean()
+            if mean_dip <= -85.:
+                self.message.warning(self, "Vertical Hole", f"The hole is near vertical.\n"
+                                                            f"Magnetic de-rotation set as default.")
+                self.mag_btn.click()
+
         while isinstance(pem_file, list):
             pem_file = pem_file[0]
 
@@ -566,7 +578,12 @@ class Derotator(QMainWindow, Ui_Derotator):
                 if not self.pem_file.has_d7():
                     self.unrotate_btn.setEnabled(False)
 
-        self.pem_file, ineligible_stations = self.pem_file.prep_rotation()
+        try:
+            self.pem_file, ineligible_stations = self.pem_file.prep_rotation()
+        except Exception as e:
+            self.message.critical(self, "Error", f"Error preparing data for de-rotation:\n{e}.")
+            self.close()
+            return
         self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")
 
         # Disable the PP values tab if there's no PP information. Also disable PP de-rotation
@@ -605,6 +622,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         set_default_soa()
         self.rotate()
         if self.pem_file.has_d7():
+            check_verticality()
             plot_mag()
             plot_dip()
         else:
@@ -833,8 +851,8 @@ def main():
     pg.setConfigOption('foreground', "w" if darkmode else (53, 53, 53))
 
     ref = []
-    pem_files = samples_folder.joinpath("Rotation Testing").glob("*.PEM")
-    for pem_file in list(pem_files)[30:40]:
+    pem_files = samples_folder.joinpath(r"Rotation Testing\Vertical Holes").glob("*.PEM")
+    for pem_file in list(pem_files)[5:9]:
         pem = PEMParser().parse(pem_file)
         d = Derotator(darkmode=darkmode)
         ref.append(d)

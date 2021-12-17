@@ -92,36 +92,57 @@ def get_split_table(table, units, ramp):
     return table
 
 
-def process_angle(average_angle, angle):
+def get_processed_angles(roll_data):
     """
-    Find the angle angle closest (by multiples of 360) to the average angle angle.
-    :param average_angle: float
-    :param angle: float
-    :return: float
+    Correct roll angles so they are generally between 0-360 and don't flip back and forth between 360 and 0.
+    :param roll_data: list, series or numpy array.
+    :return: numpy array
     """
-    # print(f"Processing angle {angle:.2f} (avg. {average_angle:.2f}).")
-    roll_minus = angle - 360
-    roll_plus = angle + 360
-    diff = abs(angle - average_angle)
-    diff_minus = abs(roll_minus - average_angle)
-    diff_plus = abs(roll_plus - average_angle)
-    # print(f"Diff, diff_minus, diff_plus: {', '.join([str(round(diff, 2)), str(round(diff_minus, 2)), str(round(diff_plus, 2))])}.")
-    if all(diff_minus < [diff, diff_plus]):
-        if diff_minus > 300:
-            roll_minus = roll_minus - 360
-        # print(f"Going with {diff_minus:.2f}")
-        # print(F"Returning new angle {roll_minus:.2f}\n")
-        return roll_minus
-    elif all(diff_plus < [diff, diff_minus]):
-        if diff_plus > 300:
-            roll_plus = roll_plus + 360
-        # print(f"Going with {diff_plus:.2f}")
-        # print(F"Returning new angle {roll_plus:.2f}\n")
-        return roll_plus
-    else:
-        # print(f"Going with {diff:.2f}")
-        # print(f"Returning angle {angle:.2f}\n")
-        return angle
+    def process_angle(reference_angle, angle):
+        """
+        Find the angle angle closest (by multiples of 360) to the base reference angle.
+        :param reference_angle: float, angle to use as the base reference.
+        :param angle: float
+        :return: float
+        """
+        # print(f"Processing angle {angle:.2f} (avg. {average_angle:.2f}).")
+        roll_minus = angle - 360
+        roll_plus = angle + 360
+        diff = abs(angle - reference_angle)
+        diff_minus = abs(roll_minus - reference_angle)
+        diff_plus = abs(roll_plus - reference_angle)
+        # print(f"Diff, diff_minus, diff_plus: {', '.join([str(round(diff, 2)), str(round(diff_minus, 2)), str(round(diff_plus, 2))])}.")
+        if all(diff_minus < [diff, diff_plus]):
+            if diff_minus > 300:
+                roll_minus = roll_minus - 360
+            # print(f"Going with {diff_minus:.2f}")
+            # print(F"Returning new angle {roll_minus:.2f}\n")
+            return roll_minus
+        elif all(diff_plus < [diff, diff_minus]):
+            if diff_plus > 300:
+                roll_plus = roll_plus + 360
+            # print(f"Going with {diff_plus:.2f}")
+            # print(F"Returning new angle {roll_plus:.2f}\n")
+            return roll_plus
+        else:
+            # print(f"Going with {diff:.2f}")
+            # print(f"Returning angle {angle:.2f}\n")
+            return angle
+
+    if not roll_data.all():
+        return roll_data
+    # The first roll angle is used as the first "average"
+    processed_roll_data = np.array([roll_data[0]])
+    for roll in roll_data[1:]:
+        processed_roll = process_angle(processed_roll_data[-1], roll)  # Works better than using average
+        processed_roll_data = np.append(processed_roll_data, processed_roll)
+
+    while all([r < 0 for r in processed_roll_data]):
+        processed_roll_data = np.array(processed_roll_data) + 360
+    while all([r >= 360 for r in processed_roll_data]):
+        processed_roll_data = np.array(processed_roll_data) - 360
+
+    return processed_roll_data
 
 
 class PEMFile:
@@ -517,12 +538,12 @@ class PEMFile:
                 if 'EPSG' in note:
                     epsg_code = re.search(r"EPSG:(\d+)", note.strip()).group(1)
                     crs = CRS.from_epsg(epsg_code)
-                    logger.info(f"{self.filepath.name} CRS is {crs.name}.")
+                    logger.debug(f"{self.filepath.name} CRS is {crs.name}.")
                     return crs
                 elif '<CRS>' in note:
                     crs_str = re.split('<CRS>', note)[-1].strip()
                     crs = CRS.from_string(crs_str)
-                    logger.info(f"{self.filepath.name} CRS is {crs.name}.")
+                    logger.debug(f"{self.filepath.name} CRS is {crs.name}.")
                     return crs
                 # For older PEM files that used the <GEN> tag
                 elif 'CRS:' in note:
@@ -551,7 +572,7 @@ class PEMFile:
                             return None
 
                     crs = CRS.from_epsg(epsg_code)
-                    logger.info(f"{self.filepath.name} CRS is {crs.name}")
+                    logger.debug(f"{self.filepath.name} CRS is {crs.name}")
                     return crs
 
     def get_loop_gps(self, sorted=False, closed=False):
@@ -644,14 +665,7 @@ class PEMFile:
         data.sort_values("Station", inplace=True)
         azimuth_data = data.RAD_tool.map(lambda x: x.get_azimuth())
 
-        # The first azimuth is used as the first "average"
-        processed_azimuth_data = np.array([azimuth_data[0]])
-        for azimuth in azimuth_data[1:]:
-            processed_azimuth = process_angle(np.mean(processed_azimuth_data), azimuth)
-            processed_azimuth_data = np.append(processed_azimuth_data, processed_azimuth)
-
-        while all([r < 0 for r in processed_azimuth_data]):
-            processed_azimuth_data = np.array(processed_azimuth_data) + 360
+        processed_azimuth_data = get_processed_angles(azimuth_data)
 
         df = pd.DataFrame.from_dict({"Angle": processed_azimuth_data, "Station": data.Station})
         if average is True:
@@ -665,8 +679,8 @@ class PEMFile:
         :return: DataFrame
         :param average: Bool, return the average per each station
         """
-        assert all(
-            [self.has_xy(), self.is_borehole()]), f"Can only get dip data from borehole surveys with XY components."
+        assert all([self.has_xy(), self.is_borehole()]), \
+            f"Can only get dip data from borehole surveys with XY components."
 
         df = self.data.drop_duplicates(subset="RAD_ID").loc[:, ["Station", "RAD_tool"]]
         df.Station = df.Station.astype(float)
@@ -679,7 +693,6 @@ class PEMFile:
         return df.dropna()
 
     def get_roll_data(self, roll_type, soa=0):
-
         if not self.prepped_for_rotation:
             raise ValueError(F"PEMFile must be prepped for de-rotation.")
 
@@ -692,33 +705,34 @@ class PEMFile:
         data.sort_values("Station", inplace=True)
 
         if roll_type == "Acc":
-            roll_data = data.RAD_tool.map(lambda x: x.acc_roll_angle + soa).to_numpy()
+            roll_data = get_processed_angles(data.RAD_tool.map(lambda x: x.acc_roll_angle + soa).to_numpy())
         elif roll_type == "Mag":
-            roll_data = data.RAD_tool.map(lambda x: x.mag_roll_angle + soa).to_numpy()
+            roll_data = get_processed_angles(data.RAD_tool.map(lambda x: x.mag_roll_angle + soa).to_numpy())
         elif roll_type == "Tool":
-            roll_data = data.RAD_tool.map(lambda x: x.angle_used + soa).to_numpy()
+            roll_data = get_processed_angles(data.RAD_tool.map(lambda x: x.angle_used + soa).to_numpy())
         elif roll_type == "Measured_PP":
             if not self.has_all_gps():
                 raise ValueError(f"PEMFile must have all GPS for {roll_type} de-rotation.")
-            roll_data = data.RAD_tool.map(lambda x: x.measured_pp_roll_angle).to_numpy()
+            roll_data = get_processed_angles(data.RAD_tool.map(lambda x: x.measured_pp_roll_angle).to_numpy())
         elif roll_type == "Cleaned_PP":
             if not self.has_all_gps():
                 raise ValueError(f"PEMFile must have all GPS for {roll_type} de-rotation.")
-            roll_data = data.RAD_tool.map(lambda x: x.cleaned_pp_roll_angle).to_numpy()
+            roll_data = get_processed_angles(data.RAD_tool.map(lambda x: x.cleaned_pp_roll_angle).to_numpy())
+        elif roll_type == "All":
+            mpp_roll_data = get_processed_angles(data.RAD_tool.map(lambda x: x.measured_pp_roll_angle).to_numpy())
+            cpp_roll_data = get_processed_angles(data.RAD_tool.map(lambda x: x.cleaned_pp_roll_angle).to_numpy())
+            acc_roll_data = get_processed_angles(data.RAD_tool.map(lambda x: x.acc_roll_angle + soa).to_numpy())
+            mag_roll_data = get_processed_angles(data.RAD_tool.map(lambda x: x.mag_roll_angle + soa).to_numpy())
+            df = pd.DataFrame.from_dict({"Station": data.Station.astype(int),
+                                         "Acc": acc_roll_data,
+                                         "Mag": mag_roll_data,
+                                         "Measured PP": mpp_roll_data,
+                                         "Cleaned PP": cpp_roll_data})
+            return df
         else:
             raise ValueError(f"{roll_type} is not a valid de-rotation method.")
 
-        # The first roll angle is used as the first "average"
-        processed_roll_data = np.array([roll_data[0]])
-        for roll in roll_data[1:]:
-            processed_roll = process_angle(processed_roll_data[-1], roll)  # Works better than using average
-            # processed_roll = process_angle(np.mean(processed_roll_data), roll)
-            processed_roll_data = np.append(processed_roll_data, processed_roll)
-
-        while all([r < 0 for r in processed_roll_data]):
-            processed_roll_data = np.array(processed_roll_data) + 360
-
-        df = pd.DataFrame.from_dict({"Angle": processed_roll_data, "Station": data.Station})
+        df = pd.DataFrame.from_dict({"Station": data.Station, "Angle": roll_data})
         return df
 
     def get_soa(self):
@@ -1075,8 +1089,8 @@ class PEMFile:
 
         eligible_data = xy_data[~xy_data.Remove.astype(bool)].drop(['Remove'], axis=1)
         ineligible_stations = xy_data[xy_data.Remove].drop(['Remove'], axis=1)
-        logger.info(f"Data ineligible for de-rotation:\n"
-                    f"{ineligible_stations.loc[:, ['Station', 'Reading_number', 'Reading_index']]}")
+        # logger.info(f"Data ineligible for de-rotation:\n"
+        #             f"{ineligible_stations.loc[:, ['Station', 'Reading_number', 'Reading_index']]}")
         return eligible_data, ineligible_stations
 
     def get_clipboard_info(self):
@@ -1822,6 +1836,7 @@ class PEMFile:
             self.notes.append(note)
         return self
 
+    @timeit
     def rotate(self, method='acc', soa=0):
         """
         Rotate the XY data of the PEM file.
@@ -2003,13 +2018,21 @@ class PEMFile:
         if xy_data.empty:
             raise Exception(f"{self.filepath.name} has no eligible XY data for de-rotation.")
 
-        # Rotate the data
-        rotated_data = xy_data.groupby(['Station', 'RAD_ID'],
-                                       group_keys=False,
-                                       as_index=False).apply(lambda l: rotate_group(l, method, soa))
+        @timeit
+        def apply_rotation():
+            # Rotate the data
+            rotated_data = xy_data.groupby(['Station', 'RAD_ID'],
+                                           group_keys=False,
+                                           as_index=False).apply(lambda l: rotate_group(l, method, soa))
+            return rotated_data
 
-        self.data.update(rotated_data)  # Fixes KeyError "... value not in index"
+        rotated_data = apply_rotation()
 
+        @timeit
+        def update_data():
+            self.data.update(rotated_data)  # Fixes KeyError "... value not in index"
+
+        update_data()
         # Remove the rows that were filtered out in filtered_data
         if method == "unrotate":
             self.soa = 0
@@ -2034,6 +2057,7 @@ class PEMFile:
             self.notes.append(f"<GEN> XY data rotated using an SOA offset of {self.soa}°.")
         return self
 
+    @timeit
     def prep_rotation(self):
         """
         Prepare the PEM file for probe de-rotation by updating the RAD tool objects with all calculations needed for
@@ -2252,30 +2276,30 @@ class PEMFile:
                     for key, value in new_info.items():
                         setattr(rad, key, value)
 
-                def calculate_mag_angles():
-                    if rad.D == 'D5':
-                        x, y, z = rad.x, rad.y, rad.z
-                    else:
-                        x, y, z = rad.Hx, rad.Hy, rad.Hz
-
-                    theta = math.atan2(-y, -z)
-                    cc_roll_angle = math.degrees(theta)
-                    roll_angle = cc_roll_angle if y < 0 else cc_roll_angle
-                    roll_angle -= 180  # Mag rotation always seems to be backwards, don't know why.
-                    if roll_angle > 360:
-                        roll_angle = roll_angle - 360
-                    elif roll_angle < 0:
-                        roll_angle = -roll_angle
-
-                    # Calculate the dip
-                    dip = -90.  # The dip is assumed to be 90°
-
-                    # Update the new_rad with the de-rotation information
-                    new_info = {'mag_roll_angle': roll_angle,
-                                'mag_dip': dip}
-                    # print(new_info)
-                    for key, value in new_info.items():
-                        setattr(rad, key, value)
+                # def calculate_mag_angles():
+                #     if rad.D == 'D5':
+                #         x, y, z = rad.x, rad.y, rad.z
+                #     else:
+                #         x, y, z = rad.Hx, rad.Hy, rad.Hz
+                #
+                #     theta = math.atan2(y, -z)
+                #     cc_roll_angle = math.degrees(theta)
+                #     roll_angle = cc_roll_angle if y < 0 else cc_roll_angle
+                #     # roll_angle -= 180
+                #     if roll_angle > 360:
+                #         roll_angle = roll_angle - 360
+                #     elif roll_angle < 0:
+                #         roll_angle = -roll_angle
+                #
+                #     # Calculate the dip
+                #     dip = -90.  # The dip is assumed to be 90°
+                #
+                #     # Update the new_rad with the de-rotation information
+                #     new_info = {'mag_roll_angle': roll_angle,
+                #                 'mag_dip': dip}
+                #     # print(new_info)
+                #     for key, value in new_info.items():
+                #         setattr(rad, key, value)
 
                 # def calculate_mag_angles():
                 #     if rad.D == 'D5':
@@ -2286,6 +2310,7 @@ class PEMFile:
                 #     theta = math.atan2(-y, -z)
                 #     cc_roll_angle = math.degrees(theta)
                 #     roll_angle = 360 - cc_roll_angle if y < 0 else cc_roll_angle
+                #     # roll_angle -= 180
                 #     if roll_angle > 360:
                 #         roll_angle = roll_angle - 360
                 #     elif roll_angle < 0:
@@ -2300,6 +2325,30 @@ class PEMFile:
                 #
                 #     for key, value in new_info.items():
                 #         setattr(rad, key, value)
+
+                def calculate_mag_angles():
+                    if rad.D == 'D5':
+                        x, y, z = rad.x, rad.y, rad.z
+                    else:
+                        x, y, z = rad.Hx, rad.Hy, rad.Hz
+
+                    theta = math.atan2(-y, -z)
+                    cc_roll_angle = math.degrees(theta)
+                    roll_angle = 360 - cc_roll_angle if y < 0 else cc_roll_angle
+                    if roll_angle > 360:
+                        roll_angle = roll_angle - 360
+                    elif roll_angle < 0:
+                        roll_angle = -roll_angle
+
+                    # Calculate the dip
+                    dip = -90.  # The dip is assumed to be 90°
+
+                    # Update the new_rad with the de-rotation information
+                    new_info = {'mag_roll_angle': roll_angle,
+                                'mag_dip': dip}
+
+                    for key, value in new_info.items():
+                        setattr(rad, key, value)
 
                 calculate_pp_angles()
                 calculate_acc_angles()
@@ -2489,6 +2538,7 @@ class PEMParser:
             :param units: str, nT/s or pT, used to know which channel is the ramp channel.
             :param num_channels: int, number of channels indicated in the PEM file header. Used to make sure all
             channels are accounted for.
+            :param ramp: float, ramp length.
             :return: DataFrame
             """
             def channel_table(channel_times, units, ramp):
@@ -3632,7 +3682,6 @@ class RADTool:
     """
     Class that represents the RAD Tool reading in a PEM survey
     """
-
     def __init__(self):
         self.D = None
         self.Hx = None
@@ -4141,69 +4190,165 @@ class PEMGetter:
         return pem_file
 
 
+def import_files():
+    data_dir = Path(r"Z:\_Data")
+    filt = r"RAW\*xy*.pem"
+    pem_files = list(data_dir.rglob(filt))
+    pem_files = [f for f in pem_files if "XYG" not in str(f).upper() and "XYT" not in str(f).upper() and "XYZT" not in str(f).upper()]
+    output_folder = Path(r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Rotation Testing\Vertical Holes")
+    parser = PEMParser()
+    print(f"XY files found: {len(pem_files)}.")
+    count = 0
+    for i, filepath in enumerate(pem_files):
+        print(f"{i + 1} / {len(pem_files)}")
+        # if filepath.suffix.lower() not in [".dmp", ".dmp2"]:
+        #     print(f"{filepath} is not .DMP or .DMP2.")
+        #     continue
+
+        try:
+            pem_file = parser.parse(filepath)
+        except:
+            print(f"Error parsing {filepath}.")
+            continue
+
+        if not pem_file.is_borehole():
+            print(f"{pem_file.filepath} is not a borehole file.")
+            continue
+        if not pem_file.has_xy():
+            print(f"{pem_file.filepath} doesn't have XY data.")
+            continue
+
+        try:
+            mean_dip = pem_file.get_dip(average=True).Dip.mean()
+        except:
+            print(f"Error calculating dip.")
+            continue
+
+        print(f"Mean dip: {mean_dip:.2f}")
+        if mean_dip <= -85.:
+            # print(f"{pem_file.filepath.name} is near vertical. Moving to sample folder.")
+            new_path = output_folder.joinpath(pem_file.filepath.stem + pem_file.line_name + ".PEM")
+            pem_file.filepath = new_path
+            pem_file.save()
+            # print(f"New filepath: {new_path}.")
+            count += 1
+
+    print(f"Vertical files found: {count}.")
+
+
+def compare_rolls():
+    folder = Path(r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Rotation Testing\Vertical Holes")
+    output_folder = Path(r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Rotation Testing\Vertical Holes\Roll Comparisons")
+    pems = list(folder.glob("*.pem"))
+    parser = PEMParser()
+    for i, filepath in enumerate(pems):
+        print(f"{i + 1} / {len(pems)}")
+        pem_file = parser.parse(filepath)
+        try:
+            pem_file.prep_rotation()
+        except:
+            print(f"Cannot prep for de-rotation")
+            continue
+
+        roll_data = pem_file.get_roll_data("All").groupby("Station", as_index=False).mean()
+        roll_data.to_csv(output_folder.joinpath(pem_file.filepath.stem).with_suffix(".csv"),
+                         index=False,
+                         float_format="%.1f")
+
+
+def analyze_rolls():
+    folder = Path(r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Rotation Testing\Vertical Holes\Roll Comparisons")
+    # folder = Path(r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Rotation Testing\Roll Comparisons")
+    files = list(folder.glob("*.csv"))
+
+    file_names = []
+    acc_mag_mean = []
+    acc_mpp_mean = []
+    acc_cpp_mean = []
+    mag_mpp_mean = []
+    mag_cpp_mean = []
+    mpp_cpp_mean = []
+
+    for file in files:
+        df = pd.read_csv(file)
+        if "Measured PP" in df.columns and "Cleaned PP" in df.columns:
+            print(f"Processing file {file.name}.")
+            file_names.append(file.name)
+
+            acc_mag_diff = get_processed_angles(df.Acc - df.Mag)
+            acc_mag_mean.append(acc_mag_diff.mean())
+            # print(f"Acc - Mag:\n{acc_mag_diff}\n")
+
+            acc_mpp_diff = get_processed_angles(df.Acc - df.loc[:, "Measured PP"])
+            acc_mpp_mean.append(acc_mpp_diff.mean())
+            # print(f"Acc - Measured PP:\n{acc_mpp_diff}\n")
+
+            acc_cpp_diff = get_processed_angles(df.Acc - df.loc[:, "Cleaned PP"])
+            acc_cpp_mean.append(acc_cpp_diff.mean())
+            # print(f"Acc - Measured PP:\n{acc_mpp_diff}\n")
+
+            mag_mpp_diff = get_processed_angles(df.Mag - df.loc[:, "Measured PP"])
+            mag_mpp_mean.append(mag_mpp_diff.mean())
+            # print(f"Mag - Measured PP:\n{mag_mpp_diff}\n")
+
+            mag_cpp_diff = get_processed_angles(df.Mag - df.loc[:, "Cleaned PP"])
+            mag_cpp_mean.append(mag_cpp_diff.mean())
+            # print(f"Mag - Cleaned PP:\n{mag_cpp_diff}\n")
+
+            mpp_cpp_diff = get_processed_angles(df.loc[:, "Measured PP"] - df.loc[:, "Cleaned PP"])
+            mpp_cpp_mean.append(mpp_cpp_diff.mean())
+            # print(f"Measured PP - Cleaned PP:\n{mpp_cpp_diff}\n")
+
+    analysis_df = pd.DataFrame(data={"File": file_names,
+                                     "Acc - Mag": acc_mag_mean,
+                                     "Acc - Measured PP": acc_mpp_mean,
+                                     "Acc - Cleaned PP": acc_cpp_mean,
+                                     "Mag - Measured PP": mag_mpp_mean,
+                                     "Mag - Cleaned PP": mag_cpp_mean,
+                                     "Measured PP - Cleaned PP": mpp_cpp_mean})
+    analysis_df.append(["Mean", acc_mag_mean, acc_mpp_mean, acc_cpp_mean, mag_mpp_mean, mag_cpp_mean, mpp_cpp_mean])
+    analysis_df.to_csv(folder.joinpath("_Analysis.CSV"), float_format="%.1f", index=False)
+    os.startfile(str(folder.joinpath("_Analysis.CSV")))
+
+
 if __name__ == '__main__':
-    import time
+    # import_files()
+    # compare_rolls()
+    analyze_rolls()
 
-    sample_folder = Path(__file__).parents[2].joinpath("sample_files")
-
-    pg = PEMGetter()
-
-    # pem_file = pg.parse(r"C:\_Data\2021\Eastern\Sterling\SP-21-040\RAW\xy_1205.PEM")
-    # pem_file = pg.parse(r"C:\_Data\2021\Nantou BF\Borehole\_PX21002\RAW\xy-px21002_1206.PEM")
-    pem_file = pg.parse(r"C:\_Data\2021\TMC\Senc Resources\Loop 11\RAW\700e_1210.PEM")
-    # txt_file = sample_folder.joinpath(r"Line GPS\KA800N_1027.txt")
-    # line = SurveyLine(txt_file)
-    # line.get_warnings(stations=pem_file.get_stations(converted=True, incl_deleted=False))
-
-    # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
-    # file = r"C:\_Data\2021\TMC\Laurentia\STE-21-50-W3\RAW\ste-21-50w3xy_0819.dmp2"
-    # pem_files = pg.parse(r"C:\_Data\2021\TMC\Laurentia\STE-21-70\Final\STE-21-70 XYT.PEM")
-    # pem_files = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-264-21\RAW\xy_1002.PEM")
-    # pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\SAN-0251-21\RAW\xy_1019.PEM")
-    # file = r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW\l35eb2_0.PEM817.dmp2"
-    # pem_file, errors = dmpparser.parse(file)
-    # print(pem_file.to_string())
-
-    # pem_files = pg.get_pems(random=True, number=1)
-    # pem_files = pg.get_pems(folder="Raw Boreholes", file=r"EB-21-52\Final\z.PEM")
-    # pem_files = pg.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")
-    # pem_files = pg.get_pems(folder="Raw Surface", subfolder=r"Loop 1\Final\Perkoa South", file="11200E.PEM")
-    # pem_files = pg.get_pems(folder="Raw Boreholes", file="em21-155 z_0415.PEM")
-
-    # pem_file = pem_files[0]
-    # pem_file, _ = pem_file.prep_rotation()
-    # pem_file.get_theory_pp()
-    # pem_file.get_theory_data()
-    pem_file.get_reversed_components()
-    # pem_file.rotate(method="unrotate")
-    # pem_file.rotate(method="unrotate")
-    # pem_file.filepath = pem_file.filepath.with_name(pem_file.filepath.stem + "(unrotated)" + ".PEM")
-    # pem_file.save()
-
-    # pem_file = pg.get_pems(client='PEM Rotation', file='_BX-081 XY.PEM')[0]
-    # pem_file.get_dad()
-    # pem_file = pg.get_pems(client='Kazzinc', number=1)[0]
-    # pem_file.to_xyz()
-    # pem_file, _ = pem_file.prep_rotation()
-    # pem_file.mag_offset()
-    # pem_file = pem_file.rotate(method=None, soa=2)
-    # pem_file = pem_file.rotate(method='unrotate', soa=10)
-    # pem_file = pem_file.rotate(method="pp", soa=1)
-    # rotated_pem = prep_pem.rotate('pp')
-
-    # pem_file = pemparser.parse(r'C:\_Data\2020\Eastern\Egypt Road\__ER-19-02\RAW\XY29_29.PEM')
-    # pem_file = dparser.parse(r'C:\_Data\2020\Eastern\Dominique\_DOM-91-1\RAW\xy03_03.DMP')
-    # pem_file = dparser.parse_dmp2(r'C:\_Data\2020\Juno\Surface\Europa\Loop 3\RAW\line 850_16.dmp2')
-    # pem_file.save(legacy=True)
-
-    # file = str(Path(__file__).parents[2].joinpath('sample_files/DMP files/DMP2 New/BR-32 Surface/l4200e.dmp2'))
-    # pem_file = dparser.parse_dmp2(file)
-    # pem_file.get_suffix_warnings()
-    # pem_file.save(processed=False)
-    # pem_file2 = pemparser.parse(file.filepath)
-    # pem_file2.save(processed=True)
-
-    # out = str(Path(__file__).parents[2].joinpath(
-    # 'sample_files/test results/f'{file.filepath.stem} - test conversion.pem')
-    # print(file.to_string(), file=open(out, 'w'))
-    # os.startfile(pem_file.filepath)
+    # sample_folder = Path(__file__).parents[2].joinpath("sample_files")
+    #
+    # pg = PEMGetter()
+    # pem_file = pg.get_pems("Rotation Testing", number=1)[0]
+    # pem_file.prep_rotation()
+    # pem_file.rotate(method="mag")
+    # print(pem_file.get_roll_data(roll_type="Mag"))
+    # pem_file = pg.parse(r"C:\_Data\2021\TMC\Senc Resources\Loop 11\RAW\700e_1210.PEM")
+    # # txt_file = sample_folder.joinpath(r"Line GPS\KA800N_1027.txt")
+    # # line = SurveyLine(txt_file)
+    # # line.get_warnings(stations=pem_file.get_stations(converted=True, incl_deleted=False))
+    #
+    # # file = sample_folder.joinpath(r"C:\_Data\2021\Eastern\Corazan Mining\FLC-2021-26 (LP-26B)\RAW\_0327_PP.DMP")
+    # # file = r"C:\_Data\2021\TMC\Laurentia\STE-21-50-W3\RAW\ste-21-50w3xy_0819.dmp2"
+    # # pem_files = pg.parse(r"C:\_Data\2021\TMC\Laurentia\STE-21-70\Final\STE-21-70 XYT.PEM")
+    # # pem_files = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-264-21\RAW\xy_1002.PEM")
+    # # pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Borehole\SAN-0251-21\RAW\xy_1019.PEM")
+    # # file = r"C:\_Data\2021\TMC\Murchison\Barraute B\RAW\l35eb2_0.PEM817.dmp2"
+    # # pem_file, errors = dmpparser.parse(file)
+    # # print(pem_file.to_string())
+    #
+    # # pem_files = pg.get_pems(random=True, number=1)
+    # # pem_files = pg.get_pems(folder="Raw Boreholes", file=r"EB-21-52\Final\z.PEM")
+    # # pem_files = pg.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")
+    # # pem_files = pg.get_pems(folder="Raw Surface", subfolder=r"Loop 1\Final\Perkoa South", file="11200E.PEM")
+    # # pem_files = pg.get_pems(folder="Raw Boreholes", file="em21-155 z_0415.PEM")
+    #
+    # # pem_file = pem_files[0]
+    # # pem_file, _ = pem_file.prep_rotation()
+    # # pem_file.get_theory_pp()
+    # # pem_file.get_theory_data()
+    # pem_file.get_reversed_components()
+    # # pem_file.rotate(method="unrotate")
+    # # pem_file.rotate(method="unrotate")
+    # # pem_file.filepath = pem_file.filepath.with_name(pem_file.filepath.stem + "(unrotated)" + ".PEM")
+    # # pem_file.save()
