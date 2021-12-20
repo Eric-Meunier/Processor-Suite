@@ -288,6 +288,7 @@ class PEMFile:
         self.operator = header.get('Operator')
         self.probes = header.get('Probes')
         self.current = header.get('Current')
+        self.original_current = header.get('Current')
         self.loop_dimensions = header.get('Loop dimensions')
 
         self.client = header.get('Client')
@@ -1727,7 +1728,7 @@ class PEMFile:
         """
         new_current = current
         assert isinstance(new_current, float), "New current is not type float"
-        logger.info(f"Performing current change for {self.filepath.name:.2f} to {current:.2f}.")
+        logger.info(f"Performing current change for {self.filepath.name} to {current:.2f}.")
 
         old_current = float(self.current)
 
@@ -3085,14 +3086,12 @@ class DMPParser:
         :param filepath: str, filepath of the .DMP2 file
         :return: PEMFile object
         """
-
         def parse_channel_times(units, ramp):
             """
             Convert the channel table in the .DMP file to a PEM channel times table DataFrame
             :param units: str, 'nT/s' or 'pT'
             :return: DataFrame
             """
-
             def channel_table(channel_times):
                 """
                 Channel times table data frame with channel start, end, center, width, and whether the channel is
@@ -3100,7 +3099,6 @@ class DMPParser:
                 :param channel_times: pandas Series, float of each channel time read from a PEM file header.
                 :return: pandas DataFrame
                 """
-
                 def find_last_off_time():
                     """
                     Find where the next channel width is less than half the previous channel width, which indicates
@@ -4257,58 +4255,80 @@ def compare_rolls():
 
 
 def analyze_rolls():
-    folder = Path(r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Rotation Testing\Vertical Holes\Roll Comparisons")
-    # folder = Path(r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Rotation Testing\Roll Comparisons")
-    files = list(folder.glob("*.csv"))
+    def process_angle(angle):
+        while angle > 180:
+            angle -= 360
+        while angle < -180:
+            angle += 360
 
-    file_names = []
-    acc_mag_mean = []
-    acc_mpp_mean = []
-    acc_cpp_mean = []
-    mag_mpp_mean = []
-    mag_cpp_mean = []
-    mpp_cpp_mean = []
+        return angle
+    vertical_hole_folder = Path(r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Rotation Testing\Vertical Holes\Roll Comparisons")
+    normal_folder = Path(r"C:\Users\Eric\PycharmProjects\PEMPro\sample_files\Rotation Testing\Roll Comparisons")
+    output_names = ["Vertical Holes", "Normal Holes"]
+    folders = [vertical_hole_folder, normal_folder]
 
-    for file in files:
-        df = pd.read_csv(file)
-        if "Measured PP" in df.columns and "Cleaned PP" in df.columns:
-            print(f"Processing file {file.name}.")
-            file_names.append(file.name)
+    for output_name, folder in zip(output_names, folders):
+        files = list(folder.glob("*.csv"))
 
-            acc_mag_diff = get_processed_angles(df.Acc - df.Mag)
-            acc_mag_mean.append(acc_mag_diff.mean())
-            # print(f"Acc - Mag:\n{acc_mag_diff}\n")
+        file_names = []
+        acc_mag_mean = []
+        acc_mpp_mean = []
+        acc_cpp_mean = []
+        mag_mpp_mean = []
+        mag_cpp_mean = []
+        mpp_cpp_mean = []
 
-            acc_mpp_diff = get_processed_angles(df.Acc - df.loc[:, "Measured PP"])
-            acc_mpp_mean.append(acc_mpp_diff.mean())
-            # print(f"Acc - Measured PP:\n{acc_mpp_diff}\n")
+        for file in files:
+            df = pd.read_csv(file)
+            if "Measured PP" in df.columns and "Cleaned PP" in df.columns:
+                print(f"Processing file {file.name}.")
+                file_names.append(file.name)
 
-            acc_cpp_diff = get_processed_angles(df.Acc - df.loc[:, "Cleaned PP"])
-            acc_cpp_mean.append(acc_cpp_diff.mean())
-            # print(f"Acc - Measured PP:\n{acc_mpp_diff}\n")
+                acc_mag_diff = get_processed_angles(df.Acc) - get_processed_angles(df.Mag)
+                acc_mag_mean.append(process_angle(acc_mag_diff.mean()))
+                # print(f"Acc - Mag:\n{acc_mag_diff}\n")
 
-            mag_mpp_diff = get_processed_angles(df.Mag - df.loc[:, "Measured PP"])
-            mag_mpp_mean.append(mag_mpp_diff.mean())
-            # print(f"Mag - Measured PP:\n{mag_mpp_diff}\n")
+                acc_mpp_diff = get_processed_angles(df.Acc) - get_processed_angles(df.loc[:, "Measured PP"])
+                acc_mpp_mean.append(process_angle(acc_mpp_diff.mean()))
+                # print(f"Acc - Measured PP:\n{acc_mpp_diff}\n")
 
-            mag_cpp_diff = get_processed_angles(df.Mag - df.loc[:, "Cleaned PP"])
-            mag_cpp_mean.append(mag_cpp_diff.mean())
-            # print(f"Mag - Cleaned PP:\n{mag_cpp_diff}\n")
+                acc_cpp_diff = get_processed_angles(df.Acc) - get_processed_angles(df.loc[:, "Cleaned PP"])
+                acc_cpp_mean.append(process_angle(acc_cpp_diff.mean()))
+                # print(f"Acc - Measured PP:\n{acc_mpp_diff}\n")
 
-            mpp_cpp_diff = get_processed_angles(df.loc[:, "Measured PP"] - df.loc[:, "Cleaned PP"])
-            mpp_cpp_mean.append(mpp_cpp_diff.mean())
-            # print(f"Measured PP - Cleaned PP:\n{mpp_cpp_diff}\n")
+                mag_mpp_diff = get_processed_angles(df.Mag) - get_processed_angles(df.loc[:, "Measured PP"])
+                mag_mpp_mean.append(process_angle(mag_mpp_diff.mean()))
+                # print(f"Mag - Measured PP:\n{mag_mpp_diff}\n")
 
-    analysis_df = pd.DataFrame(data={"File": file_names,
-                                     "Acc - Mag": acc_mag_mean,
-                                     "Acc - Measured PP": acc_mpp_mean,
-                                     "Acc - Cleaned PP": acc_cpp_mean,
-                                     "Mag - Measured PP": mag_mpp_mean,
-                                     "Mag - Cleaned PP": mag_cpp_mean,
-                                     "Measured PP - Cleaned PP": mpp_cpp_mean})
-    analysis_df.append(["Mean", acc_mag_mean, acc_mpp_mean, acc_cpp_mean, mag_mpp_mean, mag_cpp_mean, mpp_cpp_mean])
-    analysis_df.to_csv(folder.joinpath("_Analysis.CSV"), float_format="%.1f", index=False)
-    os.startfile(str(folder.joinpath("_Analysis.CSV")))
+                mag_cpp_diff = get_processed_angles(df.Mag) - get_processed_angles(df.loc[:, "Cleaned PP"])
+                mag_cpp_mean.append(process_angle(mag_cpp_diff.mean()))
+                # print(f"Mag - Cleaned PP:\n{mag_cpp_diff}\n")
+
+                mpp_cpp_diff = get_processed_angles(df.loc[:, "Measured PP"]) - get_processed_angles(df.loc[:, "Cleaned PP"])
+                mpp_cpp_mean.append(process_angle(mpp_cpp_diff.mean()))
+                # print(f"Measured PP - Cleaned PP:\n{mpp_cpp_diff}\n")
+
+        columns = ["File",
+                   "Acc - Mag",
+                   "Acc - Measured PP",
+                   "Acc - Cleaned PP",
+                   "Mag - Measured PP",
+                   "Mag - Cleaned PP",
+                   "Measured PP - Cleaned PP"]
+        analysis_df = pd.DataFrame(data=[file_names,
+                                         acc_mag_mean,
+                                         acc_mpp_mean,
+                                         acc_cpp_mean,
+                                         mag_mpp_mean,
+                                         mag_cpp_mean,
+                                         mpp_cpp_mean]).T
+        analysis_df.columns = columns
+        analysis_df.set_index("File", inplace=True)
+
+        # analysis_df = analysis_df.append(analysis_df.mean(), ignore_index=True)
+        analysis_df.loc["Mean"] = analysis_df.mean()
+        analysis_df.to_csv(folder.joinpath(output_name + ".CSV"), float_format="%.1f", index=True)
+        os.startfile(str(folder.joinpath(output_name + ".CSV")))
 
 
 if __name__ == '__main__':
