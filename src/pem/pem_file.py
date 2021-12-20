@@ -1375,16 +1375,17 @@ class PEMFile:
                     'Station', drop=True).loc[:, pp_ch_num]
 
                 # Only include common stations. PP represents the measured data, XYZ are theoretical.
-                df = pd.concat([pp_data, theory_pp_data], axis=1).rename({pp_ch_num: 'PP'}, axis=1).dropna(axis=0)
-                theory_pp = df.loc[:, component].to_numpy()
-                measured_pp = df.loc[:, 'PP'].to_numpy()
+                df = pd.concat([pp_data, theory_pp_data.loc[:, component]], axis=1).rename(
+                    {0: 'Measured', component: "Theory"}, axis=1).dropna(axis=0)
+                theory_pp = df.Theory.to_numpy()
+                measured_pp = df.Measured.to_numpy()
 
                 diff = np.abs(theory_pp - measured_pp)
                 reversed_diff = np.abs(theory_pp - (measured_pp * -1))
 
                 # Find how many diff values are greater in the flipped array than in the original. If more than half the
                 # array is larger in the original, than it is probably incorrect.
-                if len(np.where(reversed_diff > diff)) > len(diff) * 0.5:
+                if len(np.where(diff > reversed_diff)[0]) > len(diff) * 0.5:
                     logger.info(f"{self.filepath.name} {component} component may be reversed.")
                     reversed_components.append(component)
 
@@ -4334,12 +4335,13 @@ def analyze_rolls():
 if __name__ == '__main__':
     # import_files()
     # compare_rolls()
-    analyze_rolls()
+    # analyze_rolls()
 
-    # sample_folder = Path(__file__).parents[2].joinpath("sample_files")
+    sample_folder = Path(__file__).parents[2].joinpath("sample_files")
     #
-    # pg = PEMGetter()
+    pg = PEMGetter()
     # pem_file = pg.get_pems("Rotation Testing", number=1)[0]
+    pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Surface\Off Loop Puajanca\RAW\1280.PEM")
     # pem_file.prep_rotation()
     # pem_file.rotate(method="mag")
     # print(pem_file.get_roll_data(roll_type="Mag"))
@@ -4367,7 +4369,7 @@ if __name__ == '__main__':
     # # pem_file, _ = pem_file.prep_rotation()
     # # pem_file.get_theory_pp()
     # # pem_file.get_theory_data()
-    # pem_file.get_reversed_components()
+    print(pem_file.get_reversed_components())
     # # pem_file.rotate(method="unrotate")
     # # pem_file.rotate(method="unrotate")
     # # pem_file.filepath = pem_file.filepath.with_name(pem_file.filepath.stem + "(unrotated)" + ".PEM")
