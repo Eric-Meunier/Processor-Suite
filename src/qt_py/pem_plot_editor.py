@@ -1029,7 +1029,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             profile_data = self.profile_data[filt].set_index("Station", drop=True)
 
             # For nearest station calculation
-            self.component_stations[component] = self.pem_file.get_stations(component=component, converted=True)
+            self.component_stations[component] = self.pem_file.get_stations(component=component,
+                                                                            converted=True,
+                                                                            incl_deleted=True)
 
             if profile_data.empty:
                 continue
@@ -1418,8 +1420,11 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         :return: int, station number
         """
         stations = self.component_stations.get(self.current_component)
-        idx = (np.abs(stations - x)).argmin()
-        return stations[idx]
+        if stations is None:
+            return
+        else:
+            idx = (np.abs(stations - x)).argmin()
+            return stations[idx]
 
     def profile_mouse_moved(self, evt):
         """
@@ -1433,6 +1438,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         profile_axes = self.get_component_profile_axes(self.current_component)
         mouse_point = profile_axes[0].vb.mapSceneToView(pos)
         self.nearest_station = self.find_nearest_station(int(mouse_point.x()))
+        if self.nearest_station is None:
+            return  # When all data is deleted, which isn't plotted in the profile plots.
 
         for ax in self.active_profile_axes:
             ax.items[0].setPos(self.nearest_station)  # Move the hover line
@@ -1442,7 +1449,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 ax.items[1].setAnchor((1, 0))
             else:
                 ax.items[1].setAnchor((0, 0))
-            ax.items[1].setText(str(self.nearest_station))  # Chang text to the be the station number
+            ax.items[1].setText(str(self.nearest_station))  # Change text to the be the station number
 
     def profile_plot_clicked(self, evt):
         """
@@ -2966,7 +2973,8 @@ if __name__ == '__main__':
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\800E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\1200E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"JHadid\RAW\400n.PEM")[0]
-    pem_file = pem_g.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-230\RAW\em21-230z_1206.PEM")
+    # pem_file = pem_g.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-230\RAW\em21-230z_1206.PEM")
+    pem_file = pem_g.parse(r"C:\_Data\2022\TMC\Laurentia\Borehole\NRC-21-07\RAW\_0118_nrc-21-07 pp.dmp2")
     # pem_file = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]
 
     editor = PEMPlotEditor(darkmode=darkmode)

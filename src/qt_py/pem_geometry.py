@@ -22,6 +22,7 @@ from src.qt_py.gps_tools import DADSelector
 from src.ui.pem_geometry import Ui_PEMGeometry
 
 logger = logging.getLogger(__name__)
+refs = []
 
 
 def smooth_azimuth(azimuth):
@@ -212,7 +213,11 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         self.tool_az = None
         self.tool_dip = None
         self.tool_mag = None
+        self.seg_az = None
+        self.seg_dip = None
+        self.seg_depth = None
         self.stations = None
+        self.collar_depths = None
 
         # Initialize the plot lines
         self.tool_az_line = None
@@ -472,24 +477,23 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             """
             Plot the azimuth and dip from the P tags section of the pem_file
             """
-            global seg_az, seg_dip, seg_depth
             seg = self.pem_file.get_segments()
-            seg_depth = seg.Depth
-            seg_az = smooth_azimuth(seg.Azimuth)
-            seg_dip = seg.Dip * -1
+            self.seg_depth = seg.Depth
+            self.seg_az = smooth_azimuth(seg.Azimuth)
+            self.seg_dip = seg.Dip * -1
 
             if self.existing_az_line is None:
                 # Enable the show existing geometry check box
                 self.show_existing_geom_cbox.setEnabled(True)
                 # Plot the lines
-                self.existing_az_line, = self.az_ax.plot(seg_az, seg_depth,
+                self.existing_az_line, = self.az_ax.plot(self.seg_az, self.seg_depth,
                                                          color=self.azimuth_color,
                                                          linestyle='-.',
                                                          label='Existing Azimuth',
                                                          lw=0.8,
                                                          zorder=1)
 
-                self.existing_dip_line, = self.dip_ax.plot(seg_dip, seg_depth,
+                self.existing_dip_line, = self.dip_ax.plot(self.seg_dip, self.seg_depth,
                                                            color=self.dip_color,
                                                            linestyle='-.',
                                                            label='Existing Dip',
@@ -497,14 +501,14 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
                                                            zorder=1)
 
                 # Plot the lines in the polar plot
-                self.existing_az_line_p, = self.polar_ax.plot([radians(az) for az in seg_az], seg_depth,
+                self.existing_az_line_p, = self.polar_ax.plot([radians(az) for az in self.seg_az], self.seg_depth,
                                                               color=self.azimuth_color,
                                                               linestyle='-.',
                                                               label='Existing Azimuth',
                                                               lw=0.8,
                                                               zorder=1)
 
-                self.existing_dip_line_p, = self.polar_ax.plot([-radians(dip) for dip in seg_dip], seg_depth,
+                self.existing_dip_line_p, = self.polar_ax.plot([-radians(dip) for dip in self.seg_dip], self.seg_depth,
                                                                color=self.dip_color,
                                                                linestyle='-.',
                                                                label='Existing Dip',
@@ -591,7 +595,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
             plot_seg_values()
 
             if not az.any():
-                az, dip, depth = seg_az, seg_dip, seg_depth
+                az, dip, depth = self.seg_az, self.seg_dip, self.seg_depth
 
         if az.any() and depth.any():
             self.add_az_spline(az, depth)
@@ -798,17 +802,16 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         :param az: list, azimuths from either the tool values or seg file to use as a starting point
         :param depth: list, corresponding depths of the az
         """
-        global collar_depths
         avg_az = int(np.average(smooth_azimuth(az)))
         self.collar_az_sbox.blockSignals(True)
         self.collar_az_sbox.setValue(avg_az)
         self.collar_az_sbox.blockSignals(False)
 
-        collar_depths = np.array([0, depth.iloc[-1]])
+        self.collar_depths = np.array([0, depth.iloc[-1]])
         collar_az = np.array([avg_az] * 2)
 
         # Plot the lines
-        self.collar_az_line, = self.az_ax.plot(collar_az, collar_depths,
+        self.collar_az_line, = self.az_ax.plot(collar_az, self.collar_depths,
                                                color=self.azimuth_color,
                                                linestyle=(0, (5, 10)),
                                                label='Fixed Azimuth',
@@ -816,7 +819,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
                                                zorder=1)
 
         # Plot the line in the polar plot
-        self.collar_az_line_p, = self.polar_ax.plot([radians(az) for az in collar_az], collar_depths,
+        self.collar_az_line_p, = self.polar_ax.plot([radians(az) for az in collar_az], self.collar_depths,
                                                     color=self.azimuth_color,
                                                     linestyle=(0, (5, 10)),
                                                     label='Fixed Azimuth',
@@ -837,17 +840,16 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         :param dip: list, dips from either the tool values or seg file to use as a starting point
         :param depth: list, corresponding depths of the dip
         """
-        global collar_depths
         avg_dip = int(np.average(dip))
         self.collar_dip_sbox.blockSignals(True)
         self.collar_dip_sbox.setValue(avg_dip)
         self.collar_dip_sbox.blockSignals(False)
 
-        collar_depths = np.array([0, depth.iloc[-1]])
+        self.collar_depths = np.array([0, depth.iloc[-1]])
         collar_dip = np.array([avg_dip] * 2)
 
         # Plot the lines
-        self.collar_dip_line, = self.dip_ax.plot(collar_dip, collar_depths,
+        self.collar_dip_line, = self.dip_ax.plot(collar_dip, self.collar_depths,
                                                  color=self.dip_color,
                                                  linestyle=(0, (5, 10)),
                                                  label='Fixed Dip',
@@ -855,7 +857,7 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
                                                  zorder=1)
 
         # Plot in the polar plot
-        self.collar_dip_line_p, = self.polar_ax.plot([-radians(dip) for dip in collar_dip], collar_depths,
+        self.collar_dip_line_p, = self.polar_ax.plot([-radians(dip) for dip in collar_dip], self.collar_depths,
                                                      color=self.dip_color,
                                                      linestyle=(0, (5, 10)),
                                                      label='Fixed Dip',
@@ -898,8 +900,8 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
                                       f'\n{str(e)}.')
 
         filepath = Path(filepath)
-        global selector
         selector = DADSelector()
+        refs.append(selector)
         selector.accept_sig.connect(accept_file)
 
         try:
@@ -922,8 +924,8 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         Signal slot, move the tool azimuth line when the magnetic declination value is changed.
         """
         v = [self.collar_az_sbox.value()] * 2
-        self.collar_az_line.set_data(v, collar_depths)
-        self.collar_az_line_p.set_data([radians(x) for x in v], collar_depths)
+        self.collar_az_line.set_data(v, self.collar_depths)
+        self.collar_az_line_p.set_data([radians(x) for x in v], self.collar_depths)
         self.update_plots(self.az_ax)
 
     def redraw_collar_dip_line(self):
@@ -931,8 +933,8 @@ class PEMGeometry(QMainWindow, Ui_PEMGeometry):
         Signal slot, move the tool azimuth line when the magnetic declination value is changed.
         """
         v = [self.collar_dip_sbox.value()] * 2
-        self.collar_dip_line.set_data(v, collar_depths)
-        self.collar_dip_line_p.set_data([-radians(x) for x in v], collar_depths)
+        self.collar_dip_line.set_data(v, self.collar_depths)
+        self.collar_dip_line_p.set_data([-radians(x) for x in v], self.collar_depths)
         self.update_plots(self.dip_ax)
 
     def toggle_az_spline(self):

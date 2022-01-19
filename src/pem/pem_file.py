@@ -902,6 +902,20 @@ class PEMFile:
 
         return np.array(natsort.os_sorted(stations))
 
+    def get_min_station(self):
+        stations = self.get_stations(converted=True, incl_deleted=True)
+        if not stations.any():
+            return None
+        else:
+            return stations.min()
+
+    def get_max_station(self):
+        stations = self.get_stations(converted=True, incl_deleted=True)
+        if not stations.any():
+            return None
+        else:
+            return stations.max()
+
     def get_gps_extents(self):
         """
         Return the minimum and maximum of each dimension of the GPS in the file
@@ -1376,7 +1390,7 @@ class PEMFile:
 
                 # Only include common stations. PP represents the measured data, XYZ are theoretical.
                 df = pd.concat([pp_data, theory_pp_data.loc[:, component]], axis=1).rename(
-                    {0: 'Measured', component: "Theory"}, axis=1).dropna(axis=0)
+                    {pp_ch_num: 'Measured', component: "Theory"}, axis=1).dropna(axis=0)
                 theory_pp = df.Theory.to_numpy()
                 measured_pp = df.Measured.to_numpy()
 
@@ -2078,7 +2092,7 @@ class PEMFile:
             assert self.has_collar_gps(), f"{self.filepath.name} has no collar GPS."
             assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filepath.name}."
 
-            global proj, loop, ramp, mag_calc, ch_times, ch_numbers
+            # global proj, loop, ramp, mag_calc, ch_times, ch_numbers
 
             self.pp_table = pd.DataFrame(columns=['Station',
                                                   'Azimuth',
@@ -2122,13 +2136,20 @@ class PEMFile:
                 if filt.any():
                     ch_index = ch_times[filt].index.values[0]
                     ch_numbers.append(ch_index)
-            # print(ch_numbers)
 
-        def prepare_rad(group):
+            return {"proj": proj,
+                    "loop": loop,
+                    "ramp": ramp,
+                    "mag_calc": mag_calc,
+                    "ch_times": ch_times,
+                    "ch_numbers": ch_numbers}
+
+        def prepare_rad(group, pp_info):
             """
             Update the RAD Tool object with all calculated angles for rotation.
             :param group: pandas DataFrame: data frame of the readings to rotate. Must contain at least one
             reading from X and Y components, and the RAD tool values for all readings must all be the same.
+            :param pp_info: Dict, information needed to calculate PP angles.
             :return: pandas DataFrame: group with the RAD_tool objects updated and ready for rotation.
             """
             def calculate_angles(rad):
@@ -2145,114 +2166,115 @@ class PEMFile:
                         """
                         # Get the list of ch_times indexes so the cleaned_pp can be selected by index.
                         # Needed for when channels are split before hand.
-                        cleaned_pp_channels = ch_times.index.to_list()
+                        cleaned_pp_channels = pp_info.get("ch_times").index.to_list()
 
                         cleaned_pp = row.Reading[0]
-                        for num in ch_numbers:
+                        for num in pp_info.get("ch_numbers"):
                             ind = cleaned_pp_channels.index(num)
                             cleaned_pp += row.Reading[ind]
                         return cleaned_pp
 
                     # Add the PP information (theoretical PP, cleaned PP, roll angle) to the new RAD Tool object
-                    if include_pp is True:
-                        segments = self.get_segments()
-                        pp_rad_info = dict()
+                    segments = self.get_segments()
+                    pp_rad_info = dict()
 
-                        # Calculate the raw PP value for each component
-                        pp_ch_index = self.channel_times[~self.channel_times.Remove.astype(bool)].index.values[0]
-                        measured_ppx = group[group.Component == 'X'].apply(lambda x: x.Reading[pp_ch_index],
-                                                                           axis=1).mean()
-                        measured_ppy = group[group.Component == 'Y'].apply(lambda x: x.Reading[pp_ch_index],
-                                                                           axis=1).mean()
-                        ppxy_measured = math.sqrt(sum([measured_ppx ** 2, measured_ppy ** 2]))
+                    # Calculate the raw PP value for each component
+                    pp_ch_index = self.channel_times[~self.channel_times.Remove.astype(bool)].index.values[0]
+                    measured_ppx = group[group.Component == 'X'].apply(lambda x: x.Reading[pp_ch_index],
+                                                                       axis=1).mean()
+                    measured_ppy = group[group.Component == 'Y'].apply(lambda x: x.Reading[pp_ch_index],
+                                                                       axis=1).mean()
+                    ppxy_measured = math.sqrt(sum([measured_ppx ** 2, measured_ppy ** 2]))
 
-                        # Use the segment azimuth and dip of the next segment (as per Bill's cross)
-                        # Find the next station. If it's the last station, re-use the last station.
-                        stations = list(self.data.Station.unique())
-                        current_station = group.Station.unique()[0]
-                        current_station_ind = stations.index(current_station)
+                    # Use the segment azimuth and dip of the next segment (as per Bill's cross)
+                    # Find the next station. If it's the last station, re-use the last station.
+                    stations = list(self.data.Station.unique())
+                    current_station = group.Station.unique()[0]
+                    current_station_ind = stations.index(current_station)
 
-                        # Re-use the last station if it's the current index
-                        if current_station_ind == len(stations) - 1:
-                            next_station = current_station
-                        else:
-                            next_station = stations[current_station_ind + 1]
+                    # Re-use the last station if it's the current index
+                    if current_station_ind == len(stations) - 1:
+                        next_station = current_station
+                    else:
+                        next_station = stations[current_station_ind + 1]
 
-                        # Calculate the dip and azimuth at the next station, interpolating in case the station
-                        # is not in the segments.
-                        seg_dip = np.interp(int(next_station), segments.Depth, segments.Dip)
-                        seg_azimuth = np.interp(int(next_station), segments.Depth, segments.Azimuth)
+                    # Calculate the dip and azimuth at the next station, interpolating in case the station
+                    # is not in the segments.
+                    seg_dip = np.interp(int(next_station), segments.Depth, segments.Dip)
+                    seg_azimuth = np.interp(int(next_station), segments.Depth, segments.Azimuth)
 
-                        # Find the location in 3D space of the station
-                        filt = proj.loc[:, 'Relative_depth'] == float(group.Station.iloc[0])
-                        x_pos, y_pos, z_pos = proj[filt].iloc[0]['Easting'], \
-                                              proj[filt].iloc[0]['Northing'], \
-                                              proj[filt].iloc[0]['Elevation']
+                    # Find the location in 3D space of the station
+                    proj = pp_info.get("proj")
+                    filt = proj.loc[:, 'Relative_depth'] == float(group.Station.iloc[0])
+                    x_pos, y_pos, z_pos = proj[filt].iloc[0]['Easting'], \
+                                          proj[filt].iloc[0]['Northing'], \
+                                          proj[filt].iloc[0]['Elevation']
 
-                        # Calculate the theoretical magnetic field strength of each component at that point (in nT/s)
-                        Tx, Ty, Tz = mag_calc.calc_total_field(x_pos, y_pos, z_pos,
-                                                               amps=self.current,
-                                                               out_units='nT/s',
-                                                               ramp=ramp)
+                    # Calculate the theoretical magnetic field strength of each component at that point (in nT/s)
+                    mag_calc = pp_info.get("mag_calc")
+                    Tx, Ty, Tz = mag_calc.calc_total_field(x_pos, y_pos, z_pos,
+                                                           amps=self.current,
+                                                           out_units='nT/s',
+                                                           ramp=pp_info.get("ramp"))
 
-                        # Rotate the theoretical values into the same frame of reference used with boreholes
-                        rTx, rTy, rTz = R.from_euler('Z', -90, degrees=True).apply([Tx, Ty, Tz])
+                    # Rotate the theoretical values into the same frame of reference used with boreholes
+                    rTx, rTy, rTz = R.from_euler('Z', -90, degrees=True).apply([Tx, Ty, Tz])
 
-                        # Rotate the theoretical values into the hole coordinate system
-                        r = R.from_euler('YZ', [90 - seg_dip, seg_azimuth], degrees=True)
-                        rT = r.apply([rTx, rTy, rTz])  # The rotated theoretical values
-                        ppxy_theory = math.sqrt(sum([rT[0] ** 2, rT[1] ** 2]))
+                    # Rotate the theoretical values into the hole coordinate system
+                    r = R.from_euler('YZ', [90 - seg_dip, seg_azimuth], degrees=True)
+                    rT = r.apply([rTx, rTy, rTz])  # The rotated theoretical values
+                    ppxy_theory = math.sqrt(sum([rT[0] ** 2, rT[1] ** 2]))
 
-                        if not self.is_fluxgate():
-                            # Calculate the cleaned PP value for each component for non-fluxgate surveys
-                            cleaned_PPx = group[group.Component == 'X'].apply(get_cleaned_pp, axis=1).mean()
-                            cleaned_PPy = group[group.Component == 'Y'].apply(get_cleaned_pp, axis=1).mean()
-                            ppxy_cleaned = math.sqrt(sum([cleaned_PPx ** 2, cleaned_PPy ** 2]))
+                    if not self.is_fluxgate():
+                        # Calculate the cleaned PP value for each component for non-fluxgate surveys
+                        cleaned_PPx = group[group.Component == 'X'].apply(get_cleaned_pp, axis=1).mean()
+                        cleaned_PPy = group[group.Component == 'Y'].apply(get_cleaned_pp, axis=1).mean()
+                        ppxy_cleaned = math.sqrt(sum([cleaned_PPx ** 2, cleaned_PPy ** 2]))
 
-                            # Calculate the required rotation angle
-                            cleaned_pp_roll_angle = math.degrees(
-                                math.atan2(rT[1], rT[0]) - math.atan2(cleaned_PPy, cleaned_PPx)
-                            )
-
-                            # if allow_negative_angles is False:
-                            if cleaned_pp_roll_angle < 0:
-                                cleaned_pp_roll_angle = cleaned_pp_roll_angle + 360
-
-                            pp_rad_info['ppx_cleaned'] = cleaned_PPx
-                            pp_rad_info['ppy_cleaned'] = cleaned_PPy
-                        else:
-                            cleaned_pp_roll_angle = None
-                            ppxy_cleaned = None
-
-                        measured_pp_roll_angle = math.degrees(math.atan2(rT[1], rT[0]) -
-                                                              math.atan2(measured_ppy, measured_ppx))
+                        # Calculate the required rotation angle
+                        cleaned_pp_roll_angle = math.degrees(
+                            math.atan2(rT[1], rT[0]) - math.atan2(cleaned_PPy, cleaned_PPx)
+                        )
 
                         # if allow_negative_angles is False:
-                        if measured_pp_roll_angle < 0:
-                            measured_pp_roll_angle = measured_pp_roll_angle + 360
+                        if cleaned_pp_roll_angle < 0:
+                            cleaned_pp_roll_angle = cleaned_pp_roll_angle + 360
 
-                        # Update the RAD Tool object with the new information
-                        pp_rad_info['azimuth'] = seg_azimuth
-                        pp_rad_info['dip'] = seg_dip
+                        pp_rad_info['ppx_cleaned'] = cleaned_PPx
+                        pp_rad_info['ppy_cleaned'] = cleaned_PPy
+                    else:
+                        cleaned_pp_roll_angle = None
+                        ppxy_cleaned = None
 
-                        pp_rad_info['x_pos'] = x_pos
-                        pp_rad_info['y_pos'] = y_pos
-                        pp_rad_info['z_pos'] = z_pos
+                    measured_pp_roll_angle = math.degrees(math.atan2(rT[1], rT[0]) -
+                                                          math.atan2(measured_ppy, measured_ppx))
 
-                        pp_rad_info['ppx_theory'] = rT[0]
-                        pp_rad_info['ppy_theory'] = rT[1]
-                        pp_rad_info['ppz_theory'] = rT[2]
-                        pp_rad_info['ppx_raw'] = measured_ppx
-                        pp_rad_info['ppy_raw'] = measured_ppy
-                        pp_rad_info['ppxy_theory'] = ppxy_theory
-                        pp_rad_info['ppxy_cleaned'] = ppxy_cleaned
-                        pp_rad_info['ppxy_measured'] = ppxy_measured
-                        pp_rad_info['cleaned_pp_roll_angle'] = cleaned_pp_roll_angle
-                        pp_rad_info['measured_pp_roll_angle'] = measured_pp_roll_angle
-                        pp_rad_info['pp_dip'] = -seg_dip
+                    # if allow_negative_angles is False:
+                    if measured_pp_roll_angle < 0:
+                        measured_pp_roll_angle = measured_pp_roll_angle + 360
 
-                        for key, value in pp_rad_info.items():
-                            setattr(rad, key, value)
+                    # Update the RAD Tool object with the new information
+                    pp_rad_info['azimuth'] = seg_azimuth
+                    pp_rad_info['dip'] = seg_dip
+
+                    pp_rad_info['x_pos'] = x_pos
+                    pp_rad_info['y_pos'] = y_pos
+                    pp_rad_info['z_pos'] = z_pos
+
+                    pp_rad_info['ppx_theory'] = rT[0]
+                    pp_rad_info['ppy_theory'] = rT[1]
+                    pp_rad_info['ppz_theory'] = rT[2]
+                    pp_rad_info['ppx_raw'] = measured_ppx
+                    pp_rad_info['ppy_raw'] = measured_ppy
+                    pp_rad_info['ppxy_theory'] = ppxy_theory
+                    pp_rad_info['ppxy_cleaned'] = ppxy_cleaned
+                    pp_rad_info['ppxy_measured'] = ppxy_measured
+                    pp_rad_info['cleaned_pp_roll_angle'] = cleaned_pp_roll_angle
+                    pp_rad_info['measured_pp_roll_angle'] = measured_pp_roll_angle
+                    pp_rad_info['pp_dip'] = -seg_dip
+
+                    for key, value in pp_rad_info.items():
+                        setattr(rad, key, value)
 
                 def calculate_acc_angles():
                     if rad.D == 'D5':
@@ -2278,56 +2300,6 @@ class PEMFile:
                     for key, value in new_info.items():
                         setattr(rad, key, value)
 
-                # def calculate_mag_angles():
-                #     if rad.D == 'D5':
-                #         x, y, z = rad.x, rad.y, rad.z
-                #     else:
-                #         x, y, z = rad.Hx, rad.Hy, rad.Hz
-                #
-                #     theta = math.atan2(y, -z)
-                #     cc_roll_angle = math.degrees(theta)
-                #     roll_angle = cc_roll_angle if y < 0 else cc_roll_angle
-                #     # roll_angle -= 180
-                #     if roll_angle > 360:
-                #         roll_angle = roll_angle - 360
-                #     elif roll_angle < 0:
-                #         roll_angle = -roll_angle
-                #
-                #     # Calculate the dip
-                #     dip = -90.  # The dip is assumed to be 90°
-                #
-                #     # Update the new_rad with the de-rotation information
-                #     new_info = {'mag_roll_angle': roll_angle,
-                #                 'mag_dip': dip}
-                #     # print(new_info)
-                #     for key, value in new_info.items():
-                #         setattr(rad, key, value)
-
-                # def calculate_mag_angles():
-                #     if rad.D == 'D5':
-                #         x, y, z = rad.x, rad.y, rad.z
-                #     else:
-                #         x, y, z = rad.Hx, rad.Hy, rad.Hz
-                #
-                #     theta = math.atan2(-y, -z)
-                #     cc_roll_angle = math.degrees(theta)
-                #     roll_angle = 360 - cc_roll_angle if y < 0 else cc_roll_angle
-                #     # roll_angle -= 180
-                #     if roll_angle > 360:
-                #         roll_angle = roll_angle - 360
-                #     elif roll_angle < 0:
-                #         roll_angle = -roll_angle
-                #
-                #     # Calculate the dip
-                #     dip = -90.  # The dip is assumed to be 90°
-                #
-                #     # Update the new_rad with the de-rotation information
-                #     new_info = {'mag_roll_angle': roll_angle,
-                #                 'mag_dip': dip}
-                #
-                #     for key, value in new_info.items():
-                #         setattr(rad, key, value)
-
                 def calculate_mag_angles():
                     if rad.D == 'D5':
                         x, y, z = rad.x, rad.y, rad.z
@@ -2352,7 +2324,8 @@ class PEMFile:
                     for key, value in new_info.items():
                         setattr(rad, key, value)
 
-                calculate_pp_angles()
+                if include_pp is True:
+                    calculate_pp_angles()
                 calculate_acc_angles()
                 calculate_mag_angles()
                 return rad
@@ -2363,8 +2336,9 @@ class PEMFile:
             group.RAD_tool = rad
             return group
 
+        pp_info = {}
         if all([self.has_all_gps(), self.ramp > 0]):
-            setup_pp()
+            pp_info = setup_pp()
             include_pp = True
         else:
             include_pp = False
@@ -2378,7 +2352,7 @@ class PEMFile:
         # Calculate the RAD tool angles
         prepped_data = eligible_data.groupby(['Station', 'RAD_ID'],
                                              group_keys=False,
-                                             as_index=False).apply(lambda l: prepare_rad(l))
+                                             as_index=False).apply(lambda l: prepare_rad(l, pp_info))
 
         # Don't use .update as the ineligible data will be kept in.
         xy_filt = (self.data.Component == 'X') | (self.data.Component == 'Y')

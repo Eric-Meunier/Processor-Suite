@@ -492,7 +492,7 @@ class Unpacker(QMainWindow, Ui_Unpacker):
             if self.input_path.resolve() in new_folder.resolve().parents:
                 logger.info(f"Not removing directory {self.input_path.resolve()} as it is a part of the new folder.")
             else:
-                logger.warning(f"Removing directory {self.input_path.resolve()}.")
+                # logger.info(f"Removing directory {self.input_path.resolve()}.")
                 rmtree(self.input_path)
 
         # Change the project directory of PEMPro

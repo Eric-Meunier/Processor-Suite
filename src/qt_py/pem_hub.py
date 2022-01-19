@@ -103,6 +103,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.gps_dir = None
         self.available_pems = []
         self.available_gps = []
+        self.selected_row = None
+        self.selected_col = None
 
         if self.splash_screen:
             self.splash_screen.showMessage("Initializing widgets")
@@ -512,6 +514,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             :param col: int, click cell's column
             """
             # self.update_selection_text()
+            self.selected_row, self.selected_col = row, col
 
             if self.actionAlt_Click_Plotting.isChecked():
                 if keyboard.is_pressed('alt'):
@@ -536,9 +539,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             if col == self.table_columns.index('Date'):
                 self.calender.show()
 
-                # Create global variables to be used by set_date
-                global current_row, current_col
-                current_row, current_col = row, col
+                self.selected_row, self.selected_col = row, col
 
             elif col == self.table_columns.index('GPS\nWarnings'):
                 if self.table.item(row, col).text() != '0':
@@ -570,7 +571,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             """
             item = QTableWidgetItem(date.toString('MMMM dd, yyyy'))
             item.setTextAlignment(Qt.AlignCenter)
-            self.table.setItem(current_row, current_col, item)
+            self.table.setItem(self.selected_row, self.selected_col, item)
             self.calender.hide()
 
         def format_header():
@@ -1625,8 +1626,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             pem_file.loop_name,
             pem_file.current,
             pem_file.coil_area,
-            pem_file.get_stations(converted=True, incl_deleted=False).min(),
-            pem_file.get_stations(converted=True, incl_deleted=False).max(),
+            pem_file.get_min_station(),
+            pem_file.get_max_station(),
             pem_file.is_averaged(),
             pem_file.is_split(),
             pem_file.get_number_gps_warnings(),
@@ -3475,8 +3476,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         def color_station_starts():
             start_col = self.table_columns.index("First\nStation")
 
-            station_starts = np.array([self.table.item(row, start_col).text() for row in range(self.table.rowCount())],
-                                      dtype=float)
+            # Don't use the values in the table, that way stations with no un-deleted stations can stay blank.
+            # station_starts = np.array([self.table.item(row, start_col).text() for row in range(self.table.rowCount())],
+            #                           dtype=float)
+            station_starts = np.array([pem_file.get_min_station() for pem_file in self.pem_files])
 
             # Normalize column values for color mapping
             mn, mx, count = station_starts.min(), station_starts.max(), len(station_starts)
@@ -3507,8 +3510,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         def color_station_ends():
             end_col = self.table_columns.index("Last\nStation")
 
-            station_ends = np.array([self.table.item(row, end_col).text() for row in range(self.table.rowCount())],
-                                    dtype=float)
+            # station_ends = np.array([self.table.item(row, end_col).text() for row in range(self.table.rowCount())],
+            #                         dtype=float)
+            # Don't use the values in the table, that way stations with no un-deleted stations can stay blank.
+            station_ends = np.array([pem_file.get_max_station() for pem_file in self.pem_files])
 
             # Normalize column values for color mapping
             mn, mx, count = station_ends.min(), station_ends.max(), len(station_ends)
@@ -4383,7 +4388,6 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
         self.hide()
 
     def open(self, pem_files, ri_files=None, crs=None):
-
         def fill_share_range():
             """
             Calculates the minimum and maximum station numbers between all opened PEM files, and uses this to fill out
@@ -4467,6 +4471,7 @@ class PDFPlotPrinter(QWidget, Ui_PDFPlotPrinter):
             except RuntimeError:
                 self.message.critical(self, "Error", F"An error has occurred. Trying again...")
                 self.print_pdfs()
+                # try this if not working: plt.close()
                 # return
 
             else:

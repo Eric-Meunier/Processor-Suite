@@ -2897,7 +2897,7 @@ class PEMPrinter:
         super().__init__()
         self.parent = parent
         plt.style.use('default')
-        plt.close()  # Close any opened figures. Solves 'Internal C++ object (FigureCanvasQTAgg) already deleted.'
+        plt.close()  # Close any opened figures. Helps with 'Internal C++ object (FigureCanvasQTAgg) already deleted.'
 
         self.portrait_fig = plt.figure(num=1, clear=True)
         self.portrait_fig.set_size_inches((8.5, 11))
