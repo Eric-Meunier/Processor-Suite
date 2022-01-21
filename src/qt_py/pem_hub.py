@@ -84,7 +84,6 @@ warnings.filterwarnings("ignore", category=matplotlib.cbook.mplDeprecation)  # I
 
 
 class PEMHub(QMainWindow, Ui_PEMHub):
-
     def __init__(self, app, parent=None, splash_screen=None):
         super().__init__()
         self.app = app
@@ -2128,16 +2127,20 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         Open the GPS conversion widget.
         """
-        crs = self.get_crs()
-        if not crs:
+        def apply_conversion(new_crs):
+            self.set_crs(new_crs)
+            self.refresh_pems()
+
+        current_crs = self.get_crs()
+        if not current_crs:
             logger.error(f"No CRS.")
             self.message.critical(self, 'Invalid CRS', 'Project CRS is invalid.')
             return
 
         converter = GPSConversionWidget()
         refs.append(converter)
-        converter.open(self.pem_files, crs)
-        converter.accept_signal.connect(self.refresh_pems)
+        converter.open(self.pem_files, current_crs)
+        converter.accept_signal.connect(apply_conversion)
         converter.show()
 
     def open_gps_share(self, gps_object, source_widget):
@@ -3554,7 +3557,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.color_table_by_values()
 
     def refresh_pems(self):
-        for pem_file in self.pem_file:
+        for pem_file in self.pem_files:
             self.refresh_pem(pem_file)
 
     def refresh_pem(self, pem_file):

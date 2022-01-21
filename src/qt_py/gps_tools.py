@@ -1097,7 +1097,7 @@ class DADSelector(TableSelector):
 
 
 class GPSConversionWidget(QWidget):
-    accept_signal = Signal()
+    accept_signal = Signal(object)  # Emits the new CRS object
 
     def __init__(self, parent=None):
         """
@@ -1147,24 +1147,25 @@ class GPSConversionWidget(QWidget):
         """
         epsg_code = self.crs_selector.get_epsg()
         if epsg_code:
-            self.accept_signal.emit(int(epsg_code))
+            new_crs = CRS.from_epsg(epsg_code)
+            self.convert_gps(new_crs)
+            self.accept_signal.emit(new_crs)
             self.close()
         else:
             logger.error(f"{epsg_code} is not a valid EPSG code.")
             self.message.information(self, 'Invalid CRS', 'The selected CRS is invalid.')
 
-    def convert_gps(self):
+    def convert_gps(self, new_crs):
         """
         Convert the GPS of all GPS objects to the new EPSG code.
         """
-        new_crs = self.get_crs()
         if new_crs is None:
             logger.info("CRS is invalid.")
             return
 
         logger.info(f"Converting all GPS to {new_crs.name}.")
 
-        with CustomProgressDialog("Converting DMP Files...", 0, len(self.pem_files), parent=self) as dlg:
+        with CustomProgressDialog("Converting GPS Data...", 0, len(self.pem_files), parent=self) as dlg:
             # Convert all GPS of each PEMFile
             for pem_file in self.pem_files:
                 if dlg.wasCanceled():
@@ -1183,9 +1184,6 @@ class GPSConversionWidget(QWidget):
             # self.epsg_rbtn.click()
             #
             # self.status_bar.showMessage(f"Process complete. GPS converted to {new_crs.name}.", 2000)
-
-        self.accept_signal.emit()
-        self.close()
 
     def open(self, pem_files, input_crs):
         self.pem_files = pem_files

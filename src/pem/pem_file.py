@@ -904,17 +904,11 @@ class PEMFile:
 
     def get_min_station(self):
         stations = self.get_stations(converted=True, incl_deleted=True)
-        if not stations.any():
-            return None
-        else:
-            return stations.min()
+        return stations.min()
 
     def get_max_station(self):
         stations = self.get_stations(converted=True, incl_deleted=True)
-        if not stations.any():
-            return None
-        else:
-            return stations.max()
+        return stations.max()
 
     def get_gps_extents(self):
         """
@@ -1449,7 +1443,7 @@ class PEMFile:
         Set the CRS of all GPS objects
         :param crs: CRS object
         """
-        logger.info(f"Setting CRS of {self.filepath.name} to {crs.name if crs else 'None'}.")
+        logger.debug(f"Setting CRS of {self.filepath.name} to {crs.name if crs else 'None'}.")
 
         self.crs = crs
         self.loop.crs = crs
@@ -1467,7 +1461,7 @@ class PEMFile:
 
     def convert_crs(self, crs):
         if crs is not None:
-            logger.log(f"Converting GPS of {self.filepath.name} to {crs.name}.")
+            logger.debug(f"Converting GPS of {self.filepath.name} to {crs.name}.")
             epsg_code = crs.to_epsg()
             if not self.loop.df.empty:
                 self.loop = self.loop.to_epsg(epsg_code)
