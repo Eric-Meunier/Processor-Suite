@@ -896,9 +896,10 @@ class PEMFile:
         if component is not None:
             data = data[data.Component == component.upper()]
 
-        stations = data.Station.unique()
         if converted:
-            stations = [convert_station(station) for station in stations]
+            stations = data.Station.map(convert_station).unique()
+        else:
+            stations = data.Station.unique()
 
         return np.array(natsort.os_sorted(stations))
 
@@ -1219,7 +1220,7 @@ class PEMFile:
                 dip = 0
                 azimuth = azimuths[azimuths.Station == station]
                 if azimuth.empty:
-                    logger.warning(f"{station} not in list of GPS stations")
+                    logger.debug(f"{station} not in list of GPS stations")
                     continue
                 azimuth = azimuth.iloc[0].Azimuth
 
@@ -1241,7 +1242,7 @@ class PEMFile:
                 rT = r.apply([rTx, rTy, rTz])  # The rotated theoretical values
                 pps.append([station, rT[0], rT[1], rT[2]])
 
-        df = pd.DataFrame.from_records(pps, columns=["Station", "X", "Y", "Z"])
+        df = pd.DataFrame.from_records(pps, columns=["Station", "X", "Y", "Z"]).sort_values("Station")
         return df
 
     def get_theory_data(self):
@@ -1631,11 +1632,6 @@ class PEMFile:
         Averages the data of the PEM file object. Uses a weighted average.
         :return: PEM file object
         """
-        if self.is_averaged():
-            logger.info(f"{self.filepath.name} is already averaged.")
-            return
-        logger.info(f"Averaging {self.filepath.name}.")
-
         def weighted_average(group):
             """
             Function to calculate the weighted average reading of a station-component group.
@@ -1651,6 +1647,11 @@ class PEMFile:
                                                 axis=0,
                                                 weights=group['Number_of_stacks'].to_list())
             return new_data_df
+
+        if self.is_averaged():
+            logger.debug(f"{self.filepath.name} is already averaged.")
+            return
+        logger.info(f"Averaging {self.filepath.name}.")
 
         # Don't use deleted data
         filt = ~self.data.Deleted.astype(bool)

@@ -56,8 +56,8 @@ from src.qt_py.pem_plot_editor import PEMPlotEditor
 from src.qt_py.ri_importer import BatchRIImporter
 from src.qt_py.unpacker import Unpacker
 from src.ui.pdf_plot_printer import Ui_PDFPlotPrinter
-from src.ui.pem_hub import Ui_PEMHub
 from src.ui.plan_map_options import Ui_PlanMapOptions
+from src.ui.pem_hub import Ui_PEMHub
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,9 @@ logger = logging.getLogger(__name__)
 # TODO When plotting PP files, set them all as the same station, and color code by timestamp. Also add plot of °----(drift number here)---° showing drift.
 # TODO to remove loop edge effects, remove the primary field (or a percentage of it) from the readings, which is the PP
 # TODO Add component specific coil area scaling (for SQUID).
-# TODO Add warning when hole is near vertical (>85°)
+# TODO Ability to add spline in PEMGeometry when there's no RAD (for example, when a DAD is added to a Z file)
+# TODO Redo loop calculator calculations using new spreadsheet in Sample Files (Loop planning rev1.xlsx)
+# TODO Add warning and default coil area value when parsing coil area returns a nonsense value.
 
 
 # Keep a list of widgets so they don't get garbage collected

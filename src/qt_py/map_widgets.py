@@ -26,7 +26,8 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from scipy import interpolate as interp
 
-from src.qt_py import get_icon, CustomProgressDialog, NonScientific, get_line_color, MapToolbar
+from src import app_data_dir
+from src.qt_py import get_icon, CustomProgressDialog, NonScientific, get_line_color, MapToolbar, SavableWindow
 from src.gps.gps_editor import BoreholeGeometry
 from src.pem.pem_plotter import plot_line, plot_loop
 from src.ui.contour_map import Ui_ContourMap
@@ -34,12 +35,9 @@ from src.ui.contour_map import Ui_ContourMap
 logger = logging.getLogger(__name__)
 
 
-class MapboxViewer(QMainWindow):
+class TileMapViewer(SavableWindow):
+
     def __init__(self, parent=None):
-        """
-        Base widget to plot Plotly Mapbox maps in.
-        :param parent: Qt parent object
-        """
         super().__init__()
         self.pem_files = None
         self.parent = parent
@@ -53,26 +51,12 @@ class MapboxViewer(QMainWindow):
 
         self.setWindowTitle("Tile Map")
         self.setWindowIcon(get_icon('folium.png'))
-        self.status_bar = self.statusBar()
-        self.status_bar.show()
-        # self.resize(1000, 800)
+        self.resize(1000, 800)
+        self.statusBar().show()
 
         layout = QHBoxLayout()
         self.setLayout(layout)
         self.layout().setContentsMargins(0, 0, 0, 0)
-
-        self.save_img_action = QAction('Save Image')
-        self.save_img_action.setShortcut("Ctrl+S")
-        self.save_img_action.triggered.connect(self.save_img)
-        self.save_img_action.setIcon(get_icon("save_as.png"))
-        self.copy_image_action = QAction('Copy Image')
-        self.copy_image_action.setShortcut("Ctrl+C")
-        self.copy_image_action.triggered.connect(self.copy_img)
-        self.copy_image_action.setIcon(get_icon("copy.png"))
-
-        self.file_menu = self.menuBar().addMenu('&File')
-        self.file_menu.addAction(self.save_img_action)
-        self.file_menu.addAction(self.copy_image_action)
 
         self.map_figure = go.Figure(go.Scattermapbox(mode="markers+lines"))
 
@@ -81,67 +65,6 @@ class MapboxViewer(QMainWindow):
         self.map_widget.setContentsMargins(0, 0, 0, 0)
         self.layout().addWidget(self.map_widget)
         self.setCentralWidget(self.map_widget)
-
-    def load_page(self):
-        """
-        Plots the data by creating the HTML from the plot and setting it in the WebEngine.
-        """
-        # Create the HTML
-        html = '<html><body>'
-        html += plotly.offline.plot(self.map_figure,
-                                    output_type='div',
-                                    include_plotlyjs='cdn',
-                                    config={'displayModeBar': False}
-                                    )
-        html += '</body></html>'
-
-        # Add the plot HTML to be shown in the plot widget
-        self.map_widget.setHtml(html)
-
-    def save_img(self):
-        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image',
-                                                           'map.png',
-                                                           'PNG file (*.PNG);; PDF file (*.PDF)'
-                                                           )
-        if save_name:
-            if 'PDF' in save_type:
-                self.map_widget.page().printToPdf(save_name)
-            else:
-                self.grab().save(save_name)
-
-    def copy_img(self):
-        screenshot_area = self.get_screenshot_area()
-        QApplication.clipboard().setPixmap(self.grab(screenshot_area))
-        self.status_bar.showMessage('Image copied to clipboard.', 1000)
-
-    def get_screenshot_area(self):
-        """
-        Return the QRect that encompasses the main area of the window. i.e. excludes the status bar and menu bar.
-        :return: QRect
-        """
-        menu_height = self.file_menu.rect().size().height()
-        status_bar_height = self.status_bar.rect().size().height()
-        screenshot_area = self.rect()
-        screenshot_area.setHeight(screenshot_area.height() - status_bar_height - menu_height)
-        screenshot_area.moveTop(menu_height)
-        return screenshot_area
-
-
-class TileMapViewer(MapboxViewer):
-
-    def __init__(self, parent=None):
-        super().__init__()
-        self.pem_files = None
-        self.parent = parent
-
-        self.loops = []
-        self.lines = []
-        self.collars = []
-        self.holes = []
-        self.lons = []  # List of all coordinates for the purpose of centering the map
-        self.lats = []  # List of all coordinates for the purpose of centering the map
-
-        self.resize(1000, 800)
 
     def open(self, pem_files):
         if not isinstance(pem_files, list):
@@ -269,14 +192,15 @@ class TileMapViewer(MapboxViewer):
             logger.error(f"No Lat/Lon GPS after plotting all PEM files.")
             raise Exception(f"No Lat/Lon GPS after plotting all PEM files.")
 
+        # TODO Add selectable styles
         # Pass the mapbox token, for access to better map tiles. If none is passed, it uses the free open street map.
-        app_data_dir = Path(os.getenv('APPDATA')).joinpath("PEMPro")
         token = open(str(app_data_dir.joinpath(".mapbox")), 'r').read()
-        if not token:
-            logger.warning(f"No Mapbox token passed.")
-            map_style = "open-street-map"
-        else:
-            map_style = "outdoors"
+        # if not token:
+        #     logger.warning(f"No Mapbox token passed.")
+        #     # map_style = "open-street-map"
+        # else:
+        #     map_style = "outdoors"
+        map_style = "satellite-streets"
 
         # Format the figure margins and legend
         self.map_figure.update_layout(
@@ -297,7 +221,6 @@ class TileMapViewer(MapboxViewer):
         self.map_figure.update_layout(
             mapbox={
                 'center': {'lon': np.mean(self.lons), 'lat': np.mean(self.lats)},
-                # 'center': {'lon': -73.5673, 'lat': 45.5017},
                 'zoom': 13
                 },
             autosize=True,
@@ -307,11 +230,24 @@ class TileMapViewer(MapboxViewer):
         # Add the plot HTML to be shown in the plot widget
         self.load_page()
 
-    def save_img(self):
-        pass
+    def load_page(self):
+        """
+        Plots the data by creating the HTML from the plot and setting it in the WebEngine.
+        """
+        # Create the HTML
+        html = '<html><body>'
+        html += plotly.offline.plot(self.map_figure,
+                                    output_type='div',
+                                    include_plotlyjs='cdn',
+                                    config={'displayModeBar': False}
+                                    )
+        html += '</body></html>'
+
+        # Add the plot HTML to be shown in the plot widget
+        self.map_widget.setHtml(html)
 
 
-class Map3DViewer(QMainWindow):
+class Map3DViewer(SavableWindow):
 
     def __init__(self, parent=None, darkmode=False):
         super().__init__()
@@ -1379,8 +1315,8 @@ if __name__ == '__main__':
     files = getter.get_pems(folder=r'Final folders\PX20002-W01\Final', file='XY.PEM')
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
-    # m = TileMapViewer()
-    m = GPSViewer(darkmode=darkmode)
+    m = TileMapViewer()
+    # m = GPSViewer(darkmode=darkmode)
     # m = Map3DViewer(darkmode=darkmode)
     m.open(files)
     m.show()

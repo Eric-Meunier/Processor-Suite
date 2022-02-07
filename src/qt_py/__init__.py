@@ -11,7 +11,7 @@ from PySide2.QtGui import QKeySequence, QColor, QCursor, QPixmap, QIcon, QPalett
 from PySide2.QtWidgets import (QMessageBox, QWidget, QLabel, QFrame, QHBoxLayout, QVBoxLayout, QTabWidget, QMenu,
                                QAction, QComboBox, QLineEdit, QGroupBox, QGridLayout, QRadioButton, QTableWidget,
                                QTableWidgetItem, QShortcut, QPushButton, QSizePolicy, QItemDelegate, QAbstractItemView,
-                               QGraphicsDropShadowEffect)
+                               QMainWindow, QFileDialog, QApplication)
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from pyproj import CRS
 from src.logger import logger, Log
@@ -260,6 +260,7 @@ def df_to_table(df, table, set_role=False):
         columns = df.columns.to_list()
         table.setColumnCount(len(columns))
         table.setHorizontalHeaderLabels(columns)
+        table.horizontalHeader().show()
         # Cast as type "object" to prevent ints being upcasted as floats
         df.astype("O").apply(write_row, axis=1)
 
@@ -994,3 +995,55 @@ class CRSSelector(QGroupBox):
 
     def get_crs(self):
         return self.crs
+
+
+class SavableWindow(QMainWindow):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self.save_img_action = QAction('Save Image')
+        self.save_img_action.setShortcut("Ctrl+S")
+        self.save_img_action.triggered.connect(self.save_img)
+        self.save_img_action.setIcon(get_icon("save_as.png"))
+        self.copy_image_action = QAction('Copy Image')
+        self.copy_image_action.setShortcut("Ctrl+C")
+        self.copy_image_action.triggered.connect(self.copy_img)
+        self.copy_image_action.setIcon(get_icon("copy.png"))
+
+        self.file_menu = self.menuBar().addMenu('&File')
+        self.file_menu.addAction(self.save_img_action)
+        self.file_menu.addAction(self.copy_image_action)
+
+    def save_img(self):
+        save_name, save_type = QFileDialog.getSaveFileName(self, 'Save Image',
+                                                           'map.png',
+                                                           'PNG file (*.PNG);; PDF file (*.PDF)'
+                                                           )
+        if save_name:
+            if 'PDF' in save_type:
+                self.map_widget.page().printToPdf(save_name)
+            else:
+                self.grab().save(save_name)
+
+    def copy_img(self):
+        screenshot_area = self.get_screenshot_area()  # Not used for now -> self.grab(screenshot_area)
+        QApplication.clipboard().setPixmap(self.grab())
+        self.statusBar().showMessage('Image copied to clipboard.', 1000)
+
+        # QApplication.clipboard().setPixmap(self.grab())
+        # self.statusBar().show()
+        # self.statusBar().showMessage('Image copied to clipboard.', 1000)
+        # QTimer.singleShot(1000, lambda: self.statusBar().hide())
+
+    # Not used for now
+    def get_screenshot_area(self):
+        """
+        Return the QRect that encompasses the main area of the window. i.e. excludes the status bar and menu bar.
+        :return: QRect
+        """
+        menu_height = self.file_menu.rect().size().height()
+        status_bar_height = self.statusBar().rect().size().height()
+        screenshot_area = self.rect()
+        screenshot_area.setHeight(screenshot_area.height() - status_bar_height - menu_height)
+        screenshot_area.moveTop(menu_height)
+        return screenshot_area
