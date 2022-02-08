@@ -134,17 +134,12 @@ def parse_gps(file, gps_object):
                 cols_to_drop.append(i)
             # Remove units column (except borehole collars, and when number of columns would be less than 3,
             # in which case it is assumed it's the elevation value)
-            elif col.map(lambda x: str(x) == '0').all() and len(gps.columns) - len(cols_to_drop) > 3:
-                if gps_object == BoreholeCollar and len(gps.columns) == 3:
-                    pass
-                else:
+            if gps_object != BoreholeCollar and len(gps.columns) > 3:
+                if col.map(lambda x: str(x) == '0').all() and len(gps.columns) - len(cols_to_drop) > 3:
                     units = 'm'
                     logger.debug(f"Removing column of 0s.")
                     cols_to_drop.append(i)
-            elif col.map(lambda x: str(x) == '1').all() and len(gps.columns) - len(cols_to_drop) > 3:
-                if gps_object == BoreholeCollar and len(gps.columns) == 3:
-                    pass
-                else:
+                elif col.map(lambda x: str(x) == '1').all() and len(gps.columns) - len(cols_to_drop) > 3:
                     units = 'ft'
                     logger.debug(f"Removing column of 1s.")
                     cols_to_drop.append(i)
@@ -184,6 +179,7 @@ def parse_gps(file, gps_object):
     if gps.empty:
         return gps, units, gps, error_msg
 
+    gps = gps.apply(pd.to_numeric, errors='coerce')  # Force numbers to be floats
     gps.columns = range(gps.shape[1])  # Reset the columns
     gps.rename(columns=cols, inplace=True)  # Add the column names to the two data frames
     error_gps.rename(columns=cols, inplace=True)
@@ -191,7 +187,7 @@ def parse_gps(file, gps_object):
     # Remove the NaNs from the good data frame
     gps = gps.dropna(axis=0).drop_duplicates()
 
-    gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
+    # gps[['Easting', 'Northing', 'Elevation']] = gps[['Easting', 'Northing', 'Elevation']].astype(float)
     if survey_line:
         # Replace empty station numbers with 0
         gps["Station"].replace("None", "0", inplace=True)

@@ -572,7 +572,7 @@ if __name__ == '__main__':
     # up.move(app.desktop().screen().rect().center() - up.rect().center())
     # up.open_folder(samples_folder.joinpath(r"March 06, 2021.zip"))
     # folder = r'C:\Users\Mortulo\Desktop\Aug4DataGaribaldiResourcesNickelMountainLoop1Holes2&8Complete.zip'
-    # zip_file = r'C:\Users\Eric\PycharmProjects\Crone\sample_files\PEMGetter files\__SAPR-19-003\DUMP\December 19.rar'
-    # up.open_folder(folder)
+    zip_file = samples_folder.joinpath(r"06 Fev2022.zip")
+    up.open_folder(zip_file)
 
     app.exec_()

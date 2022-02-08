@@ -39,7 +39,7 @@ from src import __version__, app_data_dir
 from src.dxf.pem_dxf import PEMDXFDrawing
 from src.gps.gps_editor import (SurveyLine, TransmitterLoop, BoreholeCollar, BoreholeSegments, BoreholeGeometry)
 from src.pem.pem_file import PEMFile, PEMParser, DMPParser, PEMGetter
-from src.pem.step_file import StepFile, StepParser
+from src.pem.step_file import StepParser
 from src.pem.pem_plotter import PEMPrinter
 from src.qt_py import (icons_path, get_extension_icon, get_icon, CustomProgressDialog, read_file, light_palette,
                        dark_palette, get_line_color, CRSSelector, df_to_table, clear_table)
@@ -75,6 +75,7 @@ logger = logging.getLogger(__name__)
 # TODO Ability to add spline in PEMGeometry when there's no RAD (for example, when a DAD is added to a Z file)
 # TODO Redo loop calculator calculations using new spreadsheet in Sample Files (Loop planning rev1.xlsx)
 # TODO Add warning and default coil area value when parsing coil area returns a nonsense value.
+# TODO Show project damp files
 
 
 # Keep a list of widgets so they don't get garbage collected

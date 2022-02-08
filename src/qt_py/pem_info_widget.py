@@ -489,7 +489,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         Open the CollarPicker (if needed) and add the collarGPS.
         :param file: filepath of text, excel/CSV file, or GPX file
         """
-        def accept_collar(data):
+        def accept_collar(data: list):
             try:
                 collar = BoreholeCollar(data)
                 errors = collar.get_errors()
