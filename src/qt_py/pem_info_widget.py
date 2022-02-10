@@ -395,24 +395,21 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if current_tab == self.geometry_tab:
             file = files[0]  # Only accepts the first file for adding collars.
             crs = self.add_collar(file)
-            return
-
-        try:
-            gps_df, crs = merge_files(files, collar=bool(current_tab == self.geometry_tab))
-        except Exception as e:
-            self.message.critical(self, "Error opening GPS file", str(e))
-            return
-
-        # Add survey line GPS
-        if current_tab == self.station_gps_tab:
-            self.add_line(gps_df)
-
-        # Add loop GPS
-        elif current_tab == self.loop_gps_tab:
-            self.add_loop(gps_df)
-
         else:
-            pass
+            try:
+                gps_df, crs = merge_files(files, collar=bool(current_tab == self.geometry_tab))
+            except Exception as e:
+                self.message.critical(self, "Error opening GPS file", str(e))
+                return
+
+            # Add survey line GPS
+            if current_tab == self.station_gps_tab:
+                self.add_line(gps_df)
+            # Add loop GPS
+            elif current_tab == self.loop_gps_tab:
+                self.add_loop(gps_df)
+            else:
+                pass
 
         return crs
 
@@ -478,8 +475,8 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         loop = TransmitterLoop(loop_content)
         if loop.df.empty:
             self.message.information(self, 'No GPS Found', f"{loop.error_msg}")
-            return
-        self.loop_adder.open(loop)
+        else:
+            self.loop_adder.open(loop)
         # except Exception as e:
         #     logger.critical(f"{e}.")
         #     self.error.showMessage(f"Error adding loop: {str(e)}")

@@ -1665,7 +1665,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             gps_files = [gps_files]
 
         gps_files = [Path(file) for file in gps_files]
-        logger.info(f"Opening GPS files {', '.join([f.name for f in gps_files])}")
+        logger.debug(f"Opening GPS files {', '.join([f.name for f in gps_files])}")
         crs = pem_info_widget.open_gps_files(gps_files)
 
         # Set the project CRS if a .inf or .log file is in the directory and the project CRS is currently empty
@@ -1677,9 +1677,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.status_bar.showMessage(F"Project CRS automatically filled using information from {crs_files[0]}.",
                                             2000)
             else:
-                logger.debug(f"No CRS files found.")
+                logger.info(f"No CRS files found.")
         else:
             if crs is not None:
+                # Update the CRS
                 if current_crs is not None and current_crs != crs:
                     response = self.message.question(self, "Change CRS",
                                                      F"CRS from GPS file(s) is different then the current project "
