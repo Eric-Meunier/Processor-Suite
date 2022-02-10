@@ -428,11 +428,10 @@ class Unpacker(QMainWindow, Ui_Unpacker):
                 if old_path.resolve() == new_path.resolve():
                     continue
                 else:
-                    # logger.info(f"Moving {old_path} to {new_path}.")  # Slows things down too much.
                     try:
                         if new_path.exists():
                             logger.warning(f"{new_path.name} already exists.")
-                            self.message.warning(self, "File Exists", f"{new_path} already exists.")
+                            # self.message.warning(self, "File Exists", f"{new_path} already exists.")
                             continue
 
                         elif not old_path.is_file():

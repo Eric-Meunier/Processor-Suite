@@ -282,13 +282,23 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 else:
                     line.hide()
 
-        def select_all_stations():
-            stations = self.pem_file.get_stations(converted=True)
-            self.box_select_profile_plot((stations.min(), stations.max()), start=False)
-
         def toggle_station_cursor():
             for item in self.station_cursors:
                 item.show() if self.actionShow_Station_Cursor.isChecked() else item.hide()
+
+        def toggle_ontime():
+            if self.plot_ontime_decays_cbox.isChecked():
+                num_channels = self.last_offtime_channel + 1
+            else:
+                num_channels = len(self.pem_file.channel_times[self.pem_file.channel_times.Remove == False])
+
+            self.auto_clean_window_sbox.setMaximum(num_channels)
+            for ax in self.decay_axes:
+                ax.setLimits(xMax=num_channels)
+
+        def select_all_stations():
+            stations = self.pem_file.get_stations(converted=True)
+            self.box_select_profile_plot((stations.min(), stations.max()), start=False)
 
         def coil_area_changed():
             self.pem_file.scale_coil_area(self.coil_area_sbox.value())
@@ -352,6 +362,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.auto_range_cbox.toggled.connect(lambda: self.reset_range(decays=True, profiles=False))
 
         self.plot_auto_clean_lines_cbox.toggled.connect(toggle_auto_clean_lines)
+        self.plot_ontime_decays_cbox.toggled.connect(toggle_ontime)
         self.plot_ontime_decays_cbox.toggled.connect(lambda: self.plot_decays(self.selected_station,
                                                                               preserve_selection=True))
         self.plot_ontime_decays_cbox.toggled.connect(lambda: self.active_decay_axes[0].autoRange())
@@ -1239,32 +1250,47 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 thresh_line_2.show()
 
             # Excludes next on-time data, but keep the first on-time since we may want to clean that
-            median_data = pd.DataFrame.from_records(
-                existing_data.Reading.reset_index(drop=True)).iloc[:, :self.last_offtime_channel + 1]
+            median_data = pd.DataFrame.from_records(existing_data.Reading.reset_index(drop=True))
+            if self.plot_ontime_decays_cbox.isChecked():
+                median_data = median_data.iloc[:, :self.last_offtime_channel + 1]
+                last_channel = self.last_offtime_channel
+            else:
+                on_time_channels = self.pem_file.channel_times.Remove.astype(bool)
+                # Reset for the X axis values when not plotting on-time
+                median_data = median_data.loc[:, ~on_time_channels]
+                median_data.rename(dict(zip(median_data.columns, range(len(median_data.columns)))),
+                                   inplace=True, axis=1)
+                last_channel = median_data.columns[-1]
 
             median = median_data.median(axis=0).to_numpy()
             if self.pem_file.number_of_channels > 10:
-                median = signal.savgol_filter(median, 5, 3)
-            if not self.plot_ontime_decays_cbox.isChecked():
-                # Don't look past the last offtime channel since it isn't included in the median_data
-                median = median[~self.pem_file.channel_times.Remove.iloc[: self.last_offtime_channel + 1].astype(bool)]
+                # median = signal.savgol_filter(median, 5, 3)
+                median = signal.medfilt(median, 3)
 
-            std = np.array([self.auto_clean_std_sbox.value()] * window_size)
+            # if not self.plot_ontime_decays_cbox.isChecked():
+            #     # Don't look past the last offtime channel since it isn't included in the median_data
+            #     median = median[~self.pem_file.channel_times.Remove.iloc[: self.last_offtime_channel + 1].astype(bool)]
 
             # Resets for the X axis values when not plotting on-time
-            if not self.plot_ontime_decays_cbox.isChecked():
-                median_data.rename(dict(zip(median_data.columns,
-                                            range(len(median_data.columns)))),
-                                   inplace=True,
-                                   axis=1)
-            off_time_median = median_data.median().to_numpy()
-            if self.pem_file.number_of_channels > 10:
-                # off_time_median = signal.savgol_filter(off_time_median, 5, 3)
-                off_time_median = signal.medfilt(off_time_median, 3)
+            # if not self.plot_ontime_decays_cbox.isChecked():
+            #     median_data.rename(dict(zip(median_data.columns,
+            #                                 range(len(median_data.columns)))),
+            #                        inplace=True,
+            #                        axis=1)
 
-            x = list(range(self.last_offtime_channel - window_size + 1, self.last_offtime_channel + 1))
-            thresh_line_1.setData(x=x, y=off_time_median[-window_size:] + std)
-            thresh_line_2.setData(x=x, y=off_time_median[-window_size:] - std)
+            offset = np.array([self.auto_clean_std_sbox.value()] * window_size)
+            # off_time_median = median_data.median().to_numpy()
+            # if self.pem_file.number_of_channels > 10:
+            #     # off_time_median = signal.savgol_filter(off_time_median, 5, 3)
+            #     off_time_median = signal.medfilt(off_time_median, 3)
+
+            #
+            x = np.arange(last_channel - window_size + 1, last_channel + 1)
+            # if not self.plot_ontime_decays_cbox.isChecked():
+            #     # Offset the channels by the number of on-time channels. Next-pulse on-time channels don't matter.
+            #     x = x -
+            thresh_line_1.setData(x=x, y=median[-window_size:] + offset)
+            thresh_line_2.setData(x=x, y=median[-window_size:] - offset)
 
     def highlight_lines(self):
         """
@@ -2972,9 +2998,9 @@ if __name__ == '__main__':
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\Final\100E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\800E.PEM")[0]
     # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"Loop L\RAW\1200E.PEM")[0]
-    # pem_file = pem_g.get_pems(folder="Raw Surface", file=r"JHadid\RAW\400n.PEM")[0]
+    pem_file = pem_g.get_pems(folder="Raw Surface", file=r"JHadid\RAW\400n.PEM")[0]
     # pem_file = pem_g.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-230\RAW\em21-230z_1206.PEM")
-    pem_file = pem_g.parse(r"C:\_Data\2022\TMC\Benz Mining\Surface\Loop 1\RAW\SURFACE TDEM_L26 & L28\2600EAv.PEM")
+    # pem_file = pem_g.parse(r"C:\_Data\2022\TMC\Benz Mining\Surface\Loop 1\RAW\SURFACE TDEM_L26 & L28\2600EAv.PEM")
     # pem_file = pem_g.get_pems(folder="Minera", file="L11000N_6.PEM")[0]
 
     editor = PEMPlotEditor(darkmode=darkmode)
