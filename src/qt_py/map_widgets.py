@@ -27,7 +27,7 @@ from matplotlib.figure import Figure
 from scipy import interpolate as interp
 
 from src import app_data_dir
-from src.qt_py import get_icon, CustomProgressDialog, NonScientific, get_line_color, MapToolbar, SavableWindow
+from src.qt_py import get_icon, CustomProgressDialog, NonScientific, get_line_color, MapToolbar, ScreenshotWindow
 from src.gps.gps_editor import BoreholeGeometry
 from src.pem.pem_plotter import plot_line, plot_loop
 from src.ui.contour_map import Ui_ContourMap
@@ -35,7 +35,7 @@ from src.ui.contour_map import Ui_ContourMap
 logger = logging.getLogger(__name__)
 
 
-class TileMapViewer(SavableWindow):
+class TileMapViewer(ScreenshotWindow):
 
     def __init__(self, parent=None):
         super().__init__()
@@ -247,7 +247,7 @@ class TileMapViewer(SavableWindow):
         self.map_widget.setHtml(html)
 
 
-class Map3DViewer(SavableWindow):
+class Map3DViewer(ScreenshotWindow):
 
     def __init__(self, parent=None, darkmode=False):
         super().__init__()
@@ -269,19 +269,6 @@ class Map3DViewer(SavableWindow):
         # create an instance of QWebEngineView and set the html code
         self.map_widget = QWebEngineView()
         self.setCentralWidget(self.map_widget)
-
-        self.save_img_action = QAction('Save Image')
-        self.save_img_action.setShortcut("Ctrl+S")
-        self.save_img_action.setIcon(get_icon("save_as.png"))
-        self.save_img_action.triggered.connect(self.save_img)
-        self.copy_image_action = QAction('Copy Image')
-        self.copy_image_action.setShortcut("Ctrl+C")
-        self.copy_image_action.setIcon(get_icon("copy.png"))
-        self.copy_image_action.triggered.connect(self.copy_img)
-
-        self.file_menu = self.menuBar().addMenu('&File')
-        self.file_menu.addAction(self.save_img_action)
-        self.file_menu.addAction(self.copy_image_action)
 
         self.map_figure = go.Figure()
         self.map_figure.update_layout(scene=dict(
@@ -1315,9 +1302,9 @@ if __name__ == '__main__':
     files = getter.get_pems(folder=r'Final folders\PX20002-W01\Final', file='XY.PEM')
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
-    m = TileMapViewer()
+    # m = TileMapViewer()
     # m = GPSViewer(darkmode=darkmode)
-    # m = Map3DViewer(darkmode=darkmode)
+    m = Map3DViewer(darkmode=darkmode)
     m.open(files)
     m.show()
     # m.save_img()

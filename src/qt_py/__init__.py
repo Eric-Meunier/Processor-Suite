@@ -997,7 +997,7 @@ class CRSSelector(QGroupBox):
         return self.crs
 
 
-class SavableWindow(QMainWindow):
+class ScreenshotWindow(QMainWindow):
 
     def __init__(self, *args, **kwargs):
         super().__init__()
@@ -1047,3 +1047,10 @@ class SavableWindow(QMainWindow):
         screenshot_area.setHeight(screenshot_area.height() - status_bar_height - menu_height)
         screenshot_area.moveTop(menu_height)
         return screenshot_area
+
+
+if __name__ == "__main__":
+    app = QApplication(sys.argv)
+    win = ScreenshotWindow()
+    win.show()
+    app.exec_()
