@@ -4664,8 +4664,8 @@ class ChannelTimeViewer(QMainWindow):
         # Status bar
         self.survey_type_label = QLabel(f" {self.pem_file.get_survey_type()} Survey ")
         self.timebase_label = QLabel(f" Timebase: {self.pem_file.timebase}ms ")
-        off_time_channels = len(self.pem_file.channel_times[~self.pem_file.channel_times.Remove.astype(bool)])
-        on_time_channels = len(self.pem_file.channel_times[self.pem_file.channel_times.Remove])
+        off_time_channels = len(self.pem_file.channel_times[self.pem_file.channel_times.End > 0])
+        on_time_channels = len(self.pem_file.channel_times[self.pem_file.channel_times.End <= 0])
         self.num_channels = QLabel(f" Channels: {on_time_channels} On-Time / {off_time_channels} Off-Time ")
 
         self.units_combo = QComboBox()

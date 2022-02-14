@@ -179,7 +179,7 @@ def parse_gps(file, gps_object):
     if gps.empty:
         return gps, units, gps, error_msg
 
-    gps = gps.apply(pd.to_numeric, errors='coerce')  # Force numbers to be floats
+    gps = gps.apply(pd.to_numeric, errors='ignore')  # Force numbers to be floats
     gps.columns = range(gps.shape[1])  # Reset the columns
     gps.rename(columns=cols, inplace=True)  # Add the column names to the two data frames
     error_gps.rename(columns=cols, inplace=True)
@@ -1080,12 +1080,12 @@ class BoreholeGeometry(BaseGPS):
 if __name__ == '__main__':
     # from src.pem.pem_getter import PEMGetter
     # pem_files = pg.get_pems(client='Raglan', number=1)
-    samples_folder = Path(__file__).parents[2].joinpath('sample_files')
+    # samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     # gps_parser = GPSParser()
     # crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 1983'})
 
-    # txt_file = r"C:\_Data\2021\Managem\Surface\Kokiak Aicha\GPS\KA1000N_1025.txt"
+    txt_file = r"C:\_Data\2022\Nantou BF\Surface\2021-Q4-Loop2\GPS\LINE26400S_0210.txt"
     # gpx_file = r'C:\_Data\2021\Eastern\L5N.gpx'
     # gpx_file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
     # gpx_file = samples_folder.joinpath(r'GPX files\Loop-32.gpx')
@@ -1111,7 +1111,7 @@ if __name__ == '__main__':
     # geometry.get_projection(num_segments=1000)
     # loop = TransmitterLoop(file)
     # loop.to_nad83()
-    # line = SurveyLine(utm_gps)
+    line = SurveyLine(txt_file)
     # print(line.df)
     # print(loop.get_sorted_loop(), '\n', loop.get_loop())
     # collar = BoreholeCollar(file)
