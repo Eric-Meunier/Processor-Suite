@@ -703,6 +703,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         # Plot the LIN profiles
         self.plot_profiles(components='all')
+        self.move_profile_hover_line(self.stations.min())
 
         # Plot the first station. This also helps with the linking of the X and Y axes for the decay plots.
         self.plot_decays(self.stations.min())
@@ -1452,6 +1453,23 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             idx = (np.abs(stations - x)).argmin()
             return stations[idx]
 
+    def move_profile_hover_line(self, target_station):
+        """
+        Move the vertical station hover line in the profile plots. Mostly used when the mouse is moved over the profile
+        plots.
+        :param target_station: int, station to move hover line to
+        :return: None
+        """
+        for ax in self.active_profile_axes:
+            ax.items[0].setPos(target_station)  # Move the hover line
+            ax.items[1].setPos(target_station, ax.viewRange()[1][1])  # Move the hover text
+            # Change the anchor of the text for the later stations so they don't get clipped
+            if len(self.stations) > 1 and target_station in self.stations[-math.floor(len(self.stations) / 2):]:
+                ax.items[1].setAnchor((1, 0))
+            else:
+                ax.items[1].setAnchor((0, 0))
+            ax.items[1].setText(str(target_station))  # Change text to the be the station number
+
     def profile_mouse_moved(self, evt):
         """
         Signal slot, when the mouse is moved in one of the axes. Calculates and plots a light blue vertical line at the
@@ -1467,15 +1485,17 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         if self.nearest_station is None:
             return  # When all data is deleted, which isn't plotted in the profile plots.
 
-        for ax in self.active_profile_axes:
-            ax.items[0].setPos(self.nearest_station)  # Move the hover line
-            ax.items[1].setPos(self.nearest_station, ax.viewRange()[1][1])  # Move the hover text
-            # Change the anchor of the text for the later stations so they don't get clipped
-            if len(self.stations) > 1 and self.nearest_station in self.stations[-math.floor(len(self.stations) / 2):]:
-                ax.items[1].setAnchor((1, 0))
-            else:
-                ax.items[1].setAnchor((0, 0))
-            ax.items[1].setText(str(self.nearest_station))  # Change text to the be the station number
+        self.move_profile_hover_line(self.nearest_station)
+
+        # for ax in self.active_profile_axes:
+        #     ax.items[0].setPos(self.nearest_station)  # Move the hover line
+        #     ax.items[1].setPos(self.nearest_station, ax.viewRange()[1][1])  # Move the hover text
+        #     # Change the anchor of the text for the later stations so they don't get clipped
+        #     if len(self.stations) > 1 and self.nearest_station in self.stations[-math.floor(len(self.stations) / 2):]:
+        #         ax.items[1].setAnchor((1, 0))
+        #     else:
+        #         ax.items[1].setAnchor((0, 0))
+        #     ax.items[1].setText(str(self.nearest_station))  # Change text to the be the station number
 
     def profile_plot_clicked(self, evt):
         """
