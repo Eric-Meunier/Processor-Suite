@@ -122,8 +122,8 @@ def parse_gps(file, gps_object):
             error_msg = f"No GPS found after removing NaNs."
             return gps, error_gps
 
-        gps = gps.astype(str)
-        # Remove P tags and units columns
+        # gps = gps.astype(float)
+        # Remove P tags and units columns. Applies to all GPS objects.
         cols_to_drop = []
         for i, col in gps.dropna(axis=0).iteritems():
             if col.empty:
@@ -132,20 +132,24 @@ def parse_gps(file, gps_object):
             if col.map(lambda x: str(x).startswith('<')).all():
                 logger.debug(f"Removing <P> or <L> tag column.")
                 cols_to_drop.append(i)
+                continue
             # Remove units column (except borehole collars, and when number of columns would be less than 3,
             # in which case it is assumed it's the elevation value)
             if gps_object != BoreholeCollar and len(gps.columns) > 3:
-                if col.map(lambda x: str(x) == '0').all() and len(gps.columns) - len(cols_to_drop) > 3:
+                if col.map(lambda x: int(x) == 0).all() and len(gps.columns) - len(cols_to_drop) > 3:
                     units = 'm'
                     logger.debug(f"Removing column of 0s.")
                     cols_to_drop.append(i)
-                elif col.map(lambda x: str(x) == '1').all() and len(gps.columns) - len(cols_to_drop) > 3:
+                    continue
+                elif col.map(lambda x: int(x) == 1).all() and len(gps.columns) - len(cols_to_drop) > 3:
                     units = 'ft'
                     logger.debug(f"Removing column of 1s.")
                     cols_to_drop.append(i)
+                    continue
         gps = gps.drop(cols_to_drop, axis=1)
 
         if survey_line:
+            # Only for survey lines, remove extra columns (e.g. comments)
             if len(gps.columns) < 4:
                 error_msg = f"{len(gps.columns)} column(s) of values were found instead of 4."
                 logger.info(error_msg)
@@ -175,11 +179,11 @@ def parse_gps(file, gps_object):
     else:
         gps = get_gps(file)
 
+    gps = gps.apply(pd.to_numeric, errors='ignore')  # Force numbers to be floats
     gps, error_gps = cull_gps(gps)  # Remove tags, units, extra columns and empty/NaN rows
     if gps.empty:
         return gps, units, gps, error_msg
 
-    gps = gps.apply(pd.to_numeric, errors='ignore')  # Force numbers to be floats
     gps.columns = range(gps.shape[1])  # Reset the columns
     gps.rename(columns=cols, inplace=True)  # Add the column names to the two data frames
     error_gps.rename(columns=cols, inplace=True)
@@ -1078,14 +1082,17 @@ class BoreholeGeometry(BaseGPS):
 
 
 if __name__ == '__main__':
-    # from src.pem.pem_getter import PEMGetter
+    from src.pem.pem_file import PEMGetter as pg
     # pem_files = pg.get_pems(client='Raglan', number=1)
     # samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     # gps_parser = GPSParser()
     # crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 1983'})
 
-    txt_file = r"C:\_Data\2022\Nantou BF\Surface\2021-Q4-Loop2\GPS\LINE26400S_0210.txt"
+    pem_file = r"C:\_Data\2022\TMC\RockCliff\Loop C\RAW\From Joel\2400ZXAv.PEM"
+
+    pg().parse(pem_file)
+    # txt_file = r"C:\_Data\2022\Nantou BF\Surface\2021-Q4-Loop2\GPS\LINE26400S_0210.txt"
     # gpx_file = r'C:\_Data\2021\Eastern\L5N.gpx'
     # gpx_file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
     # gpx_file = samples_folder.joinpath(r'GPX files\Loop-32.gpx')
@@ -1111,7 +1118,7 @@ if __name__ == '__main__':
     # geometry.get_projection(num_segments=1000)
     # loop = TransmitterLoop(file)
     # loop.to_nad83()
-    line = SurveyLine(txt_file)
+    # line = SurveyLine(txt_file)
     # print(line.df)
     # print(loop.get_sorted_loop(), '\n', loop.get_loop())
     # collar = BoreholeCollar(file)
