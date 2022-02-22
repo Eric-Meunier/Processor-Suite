@@ -136,16 +136,18 @@ def parse_gps(file, gps_object):
             # Remove units column (except borehole collars, and when number of columns would be less than 3,
             # in which case it is assumed it's the elevation value)
             if gps_object != BoreholeCollar and len(gps.columns) > 3:
-                if col.map(lambda x: int(x) == 0).all() and len(gps.columns) - len(cols_to_drop) > 3:
-                    units = 'm'
-                    logger.debug(f"Removing column of 0s.")
-                    cols_to_drop.append(i)
-                    continue
-                elif col.map(lambda x: int(x) == 1).all() and len(gps.columns) - len(cols_to_drop) > 3:
-                    units = 'ft'
-                    logger.debug(f"Removing column of 1s.")
-                    cols_to_drop.append(i)
-                    continue
+                # First check if the dtype is numeric. If it's object dtype, then we know it's not the 0s column.
+                if pd.api.types.is_numeric_dtype(col):
+                    if col.map(lambda x: int(x) == 0).all() and len(gps.columns) - len(cols_to_drop) > 3:
+                        units = 'm'
+                        logger.debug(f"Removing column of 0s.")
+                        cols_to_drop.append(i)
+                        continue
+                    elif col.map(lambda x: int(x) == 1).all() and len(gps.columns) - len(cols_to_drop) > 3:
+                        units = 'ft'
+                        logger.debug(f"Removing column of 1s.")
+                        cols_to_drop.append(i)
+                        continue
         gps = gps.drop(cols_to_drop, axis=1)
 
         if survey_line:
@@ -1089,11 +1091,11 @@ if __name__ == '__main__':
     # gps_parser = GPSParser()
     # crs = CRS().from_dict({'System': 'UTM', 'Zone': '16 North', 'Datum': 'NAD 1983'})
 
-    pem_file = r"C:\_Data\2022\TMC\RockCliff\Loop C\RAW\From Joel\2400ZXAv.PEM"
+    # pem_file = r"C:\_Data\2022\TMC\RockCliff\Loop C\RAW\From Joel\2400ZXAv.PEM"
 
-    pg().parse(pem_file)
+    # pg().parse(pem_file)
     # txt_file = r"C:\_Data\2022\Nantou BF\Surface\2021-Q4-Loop2\GPS\LINE26400S_0210.txt"
-    # gpx_file = r'C:\_Data\2021\Eastern\L5N.gpx'
+    gpx_file = r'C:\_Data\2022\TMC\Star-peak\Borehole\STE-21-83\GPS\83-84_0221.gpx'
     # gpx_file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
     # gpx_file = samples_folder.joinpath(r'GPX files\Loop-32.gpx')
 
@@ -1116,7 +1118,7 @@ if __name__ == '__main__':
     # geometry = BoreholeGeometry(collar, segments)
     # print(geometry.to_string())
     # geometry.get_projection(num_segments=1000)
-    # loop = TransmitterLoop(file)
+    loop = TransmitterLoop(gpx_file)
     # loop.to_nad83()
     # line = SurveyLine(txt_file)
     # print(line.df)
