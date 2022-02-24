@@ -371,8 +371,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.link_x_cbox.toggled.connect(self.link_decay_x)
 
         # Spinboxes
-        self.min_ch_sbox.valueChanged.connect(self.profile_channel_selection_changed)
-        self.max_ch_sbox.valueChanged.connect(self.profile_channel_selection_changed)
+        self.min_ch_sbox.valueChanged.connect(lambda: self.profile_channel_selection_changed(plot_profile=True))
+        self.max_ch_sbox.valueChanged.connect(lambda: self.profile_channel_selection_changed(plot_profile=True))
         self.coil_area_sbox.valueChanged.connect(coil_area_changed)
         self.soa_sbox.valueChanged.connect(soa_changed)
         self.auto_clean_std_sbox.valueChanged.connect(self.update_auto_clean_lines)
@@ -1912,6 +1912,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.max_ch_sbox.setMinimum(self.min_ch_sbox.value())
 
         if plot_profile is True:
+            print("Plotting profile")
             self.plot_profiles("all")
 
     def data_edited(self):
