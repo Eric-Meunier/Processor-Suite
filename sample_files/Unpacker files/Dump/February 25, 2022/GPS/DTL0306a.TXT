@@ -1,0 +1,9 @@
+Device: GIS Datalogger on Windows Mobile
+
+Receive operation Completed.
+3 File(s) Successfully Transferred.
+Details are as follows:
+
+1:56:02 PM 3/6/2021	Received File C:\Users\Operator\Desktop\Springdale\TB_LOOP200.SSF from Default. Completed.	
+1:56:07 PM 3/6/2021	Received File C:\Users\Operator\Desktop\Springdale\TB_LINE100.SSF from Default. Completed.	
+1:56:14 PM 3/6/2021	Received File C:\Users\Operator\Desktop\Springdale\LP-TB-1.SSF from Default. Completed.	

@@ -76,6 +76,8 @@ logger = logging.getLogger(__name__)
 # TODO Redo loop calculator calculations using new spreadsheet in Sample Files (Loop planning rev1.xlsx)
 # TODO Add warning and default coil area value when parsing coil area returns a nonsense value.
 # TODO Show project damp files
+# TODO Use root mean squared error to measure theoretical data fit. Also use it to find best coil area value.
+# TODO Auto add median current to PEM files in unpacker
 
 
 # Keep a list of widgets so they don't get garbage collected
@@ -3853,7 +3855,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.status_bar.showMessage(f"No PEM files opened.", 2000)
             return
 
-        default = pem_files[0].coil_area
+        default = float(pem_files[0].coil_area)
         # TODO Add component specific coil areas for SQUID surveys?
         # if all(["squid" in pem_file.get_survey_type() for pem_file in pem_files]):
         #

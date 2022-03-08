@@ -2078,16 +2078,16 @@ class PEMFile:
         assert self.is_borehole(), f"{self.filepath.name} is not a borehole file."
         logger.info(f"Preparing for XY de-rotation for {self.filepath.name}.")
 
-        def setup_pp():
+        def setup_pp(ramp, normalized_ch_times):
             """
             Set up the necessary variables used for cleaned PP rotation.
+            :param ramp: float, ramp length in seconds.
+            :param normalized_ch_times: pandas Series, channel times + ramp time in seconds
             """
             assert self.has_loop_gps(), f"{self.filepath.name} has no loop GPS."
             assert self.has_geometry(), f"{self.filepath.name} has incomplete geometry."
             assert self.has_collar_gps(), f"{self.filepath.name} has no collar GPS."
             assert self.ramp > 0, f"Ramp must be larger than 0. {self.ramp} was passed for {self.filepath.name}."
-
-            # global proj, loop, ramp, mag_calc, ch_times, ch_numbers
 
             self.pp_table = pd.DataFrame(columns=['Station',
                                                   'Azimuth',
@@ -2104,39 +2104,30 @@ class PEMFile:
             geometry = BoreholeGeometry(self.collar, self.segments)
             proj = geometry.get_projection(stations=self.get_stations(converted=True))
             loop = self.get_loop_gps(sorted=False, closed=False)
-            # Get the ramp in seconds
-            ramp = self.ramp / 10 ** 6
             mag_calc = MagneticFieldCalculator(loop, closed_loop=not self.is_mmr())
 
-            # Only keep off-time channels with PP
-            ch_times = self.channel_times[~self.channel_times.Remove.astype(bool)]
-            # Normalize the channel times so they start from turn off. Look at MRC-067 for proof
-            ch_times.loc[:, 'Start':'Center'] = ch_times.loc[:, 'Start':'Center'].applymap(lambda x: x + ramp)
-
-            pp_ch = ch_times.iloc[0]
-            # Make sure the PP channel is within the ramp
-            assert pp_ch.End < ramp, 'PP channel does not fall within the ramp'
+            pp_ch = normalized_ch_times.iloc[0]
             pp_center = pp_ch['Center']
 
             # Get the special channel numbers
             ch_numbers = []
             total_time = pp_center
-            last_time = ch_times.iloc[-1].End
+            last_time = normalized_ch_times.iloc[-1].End
             while (total_time + ramp) < last_time:
                 # Add the ramp time iteratively to the PP center time until reaching the end of the off-time
                 total_time += ramp
 
                 # Create a filter to find in which channel the time falls in
-                filt = (ch_times['Start'] <= total_time) & (ch_times['End'] > total_time)
+                filt = (normalized_ch_times['Start'] <= total_time) & (normalized_ch_times['End'] > total_time)
                 if filt.any():
-                    ch_index = ch_times[filt].index.values[0]
+                    ch_index = normalized_ch_times[filt].index.values[0]
                     ch_numbers.append(ch_index)
 
             return {"proj": proj,
                     "loop": loop,
                     "ramp": ramp,
                     "mag_calc": mag_calc,
-                    "ch_times": ch_times,
+                    "ch_times": normalized_ch_times,
                     "ch_numbers": ch_numbers}
 
         def prepare_rad(group, pp_info):
@@ -2332,11 +2323,23 @@ class PEMFile:
             return group
 
         pp_info = {}
+        # Get the ramp in seconds
+        ramp = self.ramp / 10 ** 6
+        # Only keep off-time channels with PP
+        normalized_ch_times = self.channel_times[~self.channel_times.Remove.astype(bool)]
+        # Normalize the channel times so they start from turn off. Look at MRC-067 for proof
+        normalized_ch_times.loc[:, 'Start':'Center'] = normalized_ch_times.loc[:, 'Start':'Center'].applymap(
+            lambda x: x + ramp)
+
+        error_msg = ""
         if all([self.has_all_gps(), self.ramp > 0]):
-            pp_info = setup_pp()
-            include_pp = True
-        else:
-            include_pp = False
+            # Make sure the PP channel is within the ramp. Will trigger when no PP channel was used.
+            if normalized_ch_times.iloc[0].End < ramp:
+                pp_info = setup_pp(ramp, normalized_ch_times)
+                include_pp = True
+            else:
+                error_msg = "PP channel time is not within the ramp time."
+                include_pp = False
 
         # Remove groups that don't have X and Y pairs. For some reason couldn't make it work within rotate_data
         eligible_data, ineligible_data = self.get_eligible_derotation_data()
@@ -2357,7 +2360,7 @@ class PEMFile:
         # Resetting the index prevents the error IndexError: single positional indexer is out-of-bounds
         self.data = self.data.dropna(subset=['Station']).reset_index(drop=True)
         self.prepped_for_rotation = True
-        return self, ineligible_data
+        return self, ineligible_data, error_msg
 
 
 class PEMParser:

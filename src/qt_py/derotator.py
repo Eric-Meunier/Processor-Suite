@@ -44,6 +44,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.pem_file = None
         self.rotated_file = None
         self.rotation_note = None
+        self.pp_enabled = False
         self.profile_data = pd.DataFrame()
         self.soa = self.soa_sbox.value()
         self.message = QMessageBox()
@@ -496,13 +497,39 @@ class Derotator(QMainWindow, Ui_Derotator):
             self.pp_ax.addItem(self.theory_pp_curve)
             self.pp_ax.addItem(self.theory_pp_scatter)
 
+        def set_pp():
+            ramp = self.pem_file.ramp * 1e6  # Converted to seconds
+            # Disable the PP values tab if there's no PP information. Also disable PP de-rotation
+            if all([self.pem_file.has_all_gps(),
+                    self.pem_file.ramp > 0,
+                    self.pem_file.channel_times.iloc[0].End + ramp < ramp]):
+                self.pp_enabled = True
+                self.tabWidget.setTabEnabled(0, True)
+                self.tabWidget.setTabEnabled(2, True)
+                self.pp_btn.setEnabled(True)
+
+                # Add the PP rotation plot curves and scatter items
+                if not pem_file.is_fluxgate():
+                    self.rot_ax.addItem(self.cpp_rot_curve)
+                    self.rot_ax.addItem(self.cpp_rot_scatter)
+                self.rot_ax.addItem(self.mpp_rot_curve)
+                self.rot_ax.addItem(self.mpp_rot_scatter)
+
+                plot_pp_values()
+            else:
+                self.pp_enabled = False
+                self.tabWidget.setTabEnabled(0, False)
+                self.tabWidget.setTabEnabled(3, False)
+                self.pp_btn.setEnabled(False)
+
         def set_default_soa():
             """
             Set the SOA using the mean deviation between the accelerometer and measured PP values.
             :return: None
             """
-            if not pem_file.has_d7() or not self.pem_file.has_all_gps():
+            if not self.pp_enabled:
                 return
+
             acc_df = pem_file.get_roll_data("Acc", self.soa)
             measured_pp_df = pem_file.get_roll_data("Measured_PP", self.soa)
             acc_deviation = measured_pp_df.Angle - acc_df.Angle
@@ -540,28 +567,13 @@ class Derotator(QMainWindow, Ui_Derotator):
             pem_file = pem_file[0]
 
         assert isinstance(pem_file, PEMFile), f"{pem_file} is not a PEMFile object."
+        assert pem_file is not None, f"{pem_file.filepath.name} is not a valid PEM file."
+        assert not pem_file.data.empty, f"No EM data in {pem_file.filepath.name}"
+        assert pem_file.is_borehole(), f"{pem_file.filepath.name} is not a borehole file."
+        assert 'X' in pem_file.get_components() and 'Y' in pem_file.get_components(), \
+            f"No X and/or Y data found in {pem_file.filepath.name}."
 
-        if not pem_file:
-            logger.error("No PEM file passed.")
-            self.message.critical(self, 'Error', 'PEM file is invalid')
-            return
-        elif pem_file.data.empty:
-            logger.error(f"No data found in {pem_file.filepath.name}.")
-            self.message.critical(self, 'Error', f"No EM data in {pem_file.filepath.name}")
-            return
-
-        # Ensure the file is a borehole and it has both X and Y component data
-        if all([pem_file.is_borehole(), 'X' in pem_file.get_components(), 'Y' in pem_file.get_components()]):
-            self.pem_file = pem_file
-        else:
-            if not pem_file.is_borehole():
-                logger.error(f"{pem_file.filepath.name} is not a borehole file.")
-            else:
-                logger.error(f"No X and/or Y data found in {pem_file.filepath.name}.")
-
-            self.message.critical(self, 'Ineligible File',
-                                  'File must be a borehole survey with X and Y component data.')
-            return
+        self.pem_file = pem_file
 
         # Check that the file hasn't already been de-rotated.
         if self.pem_file.is_derotated():
@@ -579,31 +591,18 @@ class Derotator(QMainWindow, Ui_Derotator):
                     self.unrotate_btn.setEnabled(False)
 
         try:
-            self.pem_file, ineligible_stations = self.pem_file.prep_rotation()
+            self.pem_file, ineligible_stations, error_msg = self.pem_file.prep_rotation()
         except Exception as e:
             self.message.critical(self, "Error", f"Error preparing data for de-rotation:\n{e}.")
             self.close()
             return
+        else:
+            if error_msg:
+                self.message.warning(self, "De-rotation warning", error_msg)
+
         self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")
 
-        # Disable the PP values tab if there's no PP information. Also disable PP de-rotation
-        if all([self.pem_file.has_all_gps(), self.pem_file.ramp > 0]):
-            self.tabWidget.setTabEnabled(0, True)
-            self.tabWidget.setTabEnabled(2, True)
-            self.pp_btn.setEnabled(True)
-
-            # Add the PP rotation plot curves and scatter items
-            if not pem_file.is_fluxgate():
-                self.rot_ax.addItem(self.cpp_rot_curve)
-                self.rot_ax.addItem(self.cpp_rot_scatter)
-            self.rot_ax.addItem(self.mpp_rot_curve)
-            self.rot_ax.addItem(self.mpp_rot_scatter)
-
-            plot_pp_values()
-        else:
-            self.tabWidget.setTabEnabled(0, False)
-            self.tabWidget.setTabEnabled(3, False)
-            self.pp_btn.setEnabled(False)
+        set_pp()
 
         # Fill the table with the ineligible stations
         if not ineligible_stations.empty:
@@ -835,10 +834,12 @@ class Derotator(QMainWindow, Ui_Derotator):
 
 
 def main():
-    from src.pem.pem_file import PEMParser
+    from src.pem.pem_file import PEMGetter
     from src.qt_py import dark_palette
     from src import samples_folder
 
+    pem_g = PEMGetter()
+    
     app = QApplication(sys.argv)
     app.setStyle("Fusion")
     darkmode = True
@@ -850,17 +851,17 @@ def main():
     pg.setConfigOption('background', (66, 66, 66) if darkmode else 'w')
     pg.setConfigOption('foreground', "w" if darkmode else (53, 53, 53))
 
-    ref = []
-    pem_files = samples_folder.joinpath(r"Rotation Testing\Vertical Holes").glob("*.PEM")
-    for pem_file in list(pem_files)[5:9]:
-        pem = PEMParser().parse(pem_file)
-        d = Derotator(darkmode=darkmode)
-        ref.append(d)
-        d.open(pem)
-        app.processEvents()
+    # ref = []
+    # pem_files = samples_folder.joinpath(r"Rotation Testing\Vertical Holes").glob("*.PEM")
+    # for pem_file in list(pem_files)[5:9]:
+    #     pem = PEMParser().parse(pem_file)
+    #     d = Derotator(darkmode=darkmode)
+    #     ref.append(d)
+    #     d.open(pem)
+    #     app.processEvents()
         # input()
 
-    # pem_files = pem_g.get_pems(folder="Rotation Testing", file="SAN-225G-18 Tool - Mag (PEMPro).PEM")
+    pem_files = pem_g.parse(r"C:\_Data\Trevali Peru Data\SAN-232-18\RAW\XY.PEM")
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_SAN-225G-18 XYZ.PEM")
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_BX-081 XY.PEM")
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_MRC-067 XY.PEM")
@@ -869,8 +870,8 @@ def main():
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")
     # pem_files = pem_g.get_pems(folder="TMC", file=r"131-21-37\DATA\131-21-37 XY.PEM")
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_SAN-0246-19 XY (Cross bug).PEM")
-    # mw = Derotator(darkmode=darkmode)
-    # mw.open(pem_files)
+    mw = Derotator(darkmode=darkmode)
+    mw.open(pem_files)
 
     # mw.export_stats()
 
