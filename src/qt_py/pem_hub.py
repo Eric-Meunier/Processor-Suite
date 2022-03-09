@@ -1848,7 +1848,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         derotator = Derotator(parent=self, darkmode=self.darkmode)
         refs.append(derotator)
         derotator.accept_sig.connect(accept_file)
-        derotator.open(pem_file)
+        try:
+            derotator.open(pem_file)
+        except AssertionError as e:
+            self.message.critical(self, "Error opening Derotator", e)
 
     def open_pem_geometry(self):
         def accept_geometry(seg):
@@ -1864,7 +1867,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         pem_geometry = PEMGeometry(parent=self, darkmode=self.darkmode)
         refs.append(pem_geometry)
         pem_geometry.accepted_sig.connect(accept_geometry)
-        pem_geometry.open(pem_files)
+        try:
+            pem_geometry.open(pem_files)
+        except AssertionError as e:
+            self.message.critical(self, "Error opening PEMGeometry", e)
 
     def open_pem_merger(self):
         def check_pems():
@@ -1940,7 +1946,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             merger = PEMMerger(parent=self, darkmode=self.darkmode)
             refs.append(merger)
             merger.accept_sig.connect(accept_merge)
-            merger.open(pem_files)
+            try:
+                merger.open(pem_files)
+            except AssertionError as e:
+                self.message.critical(self, "Error opening PEMMerger", e)
 
     def open_pdf_plot_printer(self, selected=False):
         """
@@ -2006,7 +2015,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         mag_calculator = MagDeclinationCalculator(parent=self)
         refs.append(mag_calculator)
-        mag_calculator.calc_mag_dec(pem_files[0])
+        try:
+            mag_calculator.calc_mag_dec(pem_files[0])
+        except AssertionError as e:
+            self.message.critical(self, "Error opening PEMMerger", e)
         mag_calculator.show()
 
     def open_db_plot(self):
@@ -5290,10 +5302,7 @@ class MagDeclinationCalculator(QMainWindow):
             logger.warning(f"No PEM files passed.")
             return
 
-        if not pem_file.get_crs():
-            logger.warning(f"No CRS.")
-            self.message.information(self, 'Error', 'GPS coordinate system information is invalid')
-            return
+        assert pem_file.get_crs() is not None, f'{pem_file.get_crs()} is not a valid GPS coordinate system'
 
         mag = pem_file.get_mag_dec()
 

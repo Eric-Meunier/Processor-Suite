@@ -2332,6 +2332,7 @@ class PEMFile:
             lambda x: x + ramp)
 
         error_msg = ""
+        include_pp = False
         if all([self.has_all_gps(), self.ramp > 0]):
             # Make sure the PP channel is within the ramp. Will trigger when no PP channel was used.
             if normalized_ch_times.iloc[0].End < ramp:
@@ -2339,7 +2340,6 @@ class PEMFile:
                 include_pp = True
             else:
                 error_msg = "PP channel time is not within the ramp time."
-                include_pp = False
 
         # Remove groups that don't have X and Y pairs. For some reason couldn't make it work within rotate_data
         eligible_data, ineligible_data = self.get_eligible_derotation_data()
