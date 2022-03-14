@@ -897,7 +897,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         for row, station in zip(rows, rev_stations):
             self.line_table.item(row, self.station_column).setData(Qt.EditRole, station)
 
-        self.gps_object_changed(self.line_table, refresh=False)
+        self.gps_object_changed(self.line_table, refresh=True)
         self.update_line_gps()
         self.line_table.blockSignals(False)
 

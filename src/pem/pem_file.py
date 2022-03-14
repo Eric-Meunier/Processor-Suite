@@ -1141,11 +1141,9 @@ class PEMFile:
                 self.probes["Probe number"] if self.is_fluxgate() and self.is_borehole() else '',  # Fluxgate probe
                 '',  # Fluxgate battery pack
                 '',  # Borehole cable
-                self.probes["Probe number"] if not self.is_borehole() and not self.is_fluxgate() else '',
-                # Surface coil
-                self.probes["Probe number"] if not self.is_borehole() and self.is_fluxgate() else '',
-                # Surface fluxgate
-                self.probes["Probe number"] if "squid" in self.survey_type.lower() else '',
+                self.probes["Probe number"] if not self.is_borehole() and not self.is_fluxgate() else '',  # Surface coil
+                self.probes["Probe number"] if not self.is_borehole() and self.is_fluxgate() and "squid" not in self.survey_type.lower() else '',  # Surface fluxgate
+                self.probes["Probe number"] if "squid" in self.survey_type.lower() else '',  # SQUID
                 '',  # Slip ring
                 '',  # Transmitter
                 '',  # VRs
@@ -3701,26 +3699,26 @@ class RADTool:
         self.acc_roll_angle = None
         self.mag_roll_angle = None
 
-    def from_match(self, match):
+    def from_match(self, matches):
         """
         Create the RADTool object using the string parsed from PEMParser
-        :param match: str, Full string parsed from PEMParser
+        :param matches: str, Full string parsed from PEMParser
         :return RADTool object
         """
-        match = match.split()
-        self.D = match[0]
-        match[1:] = np.array(match[1:])
+        matches = matches.split()
+        self.D = matches[0]
+        matches[1:] = np.array(matches[1:])
 
         if self.D == 'D7':
-            if len(match) == 8:
+            if len(matches) == 8:
                 self.derotated = False
-                self.Hx = float(match[1])
-                self.gx = float(match[2])
-                self.Hy = float(match[3])
-                self.gy = float(match[4])
-                self.Hz = float(match[5])
-                self.gz = float(match[6])
-                self.T = float(match[7])
+                self.Hx = float(matches[1])
+                self.gx = float(matches[2])
+                self.Hy = float(matches[3])
+                self.gy = float(matches[4])
+                self.Hz = float(matches[5])
+                self.gz = float(matches[6])
+                self.T = float(matches[7])
 
                 self.id = ''.join([
                     str(self.Hx),
@@ -3732,18 +3730,18 @@ class RADTool:
                     str(self.T)
                 ])
 
-            elif len(match) == 11:
+            elif len(matches) == 11:
                 self.derotated = True
-                self.Hx = float(match[1])
-                self.gx = float(match[2])
-                self.Hy = float(match[3])
-                self.gy = float(match[4])
-                self.Hz = float(match[5])
-                self.gz = float(match[6])
-                self.roll_angle = float(match[7])
-                self.dip = float(match[8])
-                self.R = match[9]
-                self.angle_used = float(match[10])
+                self.Hx = float(matches[1])
+                self.gx = float(matches[2])
+                self.Hy = float(matches[3])
+                self.gy = float(matches[4])
+                self.Hz = float(matches[5])
+                self.gz = float(matches[6])
+                self.roll_angle = float(matches[7])
+                self.dip = float(matches[8])
+                self.R = matches[9]
+                self.angle_used = float(matches[10])
 
                 self.id = ''.join([
                     str(self.Hx),
@@ -3758,15 +3756,15 @@ class RADTool:
                     str(self.angle_used),
                 ])
             else:
-                raise Exception(f"D7 RAD tool had {len(match)} items (should have 8 or 11).")
+                raise Exception(f"D7 RAD tool had {len(matches)} items (should have 8 or 11).")
 
         elif self.D == 'D5':
-            self.x = float(match[1])
-            self.y = float(match[2])
-            self.z = float(match[3])
-            self.roll_angle = float(match[4])
-            self.dip = float(match[5])
-            if len(match) == 6:
+            self.x = float(matches[1])
+            self.y = float(matches[2])
+            self.z = float(matches[3])
+            self.roll_angle = float(matches[4])
+            self.dip = float(matches[5])
+            if len(matches) == 6:
                 self.derotated = False
 
                 self.id = ''.join([
@@ -3777,9 +3775,9 @@ class RADTool:
                     str(self.dip)
                 ])
 
-            elif len(match) == 8:
-                self.R = match[6]
-                self.angle_used = float(match[7])
+            elif len(matches) == 8:
+                self.R = matches[6]
+                self.angle_used = float(matches[7])
                 self.derotated = True
 
                 self.id = ''.join([
@@ -3793,7 +3791,7 @@ class RADTool:
                 ])
 
             else:
-                raise ValueError(f'{len(match)} long D5 RAD tool match passed. Should be length of 6 or 8.')
+                raise ValueError(f'{len(matches)} long D5 RAD tool matches passed. Should be length of 6 or 8.')
 
         else:
             raise ValueError(f'{self.D} is an invalid RAD tool D value. D value must be D5 or D7.')

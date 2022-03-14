@@ -273,6 +273,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.load_settings()  # Checking the checkboxes emits the signals, so load settings before connecting signals.
         self.init_signals()
         self.toggle_profile_plots()
+        self.toggle_station_cursor()
 
     def init_signals(self):
         def toggle_auto_clean_lines():
@@ -281,10 +282,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                     line.show()
                 else:
                     line.hide()
-
-        def toggle_station_cursor():
-            for item in self.station_cursors:
-                item.show() if self.actionShow_Station_Cursor.isChecked() else item.hide()
 
         def toggle_ontime():
             if self.plot_ontime_decays_cbox.isChecked():
@@ -350,7 +347,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         # Required or else the plots don't align correctly.
         self.actionSplit_Profile.triggered.connect(lambda: self.plot_profiles())
         self.actionSplit_Profile.triggered.connect(lambda: self.reset_range(decays=False, profiles=True))
-        self.actionShow_Station_Cursor.triggered.connect(toggle_station_cursor)
+        self.actionShow_Station_Cursor.triggered.connect(self.toggle_station_cursor)
 
         # Shortcuts
         self.actionSave_Screenshot.triggered.connect(self.save_img)
@@ -435,6 +432,10 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.z_profile_layout.ci.layout.setRowStretchFactor(0, 5)
             self.min_ch_sbox.setEnabled(True)
             self.max_ch_sbox.setEnabled(True)
+
+    def toggle_station_cursor(self):
+        for item in self.station_cursors:
+            item.show() if self.actionShow_Station_Cursor.isChecked() else item.hide()
 
     def save_settings(self):
         settings = QSettings("Crone Geophysics", "PEMPro")
@@ -2148,6 +2149,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 group.Deleted = group.Reading.map(lambda x: eval_decay(x, data_std, data_median, max_removable))
 
             cleaned_data = cleaned_data.append(group)
+            # cleaned_data = pd.concat([cleaned_data, group])
 
         # Update the data
         self.pem_file.data.update(cleaned_data)

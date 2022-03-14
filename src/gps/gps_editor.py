@@ -1095,7 +1095,7 @@ if __name__ == '__main__':
 
     # pg().parse(pem_file)
     # txt_file = r"C:\_Data\2022\Nantou BF\Surface\2021-Q4-Loop2\GPS\LINE26400S_0210.txt"
-    gpx_file = r'C:\_Data\2022\TMC\Star-peak\Borehole\STE-21-83\GPS\83-84_0221.gpx'
+    gpx_file = r'G:\Data\2022\TMC\Laurentia\Surface\N-E\GPS\Boucle Nord-Est_0310.gpx'
     # gpx_file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
     # gpx_file = samples_folder.joinpath(r'GPX files\Loop-32.gpx')
 

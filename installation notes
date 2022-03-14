@@ -1,0 +1,16 @@
+pip install wheel
+pip install pipwin
+
+pipwin install numpy
+pipwin install pandas
+pipwin install shapely
+pipwin install gdal
+pipwin install fiona
+pipwin install pyproj
+pipwin install rtree
+pipwin install geopandas  # Intalls an old version, need to 'pip install -U geopandas' afterwards
+pipwin install cartopy
+
+pip install pyside2==5.14.0
+pip install pyqtgraph==0.11.0
+pip install matplotlib==3.3.0
