@@ -1377,8 +1377,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             file = file.filepath
 
         if self.pem_files:
-            existing_filepaths = [file.filepath.absolute for file in self.pem_files]
-            if file.absolute in existing_filepaths:
+            existing_filepaths = [file.filepath.absolute() for file in self.pem_files]
+            if file.absolute() in existing_filepaths:
                 logger.info(f"{file.name} is already opened.")
                 self.status_bar.showMessage(f"{file.name} is already opened", 2000)
                 return True

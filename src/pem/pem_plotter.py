@@ -3178,7 +3178,6 @@ class PEMPrinter:
             with CustomProgressDialog("Printing PDFs..", 0, num_pages, busyCursor=True) as dlg:
                 # Save the borehole PDFs
                 for survey, files in unique_bhs.items():
-
                     if dlg.wasCanceled():
                         break
 
@@ -3198,7 +3197,6 @@ class PEMPrinter:
 
                 # Save the surface PDFs
                 for loop, files in unique_grids.items():
-
                     if dlg.wasCanceled():
                         break
 
@@ -3217,7 +3215,6 @@ class PEMPrinter:
 
         plt.close(self.portrait_fig)
         plt.close(self.landscape_fig)
-        # os.startfile(save_path + '.PDF')
 
     def configure_lin_fig(self):
         """

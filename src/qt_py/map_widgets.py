@@ -194,13 +194,18 @@ class TileMapViewer(ScreenshotWindow):
 
         # TODO Add selectable styles
         # Pass the mapbox token, for access to better map tiles. If none is passed, it uses the free open street map.
-        token = open(str(app_data_dir.joinpath(".mapbox")), 'r').read()
+        if app_data_dir.joinpath(".mapbox").is_file():
+            token = open(str(app_data_dir.joinpath(".mapbox")), 'r').read()
+            # map_style = "outdoors"
+            map_style = "satellite-streets"
+        else:
+            token = None
+            map_style = "open-street-map"
         # if not token:
         #     logger.warning(f"No Mapbox token passed.")
         #     # map_style = "open-street-map"
         # else:
         #     map_style = "outdoors"
-        map_style = "satellite-streets"
 
         # Format the figure margins and legend
         self.map_figure.update_layout(

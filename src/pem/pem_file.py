@@ -1128,7 +1128,7 @@ class PEMFile:
                 ', '.join(self.data.ZTS.astype(int).astype(str).unique()),  # ZTS
                 self.timebase,  # Timebase
                 '',  # Channel config.
-                self.ramp,  # Ramp
+                f"{self.ramp / 1000:.1f}",  # Ramp
                 self.current,  # Current
                 '',  # Damping box setting
                 '',  # Tx config.
@@ -4311,7 +4311,8 @@ if __name__ == '__main__':
     #
     pg = PEMGetter()
     # pem_file = pg.get_pems("Rotation Testing", number=1)[0]
-    pem_file = pg.parse(r"C:\_Data\2021\Trevali Peru\Surface\Off Loop Puajanca\RAW\1280.PEM")
+    pem_file = pg.parse(r"G:\Data\2022\TMC\Star-peak\Borehole\STE-22-92\RAW\xy_0320.PEM")
+    pem_file.save(processed=True)
     # pem_file.prep_rotation()
     # pem_file.rotate(method="mag")
     # print(pem_file.get_roll_data(roll_type="Mag"))
@@ -4339,7 +4340,7 @@ if __name__ == '__main__':
     # # pem_file, _ = pem_file.prep_rotation()
     # # pem_file.get_theory_pp()
     # # pem_file.get_theory_data()
-    print(pem_file.get_reversed_components())
+    # print(pem_file.get_reversed_components())
     # # pem_file.rotate(method="unrotate")
     # # pem_file.rotate(method="unrotate")
     # # pem_file.filepath = pem_file.filepath.with_name(pem_file.filepath.stem + "(unrotated)" + ".PEM")
