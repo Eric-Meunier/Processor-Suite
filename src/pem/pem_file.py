@@ -2012,6 +2012,14 @@ class PEMFile:
             row['RAD_tool'] = row['RAD_tool'].map(lambda p: new_rad)
             return row
 
+        @timeit
+        def apply_rotation():
+            # Rotate the data
+            rotated_data = xy_data.groupby(['Station', 'RAD_ID'],
+                                           group_keys=False,
+                                           as_index=False).apply(lambda l: rotate_group(l, method, soa))
+            return rotated_data
+
         global include_pp
         if all([self.has_all_gps(), self.ramp > 0]):
             include_pp = True
@@ -2026,14 +2034,6 @@ class PEMFile:
 
         if xy_data.empty:
             raise Exception(f"{self.filepath.name} has no eligible XY data for de-rotation.")
-
-        @timeit
-        def apply_rotation():
-            # Rotate the data
-            rotated_data = xy_data.groupby(['Station', 'RAD_ID'],
-                                           group_keys=False,
-                                           as_index=False).apply(lambda l: rotate_group(l, method, soa))
-            return rotated_data
 
         rotated_data = apply_rotation()
 
@@ -4311,8 +4311,8 @@ if __name__ == '__main__':
     #
     pg = PEMGetter()
     # pem_file = pg.get_pems("Rotation Testing", number=1)[0]
-    pem_file = pg.parse(r"G:\Data\2022\TMC\Star-peak\Borehole\STE-22-92\RAW\xy_0320.PEM")
-    pem_file.save(processed=True)
+    pem_file = pg.parse(r"G:\Data\2022\Managem\Surface\Frizem\North Loop\RAW\0N.PEM")
+    pem_file.rotate(method=None, soa=2)
     # pem_file.prep_rotation()
     # pem_file.rotate(method="mag")
     # print(pem_file.get_roll_data(roll_type="Mag"))

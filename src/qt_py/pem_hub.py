@@ -68,7 +68,7 @@ logger = logging.getLogger(__name__)
 # TODO Log recently opened files.
 # TODO Could add std plot to the right of decay plots
 # TODO Add a Recent projects list, below project GPS, which will be a history of recently clicked folders.
-# TODO Add old PEM parsing
+# TODO Add old PEM file parsing
 # TODO When plotting PP files, set them all as the same station, and color code by timestamp. Also add plot of °----(drift number here)---° showing drift.
 # TODO to remove loop edge effects, remove the primary field (or a percentage of it) from the readings, which is the PP
 # TODO Add component specific coil area scaling (for SQUID).
@@ -78,6 +78,10 @@ logger = logging.getLogger(__name__)
 # TODO Show project damp files
 # TODO Use root mean squared error to measure theoretical data fit. Also use it to find best coil area value.
 # TODO Auto add median current to PEM files in unpacker
+# TODO Add mapbox view options
+# TODO Add favorites for project folders
+# TODO (later) Add PEM files to SQL data base (instead of importing filed logs?)
+# TODO Add SOA rotation for X and Y of surface surveys. Y of SQUID 12 may be off by ~2-3°.
 
 
 # Keep a list of widgets so they don't get garbage collected
@@ -2380,7 +2384,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         :param position: QPoint, position of mouse at time of right-click
         """
         def open_step():
-            # Open the Step window at the selected location in the project tree
+            # No longer used in 64bit system. Open the Step window at the selected location in the project tree
             path = self.get_current_project_path()
             if path.is_dir():
                 os.chdir(str(path))
@@ -2437,10 +2441,17 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 pdf_files = list(path.glob("*.PDF"))
                 files = np.concatenate([pem_files, step_files, pdf_files])
                 if not any(files):
-                    self.status_bar.showMessage(f"No processed files found in {path}.", 1500)
+                    self.message.information(self, "No Files Found", f"No processed files found in {path}.")
                     return
 
                 logger.debug(f"Delivery folder path: {str(folder_path)}")
+                if folder_path.with_suffix(".zip").exists():
+                    response = self.message.question(self, "Folder Exists",
+                                                     f"{folder_path} already exists. Overwrite?",
+                                                     self.message.Yes, self.message.No)
+                    if response == self.message.No:
+                        return
+
                 folder_path.mkdir(exist_ok=True)
 
                 for file in files:
@@ -2467,9 +2478,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
         menu = QMenu()
         menu.addAction(get_icon("rename"), 'Rename Folder', rename)
-        menu.addSeparator()
-        menu.addAction(get_icon("crone_logo"), 'Run Step', open_step)
-        menu.addSeparator()
+        # menu.addSeparator()
         menu.addAction('Auto-Name Files', autoname_files)
         menu.addAction(get_icon("add"), 'Create Delivery Folder', create_delivery_folder)
         menu.exec_(self.project_tree.viewport().mapToGlobal(position))
