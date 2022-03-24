@@ -2329,7 +2329,7 @@ class PEMFile:
                         x_data[reading_pos] = np.array([x * math.cos(roll) - y * math.sin(roll) for (x, y) in zip(x_decay, y_decay)])
                         y_data[reading_pos] = np.array([x * math.sin(roll) + y * math.cos(roll) for (x, y) in zip(x_decay, y_decay)])
                 else:
-                    print(f"Station {key[0]} has uneven number of X and Y readings.")
+                    # print(f"Station {key[0]} has uneven number of X and Y readings.")
                     x_pair = np.average([r[reading_pos] for r in xs], axis=0, weights=[r[stacks_pos] for r in xs])
                     y_pair = np.average([r[reading_pos] for r in ys], axis=0, weights=[r[stacks_pos] for r in ys])
 

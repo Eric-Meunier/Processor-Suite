@@ -641,7 +641,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 self.plot_mag_cbox.setEnabled(False)
         else:
             self.plot_mag_cbox.setEnabled(False)
-            self.soa_sbox.setEnabled(False)
+            # self.soa_sbox.setEnabled(False)
         # Manually toggle mag plots incase they may have been disabled in the previous step.
         self.toggle_mag_plots()
 

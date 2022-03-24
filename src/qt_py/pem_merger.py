@@ -493,9 +493,9 @@ class PEMMerger(QMainWindow, Ui_PEMMerger):
         assert f1.number_of_channels == f2.number_of_channels, f"Both files must have the same number of channels."
 
         # Enable the SOA spin boxes if the file is a borehole file and has XY component data
-        if all([f1.is_borehole(), f1.has_xy()]):
+        if f1.has_xy():
             self.soa_sbox_1.setEnabled(True)
-        if all([f2.is_borehole(), f2.has_xy()]):
+        if f2.has_xy():
             self.soa_sbox_2.setEnabled(True)
 
         # Try and ensure the files are plotted in the correct order
