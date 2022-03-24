@@ -16,6 +16,7 @@ from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QLabel, QA
                                QInputDialog, QPushButton, QShortcut, QVBoxLayout)
 from scipy import spatial, signal
 
+from src import timeit
 from src.pem import convert_station
 from src.pem.pem_file import PEMParser, PEMGetter
 from src.qt_py import get_icon, get_line_color
@@ -915,6 +916,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             for ax in self.decay_axes:
                 ax.setYRange(min_y, max_y)
 
+    @timeit
     def plot_profiles(self, components=None):
         """
         Plot the PEM file in a LIN plot style, with both components in separate plots
@@ -940,6 +942,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                     continue
                 ax.clearPlots()
 
+        @timeit
         def plot_lin(profile_data, axes):
             def plot_lines(df, ax):
                 """
