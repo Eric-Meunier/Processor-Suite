@@ -936,6 +936,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         @timeit
         def plot_lin(profile_data, axes):
+            # @timeit
             def plot_lines(data, ax):
                 """
                 Plot the lines on the pyqtgraph ax
@@ -999,6 +1000,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                     # Plot the data
                     for channel in range(bounds[0], bounds[1] + 1):
                         data = profile_data[:, [0, channel + 3]]  # +3 since first three columns are Station, Component and Deleted
+                        print(f"{channel=}")
                         plot_lines(data, ax)
                         if self.show_scatter_cbox.isChecked():
                             plot_scatters(data, ax)
@@ -1054,6 +1056,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             else:
                 axes = self.z_layout_axes
 
+            print(f"{component=}")
             plot_lin(profile_data, axes)
 
     # @timeit
