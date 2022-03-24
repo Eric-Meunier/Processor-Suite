@@ -355,7 +355,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         """
         Open GPS files through the file dialog
         """
-        default_path = str(self.pem_file.parent)
+        default_path = str(self.pem_file.filepath.parent)
         files = self.dialog.getOpenFileNames(self, 'Open GPS File(s)', default_path,
                                              filter='TXT files (*.txt);; CSV files (*.csv);; '
                                                     'GPX files (*.gpx);; All files(*.*)')[0]

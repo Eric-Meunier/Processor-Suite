@@ -82,6 +82,7 @@ logger = logging.getLogger(__name__)
 # TODO Add favorites for project folders
 # TODO (later) Add PEM files to SQL data base (instead of importing filed logs?)
 # TODO Add SOA rotation for X and Y of surface surveys. Y of SQUID 12 may be off by ~2-3°.
+# TODO Speed up coil area correction
 
 
 # Keep a list of widgets so they don't get garbage collected
@@ -312,7 +313,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             pem_files, rows = self.get_pem_files(selected=True)
             pem_file = pem_files[0]
             if pem_file.is_derotated():
-                pem_file.prep_rotation()
+                pem_file.prep_rotation("unrotate")
                 pem_file = pem_file.rotate(method="unrotate")
                 self.refresh_pem(pem_file)
                 self.update_selection_text()  # Update selection text since the file is currently selected

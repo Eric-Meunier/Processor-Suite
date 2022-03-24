@@ -770,12 +770,11 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         :return: None
         """
         df = table_to_df(self.table)
-
         if df.empty:
             return
 
         # Close the loop
-        df = df.append(df.iloc[0], ignore_index=True)
+        df = pd.concat([df, df.iloc[0].to_frame().T], ignore_index=True)
 
         # Plot the plan map
         self.plan_plot.setData(df.Easting.to_numpy(), df.Northing.to_numpy())

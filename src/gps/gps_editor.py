@@ -602,7 +602,7 @@ class TransmitterLoop(BaseGPS):
             df = self.df
 
         if not df.empty and closed and not df.duplicated().any():
-            df = df.append(df.iloc[0], ignore_index=True)
+            df = pd.concat([df, df.iloc[0].to_frame().T], axis=0)
 
         return df
 
@@ -846,7 +846,6 @@ class BoreholeSegments(BaseGPS):
         self.df, self.units, self.errors, self.error_msg = self.parse_segments(segments)
 
     @staticmethod
-    # @Log()
     def parse_segments(file):
         """
         Parse a text file for geometry segments.
@@ -939,8 +938,33 @@ class BoreholeSegments(BaseGPS):
 
         return gps, units, error_gps, error_msg
 
-    def get_segments(self):
+    def get_segments(self, stations=None):
+        """
+        Return the segments object.
+        :param stations: list, ensures any stations in the list will be in the segments data frame.
+        :return: DataFrame.
+        """
+        existing_stations = self.df.Depth.astype(int).values
+        # Add and interpolate new stations/depths
+        if stations is not None:
+            stations = pd.Series(stations).astype(int)
+            stations = stations[~stations.isin(existing_stations)]  # Remove stations that are already in the segments
+            if len(stations) > 0:  # If any are left after culling existing stations
+                station_df = pd.DataFrame({"Depth": stations}, dtype=float)
+                self.df = pd.concat([self.df, station_df], join="outer")
+                self.df.sort_values(by="Depth", inplace=True)
+                # Interpolate both ways since values at either end of the data frame could be ignored
+                self.df.interpolate(method="linear", limit_direction="backward", inplace=True)
+                self.df.interpolate(method="linear", limit_direction="forward", inplace=True)
         return self.df
+
+    def get_segment(self, station):
+        """
+        Return the segment information for the given station
+        :param station: (str, int, float), station value
+        :return: Series object
+        """
+        return np.where(self.df.Depth.astype(int).to_numpy() == int(station))[0]
 
     def get_units_code(self):
         if self.units == "m":
@@ -1063,8 +1087,21 @@ class BoreholeGeometry(BaseGPS):
     def get_collar_gps(self):
         return self.collar.get_collar_gps()
 
-    def get_segments(self):
-        return self.segments.get_segments()
+    def get_segments(self, stations=None):
+        """
+        Return the segments object.
+        :param stations: list, ensures any stations in the list will be in the segments data frame.
+        :return: DataFrame.
+        """
+        return self.segments.get_segments(stations=stations)
+
+    def get_station_position(self, station):
+        """
+        Return the position in 3D space of the station.
+        :param station: (float, int, str), station value.
+        :return: Series object.
+        """
+        return np.where(self.df.loc[:, 'Relative_depth'].astype(int).to_numpy() == int(station))[0]
 
     def to_string(self, header=False):
         units = self.collar.get_units()
@@ -1085,7 +1122,8 @@ class BoreholeGeometry(BaseGPS):
 
 if __name__ == '__main__':
     from src.pem.pem_file import PEMGetter as pg
-    # pem_files = pg.get_pems(client='Raglan', number=1)
+    pem_files = pg().get_pems(folder='Raglan', number=1)
+    pem_files[0].get_segments(stations=[22, 35, 45, 60, 60, 60])
     # samples_folder = Path(__file__).parents[2].joinpath('sample_files')
 
     # gps_parser = GPSParser()

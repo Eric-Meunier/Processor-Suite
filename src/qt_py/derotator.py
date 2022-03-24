@@ -417,152 +417,6 @@ class Derotator(QMainWindow, Ui_Derotator):
         Open, rotate, and plot the PEMFile.
         :param pem_file: borehole PEMFile object
         """
-        def fill_table(stations):
-            """
-            Fill the stations list with the ineligible readings
-            :param stations: pd.DataFrame of ineligible readings
-            """
-            list = []
-            for s in stations.itertuples():
-                result = f"{s.Station} {s.Component} - reading # {s.Reading_number} (index {s.Reading_index})"
-                list.append(result)
-            self.list.setText("\n".join(list))
-
-        def plot_mag():
-            mag_df = self.pem_file.get_mag(average=False)
-            mag_df_avg = self.pem_file.get_mag(average=True)
-            if mag_df.Mag.any():
-                self.mag_curve.setData(x=mag_df_avg.Mag.to_numpy(), y=mag_df_avg.Station.astype(int).to_numpy())
-                self.mag_scatter.setData(x=mag_df.Mag.to_numpy(), y=mag_df.Station.astype(int).to_numpy())
-            else:
-                logger.warning(f"No mag data found in {self.pem_file.filepath.name}")
-
-        def plot_dip():
-            """
-            Plot the dip of the hole.
-            """
-            dip_df = self.pem_file.get_dip(average=False)
-            dip_df_avg = self.pem_file.get_dip(average=True)
-            if not dip_df.empty:
-                self.dip_curve.setData(x=dip_df_avg.Dip.to_numpy(), y=dip_df_avg.Station.astype(int).to_numpy())
-                self.dip_scatter.setData(x=dip_df.Dip.to_numpy(), y=dip_df.Station.astype(int).to_numpy())
-            else:
-                logger.warning(f"No dip data found in {self.pem_file.filepath.name}")
-
-        def plot_pp_values():
-            """
-            Plot the theoretical PP values with the measured (raw) and cleaned PP
-            """
-            # Used for PP values and rotation angle plots, not lin plots
-            data = self.pem_file.data.drop_duplicates(subset="RAD_ID")
-            stations = data.Station.astype(float)
-
-            # PP XY cleaned
-            if not pem_file.is_fluxgate():
-                ppxy_cleaned = data.RAD_tool.map(lambda x: x.ppxy_cleaned)
-                data.assign(PPXY_cleaned=ppxy_cleaned)
-
-                ppxy_cleaned_df = pd.DataFrame([ppxy_cleaned, stations]).T
-                ppxy_cleaned_df.rename(columns={"RAD_tool": "PPXY_cleaned"}, inplace=True)
-                ppxy_cleaned_avg_df = ppxy_cleaned_df.groupby("Station", as_index=False).mean()
-
-                self.cleaned_pp_curve.setData(ppxy_cleaned_avg_df.PPXY_cleaned, ppxy_cleaned_avg_df.Station)
-                self.cleaned_pp_scatter.setData(ppxy_cleaned_df.PPXY_cleaned, ppxy_cleaned_df.Station)
-                self.pp_ax.addItem(self.cleaned_pp_curve)
-                self.pp_ax.addItem(self.cleaned_pp_scatter)
-
-            # PP XY measured
-            ppxy_measured = data.RAD_tool.map(lambda x: x.ppxy_measured)
-            data.assign(PPXY_measured=ppxy_measured)
-
-            ppxy_measured_df = pd.DataFrame([ppxy_measured, stations]).T
-            ppxy_measured_df.rename(columns={"RAD_tool": "PPXY_measured"}, inplace=True)
-            ppxy_measured_avg_df = ppxy_measured_df.groupby("Station", as_index=False).mean()
-
-            self.measured_pp_curve.setData(ppxy_measured_avg_df.PPXY_measured, ppxy_measured_avg_df.Station)
-            self.measured_pp_scatter.setData(ppxy_measured_df.PPXY_measured, ppxy_measured_df.Station)
-            self.pp_ax.addItem(self.measured_pp_curve)
-            self.pp_ax.addItem(self.measured_pp_scatter)
-
-            # PP XY theory
-            ppxy_theory = data.RAD_tool.map(lambda x: x.ppxy_theory)
-            data.assign(PPXY_theory=ppxy_theory)
-
-            ppxy_theory_df = pd.DataFrame([ppxy_theory, stations]).T
-            ppxy_theory_df.rename(columns={"RAD_tool": "PPXY_theory"}, inplace=True)
-            ppxy_theory_avg_df = ppxy_theory_df.groupby("Station", as_index=False).mean()
-
-            self.theory_pp_curve.setData(ppxy_theory_avg_df.PPXY_theory, ppxy_theory_avg_df.Station)
-            self.theory_pp_scatter.setData(ppxy_theory_df.PPXY_theory, ppxy_theory_df.Station)
-            self.pp_ax.addItem(self.theory_pp_curve)
-            self.pp_ax.addItem(self.theory_pp_scatter)
-
-        def set_pp():
-            ramp = self.pem_file.ramp * 1e6  # Converted to seconds
-            # Disable the PP values tab if there's no PP information. Also disable PP de-rotation
-            if all([self.pem_file.has_all_gps(),
-                    self.pem_file.ramp > 0,
-                    self.pem_file.channel_times.iloc[0].End + ramp < ramp]):
-                self.pp_enabled = True
-                self.tabWidget.setTabEnabled(0, True)
-                self.tabWidget.setTabEnabled(2, True)
-                self.pp_btn.setEnabled(True)
-
-                # Add the PP rotation plot curves and scatter items
-                if not pem_file.is_fluxgate():
-                    self.rot_ax.addItem(self.cpp_rot_curve)
-                    self.rot_ax.addItem(self.cpp_rot_scatter)
-                self.rot_ax.addItem(self.mpp_rot_curve)
-                self.rot_ax.addItem(self.mpp_rot_scatter)
-
-                plot_pp_values()
-            else:
-                self.pp_enabled = False
-                self.tabWidget.setTabEnabled(0, False)
-                self.tabWidget.setTabEnabled(3, False)
-                self.pp_btn.setEnabled(False)
-
-        def set_default_soa():
-            """
-            Set the SOA using the mean deviation between the accelerometer and measured PP values.
-            :return: None
-            """
-            if not self.pp_enabled:
-                return
-
-            acc_df = pem_file.get_roll_data("Acc", self.soa)
-            measured_pp_df = pem_file.get_roll_data("Measured_PP", self.soa)
-            acc_deviation = measured_pp_df.Angle - acc_df.Angle
-            if all(acc_deviation < 0):
-                acc_deviation = acc_deviation + 360
-
-            # Calculate the average deviation for the curve line. Only consider the 2nd half as it is less affected by
-            # geometry error
-            acc_dev_df = pd.DataFrame([acc_deviation, acc_df.Station]).T.iloc[int(len(acc_deviation) / 2):]
-            acc_avg_df = acc_dev_df.groupby("Station", as_index=False).mean()
-
-            # Set the SOA to the mean accelerometer deviation
-            soa = acc_avg_df.Angle.mean()
-            self.soa = (soa if soa < 180 else (360 - soa) * -1)
-            self.soa_sbox.blockSignals(True)
-            self.soa_sbox.setValue(self.soa)
-            self.soa_sbox.blockSignals(False)
-
-            if self.soa > 20:
-                self.message.warning(self, "High SOA Value", f"An SOA value of {self.soa:.0f} was used. The XY data may"
-                                                             f" be backwards from normal convention.")
-
-        def check_verticality():
-            """
-            Add a warning and set the mag de-rotation as default if the hole is near vertical (> 85°)
-            :return: None
-            """
-            mean_dip = pem_file.get_dip(average=True).Dip.mean()
-            if mean_dip <= -85.:
-                self.message.warning(self, "Vertical Hole", f"The hole is near vertical.\n"
-                                                            f"Magnetic de-rotation set as default.")
-                self.mag_btn.click()
-
         while isinstance(pem_file, list):
             pem_file = pem_file[0]
 
@@ -581,9 +435,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                                              f"{pem_file.filepath.name} is already de-rotated. " +
                                              'Do you wish to de-rotate again?',
                                              self.message.Yes | self.message.No)
-            if response == self.message.No:
-                return
-            else:
+            if response == self.message.Yes:
                 self.separator.show()
                 self.unrotate_btn.show()
 
@@ -591,7 +443,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                     self.unrotate_btn.setEnabled(False)
 
         try:
-            self.pem_file, ineligible_stations, error_msg = self.pem_file.prep_rotation()
+            self.pem_file, ineligible_stations, error_msg = self.pem_file.prep_rotation(self.get_method())
         except Exception as e:
             self.message.critical(self, "Error", f"Error preparing data for de-rotation:\n{e}.")
             self.close()
@@ -602,11 +454,11 @@ class Derotator(QMainWindow, Ui_Derotator):
 
         self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")
 
-        set_pp()
+        self.set_pp()
 
         # Fill the table with the ineligible stations
         if not ineligible_stations.empty:
-            fill_table(ineligible_stations)
+            self.fill_table(ineligible_stations)
             self.bad_stations_label.show()
         else:
             self.bad_stations_label.hide()
@@ -618,17 +470,163 @@ class Derotator(QMainWindow, Ui_Derotator):
         for ax in [self.dev_ax, self.dip_ax, self.mag_ax, self.rot_ax, self.pp_ax]:
             ax.setLimits(yMin=stations.min() - 1, yMax=stations.max() + 1)
 
-        set_default_soa()
+        self.set_default_soa()
         self.rotate()
         if self.pem_file.has_d7():
-            check_verticality()
-            plot_mag()
-            plot_dip()
+            self.check_verticality()
+            self.plot_mag()
+            self.plot_dip()
         else:
             self.tabWidget.setTabEnabled(1, False)
 
         self.show()
         self.reset_range()
+
+    def fill_table(self, stations):
+        """
+        Fill the stations list with the ineligible readings
+        :param stations: pd.DataFrame of ineligible readings
+        """
+        list = []
+        for s in stations.itertuples():
+            result = f"{s.Station} {s.Component} - reading # {s.Reading_number} (index {s.Reading_index})"
+            list.append(result)
+        self.list.setText("\n".join(list))
+
+    def plot_mag(self):
+        mag_df = self.pem_file.get_mag(average=False)
+        mag_df_avg = self.pem_file.get_mag(average=True)
+        if mag_df.Mag.any():
+            self.mag_curve.setData(x=mag_df_avg.Mag.to_numpy(), y=mag_df_avg.Station.astype(int).to_numpy())
+            self.mag_scatter.setData(x=mag_df.Mag.to_numpy(), y=mag_df.Station.astype(int).to_numpy())
+        else:
+            logger.warning(f"No mag data found in {self.pem_file.filepath.name}")
+
+    def plot_dip(self):
+        """
+        Plot the dip of the hole.
+        """
+        dip_df = self.pem_file.get_dip(average=False)
+        dip_df_avg = self.pem_file.get_dip(average=True)
+        if not dip_df.empty:
+            self.dip_curve.setData(x=dip_df_avg.Dip.to_numpy(), y=dip_df_avg.Station.astype(int).to_numpy())
+            self.dip_scatter.setData(x=dip_df.Dip.to_numpy(), y=dip_df.Station.astype(int).to_numpy())
+        else:
+            logger.warning(f"No dip data found in {self.pem_file.filepath.name}")
+
+    def plot_pp_values(self):
+        """
+        Plot the theoretical PP values with the measured (raw) and cleaned PP
+        """
+        # Used for PP values and rotation angle plots, not lin plots
+        data = self.pem_file.data.drop_duplicates(subset="RAD_ID")
+        stations = data.Station.astype(float)
+
+        # PP XY cleaned
+        if not self.pem_file.is_fluxgate():
+            ppxy_cleaned = data.RAD_tool.map(lambda x: x.ppxy_cleaned)
+            data.assign(PPXY_cleaned=ppxy_cleaned)
+
+            ppxy_cleaned_df = pd.DataFrame([ppxy_cleaned, stations]).T
+            ppxy_cleaned_df.rename(columns={"RAD_tool": "PPXY_cleaned"}, inplace=True)
+            ppxy_cleaned_avg_df = ppxy_cleaned_df.groupby("Station", as_index=False).mean()
+
+            self.cleaned_pp_curve.setData(ppxy_cleaned_avg_df.PPXY_cleaned, ppxy_cleaned_avg_df.Station)
+            self.cleaned_pp_scatter.setData(ppxy_cleaned_df.PPXY_cleaned, ppxy_cleaned_df.Station)
+            self.pp_ax.addItem(self.cleaned_pp_curve)
+            self.pp_ax.addItem(self.cleaned_pp_scatter)
+
+        # PP XY measured
+        ppxy_measured = data.RAD_tool.map(lambda x: x.ppxy_measured)
+        data.assign(PPXY_measured=ppxy_measured)
+
+        ppxy_measured_df = pd.DataFrame([ppxy_measured, stations]).T
+        ppxy_measured_df.rename(columns={"RAD_tool": "PPXY_measured"}, inplace=True)
+        ppxy_measured_avg_df = ppxy_measured_df.groupby("Station", as_index=False).mean()
+
+        self.measured_pp_curve.setData(ppxy_measured_avg_df.PPXY_measured, ppxy_measured_avg_df.Station)
+        self.measured_pp_scatter.setData(ppxy_measured_df.PPXY_measured, ppxy_measured_df.Station)
+        self.pp_ax.addItem(self.measured_pp_curve)
+        self.pp_ax.addItem(self.measured_pp_scatter)
+
+        # PP XY theory
+        ppxy_theory = data.RAD_tool.map(lambda x: x.ppxy_theory)
+        data.assign(PPXY_theory=ppxy_theory)
+
+        ppxy_theory_df = pd.DataFrame([ppxy_theory, stations]).T
+        ppxy_theory_df.rename(columns={"RAD_tool": "PPXY_theory"}, inplace=True)
+        ppxy_theory_avg_df = ppxy_theory_df.groupby("Station", as_index=False).mean()
+
+        self.theory_pp_curve.setData(ppxy_theory_avg_df.PPXY_theory, ppxy_theory_avg_df.Station)
+        self.theory_pp_scatter.setData(ppxy_theory_df.PPXY_theory, ppxy_theory_df.Station)
+        self.pp_ax.addItem(self.theory_pp_curve)
+        self.pp_ax.addItem(self.theory_pp_scatter)
+
+    def set_pp(self):
+        ramp = self.pem_file.ramp * 1e6  # Converted to seconds
+        # Disable the PP values tab if there's no PP information. Also disable PP de-rotation
+        if all([self.pem_file.has_all_gps(),
+                self.pem_file.ramp > 0,
+                self.pem_file.channel_times.iloc[0].End + ramp < ramp]):
+            self.pp_enabled = True
+            self.tabWidget.setTabEnabled(0, True)
+            self.tabWidget.setTabEnabled(2, True)
+            self.pp_btn.setEnabled(True)
+
+            # Add the PP rotation plot curves and scatter items
+            if not self.pem_file.is_fluxgate():
+                self.rot_ax.addItem(self.cpp_rot_curve)
+                self.rot_ax.addItem(self.cpp_rot_scatter)
+            self.rot_ax.addItem(self.mpp_rot_curve)
+            self.rot_ax.addItem(self.mpp_rot_scatter)
+
+            self.plot_pp_values()
+        else:
+            self.pp_enabled = False
+            self.tabWidget.setTabEnabled(0, False)
+            self.tabWidget.setTabEnabled(3, False)
+            self.pp_btn.setEnabled(False)
+
+    def set_default_soa(self):
+        """
+        Set the SOA using the mean deviation between the accelerometer and measured PP values.
+        :return: None
+        """
+        if not self.pp_enabled:
+            return
+
+        acc_df = self.pem_file.get_roll_data("Acc", self.soa)
+        measured_pp_df = self.pem_file.get_roll_data("Measured_PP", self.soa)
+        acc_deviation = measured_pp_df.Angle - acc_df.Angle
+        if all(acc_deviation < 0):
+            acc_deviation = acc_deviation + 360
+
+        # Calculate the average deviation for the curve line. Only consider the 2nd half as it is less affected by
+        # geometry error
+        acc_dev_df = pd.DataFrame([acc_deviation, acc_df.Station]).T.iloc[int(len(acc_deviation) / 2):]
+        acc_avg_df = acc_dev_df.groupby("Station", as_index=False).mean()
+
+        # Set the SOA to the mean accelerometer deviation
+        soa = acc_avg_df.Angle.mean()
+        self.soa = (soa if soa < 180 else (360 - soa) * -1)
+        self.soa_sbox.blockSignals(True)
+        self.soa_sbox.setValue(self.soa)
+        self.soa_sbox.blockSignals(False)
+
+        if self.soa > 20:
+            self.message.warning(self, "High SOA Value", f"An SOA value of {self.soa:.0f} was used. The XY data may"
+                                                         f" be backwards from normal convention.")
+
+    def check_verticality(self):
+        """
+        Add a warning and set the mag de-rotation as default if the hole is near vertical (> 85°)
+        :return: None
+        """
+        mean_dip = self.pem_file.get_dip(average=True).Dip.mean()
+        if mean_dip <= -85.:
+            self.message.warning(self, "Vertical Hole", f"The hole is near vertical.\n"
+                                                        f"Magnetic de-rotation set as default.")
+            self.mag_btn.click()
 
     def plot_pem(self, pem_file):
         """
@@ -861,8 +859,8 @@ def main():
     #     app.processEvents()
         # input()
 
-    pem_files = pem_g.parse(r"C:\_Data\Trevali Peru Data\SAN-232-18\RAW\XY.PEM")
-    # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_SAN-225G-18 XYZ.PEM")
+    # pem_files = pem_g.parse(r"C:\_Data\Trevali Peru Data\SAN-232-18\RAW\XY.PEM")
+    pem_files = pem_g.get_pems(folder="Rotation Testing", file="em10-10xy_0403.PEM")
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_BX-081 XY.PEM")
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_MRC-067 XY.PEM")
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_MX-198 XY.PEM")
