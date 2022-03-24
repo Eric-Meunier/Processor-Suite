@@ -6,6 +6,7 @@ import re
 import sys
 
 import keyboard
+import itertools
 import pyqtgraph as pg
 import numpy as np
 import pandas as pd
@@ -16,6 +17,7 @@ from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QLabel, QA
                                QInputDialog, QPushButton, QShortcut, QVBoxLayout)
 from scipy import spatial, signal
 
+from src import timeit
 from src.pem import convert_station
 from src.pem.pem_file import PEMParser, PEMGetter
 from src.qt_py import get_icon, get_line_color
@@ -741,6 +743,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.status_bar.showMessage(f'File saved to {file_path}', 2000)
             QTimer.singleShot(2000, lambda: self.station_text.setText(station_text))
 
+    @timeit
     def update_(self):
         """
         Updates all the plots, hide/show components as needed, reset the limits of the plots, re-calculate the stations
@@ -780,11 +783,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             Update which profile axes are active based on what components are present and update the axis links.
             Resets and re-adds all axes in order to keep the sorting of self.active_profile_axes consistent.
             """
-            def link_profile_axes():  # is this necessary?
-                if len(self.active_profile_axes) > 1:
-                    for ax in self.active_profile_axes[1:]:
-                        ax.setXLink(self.active_profile_axes[0])
-
             def update_active_axes(component):
                 if component == "X":
                     layout_axes = self.x_layout_axes
@@ -812,17 +810,12 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                         print(f"'{component}' is not in the list of available components ({avaiable_components})")
                         self.cycle_profile_component()
 
-                # if self.profile_tab_widget.currentIndex() == 0:
-                #     self.cycle_profile_component()
-
             # Reset in order to keep the sorting of the self.active_profile_axes list consistent.
             self.active_profile_axes = []
 
             update_active_axes("X")
             update_active_axes("Y")
             update_active_axes("Z")
-
-            # link_profile_axes()  # Is this necessary?
 
         # Update the list of stations
         self.stations = np.sort(self.pem_file.get_stations(converted=True))
@@ -915,6 +908,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             for ax in self.decay_axes:
                 ax.setYRange(min_y, max_y)
 
+    @timeit
     def plot_profiles(self, components=None):
         """
         Plot the PEM file in a LIN plot style, with both components in separate plots
@@ -940,26 +934,31 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                     continue
                 ax.clearPlots()
 
+        @timeit
         def plot_lin(profile_data, axes):
-            def plot_lines(df, ax):
+            def plot_lines(data, ax):
                 """
                 Plot the lines on the pyqtgraph ax
-                :param df: DataFrame of filtered data
+                :param data: numpy array
                 :param ax: pyqtgraph PlotItem
                 """
-                df_avg = df.groupby('Station').mean()
-                x, y = df_avg.index.to_numpy(), df_avg.to_numpy()
+                x, y = np.array([]), np.array([])
+                for key, group in itertools.groupby(data, key=lambda x: x[0]):  # Groups by Station
+                    group = np.array(list(group))
+                    mean = np.mean(group[:, 1])
+                    x = np.append(x, float(key))
+                    y = np.append(y, mean)
 
                 ax.plot(x=x, y=y, pen=pg.mkPen(self.foreground_color, width=1.))
 
-            def plot_scatters(df, ax):
+            def plot_scatters(data, ax):
                 """
                 Plot the scatter plot markers
-                :param df: DataFrame of filtered data
+                :param data: numpy array
                 :param ax: pyqtgraph PlotItem
-                :return:
+                :return: None
                 """
-                x, y = df.index.to_numpy(), df.to_numpy()
+                x, y = data[:, 0], data[:, 1]
 
                 scatter = pg.ScatterPlotItem(x=x, y=y,
                                              pen=pg.mkPen(self.foreground_color, width=1.),
@@ -983,12 +982,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                                                     name="PP Theory")
                     ax.addItem(pp_plot_item)
 
-            # Use the actual channel numbers for the Y axis of the profile plots so it matches with decay plots
-            ch_offset = self.pem_file.channel_times[~self.pem_file.channel_times.Remove.astype(bool)].index[1] - 1
-
             # Since toggling the self.actionSplit_Profiles needs to call plot_profiles(), there's no point in plotting
             # both the split profiles and single profile.
-            if self.actionSplit_Profile.isChecked():
+            if self.actionSplit_Profile.isChecked():  # 5 axis profile plots
                 # Plot the split profile axes
                 for i, bounds in enumerate(self.channel_bounds):
                     ax = axes[i + 1]  # axes[0] is the single profile ax
@@ -1002,12 +998,13 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
                     # Plot the data
                     for channel in range(bounds[0], bounds[1] + 1):
-                        data = profile_data.loc[:, channel]
+                        data = profile_data[:, [0, channel + 3]]  # +3 since first three columns are Station, Component and Deleted
                         plot_lines(data, ax)
                         if self.show_scatter_cbox.isChecked():
                             plot_scatters(data, ax)
 
                     ax.autoRange()  # Is there ever a reason not to auto range the profile axes?
+
                 plot_theory_pp(self.theory_data, axes[1])
                 axes[1].autoRange()  # Auto range again after the PP line is added
             else:
@@ -1016,7 +1013,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 ax = axes[0]
                 for channel in range(min_ch, max_ch + 1):
                     ax.setLabel('left', f"Channel {'PP' if min_ch == 0 else min_ch} to {max_ch}", units=self.units)
-                    data = profile_data.loc[:, channel]
+                    data = profile_data[:, [0, channel + 3]]  # +3 since first three columns are Station, Component and Deleted
                     plot_lines(data, ax)
                     if self.show_scatter_cbox.isChecked():
                         plot_scatters(data, ax)
@@ -1026,12 +1023,12 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 if min_ch == 0:
                     plot_theory_pp(self.theory_data, ax)
 
-        file = copy.deepcopy(self.pem_file)
+        file = self.pem_file.copy()
         file.data = file.data.loc[~file.data.Deleted.astype(bool)]  # Remove deleted data for the profile plots.
         self.update_()
         self.number_of_readings.setText(f"{len(file.data)} reading(s)")
 
-        if not isinstance(components, np.ndarray):
+        if not isinstance(components, np.ndarray):  # When "all" or None is passed
             # Get the components
             if components is None or components == 'all':
                 components = file.get_components()
@@ -1040,15 +1037,14 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         for component in components:
             filt = (self.profile_data.Component == component) & (self.profile_data.Deleted == False)
-            profile_data = self.profile_data[filt].set_index("Station", drop=True)
+            profile_data = self.profile_data[filt].values
+            if len(profile_data) == 0:
+                continue
 
             # For nearest station calculation
             self.component_stations[component] = self.pem_file.get_stations(component=component,
                                                                             converted=True,
                                                                             incl_deleted=True)
-
-            if profile_data.empty:
-                continue
 
             # Select the correct axes based on the component
             if component == 'X':
@@ -1060,6 +1056,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             plot_lin(profile_data, axes)
 
+    # @timeit
     def plot_decays(self, station, preserve_selection=False):
         """
         Plot the decay lines for each component of the given station
@@ -1216,6 +1213,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             for ax in self.active_decay_axes:
                 ax.autoRange()
 
+    # @timeit
     def plot_mag(self):
         # Only plot the mag once. It doesn't need to be cleared.
         x, y = self.mag_df.Station.to_numpy(), self.mag_df.Mag.to_numpy()
@@ -1224,6 +1222,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             ax.getAxis("left").setLabel("Total Magnetic Field", units="pT")
             ax.addItem(mag_plot_item)
 
+    # @timeit
     def update_auto_clean_lines(self):
         """
         Update the position and length of the auto-clean threshold lines.
@@ -1269,28 +1268,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 # median = signal.savgol_filter(median, 5, 3)
                 median = signal.medfilt(median, 3)
 
-            # if not self.plot_ontime_decays_cbox.isChecked():
-            #     # Don't look past the last offtime channel since it isn't included in the median_data
-            #     median = median[~self.pem_file.channel_times.Remove.iloc[: self.last_offtime_channel + 1].astype(bool)]
-
-            # Resets for the X axis values when not plotting on-time
-            # if not self.plot_ontime_decays_cbox.isChecked():
-            #     median_data.rename(dict(zip(median_data.columns,
-            #                                 range(len(median_data.columns)))),
-            #                        inplace=True,
-            #                        axis=1)
-
             offset = np.array([self.auto_clean_std_sbox.value()] * window_size)
-            # off_time_median = median_data.median().to_numpy()
-            # if self.pem_file.number_of_channels > 10:
-            #     # off_time_median = signal.savgol_filter(off_time_median, 5, 3)
-            #     off_time_median = signal.medfilt(off_time_median, 3)
-
-            #
             x = np.arange(last_channel - window_size + 1, last_channel + 1)
-            # if not self.plot_ontime_decays_cbox.isChecked():
-            #     # Offset the channels by the number of on-time channels. Next-pulse on-time channels don't matter.
-            #     x = x -
             thresh_line_1.setData(x=x, y=median[-window_size:] + offset)
             thresh_line_2.setData(x=x, y=median[-window_size:] - offset)
 
@@ -2148,8 +2127,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 group = group.sort_values(by="Deviation", ascending=False).drop("Deviation", axis=1)
                 group.Deleted = group.Reading.map(lambda x: eval_decay(x, data_std, data_median, max_removable))
 
-            cleaned_data = cleaned_data.append(group)
-            # cleaned_data = pd.concat([cleaned_data, group])
+            cleaned_data = pd.concat([cleaned_data, group], axis=0)
 
         # Update the data
         self.pem_file.data.update(cleaned_data)

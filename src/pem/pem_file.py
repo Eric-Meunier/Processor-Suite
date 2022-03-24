@@ -2318,8 +2318,8 @@ class PEMFile:
                     reading[rad_tool_pos] = new_rad
                 roll = get_roll(rad, new_rad, method)
 
-                xs = [r for r in group if r[component_pos] == "X"]
-                ys = [r for r in group if r[component_pos] == "Y"]
+                xs = np.array([r for r in group if r[component_pos] == "X"])
+                ys = np.array([r for r in group if r[component_pos] == "Y"])
 
                 if len(xs) == len(ys):
                     for i, (x_data, y_data) in enumerate(zip(xs, ys)):
@@ -2330,8 +2330,8 @@ class PEMFile:
                         y_data[reading_pos] = np.array([x * math.sin(roll) + y * math.cos(roll) for (x, y) in zip(x_decay, y_decay)])
                 else:
                     # print(f"Station {key[0]} has uneven number of X and Y readings.")
-                    x_pair = np.average([r[reading_pos] for r in xs], axis=0, weights=[r[stacks_pos] for r in xs])
-                    y_pair = np.average([r[reading_pos] for r in ys], axis=0, weights=[r[stacks_pos] for r in ys])
+                    x_pair = np.average(xs[:, reading_pos], axis=0, weights=xs[:, stacks_pos])
+                    y_pair = np.average(ys[:, reading_pos], axis=0, weights=ys[:, stacks_pos])
 
                     for x_data in xs:
                         x_decay = x_data[reading_pos]
