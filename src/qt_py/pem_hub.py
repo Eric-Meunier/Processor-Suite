@@ -2478,9 +2478,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     self.message.critical(self, "Access Denied", "Access was defined.")
 
         menu = QMenu()
+        menu.addAction(get_icon("edit"), 'Auto-Name Files', autoname_files)
         menu.addAction(get_icon("rename"), 'Rename Folder', rename)
         # menu.addSeparator()
-        menu.addAction('Auto-Name Files', autoname_files)
         menu.addAction(get_icon("add"), 'Create Delivery Folder', create_delivery_folder)
         menu.exec_(self.project_tree.viewport().mapToGlobal(position))
 
