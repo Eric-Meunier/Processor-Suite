@@ -452,7 +452,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             pem_file = self.pem_files[row]
             value = self.table.item(row, col).text()
 
-            # Rename a file when the 'File' column is changed
+            # Rename a file when the 'File' (filepath) column is changed
             if col == self.table_columns.index('File'):
                 old_path = pem_file.filepath
                 new_value = self.table.item(row, col).text()
@@ -473,6 +473,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     else:
                         pem_file.filepath = new_path
                         self.fill_pem_list()
+                        # TODO Re-order the PEM files in PEMHub.
                         self.status_bar.showMessage(f"{old_path.name} renamed to {str(new_value)}", 2000)
 
             elif col == self.table_columns.index('Date'):
@@ -1779,7 +1780,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.status_bar.showMessage(f"{pem_file.filepath} does not exist.", 2000)
                 return
 
-            browser = PEMBrowser(pem_file)
+            browser = PEMTextBrowser(pem_file)
             browser.close_request.connect(on_browser_close)
             self.text_browsers.append(browser)
             browser.show()
@@ -4279,7 +4280,7 @@ class PathFilter(QWidget):
             self.accept_sig.emit()
 
 
-class PEMBrowser(QTextBrowser):
+class PEMTextBrowser(QTextBrowser):
     close_request = Signal(object)
 
     def __init__(self, pem_file):
@@ -4854,32 +4855,6 @@ class ChannelTimeViewer(QMainWindow):
         self.fill_channel_table()
 
 
-class SuffixWarningViewer(QMainWindow):
-
-    def __init__(self, pem_file, parent=None):
-        super().__init__()
-        self.parent = parent
-
-        assert not pem_file.is_borehole(), f"{pem_file.filepath.name} is a borehole file."
-
-        self.pem_file = pem_file
-        self.suffixes = self.pem_file.get_suffix_warnings()
-        self.suffixes = self.suffixes[['Station', 'Component', 'Reading_index', 'Reading_number']]
-        if self.suffixes.empty:
-            logger.error(f"No suffixes to view in {pem_file.filepath.name}.")
-            return
-
-        self.setWindowTitle(f"Suffix Warnings Viewer - {pem_file.filepath.name}")
-
-        self.setLayout(QVBoxLayout())
-        self.table = pg.TableWidget()
-        self.layout().addWidget(self.table)
-        self.setCentralWidget(self.table)
-
-        self.table.setData(self.suffixes.to_dict('index'))
-        self.show()
-
-
 class WarningEditor(QMainWindow):
     accept_sig = Signal(object)
 
@@ -5007,16 +4982,18 @@ class GPSWarningViewer(QMainWindow):
                 box.setAlignment(Qt.AlignCenter)
 
                 for warning_type, warnings_df in warnings.items():  # Specific types of warnings, duplicates, sorting, etc..
-                    box.layout().addWidget(QLabel(warning_type + ":"))
                     if warnings_df.empty:
-                        box.layout().addWidget(QLabel("None"))
+                        # box.layout().addWidget(QLabel("None"))
                         continue
-                    table = QTableWidget()
-                    table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-                    table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
-                    table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-                    df_to_table(warnings_df, table)
-                    box.layout().addWidget(table)
+
+                    box.layout().addWidget(QLabel(warning_type + ":"))
+                    label = QLabel(warnings_df.to_string())
+                    # table = QTableWidget()
+                    # table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                    # table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
+                    # table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+                    # df_to_table(warnings_df, table)
+                    box.layout().addWidget(label)
 
                 self.widget.layout().addWidget(box)
 
@@ -5308,10 +5285,7 @@ class MagDeclinationCalculator(QMainWindow):
         :param pem_file: PEMFile object
         :return: None
         """
-        if not pem_file:
-            logger.warning(f"No PEM files passed.")
-            return
-
+        assert pem_file, f"No PEM file passed."
         assert pem_file.get_crs() is not None, f'{pem_file.get_crs()} is not a valid GPS coordinate system'
 
         mag = pem_file.get_mag_dec()
@@ -5357,7 +5331,7 @@ def main():
     # pem_files = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-207\Final\_EM21-207 XYT.PEM")
     # pem_files = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-206\RAW\em21-206 xy_1030.PEM")
     # pem_files2 = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-206\RAW\em21-206 z_1030.PEM")
-    # pem_files = pem_getter.parse(samples_folder.joinpath(r"Line GPS\800N.PEM"))
+    pem_files = pem_getter.parse(samples_folder.joinpath(r"Line GPS\800N.PEM"))
     # txt_file = samples_folder.joinpath(r"Line GPS\KA800N_1027.txt")
     # pem_files = pem_getter.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0251-21\RAW\xy1910_1019.dmp2")
     # pem_files.extend(pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0824.PEM"))
@@ -5368,11 +5342,8 @@ def main():
     # channel_viewer = ChannelTimeViewer(pem_files)
     # channel_viewer.show()
 
-    # gps_warning_viewer = GPSWarningViewer(pem_files)
+    # mw = GPSWarningViewer(pem_files)
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
-    # mw.open_project_dir()
-    # mw.show()
-    # app.processEvents()
 
     # mw.add_pem_files(pem_files)
 
@@ -5393,46 +5364,6 @@ def main():
     # mw.save_pem_file_as()
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.add_gps_files(txt_file)
-
-    """ Attempting to re-create printing bug """
-    # mw.open_unpacker(folder=samples_folder.joinpath(r"Raw Boreholes\EB-21-52\DUMP\July 20, 2021"))
-    # mw.unpacker.accept()
-    #
-    # dmp_files = [samples_folder.joinpath(r"Raw Boreholes\EB-21-52\RAW\xy_0720.dmp2")]
-    # dmp_files.extend([samples_folder.joinpath(r"Raw Boreholes\EB-21-52\RAW\z_0720.dmp2")])
-    # mw.add_dmp_files(dmp_files)
-    # mw.table.selectRow(0)
-    # mw.add_gps_files(samples_folder.joinpath(r"Raw Boreholes\EB-21-52\GPS\LOOP EB-1_0718.txt"))
-    # mw.stackedWidget.currentWidget().loop_adder.accept()
-    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
-    # mw.add_gps_files(samples_folder.joinpath(r"Raw Boreholes\EB-21-52\GPS\EB-21-52_0719.txt"))
-    # mw.open_pem_geometry()
-    # mw.pem_geometry.az_output_combo.setCurrentIndex(1)
-    # mw.pem_geometry.dip_output_combo.setCurrentIndex(1)
-    # mw.pem_geometry.accept()
-    # mw.open_gps_share('all', mw.pem_info_widgets[0])
-    # mw.gps_share.accept()
-    # mw.open_derotator()
-    # mw.derotator.accept()
-    #
-    # mw.open_pem_plot_editor()
-    # mw.pem_editor_widgets[0].auto_clean()
-    # mw.pem_editor_widgets[0].close()
-    # mw.table.selectRow(1)
-    # mw.open_pem_plot_editor()
-    # mw.pem_editor_widgets[0].auto_clean()
-    # mw.pem_editor_widgets[0].close()
-    #
-    # mw.save_pem_files(selected=False)
-    #
-    # mw.export_pem_files(selected=False, processed=True)
-    # mw.remove_pem_file()
-    # mw.table.selectRow(0)
-    # mw.remove_pem_file()
-    # mw.add_pem_files([samples_folder.joinpath(r"Raw Boreholes\EB-21-52\Final\xy.pem"),
-    #                  samples_folder.joinpath(r"Raw Boreholes\EB-21-52\Final\z.pem")])
-
-    """"""
 
     mw.show()
     # mw.open_pdf_plot_printer(selected=False)

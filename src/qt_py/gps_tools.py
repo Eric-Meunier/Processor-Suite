@@ -42,7 +42,7 @@ class GPSAdder(QMainWindow):
     """
     accept_sig = Signal(object)
 
-    def __init__(self, pem_file, parent=None, darkmode=False):
+    def __init__(self, pem_file, parent=None, darkmode=False, **kwargs):
         super().__init__()
         self.resize(1000, 800)
         self.setWindowIcon(get_icon('gps_adder.png'))
@@ -649,6 +649,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.table.setFixedWidth(400)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
+        self.auto_sort_cbox.setChecked(kwargs.get("sort_loop"))
         self.plan_view.addItem(self.plan_plot)
         self.section_view.addItem(self.section_plot)
         self.plan_view.setFocusPolicy(Qt.StrongFocus)
@@ -731,6 +732,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         :param check_elevation_errors: bool, prompt to fix elevation errors. Used on inital open only.
         """
         errors = pd.DataFrame()
+
         if isinstance(gps, str) or isinstance(gps, Path):
             if Path(gps).is_file():
                 self.gps_object = TransmitterLoop(gps)

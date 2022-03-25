@@ -14,7 +14,7 @@ from scipy import spatial
 from shapely.geometry import asMultiPoint, Point, Polygon, MultiLineString, LineString
 from zipfile import ZipFile
 
-from src import app_temp_dir
+from src import app_temp_dir, timeit
 from src.pem import convert_station
 from src.qt_py import read_file
 
@@ -640,58 +640,60 @@ class TransmitterLoop(BaseGPS):
         Return rows where the elevation is 0 and where the rows might not be sorted counter-clockwise.
         :return: DataFrame
         """
-        sorting_warnings = pd.DataFrame()
-        elevation_warnings = pd.DataFrame()
+        @timeit
+        def get_sorting_warnings():
+            sorting_warnings = pd.DataFrame()
+
+            sorted_df = self.get_sorted_loop().copy().reset_index(drop=True)
+            sorted_values = sorted_df.values
+            loop_values = self.df.values
+            loop_sorted = False
+
+            # Ensure the loop is truly not sorted, and not simple caused by a different start and end coordinate.
+            for i in range(len(loop_values)):  # Try every permutation
+                if np.array_equal(np.roll(loop_values, -i, axis=0), sorted_values):
+                    print(f"Loop is sorted after rolling {i} times.")
+                    loop_sorted = True
+                    break
+
+            if not loop_sorted:
+                # Attempt to find which values are different between the sorted and current loop coordinates
+                num_matches = []
+                for i in range(len(loop_values)):
+                    # Find which roll value creates to closest match between the two loops
+                    test_values = np.roll(loop_values, -i, axis=0)
+                    count = 0
+                    for j in range(len(test_values)):
+                        if np.array_equal(test_values[j], sorted_values[j]):
+                            count += 1
+                        num_matches.append((i, count))
+
+                best_match = max(num_matches, key=lambda x: x[1])
+                print(f"Best match is roll {best_match[0]} with {best_match[1]} matches")
+
+                sorting_mask = []
+                best_match_values = np.roll(loop_values, -best_match[0], axis=0)
+                for k in range(len(best_match_values)):
+                    if np.array_equal(best_match_values[k], sorted_values[k]):
+                        sorting_mask.append(False)
+                    else:
+                        sorting_mask.append(True)
+
+                sorting_warnings = self.df[sorting_mask].dropna()
+                print(f"Sorting warnings: \n{sorting_warnings}")
+
+            return sorting_warnings
+
+        def get_elevation_warnings():
+            elevation_warnings = self.df[self.df.Elevation == 0]
+            return elevation_warnings
 
         if self.df.empty:
-            return {"Sorting Warnings": sorting_warnings,
-                    "Elevation Warnings": elevation_warnings}
+            return {"Sorting Warnings": pd.DataFrame(),
+                    "Elevation Warnings": pd.DataFrame()}
 
-        # Sorting
-        sorted_df = self.get_sorted_loop().copy().reset_index(drop=True)
-        sorted_values = sorted_df.values
-        loop_values = self.df.values
-        loop_sorted = False
-
-        # Ensure the loop is truly not sorted, and not simple caused by a different start and end coordinate.
-        for i in range(len(loop_values)):  # Try every permutation
-            if np.array_equal(np.roll(loop_values, -i, axis=0), sorted_values):
-                print(f"Loop is sorted after rolling {i} times.")
-                loop_sorted = True
-                break
-
-        if not loop_sorted:
-            # Attempt to find which values are different between the sorted and current loop coordinates
-            num_matches = []
-            for i in range(len(loop_values)):
-                # Find which roll value creates to closest match between the two loops
-                test_values = np.roll(loop_values, -i, axis=0)
-                count = 0
-                for j in range(len(test_values)):
-                    if np.array_equal(test_values[j], sorted_values[j]):
-                        count += 1
-                    num_matches.append((i, count))
-
-            best_match = max(num_matches, key=lambda x: x[1])
-            print(f"Best match is roll {best_match[0]} with {best_match[1]} matches")
-
-            sorting_mask = []
-            best_match_values = np.roll(loop_values, -best_match[0], axis=0)
-            for k in range(len(best_match_values)):
-                if np.array_equal(best_match_values[k], sorted_values[k]):
-                    sorting_mask.append(False)
-                else:
-                    sorting_mask.append(True)
-
-            sorting_warnings = self.df[sorting_mask].dropna()
-            print(f"Sorting warnings: \n{sorting_warnings}")
-
-        # Elevation
-        elevation_warnings = self.df[self.df.Elevation == 0]
-        # print(f"Elevation warnings:\n{elevation_warnings}")
-
-        return {"Sorting Warnings": sorting_warnings,
-                "Elevation Warnings": elevation_warnings}
+        return {"Sorting Warnings": get_sorting_warnings(),
+                "Elevation Warnings": get_elevation_warnings()}
 
 
 class SurveyLine(BaseGPS):

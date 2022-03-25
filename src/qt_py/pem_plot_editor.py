@@ -2151,8 +2151,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 group = group.sort_values(by="Deviation", ascending=False).drop("Deviation", axis=1)
                 group.Deleted = group.Reading.map(lambda x: eval_decay(x, data_std, data_median, max_removable))
 
-            cleaned_data = cleaned_data.append(group)
-            # cleaned_data = pd.concat([cleaned_data, group])
+            cleaned_data = pd.concat([cleaned_data, group], axis=0)
 
         # Update the data
         self.pem_file.data.update(cleaned_data)
