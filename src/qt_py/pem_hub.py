@@ -1955,21 +1955,27 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             """
             filepath = Path(filepath)
             removal_rows = []
+
+            # Block signals so the files in the table aren't automatically rearranged, which causes
+            # issues with removing the correct files.
+            self.table.blockSignals(True)
             if self.actionRename_Merged_Files.isChecked():
                 for row in rows:
                     name = self.table.item(row, self.table_columns.index("File")).text()
                     if name != filepath.name:
-                        removal_rows.append(row)
+                        # removal_rows.append(row)
                         if self.pem_files[row].filepath.is_file():
                             new_name = "[M]" + name
                             # Also triggers file re-name.
                             self.table.item(row, self.table_columns.index("File")).setText(new_name)
+            self.table.blockSignals(False)
 
             if self.delete_merged_files_cbox.isChecked():
                 self.remove_pem_file(removal_rows)
 
             self.add_pem_files([filepath], refresh=True)
             self.fill_pem_list()
+            self.reorder_pems()
 
         pem_files, rows = self.get_pem_files(selected=True)
         if len(pem_files) != 2:
