@@ -474,6 +474,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         pem_file.filepath = new_path
                         self.fill_pem_list()
                         # TODO Re-order the PEM files in PEMHub.
+                        self.reorder_pems()
                         self.status_bar.showMessage(f"{old_path.name} renamed to {str(new_value)}", 2000)
 
             elif col == self.table_columns.index('Date'):
@@ -1624,6 +1625,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         :return: None
         """
         logger.info(f"Adding {pem_file.filepath.name} to the table.")
+        assert self.table.rowCount() >= row, f"PEM file to be added to row {row}, but {self.table.rowCount()} exist."
         self.table.blockSignals(True)
 
         # Get the information for each column
@@ -1724,6 +1726,33 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.menuPEM.setEnabled(enable)
         self.menuGPS.setEnabled(enable)
         self.menuMap.setEnabled(enable)
+
+    def reorder_pems(self):
+        """
+        Reorder the PEM files in the table and their respective PIW widgets.
+        """
+        if self.auto_sort_files_cbox.isChecked():
+            self.table.setUpdatesEnabled(False)
+            self.table.blockSignals(True)
+            for row in reversed(range(self.table.rowCount())):
+                self.table.removeRow(row)
+
+            for widget in reversed(self.pem_info_widgets):
+                self.stackedWidget.removeWidget(widget)
+
+            sorted_objects = natsort.os_sorted((zip(self.pem_files, self.pem_info_widgets)),
+                                        key=lambda x: str(x[0].filepath))
+
+            for i, (pem, piw) in enumerate(sorted_objects):
+                self.table.insertRow(i)
+                self.stackedWidget.insertWidget(i, piw)
+                self.add_pem_to_table(pem, i)
+
+            self.pem_files = [i[0] for i in sorted_objects]
+            self.pem_info_widgets = [i[1] for i in sorted_objects]
+
+            self.table.setUpdatesEnabled(True)
+            self.table.blockSignals(False)
 
     def remove_pem_file(self, rows=None):
         """
@@ -1857,7 +1886,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         try:
             derotator.open(pem_file)
         except AssertionError as e:
-            self.message.critical(self, "Error opening Derotator", e)
+            self.message.critical(self, "Error opening Derotator", str(e))
 
     def open_pem_geometry(self):
         def accept_geometry(seg):
@@ -1876,7 +1905,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         try:
             pem_geometry.open(pem_files)
         except AssertionError as e:
-            self.message.critical(self, "Error opening PEMGeometry", e)
+            self.message.critical(self, "Error opening PEMGeometry", str(e))
 
     def open_pem_merger(self):
         def check_pems():
@@ -1939,7 +1968,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             if self.delete_merged_files_cbox.isChecked():
                 self.remove_pem_file(removal_rows)
 
-            self.add_pem_files(filepath, refresh=True)
+            self.add_pem_files([filepath], refresh=True)
             self.fill_pem_list()
 
         pem_files, rows = self.get_pem_files(selected=True)
@@ -1955,7 +1984,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             try:
                 merger.open(pem_files)
             except AssertionError as e:
-                self.message.critical(self, "Error opening PEMMerger", e)
+                self.message.critical(self, "Error opening PEMMerger", str(e))
 
     def open_pdf_plot_printer(self, selected=False):
         """
@@ -2695,27 +2724,35 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             # Inclusive files
             if any(include_files):
-                filtered_pems = [p for p in filtered_pems if any(
-                    [f.lower() in str(p.name).lower() for f in include_files if f]
-                )]
+                for pem in reversed(filtered_pems):
+                    for file in include_files:
+                        if file.lower() not in pem.name.lower():
+                            filtered_pems.remove(pem)
+                            break
 
             # Exclusive files
             if any(exclude_files):
-                filtered_pems = [p for p in filtered_pems if all(
-                    [f.lower() not in str(p.name).lower() for f in exclude_files if f]
-                )]
+                for pem in reversed(filtered_pems):
+                    for file in exclude_files:
+                        if file.lower() in pem.name.lower():
+                            filtered_pems.remove(pem)
+                            break
 
             # Inclusive folders
             if any(include_folders):
-                filtered_pems = [p for p in filtered_pems if any(
-                    [f.lower() in str(p.parent).lower() for f in include_folders if f]
-                )]
+                for pem in reversed(filtered_pems):
+                    for folder in include_folders:
+                        if not any([part.lower() == folder.lower() for part in pem.parts]):
+                            filtered_pems.remove(pem)
+                            break
 
             # Exclusive folders
             if any(exclude_folders):
-                filtered_pems = [p for p in filtered_pems if all(
-                    [f.lower() not in str(p.parent).lower() for f in exclude_folders if f]
-                )]
+                for pem in reversed(filtered_pems):
+                    for folder in exclude_folders:
+                        if any([part.lower() == folder.lower() for part in pem.parts]):
+                            filtered_pems.remove(pem)
+                            break
 
             include_exts = strip(self.pem_list_filter.include_exts_edit.text().split(','))
             exclude_exts = strip(self.pem_list_filter.exclude_exts_edit.text().split(','))
