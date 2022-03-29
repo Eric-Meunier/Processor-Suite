@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from pyproj import CRS
 from scipy import spatial
-from shapely.geometry import asMultiPoint, Point, Polygon, MultiLineString, LineString
+from shapely.geometry import MultiPoint, Point, Polygon, MultiLineString, LineString
 from zipfile import ZipFile
 
 from src import app_temp_dir, timeit
@@ -393,8 +393,8 @@ class BaseGPS:
             return None
 
         # Create point objects for each coordinate
-        mpoints = asMultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
-        gdf = gpd.GeoSeries(list(mpoints), crs=self.crs)
+        mpoints = MultiPoint(self.df.loc[:, ['Easting', 'Northing']].to_numpy())
+        gdf = gpd.GeoSeries(mpoints.geoms, crs=self.crs)
         return gdf
 
     def to_string(self, header=False):

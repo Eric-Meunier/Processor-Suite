@@ -472,15 +472,16 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         if loop_content is None:
             loop_content = self.get_loop()
 
-        # try:
-        loop = TransmitterLoop(loop_content)
-        if loop.df.empty:
-            self.message.information(self, 'No GPS Found', f"{loop.error_msg}")
+        try:
+            loop = TransmitterLoop(loop_content)
+        except Exception as e:
+            logger.critical(f"{e}.")
+            self.error.showMessage(f"Error adding loop: {str(e)}")
         else:
-            self.loop_adder.open(loop)
-        # except Exception as e:
-        #     logger.critical(f"{e}.")
-        #     self.error.showMessage(f"Error adding loop: {str(e)}")
+            if loop.df.empty:
+                self.message.information(self, 'No GPS Found', f"{loop.error_msg}")
+            else:
+                self.loop_adder.open(loop)
 
     def add_collar(self, file):
         """

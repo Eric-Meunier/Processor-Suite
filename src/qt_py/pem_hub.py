@@ -81,8 +81,6 @@ logger = logging.getLogger(__name__)
 # TODO Add mapbox view options
 # TODO Add favorites for project folders
 # TODO (later) Add PEM files to SQL data base (instead of importing filed logs?)
-# TODO Add SOA rotation for X and Y of surface surveys. Y of SQUID 12 may be off by ~2-3°.
-# TODO Speed up coil area correction
 
 
 # Keep a list of widgets so they don't get garbage collected
@@ -1567,7 +1565,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         continue
 
                 dlg.setLabelText(f"Opening {pem_file.filepath.name}")
-
                 # Create the PEMInfoWidget
                 pem_widget = add_piw_widget(pem_file)
 
@@ -1575,8 +1572,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 if not self.pem_files:
                     share_header(pem_file)
                     self.enable_menus(True)
-                    # self.move_dir_tree(pem_file.filepath.parent)
-                    # self.piw_frame.show()
                 if self.project_dir_edit.text() == '':
                     self.move_dir_tree(pem_file.filepath.parent)
 
@@ -1606,8 +1601,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                 count += 1
                 dlg += 1
-
-        # self.color_table_by_values()
 
         self.allow_signals = True
         self.table.setUpdatesEnabled(True)
