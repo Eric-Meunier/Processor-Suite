@@ -467,13 +467,10 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         # Keep the old name if the new file name already exists
                         logger.error(f"{e}.")
                         self.message.critical(self, 'File Error', f"{e}.")
-                        item = QTableWidgetItem(str(old_path.name))
-                        item.setTextAlignment(Qt.AlignCenter)
-                        self.table.setItem(row, col, item)
+                        self.table.item(row, col).setText(str(old_path.name))
                     else:
                         pem_file.filepath = new_path
                         self.fill_pem_list()
-                        # TODO Re-order the PEM files in PEMHub.
                         self.reorder_pems()
                         self.status_bar.showMessage(f"{old_path.name} renamed to {str(new_value)}", 2000)
 
@@ -696,6 +693,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                 self.add_dmp_files(dmp_filepaths)
                 self.add_pem_files(pem_filepaths)
+            self.color_table_by_values()
 
         def add_gps_list_files():
             """
@@ -1023,6 +1021,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                                              self.message.Yes | self.message.No)
             if response == self.message.Yes:
                 self.add_pem_files(last_opened_pems)
+                self.color_table_by_values()
 
         settings.endGroup()
 
@@ -1352,11 +1351,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             dmp_files = [url for url in urls if url.suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4']]
             if pem_files:
                 self.add_pem_files(pem_files)
+                self.color_table_by_values()
             if dmp_files:
                 self.add_dmp_files(dmp_files)
+                self.color_table_by_values()
 
-        elif all([Path(file).suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4'] for file in urls]):
-            self.add_dmp_files(urls)
+        # elif all([Path(file).suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4'] for file in urls]):
+        #     self.add_dmp_files(urls)
+        #     self.color_table_by_values()
 
         elif all([Path(file).suffix.lower() in ['.txt', '.csv', '.seg', '.xyz', '.gpx', '.xlsx', '.xls'] for file in urls]):
             self.add_gps_files(urls)
@@ -1605,7 +1607,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 count += 1
                 dlg += 1
 
-        self.color_table_by_values()
+        # self.color_table_by_values()
 
         self.allow_signals = True
         self.table.setUpdatesEnabled(True)
@@ -1624,7 +1626,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         :param row: int, row of the PEM file in the table
         :return: None
         """
-        logger.info(f"Adding {pem_file.filepath.name} to the table.")
+        logger.debug(f"Adding {pem_file.filepath.name} to the table.")
         assert self.table.rowCount() >= row, f"PEM file to be added to row {row}, but {self.table.rowCount()} exist."
         self.table.blockSignals(True)
 
@@ -1826,6 +1828,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.add_pem_files(files)
             else:
                 self.add_dmp_files(files)
+            self.color_table_by_values()
 
     def open_pem_plot_editor(self):
         """
@@ -1976,6 +1979,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.add_pem_files([filepath], refresh=True)
             self.fill_pem_list()
             self.reorder_pems()
+            self.color_table_by_values()
 
         pem_files, rows = self.get_pem_files(selected=True)
         if len(pem_files) != 2:
@@ -2081,19 +2085,23 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             """
             if kind == 'File':
                 col = self.table_columns.index('File')
+                self.table.blockSignals(True)
             else:
                 col = self.table_columns.index('Line/Hole')
 
             for i, row in enumerate(rows):
-                item = QTableWidgetItem(new_names[i])
-                item.setTextAlignment(Qt.AlignCenter)
-                self.table.setItem(row, col, item)
+                self.table.item(row, col).setText(new_names[i])
+                # Manually rename the files. Allowing the signal slot from changing the file
+                # name in the table causes the table to reorder after every rename.
+                if kind == "File":
+                    os.rename(str(self.pem_files[row].filepath), str(self.pem_files[row].filepath.with_name(new_names[i])))
+                    pem_files[row].filepath = pem_files[row].filepath.with_name(new_names[i])
+                    self.pem_files[row].filepath = self.pem_files[row].filepath.with_name(new_names[i])
+            self.table.blockSignals(False)
             batch_name_editor.open(pem_files, kind=kind)
 
         pem_files, rows = self.get_pem_files(selected=selected)
-
         if not pem_files:
-            logger.warning("No PEM files selected.")
             self.status_bar.showMessage(f"No PEM files selected.", 2000)
             return
 
@@ -2830,7 +2838,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         Serialize the currently selected PEMFile as a .PEM or .XYZ file.
         """
-
         def save_pem():
             # Create a copy of the PEM file, then update the copy
             new_pem = pem_file.copy()
@@ -2846,6 +2853,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.refresh_pem(new_pem)
             else:
                 self.add_pem_files(new_pem)
+                self.color_table_by_values()
 
             # Refresh the PEM list
             self.fill_pem_list()
@@ -3479,13 +3487,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         Color the background of the cells based on their values for the current, coil area, and station ranges.
         """
-        if not self.pem_files:
-            return
-
-        self.table.blockSignals(True)
-        mpl_red, mpl_blue = np.array([34, 79, 214]) / 256, np.array([247, 42, 42]) / 256
-        alpha = 250
-
         def color_currents():
             current_col = self.table_columns.index("Current")
             currents = np.array([self.table.item(row, current_col).text() for row in range(self.table.rowCount())],
@@ -3616,6 +3617,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                 count += 1
 
+        if not self.pem_files:
+            return
+
+        print("Coloring table by values")
+        self.table.blockSignals(True)
+        mpl_red, mpl_blue = np.array([34, 79, 214]) / 256, np.array([247, 42, 42]) / 256
+        alpha = 250
+
         color_currents()
         color_coil_areas()
         color_station_starts()
@@ -3646,7 +3655,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.format_row(ind)
             self.color_table_by_values()
         else:
-            logger.error(f"PEMFile ID {id(pem_file)} is not in the table.")
+            logger.error(f"PEMFile {pem_file.filepath.name} is not in the table.")
             # raise IndexError(f"PEMFile ID {id(pem_file)} is not in the table.")
 
     def update_selection_text(self):
@@ -5127,6 +5136,7 @@ class StationSplitter(QWidget):
             new_pem_file.number_of_readings = len(new_data.index)
             new_pem_file.save()
             self.parent.add_pem_files(new_pem_file)
+            self.parent.color_table_by_values()
 
             # Remove the selected stations from the original file.
             self.pem_file.data = self.pem_file.data.loc[~filt]
