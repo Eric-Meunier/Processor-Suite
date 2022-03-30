@@ -78,7 +78,6 @@ logger = logging.getLogger(__name__)
 # TODO Show project damp files
 # TODO Use root mean squared error to measure theoretical data fit. Also use it to find best coil area value.
 # TODO Auto add median current to PEM files in unpacker
-# TODO Add mapbox view options
 # TODO Add favorites for project folders
 # TODO (later) Add PEM files to SQL data base (instead of importing filed logs?)
 

@@ -4,7 +4,7 @@ import math
 import os
 import re
 import sys
-
+import time
 import keyboard
 import pyqtgraph as pg
 import numpy as np
@@ -190,6 +190,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.y_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
         self.z_profile_layout.ci.layout.setSpacing(5)  # Spacing between plots
 
+        self.profile_plots = {}  # Save all profile plot lines for quicket plotting with setData()
+
         # Configure the profile plots
         # X axis lin plots
         self.x_ax = self.x_profile_layout.addPlot(row=0, col=0, rowspan=5, viewBox=ProfileViewBox())
@@ -344,11 +346,11 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.actionSave.triggered.connect(self.save)
         self.actionSave_As.triggered.connect(self.save_as)
         self.actionUn_Delete_All.triggered.connect(self.undelete_all)
-        self.actionSplit_Profile.triggered.connect(self.toggle_profile_plots)
+        self.split_profile_cbox.toggled.connect(self.toggle_profile_plots)
         # Required or else the plots don't align correctly.
-        self.actionSplit_Profile.triggered.connect(lambda: self.plot_profiles())
-        self.actionSplit_Profile.triggered.connect(lambda: self.reset_range(decays=False, profiles=True))
-        self.actionShow_Station_Cursor.triggered.connect(self.toggle_station_cursor)
+        self.split_profile_cbox.toggled.connect(lambda: self.plot_profiles())
+        self.split_profile_cbox.toggled.connect(lambda: self.reset_range(decays=False, profiles=True))
+        self.show_station_cursor_cbox.toggled.connect(self.toggle_station_cursor)
 
         # Shortcuts
         self.actionSave_Screenshot.triggered.connect(self.save_img)
@@ -416,11 +418,11 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 continue
 
             if ax in [self.x_ax, self.y_ax, self.z_ax]:
-                ax.hide() if self.actionSplit_Profile.isChecked() else ax.show()
+                ax.hide() if self.split_profile_cbox.isChecked() else ax.show()
             else:
-                ax.show() if self.actionSplit_Profile.isChecked() else ax.hide()
+                ax.show() if self.split_profile_cbox.isChecked() else ax.hide()
 
-        if self.actionSplit_Profile.isChecked():
+        if self.split_profile_cbox.isChecked():
             self.x_profile_layout.ci.layout.setRowStretchFactor(0, 0)
             self.y_profile_layout.ci.layout.setRowStretchFactor(0, 0)
             self.z_profile_layout.ci.layout.setRowStretchFactor(0, 0)
@@ -436,7 +438,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
     def toggle_station_cursor(self):
         for item in self.station_cursors:
-            item.show() if self.actionShow_Station_Cursor.isChecked() else item.hide()
+            item.show() if self.show_station_cursor_cbox.isChecked() else item.hide()
 
     def save_settings(self):
         settings = QSettings("Crone Geophysics", "PEMPro")
@@ -446,8 +448,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         settings.setValue("windowGeometry", self.saveGeometry())
 
         # Setting options
-        settings.setValue("actionSplit_Profile", self.actionSplit_Profile.isChecked())
-        settings.setValue("actionShow_Station_Cursor", self.actionShow_Station_Cursor.isChecked())
+        settings.setValue("split_profile_cbox", self.split_profile_cbox.isChecked())
+        settings.setValue("show_station_cursor_cbox", self.show_station_cursor_cbox.isChecked())
         settings.setValue("plot_ontime_decays_cbox", self.plot_ontime_decays_cbox.isChecked())
         settings.setValue("plot_auto_clean_lines_cbox", self.plot_auto_clean_lines_cbox.isChecked())
         settings.setValue("link_x_cbox", self.link_x_cbox.isChecked())
@@ -467,10 +469,10 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.restoreGeometry(settings.value("windowGeometry"))
 
         # Setting options
-        self.actionSplit_Profile.setChecked(
-            settings.value("actionSplit_Profile", defaultValue=True, type=bool))
-        self.actionShow_Station_Cursor.setChecked(
-            settings.value("actionShow_Station_Cursor", defaultValue=True, type=bool))
+        self.split_profile_cbox.setChecked(
+            settings.value("split_profile_cbox", defaultValue=True, type=bool))
+        self.show_station_cursor_cbox.setChecked(
+            settings.value("show_station_cursor_cbox", defaultValue=True, type=bool))
         self.plot_ontime_decays_cbox.setChecked(
             settings.value("plot_ontime_decays_cbox", defaultValue=True, type=bool))
         self.plot_auto_clean_lines_cbox.setChecked(
@@ -620,7 +622,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         file_info = ' | '.join([f"Timebase: {self.pem_file.timebase:.2f}ms",
                                 f"{self.pem_file.get_survey_type()} Survey",
-                                f"Operator: {self.pem_file.operator.title()}"])
+                                f"Operator: {self.pem_file.operator.title()}",
+                                f"Loop: {self.pem_file.loop_name}"])
         self.file_info_label.setText(file_info)
 
         if self.pem_file.is_split():  # Takes care of PP files too
@@ -691,12 +694,12 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.auto_clean_window_sbox.blockSignals(False)
 
         # Add the line name and loop name as the title for the profile plots
-        self.x_ax.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name}\n[X Component]")
-        self.x_ax0.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name}\n[X Component]")
-        self.y_ax.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name}\n[Y Component]")
-        self.y_ax0.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name}\n[Y Component]")
-        self.z_ax.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name}\n[Z Component]")
-        self.z_ax0.setTitle(f"{self.pem_file.line_name} - Loop {self.pem_file.loop_name}\n[Z Component]")
+        self.x_ax.setTitle("X Component")
+        self.x_ax0.setTitle("X Component")
+        self.y_ax.setTitle("Y Component")
+        self.y_ax0.setTitle("Y Component")
+        self.z_ax.setTitle("Z Component")
+        self.z_ax0.setTitle("Z Component")
 
         # Set the X and Y axis labels for the decay axes
         for ax in self.decay_axes:
@@ -799,7 +802,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 mag_profile_ax = layout_axes[-1]
 
                 if component in avaiable_components:
-                    if self.actionSplit_Profile.isChecked():
+                    if self.split_profile_cbox.isChecked():
                         # Add the split profile axes
                         self.active_profile_axes.extend(split_profile_axes)
                     else:
@@ -986,12 +989,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                                                     name="PP Theory")
                     ax.addItem(pp_plot_item)
 
-            # Use the actual channel numbers for the Y axis of the profile plots so it matches with decay plots
-            ch_offset = self.pem_file.channel_times[~self.pem_file.channel_times.Remove.astype(bool)].index[1] - 1
-
-            # Since toggling the self.actionSplit_Profiles needs to call plot_profiles(), there's no point in plotting
+            # Since toggling the self.split_profile_cboxs needs to call plot_profiles(), there's no point in plotting
             # both the split profiles and single profile.
-            if self.actionSplit_Profile.isChecked():
+            if self.split_profile_cbox.isChecked():
                 # Plot the split profile axes
                 for i, bounds in enumerate(self.channel_bounds):
                     ax = axes[i + 1]  # axes[0] is the single profile ax
@@ -1042,6 +1042,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         clear_plots(components)
 
         for component in components:
+            t = time.time()
             filt = (self.profile_data.Component == component) & (self.profile_data.Deleted == False)
             profile_data = self.profile_data[filt].set_index("Station", drop=True)
 
@@ -1049,7 +1050,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.component_stations[component] = self.pem_file.get_stations(component=component,
                                                                             converted=True,
                                                                             incl_deleted=True)
-
+            print(f"Time to filter data: {time.time() - t:.2f}s")
             if profile_data.empty:
                 continue
 
@@ -1080,9 +1081,9 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 station_number_text = f" Station: {stn[0]}"
                 reading_numbers = data.Reading_number.unique()
                 if len(reading_numbers) > 1:
-                    r_numbers_range = f"R-numbers: {reading_numbers.min()} - {reading_numbers.max()}"
+                    r_numbers_range = f"R-numbers: {int(reading_numbers.min())} - {int(reading_numbers.max())}"
                 else:
-                    r_numbers_range = f"R-number: {reading_numbers.min()}"
+                    r_numbers_range = f"R-number: {int(reading_numbers.min())}"
 
                 station_readings = f"{len(data.index)} {'Reading' if len(data.index) == 1 else 'Readings'}"
 
@@ -3030,7 +3031,7 @@ if __name__ == '__main__':
 
     editor = PEMPlotEditor(darkmode=darkmode)
     editor.open(pem_file)
-    # editor.actionSplit_Profile.trigger()
+    # editor.split_profile_cbox.trigger()
     # editor.auto_clean()
 
     app.exec_()

@@ -313,6 +313,12 @@ class Ui_PEMPlotEditor(object):
         self.verticalLayout_10 = QVBoxLayout(self.groupBox)
         self.verticalLayout_10.setObjectName(u"verticalLayout_10")
         self.verticalLayout_10.setContentsMargins(9, 9, 9, 9)
+        self.split_profile_cbox = QCheckBox(self.groupBox)
+        self.split_profile_cbox.setObjectName(u"split_profile_cbox")
+        self.split_profile_cbox.setChecked(True)
+
+        self.verticalLayout_10.addWidget(self.split_profile_cbox)
+
         self.plot_mag_cbox = QCheckBox(self.groupBox)
         self.plot_mag_cbox.setObjectName(u"plot_mag_cbox")
         self.plot_mag_cbox.setChecked(True)
@@ -332,6 +338,12 @@ class Ui_PEMPlotEditor(object):
         self.show_scatter_cbox.setChecked(True)
 
         self.verticalLayout_10.addWidget(self.show_scatter_cbox)
+
+        self.show_station_cursor_cbox = QCheckBox(self.groupBox)
+        self.show_station_cursor_cbox.setObjectName(u"show_station_cursor_cbox")
+        self.show_station_cursor_cbox.setChecked(True)
+
+        self.verticalLayout_10.addWidget(self.show_station_cursor_cbox)
 
 
         self.verticalLayout_11.addWidget(self.groupBox)
@@ -461,8 +473,6 @@ class Ui_PEMPlotEditor(object):
         self.menubar.setGeometry(QRect(0, 0, 1116, 21))
         self.menuFile = QMenu(self.menubar)
         self.menuFile.setObjectName(u"menuFile")
-        self.menuView = QMenu(self.menubar)
-        self.menuView.setObjectName(u"menuView")
         PEMPlotEditor.setMenuBar(self.menubar)
         self.status_bar = QStatusBar(PEMPlotEditor)
         self.status_bar.setObjectName(u"status_bar")
@@ -484,7 +494,6 @@ class Ui_PEMPlotEditor(object):
         QWidget.setTabOrder(self.z_profile_layout, self.x_profile_layout)
 
         self.menubar.addAction(self.menuFile.menuAction())
-        self.menubar.addAction(self.menuView.menuAction())
         self.menuFile.addAction(self.actionSave)
         self.menuFile.addAction(self.actionSave_As)
         self.menuFile.addSeparator()
@@ -493,8 +502,6 @@ class Ui_PEMPlotEditor(object):
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionUn_Delete_All)
         self.menuFile.addAction(self.actionReset_File)
-        self.menuView.addAction(self.actionSplit_Profile)
-        self.menuView.addAction(self.actionShow_Station_Cursor)
 
         self.retranslateUi(PEMPlotEditor)
 
@@ -556,8 +563,10 @@ class Ui_PEMPlotEditor(object):
         self.auto_clean_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Auto-Clean", None))
         self.label_2.setText(QCoreApplication.translate("PEMPlotEditor", u"Profile Options", None))
         self.groupBox.setTitle(QCoreApplication.translate("PEMPlotEditor", u"View", None))
+        self.split_profile_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Split Profile", None))
         self.plot_mag_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Plot Mag", None))
         self.show_scatter_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Show Scatter", None))
+        self.show_station_cursor_cbox.setText(QCoreApplication.translate("PEMPlotEditor", u"Show Station Cursor", None))
         self.groupBox_4.setTitle(QCoreApplication.translate("PEMPlotEditor", u"Channels", None))
         self.max_ch_sbox.setPrefix(QCoreApplication.translate("PEMPlotEditor", u"Ch ", None))
         self.label_5.setText(QCoreApplication.translate("PEMPlotEditor", u"-", None))
@@ -572,6 +581,5 @@ class Ui_PEMPlotEditor(object):
         self.label_7.setText(QCoreApplication.translate("PEMPlotEditor", u"SOA:", None))
         self.calculate_coil_area_btn.setText(QCoreApplication.translate("PEMPlotEditor", u"Calculate", None))
         self.menuFile.setTitle(QCoreApplication.translate("PEMPlotEditor", u"File", None))
-        self.menuView.setTitle(QCoreApplication.translate("PEMPlotEditor", u"View", None))
     # retranslateUi
 
