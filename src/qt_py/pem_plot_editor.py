@@ -6,6 +6,7 @@ import re
 import sys
 import time
 import keyboard
+import cProfile
 import pyqtgraph as pg
 import numpy as np
 import pandas as pd
@@ -16,7 +17,7 @@ from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QLabel, QA
                                QInputDialog, QPushButton, QShortcut, QVBoxLayout)
 from scipy import spatial, signal
 
-from src import timeit
+from src import timeit, profile
 from src.pem import convert_station
 from src.pem.pem_file import PEMParser, PEMGetter
 from src.qt_py import get_icon, get_line_color
@@ -235,6 +236,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             ax.vb.installEventFilter(self)
             ax.vb.box_select_signal.connect(self.box_select_profile_plot)
             ax.hideButtons()
+            ax.disableAutoRange()
             ax.setMenuEnabled(False)
             ax.getAxis('left').setWidth(60)
             ax.getAxis('left').enableAutoSIPrefix(enable=False)
@@ -604,6 +606,42 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         QApplication.clipboard().setPixmap(self.grab())
         self.status_bar.showMessage(f"Image saved to clipboard.", 1500)
 
+    @timeit
+    def set_profile_plots(self):
+        """
+        Add the profile plot items for faster profile plotting through setData().
+        """
+        for component in ["X", "Y", "Z"]:  # Add all components incase some are added during editing
+            print(f"{component=}")
+            self.profile_plots[component] = {}
+            if component == 'X':
+                axes = self.x_layout_axes
+            elif component == 'Y':
+                axes = self.y_layout_axes
+            else:
+                axes = self.z_layout_axes
+
+            # Add the plot items for the single axis profile
+            self.profile_plots[component][0] = []
+            ax = axes[0]
+            for channel in range(len(self.pem_file.get_offtime_channels())):
+                print(f"{channel=}")
+                plot_line = pg.PlotItem()
+                self.profile_plots[component][0].append(plot_line)
+                ax.addItem(plot_line)
+
+            # Add the plot items for the split profile
+            for i, bounds in enumerate(self.channel_bounds):
+                print(f"{bounds=}")
+                ax = axes[i + 1]  # axes[0] is the single profile ax
+                self.profile_plots[component][i + 1] = []
+
+                for channel in range(bounds[0], bounds[1] + 1):
+                    print(f"{channel=}")
+                    plot_line = pg.PlotItem()
+                    self.profile_plots[component][i + 1].append(plot_line)
+                    ax.addItem(plot_line)
+
     def open(self, pem_file):
         """
         Open a PEMFile object and plot the data.
@@ -707,6 +745,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             ax.setLabel('bottom', 'Channel number')
 
         # Plot the LIN profiles
+        # self.set_profile_plots()
         self.plot_profiles(components='all')
         self.move_profile_hover_line(self.stations.min())
 
@@ -919,6 +958,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             for ax in self.decay_axes:
                 ax.setYRange(min_y, max_y)
 
+    @profile(sort_by='cumtime', lines_to_print=20, strip_dirs=True, output_file="plot_profile.txt")
     @timeit
     def plot_profiles(self, components=None):
         """
@@ -941,12 +981,12 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             for ax in axes:
                 # Don't clear the mag plots. They only need to be plotted once.
-                if ax in [self.mag_x_ax, self.mag_y_ax, self.mag_z_ax]:
-                    continue
-                ax.clearPlots()
+                if ax not in [self.mag_x_ax, self.mag_y_ax, self.mag_z_ax]:
+                    ax.clearPlots()
 
         @timeit
         def plot_lin(profile_data, axes):
+
             def plot_lines(df, ax):
                 """
                 Plot the lines on the pyqtgraph ax
@@ -956,7 +996,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                 df_avg = df.groupby('Station').mean()
                 x, y = df_avg.index.to_numpy(), df_avg.to_numpy()
 
-                ax.plot(x=x, y=y, pen=pg.mkPen(self.foreground_color, width=1.))
+                curve = pg.PlotCurveItem(x=x, y=y, pen=pg.mkPen(self.foreground_color, width=1))
+                ax.addItem(curve)
 
             def plot_scatters(df, ax):
                 """
@@ -1005,14 +1046,15 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
                     # Plot the data
                     for channel in range(bounds[0], bounds[1] + 1):
+                        # print(f"{channel=}")
                         data = profile_data.loc[:, channel]
                         plot_lines(data, ax)
                         if self.show_scatter_cbox.isChecked():
                             plot_scatters(data, ax)
 
-                    ax.autoRange()  # Is there ever a reason not to auto range the profile axes?
+                    # ax.autoRange()  # Is there ever a reason not to auto range the profile axes?
                 plot_theory_pp(self.theory_data, axes[1])
-                axes[1].autoRange()  # Auto range again after the PP line is added
+                # axes[1].autoRange()  # Auto range again after the PP line is added
             else:
                 # Plot the single profile ax
                 min_ch, max_ch = self.min_ch_sbox.value(), self.max_ch_sbox.value()
@@ -1024,7 +1066,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
                     if self.show_scatter_cbox.isChecked():
                         plot_scatters(data, ax)
 
-                ax.autoRange()  # Is there ever a reason not to auto range the profile axes?
+                # ax.autoRange()  # Is there ever a reason not to auto range the profile axes?
                 # Only plot the theoretical value if the PP is plotted.
                 if min_ch == 0:
                     plot_theory_pp(self.theory_data, ax)
@@ -1042,7 +1084,7 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         clear_plots(components)
 
         for component in components:
-            t = time.time()
+            # print(f"{component=}")
             filt = (self.profile_data.Component == component) & (self.profile_data.Deleted == False)
             profile_data = self.profile_data[filt].set_index("Station", drop=True)
 
@@ -1050,7 +1092,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
             self.component_stations[component] = self.pem_file.get_stations(component=component,
                                                                             converted=True,
                                                                             incl_deleted=True)
-            print(f"Time to filter data: {time.time() - t:.2f}s")
             if profile_data.empty:
                 continue
 
@@ -1064,6 +1105,8 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
             plot_lin(profile_data, axes)
 
+    @profile(sort_by='cumtime', lines_to_print=20, strip_dirs=True, output_file="plot_decays.txt")
+    @timeit
     def plot_decays(self, station, preserve_selection=False):
         """
         Plot the decay lines for each component of the given station

@@ -21,7 +21,7 @@ from src.pem import convert_station
 from src.gps.gps_editor import TransmitterLoop, SurveyLine, BoreholeCollar, BoreholeSegments, BoreholeGeometry
 # from src.logger import Log
 from src.mag_field.mag_field_calculator import MagneticFieldCalculator
-from src import timeit
+from src import timeit, profile
 
 logger = logging.getLogger(__name__)
 
