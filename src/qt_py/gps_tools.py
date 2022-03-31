@@ -999,7 +999,7 @@ class CollarPicker(GPSAdder, Ui_LoopAdder):
                 # Convert NaNs to "0"
                 df = df.replace(to_replace=np.nan, value="0")
                 df = df.replace(to_replace="nan", value="0")  # In some dataframes, the NaN is just a "nan" string
-                df = df.drop(columns=["geometry"])  # Don't want this column showing in the table
+                # df = df.drop(columns=["geometry"])  # Don't want this column showing in the table
                 df = df.apply(pd.to_numeric, errors='ignore')
             except ValueError as e:
                 self.show()
@@ -1805,12 +1805,13 @@ if __name__ == '__main__':
     # file = samples_folder.joinpath(r"Segments\for Eastern Geophy-reflex.xlsx")
     # file = samples_folder.joinpath(r"Segments\BHEM-Belvais-2021-07-22.xlsx")
     # # file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
-    file = r"G:\Data\2022\TMC\Benz Mining\Borehole\EM-22-251\GPS\EM-22-251 + loop 22-3_0324.gpx"
+    file = r"G:\Data\2022\Eastern\Stony Rapids\GC22-01\GPS\GV22-01_0330.txt"
     # # file = samples_folder.joinpath(r'Raw Boreholes\OBS-88-027\RAW\Obalski.xlsx')
     # # file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')
     # # line = SurveyLine(str(file))
 
-    mw = LoopAdder(pem_file, darkmode=darkmode)
+    mw = CollarPicker(pem_file)
+    # mw = LoopAdder(pem_file, darkmode=darkmode)
     # mw = LineAdder(pem_file, darkmode=darkmode)
     mw.open(file)
     mw.show()

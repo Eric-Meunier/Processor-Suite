@@ -90,7 +90,7 @@ def dad_to_seg(df):
 
     # Add the last segment if it isn't there from the iterative calculations
     if seg.tail(1).Depth.iloc[0] != df.tail(1).Depth.iloc[0]:
-        seg = seg.append(df.iloc[-1])
+        seg = pd.concat([seg, df.iloc[-1]])
 
     seg_length = seg.Depth.diff()
     seg_length.iloc[0] = seg.Depth.iloc[0]

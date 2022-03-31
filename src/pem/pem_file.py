@@ -2176,7 +2176,9 @@ class PEMFile:
                     error_msg = "PP channel time is not within the ramp time."
 
         # Remove groups that don't have X and Y pairs. For some reason couldn't make it work within rotate_data
-        eligible_data, ineligible_data = self.get_eligible_derotation_data()
+        # eligible_data, ineligible_data = self.get_eligible_derotation_data()
+        ineligible_data = []
+        eligible_data = self.get_xy_data()
         if eligible_data.empty:
             raise Exception(f"No eligible data found for probe de-rotation in {self.filepath.name}")
 
@@ -3275,7 +3277,7 @@ class DMPParser:
         """
         self.filepath = None
         self.pp_file = False
-
+        self.ind_of_0 = None
         self.data_columns = [
             'Station',
             'Component',
@@ -3297,7 +3299,6 @@ class DMPParser:
         :param filepath: str, filepath of the .DMP file
         :return: PEMFile object
         """
-
         def parse_header(text, old_dmp=False):
             """
             Create the header dictionary that is found in PEM files from the contents of the .DMP file.
@@ -3423,10 +3424,9 @@ class DMPParser:
             # Used to add the gap channel, but not sure if needed.
             if self.pp_file is False:
                 # Find the index of the gap 0 channel
-                global ind_of_0  # global index since the 0 value must be inserted into the decays
-                ind_of_0 = list(times[:, 0]).index(1)
+                self.ind_of_0 = list(times[:, 0]).index(1)
                 # Add the gap channel
-                times = np.insert(times, ind_of_0, [0., times[ind_of_0 - 1][2], 0.], axis=0)
+                times = np.insert(times, self.ind_of_0, [0., times[self.ind_of_0 - 1][2], 0.], axis=0)
 
             # Remove the channel number column
             times = np.delete(times, 0, axis=1)
@@ -3457,7 +3457,6 @@ class DMPParser:
             :param header: dict, the parsed header section of the .DMP file
             :return: DataFrame
             """
-
             def format_data(reading):
                 """
                 Format the data row so it is ready to be added to the data frame
@@ -3484,7 +3483,7 @@ class DMPParser:
                 # Add the 0 gap
                 if self.pp_file is False:
                     decay = ' '.join(
-                        np.insert(np.array(''.join(contents[2:]).split(), dtype=float), ind_of_0, 0.0).astype(str)
+                        np.insert(np.array(''.join(contents[2:]).split(), dtype=float), self.ind_of_0, 0.0).astype(str)
                     )
                 else:
                     decay = ''.join(contents[2:])
@@ -3498,20 +3497,18 @@ class DMPParser:
                 text = '\n'.join(text)
 
             # Reading variables that are sourced from outside the data section of the .DMP file
-            global rx_type, gain, coil_delay, ramp
             rx_type = 'A'
             gain = 0
             coil_delay = header.get('Coil delay')
             ramp = header.get('Ramp')
 
             # Replace the spaces infront of station names with a tab character, to more easily split after
-            text = re.sub(r'\s{3,}(?P<station>[\w]{1+}\s[XYZ])', r'\t\g<station>', text.strip())
+            text = re.sub(r'\s{3,}(?P<station>[\w]{1,}\s[XYZ])', r'\t\g<station>', text.strip())
             text = text.split('\t')
 
             data = []
             for reading in text:
                 # Parse the data row and create a Series object to be inserted in the data frame
-                # series = parse_row(reading)
                 data.append(format_data(reading))
 
             df = pd.DataFrame(data, columns=self.data_columns)
@@ -4870,14 +4867,13 @@ if __name__ == '__main__':
     # pem_file = pg.get_pems("Rotation Testing", number=1)[0]
     # pem_file = pg.parse(r"G:\Data\2022\Managem\Surface\Frizem\North Loop\RAW\0N.PEM")
 
-    pem_file = pg.get_pems(folder=r"Rotation Testing\Surface", file="0E.PEM")[0]
-    pem_file.filepath = pem_file.filepath.with_name("0E Rotated.PEM")
-    pem_file.rotate(method=None, soa=2)
+    # pem_file = pg.get_pems(folder=r"Rotation Testing\Surface", file="0E.PEM")[0]
+    # pem_file.filepath = pem_file.filepath.with_name("0E Rotated.PEM")
+    # pem_file.rotate(method=None, soa=2)
     # pem_file.save()
 
-    # pem_file = pg.parse(r"G:\Data\2022\TMC\Agnico Eagle\Borehole\131-22-45\RAW\131-22-45 xy_0303.PEM")
-    # pem_file.filepath = Path(r"C:\Users\Eric\PycharmProjects\PEMPro\Testing\Rotation2.PEM")
-    # pem_file.rotate2(method="acc", soa=2)
+    pem_file = pg.parse(r"G:\Data\2022\TMC\Sulliden Mining\SU-22-006\RAW\xy_0330.PEM")
+    pem_file.rotate(method="acc")
     # pem_file.save()
 
     # pem_file.prep_rotation()
