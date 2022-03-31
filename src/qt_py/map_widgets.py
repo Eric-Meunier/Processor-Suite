@@ -19,7 +19,7 @@ from PySide2.QtCore import Qt, QTimer, QPointF, QRect
 from PySide2.QtGui import QFont
 from PySide2.QtWebEngineWidgets import QWebEngineView
 from PySide2.QtWidgets import (QMainWindow, QMessageBox, QGridLayout, QWidget, QAction, QErrorMessage,
-                               QFileDialog, QApplication, QHBoxLayout, QShortcut)
+                               QFileDialog, QApplication, QHBoxLayout, QShortcut, QActionGroup)
 from matplotlib import patheffects
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
@@ -58,6 +58,38 @@ class TileMapViewer(ScreenshotWindow):
         self.setLayout(layout)
         self.layout().setContentsMargins(0, 0, 0, 0)
 
+        self.mapbox_token = self.get_mapbox_token()
+
+        self.map_styles = ["open-street-map",
+                          "carto-positron",
+                          "carto-darkmatter",
+                          "stamen-terrain",
+                          "stamen-toner",
+                          "stamen-watercolor"]
+        if self.mapbox_token:
+            self.map_styles.extend(
+                ["basic",
+                          "streets",
+                          "outdoors",
+                          "light",
+                          "dark",
+                          "satellite",
+                          "satellite-streets"]
+            )
+
+        self.view_menu = self.menuBar().addMenu('&Map Style')
+        # self.map_style_menu = self.view_menu.addMenu("Map Style")
+        self.map_style_group = QActionGroup(self, exclusive=True)
+        for style in self.map_styles:
+            action = self.map_style_group.addAction(QAction(style.title(), self, checkable=True))
+            self.view_menu.addAction(action)
+
+        if self.mapbox_token:
+            self.map_style_group.actions()[self.map_styles.index("satellite")].setChecked(True)
+        else:
+            self.map_style_group.actions()[self.map_styles.index("open-street-map")].setChecked(True)
+        self.map_style_group.triggered.connect(self.refresh_map_style)
+
         self.map_figure = go.Figure(go.Scattermapbox(mode="markers+lines"))
 
         # create an instance of QWebEngineView and set the html code
@@ -66,18 +98,33 @@ class TileMapViewer(ScreenshotWindow):
         self.layout().addWidget(self.map_widget)
         self.setCentralWidget(self.map_widget)
 
+    @staticmethod
+    def get_mapbox_token():
+        if app_data_dir.joinpath(".mapbox").is_file():
+            return open(str(app_data_dir.joinpath(".mapbox")), 'r').read()
+        else:
+            return None
+
+    def get_map_style(self):
+        ind = self.map_style_group.actions().index(self.map_style_group.checkedAction())
+        style = self.map_styles[ind]
+        return style
+
+    def refresh_map_style(self):
+        self.map_figure.update_layout(
+            mapbox_style=self.get_map_style(),
+            mapbox_accesstoken=self.mapbox_token)
+        self.load_page()
+
     def open(self, pem_files):
         if not isinstance(pem_files, list):
             pem_files = [pem_files]
-
         assert pem_files, "No files to plot."
+        assert any([f.has_any_gps() for f in pem_files]), "No GPS to plot."
 
-        if any([f.has_any_gps() for f in pem_files]):
-            self.show()
-            self.pem_files = pem_files
-            self.plot_pems()
-        else:
-            raise Exception(f"No GPS to plot.")
+        self.show()
+        self.pem_files = pem_files
+        self.plot_pems()
 
     def plot_pems(self):
         def plot_loop():
@@ -188,52 +235,27 @@ class TileMapViewer(ScreenshotWindow):
                     plot_hole()
                 dlg += 1
 
-        if not all([self.lons, self.lats]):
-            logger.error(f"No Lat/Lon GPS after plotting all PEM files.")
-            raise Exception(f"No Lat/Lon GPS after plotting all PEM files.")
+        assert all([self.lons, self.lats]), f"No Lat/Lon GPS found."
 
-        # TODO Add selectable styles
-        # Pass the mapbox token, for access to better map tiles. If none is passed, it uses the free open street map.
-        if app_data_dir.joinpath(".mapbox").is_file():
-            token = open(str(app_data_dir.joinpath(".mapbox")), 'r').read()
-            # map_style = "outdoors"
-            map_style = "satellite-streets"
-        else:
-            token = None
-            map_style = "open-street-map"
-        # if not token:
-        #     logger.warning(f"No Mapbox token passed.")
-        #     # map_style = "open-street-map"
-        # else:
-        #     map_style = "outdoors"
-
-        # Format the figure margins and legend
         self.map_figure.update_layout(
             margin={"r": 0,
                     "t": 0,
                     "l": 0,
                     "b": 0},
-            legend=dict(
-                yanchor="top",
-                y=0.99,
-                xanchor="left",
-                x=0.01,
-                bordercolor="Black",
-                borderwidth=1
-            ),
+            legend=dict(yanchor="top",
+                        xanchor="left",
+                        x=0.01,
+                        y=0.99,
+                        bordercolor="Black",
+                        borderwidth=1),
+            mapbox={'center': {'lon': np.mean(self.lons), 'lat': np.mean(self.lats)},
+                    'zoom': 13},
+            # autosize=True,
+            mapbox_style=self.get_map_style(),
+            mapbox_accesstoken=self.mapbox_token
         )
-        # Add the map style and center/zoom the map
-        self.map_figure.update_layout(
-            mapbox={
-                'center': {'lon': np.mean(self.lons), 'lat': np.mean(self.lats)},
-                'zoom': 13
-                },
-            autosize=True,
-            mapbox_style=map_style,
-            mapbox_accesstoken=token)
 
-        # Add the plot HTML to be shown in the plot widget
-        self.load_page()
+        self.load_page() # Add the plot HTML to be shown in the plot widget
 
     def load_page(self):
         """
@@ -1307,9 +1329,9 @@ if __name__ == '__main__':
     files = getter.get_pems(folder=r'Final folders\PX20002-W01\Final', file='XY.PEM')
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
-    # m = TileMapViewer()
+    m = TileMapViewer()
     # m = GPSViewer(darkmode=darkmode)
-    m = Map3DViewer(darkmode=darkmode)
+    # m = Map3DViewer(darkmode=darkmode)
     m.open(files)
     m.show()
     # m.save_img()

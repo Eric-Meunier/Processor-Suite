@@ -165,7 +165,7 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
         self.export_segments_btn.clicked.connect(lambda: self.export_gps('segments'))
 
         self.reverse_loop_btn.clicked.connect(reverse_loop)
-        self.view_loop_btn.clicked.connect(lambda: self.add_loop(loop_content=self.get_loop()))
+        self.view_loop_btn.clicked.connect(lambda: self.add_loop(loop_content=self.get_loop(), sort_loop=False))
         self.view_line_btn.clicked.connect(lambda: self.add_line(line_content=self.get_line()))
 
         self.share_loop_gps_btn.clicked.connect(lambda: self.share_loop_signal.emit(self.get_loop()))
@@ -455,31 +455,33 @@ class PEMFileInfoWidget(QWidget, Ui_PEMInfoWidget):
             logger.critical(str(e))
             self.error.showMessage(f"Error adding line: {str(e)}.")
 
-    def add_loop(self, loop_content=None):
+    def add_loop(self, loop_content=None, sort_loop=True):
         """
         Open the LoopAdder and add the TransmitterLoop
         :param loop_content: str or Path or pd DataFrame. If None is passed, will use what's in the loop_table.
+        :param sort_loop: Bool, whether LoopAdder should automatically sort the loop.
         """
         def loop_accept_sig_wrapper(data):
             self.fill_gps_table(data, self.loop_table)
 
         # global loop_adder
-        self.loop_adder = LoopAdder(self.pem_file, parent=self, darkmode=self.darkmode)
+        self.loop_adder = LoopAdder(self.pem_file, sort_loop=sort_loop, parent=self, darkmode=self.darkmode)
         self.loop_adder.accept_sig.connect(loop_accept_sig_wrapper)
         self.loop_adder.accept_sig.connect(lambda: self.gps_object_changed(self.loop_table, refresh=True))
 
         if loop_content is None:
             loop_content = self.get_loop()
 
-        # try:
-        loop = TransmitterLoop(loop_content)
-        if loop.df.empty:
-            self.message.information(self, 'No GPS Found', f"{loop.error_msg}")
+        try:
+            loop = TransmitterLoop(loop_content)
+        except Exception as e:
+            logger.critical(f"{e}.")
+            self.error.showMessage(f"Error adding loop: {str(e)}")
         else:
-            self.loop_adder.open(loop)
-        # except Exception as e:
-        #     logger.critical(f"{e}.")
-        #     self.error.showMessage(f"Error adding loop: {str(e)}")
+            if loop.df.empty:
+                self.message.information(self, 'No GPS Found', f"{loop.error_msg}")
+            else:
+                self.loop_adder.open(loop)
 
     def add_collar(self, file):
         """

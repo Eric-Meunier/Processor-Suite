@@ -78,11 +78,8 @@ logger = logging.getLogger(__name__)
 # TODO Show project damp files
 # TODO Use root mean squared error to measure theoretical data fit. Also use it to find best coil area value.
 # TODO Auto add median current to PEM files in unpacker
-# TODO Add mapbox view options
 # TODO Add favorites for project folders
 # TODO (later) Add PEM files to SQL data base (instead of importing filed logs?)
-# TODO Add SOA rotation for X and Y of surface surveys. Y of SQUID 12 may be off by ~2-3°.
-# TODO Speed up coil area correction
 
 
 # Keep a list of widgets so they don't get garbage collected
@@ -452,7 +449,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             pem_file = self.pem_files[row]
             value = self.table.item(row, col).text()
 
-            # Rename a file when the 'File' column is changed
+            # Rename a file when the 'File' (filepath) column is changed
             if col == self.table_columns.index('File'):
                 old_path = pem_file.filepath
                 new_value = self.table.item(row, col).text()
@@ -467,12 +464,11 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         # Keep the old name if the new file name already exists
                         logger.error(f"{e}.")
                         self.message.critical(self, 'File Error', f"{e}.")
-                        item = QTableWidgetItem(str(old_path.name))
-                        item.setTextAlignment(Qt.AlignCenter)
-                        self.table.setItem(row, col, item)
+                        self.table.item(row, col).setText(str(old_path.name))
                     else:
                         pem_file.filepath = new_path
                         self.fill_pem_list()
+                        self.reorder_pems()
                         self.status_bar.showMessage(f"{old_path.name} renamed to {str(new_value)}", 2000)
 
             elif col == self.table_columns.index('Date'):
@@ -694,6 +690,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                 self.add_dmp_files(dmp_filepaths)
                 self.add_pem_files(pem_filepaths)
+            self.color_table_by_values()
 
         def add_gps_list_files():
             """
@@ -1021,6 +1018,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                                              self.message.Yes | self.message.No)
             if response == self.message.Yes:
                 self.add_pem_files(last_opened_pems)
+                self.color_table_by_values()
 
         settings.endGroup()
 
@@ -1350,11 +1348,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             dmp_files = [url for url in urls if url.suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4']]
             if pem_files:
                 self.add_pem_files(pem_files)
+                self.color_table_by_values()
             if dmp_files:
                 self.add_dmp_files(dmp_files)
+                self.color_table_by_values()
 
-        elif all([Path(file).suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4'] for file in urls]):
-            self.add_dmp_files(urls)
+        # elif all([Path(file).suffix.lower() in ['.dmp', '.dmp2', '.dmp3', '.dmp4'] for file in urls]):
+        #     self.add_dmp_files(urls)
+        #     self.color_table_by_values()
 
         elif all([Path(file).suffix.lower() in ['.txt', '.csv', '.seg', '.xyz', '.gpx', '.xlsx', '.xls'] for file in urls]):
             self.add_gps_files(urls)
@@ -1563,7 +1564,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                         continue
 
                 dlg.setLabelText(f"Opening {pem_file.filepath.name}")
-
                 # Create the PEMInfoWidget
                 pem_widget = add_piw_widget(pem_file)
 
@@ -1571,8 +1571,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 if not self.pem_files:
                     share_header(pem_file)
                     self.enable_menus(True)
-                    # self.move_dir_tree(pem_file.filepath.parent)
-                    # self.piw_frame.show()
                 if self.project_dir_edit.text() == '':
                     self.move_dir_tree(pem_file.filepath.parent)
 
@@ -1603,8 +1601,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 count += 1
                 dlg += 1
 
-        self.color_table_by_values()
-
         self.allow_signals = True
         self.table.setUpdatesEnabled(True)
         self.table.blockSignals(False)
@@ -1622,7 +1618,8 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         :param row: int, row of the PEM file in the table
         :return: None
         """
-        logger.info(f"Adding {pem_file.filepath.name} to the table.")
+        logger.debug(f"Adding {pem_file.filepath.name} to the table.")
+        assert self.table.rowCount() >= row, f"PEM file to be added to row {row}, but {self.table.rowCount()} exist."
         self.table.blockSignals(True)
 
         # Get the information for each column
@@ -1724,6 +1721,33 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         self.menuGPS.setEnabled(enable)
         self.menuMap.setEnabled(enable)
 
+    def reorder_pems(self):
+        """
+        Reorder the PEM files in the table and their respective PIW widgets.
+        """
+        if self.auto_sort_files_cbox.isChecked():
+            self.table.setUpdatesEnabled(False)
+            self.table.blockSignals(True)
+            for row in reversed(range(self.table.rowCount())):
+                self.table.removeRow(row)
+
+            for widget in reversed(self.pem_info_widgets):
+                self.stackedWidget.removeWidget(widget)
+
+            sorted_objects = natsort.os_sorted((zip(self.pem_files, self.pem_info_widgets)),
+                                        key=lambda x: str(x[0].filepath))
+
+            for i, (pem, piw) in enumerate(sorted_objects):
+                self.table.insertRow(i)
+                self.stackedWidget.insertWidget(i, piw)
+                self.add_pem_to_table(pem, i)
+
+            self.pem_files = [i[0] for i in sorted_objects]
+            self.pem_info_widgets = [i[1] for i in sorted_objects]
+
+            self.table.setUpdatesEnabled(True)
+            self.table.blockSignals(False)
+
     def remove_pem_file(self, rows=None):
         """
         Removes PEM files from the main table, along with any associated widgets.
@@ -1779,7 +1803,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.status_bar.showMessage(f"{pem_file.filepath} does not exist.", 2000)
                 return
 
-            browser = PEMBrowser(pem_file)
+            browser = PEMTextBrowser(pem_file)
             browser.close_request.connect(on_browser_close)
             self.text_browsers.append(browser)
             browser.show()
@@ -1796,6 +1820,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.add_pem_files(files)
             else:
                 self.add_dmp_files(files)
+            self.color_table_by_values()
 
     def open_pem_plot_editor(self):
         """
@@ -1856,7 +1881,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         try:
             derotator.open(pem_file)
         except AssertionError as e:
-            self.message.critical(self, "Error opening Derotator", e)
+            self.message.critical(self, "Error opening Derotator", str(e))
 
     def open_pem_geometry(self):
         def accept_geometry(seg):
@@ -1875,7 +1900,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         try:
             pem_geometry.open(pem_files)
         except AssertionError as e:
-            self.message.critical(self, "Error opening PEMGeometry", e)
+            self.message.critical(self, "Error opening PEMGeometry", str(e))
 
     def open_pem_merger(self):
         def check_pems():
@@ -1925,21 +1950,28 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             """
             filepath = Path(filepath)
             removal_rows = []
+
+            # Block signals so the files in the table aren't automatically rearranged, which causes
+            # issues with removing the correct files.
+            self.table.blockSignals(True)
             if self.actionRename_Merged_Files.isChecked():
                 for row in rows:
                     name = self.table.item(row, self.table_columns.index("File")).text()
                     if name != filepath.name:
-                        removal_rows.append(row)
+                        # removal_rows.append(row)
                         if self.pem_files[row].filepath.is_file():
                             new_name = "[M]" + name
                             # Also triggers file re-name.
                             self.table.item(row, self.table_columns.index("File")).setText(new_name)
+            self.table.blockSignals(False)
 
             if self.delete_merged_files_cbox.isChecked():
                 self.remove_pem_file(removal_rows)
 
-            self.add_pem_files(filepath, refresh=True)
+            self.add_pem_files([filepath], refresh=True)
             self.fill_pem_list()
+            self.reorder_pems()
+            self.color_table_by_values()
 
         pem_files, rows = self.get_pem_files(selected=True)
         if len(pem_files) != 2:
@@ -1954,7 +1986,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             try:
                 merger.open(pem_files)
             except AssertionError as e:
-                self.message.critical(self, "Error opening PEMMerger", e)
+                self.message.critical(self, "Error opening PEMMerger", str(e))
 
     def open_pdf_plot_printer(self, selected=False):
         """
@@ -2045,19 +2077,23 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             """
             if kind == 'File':
                 col = self.table_columns.index('File')
+                self.table.blockSignals(True)
             else:
                 col = self.table_columns.index('Line/Hole')
 
             for i, row in enumerate(rows):
-                item = QTableWidgetItem(new_names[i])
-                item.setTextAlignment(Qt.AlignCenter)
-                self.table.setItem(row, col, item)
+                self.table.item(row, col).setText(new_names[i])
+                # Manually rename the files. Allowing the signal slot from changing the file
+                # name in the table causes the table to reorder after every rename.
+                if kind == "File":
+                    os.rename(str(self.pem_files[row].filepath), str(self.pem_files[row].filepath.with_name(new_names[i])))
+                    pem_files[row].filepath = pem_files[row].filepath.with_name(new_names[i])
+                    self.pem_files[row].filepath = self.pem_files[row].filepath.with_name(new_names[i])
+            self.table.blockSignals(False)
             batch_name_editor.open(pem_files, kind=kind)
 
         pem_files, rows = self.get_pem_files(selected=selected)
-
         if not pem_files:
-            logger.warning("No PEM files selected.")
             self.status_bar.showMessage(f"No PEM files selected.", 2000)
             return
 
@@ -2478,9 +2514,9 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                     self.message.critical(self, "Access Denied", "Access was defined.")
 
         menu = QMenu()
+        menu.addAction(get_icon("edit"), 'Auto-Name Files', autoname_files)
         menu.addAction(get_icon("rename"), 'Rename Folder', rename)
         # menu.addSeparator()
-        menu.addAction('Auto-Name Files', autoname_files)
         menu.addAction(get_icon("add"), 'Create Delivery Folder', create_delivery_folder)
         menu.exec_(self.project_tree.viewport().mapToGlobal(position))
 
@@ -2694,27 +2730,35 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
             # Inclusive files
             if any(include_files):
-                filtered_pems = [p for p in filtered_pems if any(
-                    [f.lower() in str(p.name).lower() for f in include_files if f]
-                )]
+                for pem in reversed(filtered_pems):
+                    for file in include_files:
+                        if file.lower() not in pem.name.lower():
+                            filtered_pems.remove(pem)
+                            break
 
             # Exclusive files
             if any(exclude_files):
-                filtered_pems = [p for p in filtered_pems if all(
-                    [f.lower() not in str(p.name).lower() for f in exclude_files if f]
-                )]
+                for pem in reversed(filtered_pems):
+                    for file in exclude_files:
+                        if file.lower() in pem.name.lower():
+                            filtered_pems.remove(pem)
+                            break
 
             # Inclusive folders
             if any(include_folders):
-                filtered_pems = [p for p in filtered_pems if any(
-                    [f.lower() in str(p.parent).lower() for f in include_folders if f]
-                )]
+                for pem in reversed(filtered_pems):
+                    for folder in include_folders:
+                        if not any([part.lower() == folder.lower() for part in pem.parts]):
+                            filtered_pems.remove(pem)
+                            break
 
             # Exclusive folders
             if any(exclude_folders):
-                filtered_pems = [p for p in filtered_pems if all(
-                    [f.lower() not in str(p.parent).lower() for f in exclude_folders if f]
-                )]
+                for pem in reversed(filtered_pems):
+                    for folder in exclude_folders:
+                        if any([part.lower() == folder.lower() for part in pem.parts]):
+                            filtered_pems.remove(pem)
+                            break
 
             include_exts = strip(self.pem_list_filter.include_exts_edit.text().split(','))
             exclude_exts = strip(self.pem_list_filter.exclude_exts_edit.text().split(','))
@@ -2786,7 +2830,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         Serialize the currently selected PEMFile as a .PEM or .XYZ file.
         """
-
         def save_pem():
             # Create a copy of the PEM file, then update the copy
             new_pem = pem_file.copy()
@@ -2802,6 +2845,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 self.refresh_pem(new_pem)
             else:
                 self.add_pem_files(new_pem)
+                self.color_table_by_values()
 
             # Refresh the PEM list
             self.fill_pem_list()
@@ -3435,13 +3479,6 @@ class PEMHub(QMainWindow, Ui_PEMHub):
         """
         Color the background of the cells based on their values for the current, coil area, and station ranges.
         """
-        if not self.pem_files:
-            return
-
-        self.table.blockSignals(True)
-        mpl_red, mpl_blue = np.array([34, 79, 214]) / 256, np.array([247, 42, 42]) / 256
-        alpha = 250
-
         def color_currents():
             current_col = self.table_columns.index("Current")
             currents = np.array([self.table.item(row, current_col).text() for row in range(self.table.rowCount())],
@@ -3572,6 +3609,14 @@ class PEMHub(QMainWindow, Ui_PEMHub):
 
                 count += 1
 
+        if not self.pem_files:
+            return
+
+        print("Coloring table by values")
+        self.table.blockSignals(True)
+        mpl_red, mpl_blue = np.array([34, 79, 214]) / 256, np.array([247, 42, 42]) / 256
+        alpha = 250
+
         color_currents()
         color_coil_areas()
         color_station_starts()
@@ -3602,7 +3647,7 @@ class PEMHub(QMainWindow, Ui_PEMHub):
             self.format_row(ind)
             self.color_table_by_values()
         else:
-            logger.error(f"PEMFile ID {id(pem_file)} is not in the table.")
+            logger.error(f"PEMFile {pem_file.filepath.name} is not in the table.")
             # raise IndexError(f"PEMFile ID {id(pem_file)} is not in the table.")
 
     def update_selection_text(self):
@@ -4279,7 +4324,7 @@ class PathFilter(QWidget):
             self.accept_sig.emit()
 
 
-class PEMBrowser(QTextBrowser):
+class PEMTextBrowser(QTextBrowser):
     close_request = Signal(object)
 
     def __init__(self, pem_file):
@@ -4854,32 +4899,6 @@ class ChannelTimeViewer(QMainWindow):
         self.fill_channel_table()
 
 
-class SuffixWarningViewer(QMainWindow):
-
-    def __init__(self, pem_file, parent=None):
-        super().__init__()
-        self.parent = parent
-
-        assert not pem_file.is_borehole(), f"{pem_file.filepath.name} is a borehole file."
-
-        self.pem_file = pem_file
-        self.suffixes = self.pem_file.get_suffix_warnings()
-        self.suffixes = self.suffixes[['Station', 'Component', 'Reading_index', 'Reading_number']]
-        if self.suffixes.empty:
-            logger.error(f"No suffixes to view in {pem_file.filepath.name}.")
-            return
-
-        self.setWindowTitle(f"Suffix Warnings Viewer - {pem_file.filepath.name}")
-
-        self.setLayout(QVBoxLayout())
-        self.table = pg.TableWidget()
-        self.layout().addWidget(self.table)
-        self.setCentralWidget(self.table)
-
-        self.table.setData(self.suffixes.to_dict('index'))
-        self.show()
-
-
 class WarningEditor(QMainWindow):
     accept_sig = Signal(object)
 
@@ -5007,16 +5026,18 @@ class GPSWarningViewer(QMainWindow):
                 box.setAlignment(Qt.AlignCenter)
 
                 for warning_type, warnings_df in warnings.items():  # Specific types of warnings, duplicates, sorting, etc..
-                    box.layout().addWidget(QLabel(warning_type + ":"))
                     if warnings_df.empty:
-                        box.layout().addWidget(QLabel("None"))
+                        # box.layout().addWidget(QLabel("None"))
                         continue
-                    table = QTableWidget()
-                    table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-                    table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
-                    table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-                    df_to_table(warnings_df, table)
-                    box.layout().addWidget(table)
+
+                    box.layout().addWidget(QLabel(warning_type + ":"))
+                    label = QLabel(warnings_df.to_string())
+                    # table = QTableWidget()
+                    # table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+                    # table.horizontalHeader().setResizeMode(QHeaderView.Stretch)
+                    # table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+                    # df_to_table(warnings_df, table)
+                    box.layout().addWidget(label)
 
                 self.widget.layout().addWidget(box)
 
@@ -5107,6 +5128,7 @@ class StationSplitter(QWidget):
             new_pem_file.number_of_readings = len(new_data.index)
             new_pem_file.save()
             self.parent.add_pem_files(new_pem_file)
+            self.parent.color_table_by_values()
 
             # Remove the selected stations from the original file.
             self.pem_file.data = self.pem_file.data.loc[~filt]
@@ -5308,10 +5330,7 @@ class MagDeclinationCalculator(QMainWindow):
         :param pem_file: PEMFile object
         :return: None
         """
-        if not pem_file:
-            logger.warning(f"No PEM files passed.")
-            return
-
+        assert pem_file, f"No PEM file passed."
         assert pem_file.get_crs() is not None, f'{pem_file.get_crs()} is not a valid GPS coordinate system'
 
         mag = pem_file.get_mag_dec()
@@ -5357,7 +5376,7 @@ def main():
     # pem_files = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-207\Final\_EM21-207 XYT.PEM")
     # pem_files = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-206\RAW\em21-206 xy_1030.PEM")
     # pem_files2 = pem_getter.parse(r"C:\_Data\2021\TMC\Benz Mining\EM21-206\RAW\em21-206 z_1030.PEM")
-    # pem_files = pem_getter.parse(samples_folder.joinpath(r"Line GPS\800N.PEM"))
+    pem_files = pem_getter.parse(samples_folder.joinpath(r"Line GPS\800N.PEM"))
     # txt_file = samples_folder.joinpath(r"Line GPS\KA800N_1027.txt")
     # pem_files = pem_getter.parse(r"C:\_Data\2021\Trevali Peru\Borehole\_SAN-0251-21\RAW\xy1910_1019.dmp2")
     # pem_files.extend(pem_getter.get_pems(folder='PEM Merging', file=r"Nantou Loop 5\[M]line19000e_0824.PEM"))
@@ -5368,11 +5387,8 @@ def main():
     # channel_viewer = ChannelTimeViewer(pem_files)
     # channel_viewer.show()
 
-    # gps_warning_viewer = GPSWarningViewer(pem_files)
+    # mw = GPSWarningViewer(pem_files)
     # mw.project_dir_edit.setText(str(samples_folder.joinpath(r"Final folders\Birchy 2\Final")))
-    # mw.open_project_dir()
-    # mw.show()
-    # app.processEvents()
 
     # mw.add_pem_files(pem_files)
 
@@ -5393,46 +5409,6 @@ def main():
     # mw.save_pem_file_as()
     # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
     # mw.add_gps_files(txt_file)
-
-    """ Attempting to re-create printing bug """
-    # mw.open_unpacker(folder=samples_folder.joinpath(r"Raw Boreholes\EB-21-52\DUMP\July 20, 2021"))
-    # mw.unpacker.accept()
-    #
-    # dmp_files = [samples_folder.joinpath(r"Raw Boreholes\EB-21-52\RAW\xy_0720.dmp2")]
-    # dmp_files.extend([samples_folder.joinpath(r"Raw Boreholes\EB-21-52\RAW\z_0720.dmp2")])
-    # mw.add_dmp_files(dmp_files)
-    # mw.table.selectRow(0)
-    # mw.add_gps_files(samples_folder.joinpath(r"Raw Boreholes\EB-21-52\GPS\LOOP EB-1_0718.txt"))
-    # mw.stackedWidget.currentWidget().loop_adder.accept()
-    # mw.pem_info_widgets[0].tabs.setCurrentIndex(2)
-    # mw.add_gps_files(samples_folder.joinpath(r"Raw Boreholes\EB-21-52\GPS\EB-21-52_0719.txt"))
-    # mw.open_pem_geometry()
-    # mw.pem_geometry.az_output_combo.setCurrentIndex(1)
-    # mw.pem_geometry.dip_output_combo.setCurrentIndex(1)
-    # mw.pem_geometry.accept()
-    # mw.open_gps_share('all', mw.pem_info_widgets[0])
-    # mw.gps_share.accept()
-    # mw.open_derotator()
-    # mw.derotator.accept()
-    #
-    # mw.open_pem_plot_editor()
-    # mw.pem_editor_widgets[0].auto_clean()
-    # mw.pem_editor_widgets[0].close()
-    # mw.table.selectRow(1)
-    # mw.open_pem_plot_editor()
-    # mw.pem_editor_widgets[0].auto_clean()
-    # mw.pem_editor_widgets[0].close()
-    #
-    # mw.save_pem_files(selected=False)
-    #
-    # mw.export_pem_files(selected=False, processed=True)
-    # mw.remove_pem_file()
-    # mw.table.selectRow(0)
-    # mw.remove_pem_file()
-    # mw.add_pem_files([samples_folder.joinpath(r"Raw Boreholes\EB-21-52\Final\xy.pem"),
-    #                  samples_folder.joinpath(r"Raw Boreholes\EB-21-52\Final\z.pem")])
-
-    """"""
 
     mw.show()
     # mw.open_pdf_plot_printer(selected=False)

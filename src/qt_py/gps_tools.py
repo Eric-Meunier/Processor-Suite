@@ -42,7 +42,7 @@ class GPSAdder(QMainWindow):
     """
     accept_sig = Signal(object)
 
-    def __init__(self, pem_file, parent=None, darkmode=False):
+    def __init__(self, pem_file, parent=None, darkmode=False, **kwargs):
         super().__init__()
         self.resize(1000, 800)
         self.setWindowIcon(get_icon('gps_adder.png'))
@@ -140,8 +140,6 @@ class GPSAdder(QMainWindow):
                 next_row = row - 1
             else:
                 next_row = row
-
-            # Highlight the next row
             self.highlight_point(next_row)
 
             self.color_table()
@@ -151,12 +149,11 @@ class GPSAdder(QMainWindow):
         Signal slot: Adds the data from the table to the write_widget's (pem_info_widget object) table.
         :return: None
         """
-        self.accept_sig.emit(table_to_df(self.table).dropna())
+        self.accept_sig.emit(self.get_df().dropna())
         self.close()
         self.deleteLater()
 
     def clear_table(self):
-        print("Clearning table")
         self.table.blockSignals(True)
         self.table.clear()
         while self.table.rowCount() > 0:
@@ -211,6 +208,11 @@ class GPSAdder(QMainWindow):
         self.table.blockSignals(False)
 
     def plot_table(self, preserve_limits=False):
+        """
+        Plot the data from the table to the axes.
+        :param preserve_limits: bool, preserve the limits of the plan and section views. Not used in LineAdder.
+        :return: None
+        """
         pass
 
     def color_table(self):
@@ -236,7 +238,7 @@ class GPSAdder(QMainWindow):
             """
             indexes = self.selection
             # Create the data frame
-            df = table_to_df(self.table)
+            df = self.get_df()
             # Create a copy of the two rows.
             a, b = df.iloc[indexes[0]].copy(), df.iloc[indexes[1]].copy()
             # Allocate the two rows in reverse order
@@ -415,7 +417,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
             if response != self.message.Yes:
                 return
 
-        self.accept_sig.emit(table_to_df(self.table).dropna())
+        self.accept_sig.emit(self.get_df().dropna())
         self.close()
         self.deleteLater()
 
@@ -476,7 +478,7 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         :param preserve_limits: bool, preserve the limits of the plan and section views. Not used in LineAdder.
         :return: None
         """
-        df = table_to_df(self.table)
+        df = self.get_df()
         if df.empty:
             return
 
@@ -505,7 +507,6 @@ class LineAdder(GPSAdder, Ui_LineAdder):
         color = get_line_color("red", "pyqt", self.darkmode) if keyboard.is_pressed(
             'ctrl') else get_line_color("single_blue", "pyqt", self.darkmode)
 
-        df = table_to_df(self.table)
         df['Station'] = df['Station'].astype(int)
 
         # Plot on the plan map
@@ -648,6 +649,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         self.table.setFixedWidth(400)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
+        self.auto_sort_cbox.setChecked(kwargs.get("sort_loop"))
         self.plan_view.addItem(self.plan_plot)
         self.section_view.addItem(self.section_plot)
         self.plan_view.setFocusPolicy(Qt.StrongFocus)
@@ -665,7 +667,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
 
         self.table.cellChanged.connect(self.cell_changed)
         self.table.itemSelectionChanged.connect(self.highlight_point)
-        self.auto_sort_cbox.toggled.connect(lambda: self.open(self.gps_object, check_elevation_errors=False))
+        self.auto_sort_cbox.toggled.connect(lambda: self.open(self.get_df(), check_elevation_errors=False))
 
     def format_plots(self):
         float_delegate = QItemDelegate()
@@ -719,7 +721,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
             if response != self.message.Yes:
                 return
 
-        self.accept_sig.emit(table_to_df(self.table).dropna())
+        self.accept_sig.emit(self.get_df().dropna())
         self.close()
         self.deleteLater()
 
@@ -730,12 +732,16 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         :param check_elevation_errors: bool, prompt to fix elevation errors. Used on inital open only.
         """
         errors = pd.DataFrame()
+
         if isinstance(gps, str) or isinstance(gps, Path):
             if Path(gps).is_file():
                 self.gps_object = TransmitterLoop(gps)
                 errors = self.gps_object.get_errors()
             else:
-                raise ValueError(f"{gps} is not a valid file.")
+                raise ValueError(f"File {gps} does not exist.")
+        elif isinstance(gps, pd.DataFrame):
+            self.gps_object = TransmitterLoop(gps)
+            errors = self.gps_object.get_errors()
         elif isinstance(gps, TransmitterLoop):
             self.gps_object = gps
         else:
@@ -769,7 +775,7 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
         Plot the data from the table to the axes.
         :return: None
         """
-        df = table_to_df(self.table)
+        df = self.get_df()
         if df.empty:
             return
 
@@ -802,8 +808,6 @@ class LoopAdder(GPSAdder, Ui_LoopAdder):
 
         color = get_line_color("red", "pyqt", self.darkmode) if keyboard.is_pressed(
             'ctrl') else get_line_color("single_blue", "pyqt", self.darkmode)
-
-        df = table_to_df(self.table)
 
         # Plot on the plan map
         plan_x, plan_y = df.loc[row, 'Easting'], df.loc[row, 'Northing']
@@ -1576,8 +1580,7 @@ class GPXCreator(QMainWindow, Ui_GPXCreator):
             self.status_bar.showMessage('Cancelled', 2000)
             return
 
-        logger.info(f"Saving {file}")
-
+        logger.debug(f"Saving {file}")
         gpx = gpxpy.gpx.GPX()
 
         # Create a data frame from the table
@@ -1790,7 +1793,7 @@ if __name__ == '__main__':
 
     """Adders"""
     pem_file = getter.parse(samples_folder.joinpath(r"Line GPS\800N.PEM"))
-    mw = CollarPicker(pem_file, darkmode=darkmode)
+    # mw = CollarPicker(pem_file, darkmode=darkmode)
     # file = r"C:\_Data\2021\TMC\Laurentia\GEN-21-09\GPS\Loop 09_0823.gpx"
     # # file = str(Path(line_samples_folder).joinpath('PRK-LOOP11-LINE9.txt'))
     # file = samples_folder.joinpath(r"Line GPS\KA800N_1027.txt")
@@ -1802,12 +1805,12 @@ if __name__ == '__main__':
     # file = samples_folder.joinpath(r"Segments\for Eastern Geophy-reflex.xlsx")
     # file = samples_folder.joinpath(r"Segments\BHEM-Belvais-2021-07-22.xlsx")
     # # file = samples_folder.joinpath(r'GPX files\L3100E_0814 (elevation error).gpx')
-    file = r"C:\_Data\2022\TMC\Monarch Mining\MK-21-297\GPS\LOOP A02022022_0206.gpx"
+    file = r"G:\Data\2022\TMC\Benz Mining\Borehole\EM-22-251\GPS\EM-22-251 + loop 22-3_0324.gpx"
     # # file = samples_folder.joinpath(r'Raw Boreholes\OBS-88-027\RAW\Obalski.xlsx')
     # # file = samples_folder.joinpath(r'Raw Boreholes\GEN-21-02\RAW\GEN-21-01_02_04.xlsx')
     # # line = SurveyLine(str(file))
 
-    # mw = LoopAdder(pem_file, darkmode=darkmode)
+    mw = LoopAdder(pem_file, darkmode=darkmode)
     # mw = LineAdder(pem_file, darkmode=darkmode)
     mw.open(file)
     mw.show()
