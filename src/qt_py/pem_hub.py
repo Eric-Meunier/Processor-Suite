@@ -1958,10 +1958,16 @@ class PEMHub(QMainWindow, Ui_PEMHub):
                 for row in rows:
                     name = self.table.item(row, self.table_columns.index("File")).text()
                     if name != filepath.name:
-                        # removal_rows.append(row)
-                        if self.pem_files[row].filepath.is_file():
+                        removal_rows.append(row)
+                        pem_file = self.pem_files[row]
+                        if pem_file.filepath.is_file():
                             new_name = "[M]" + name
-                            # Also triggers file re-name.
+                            try:
+                                os.rename(str(pem_file.filepath), str(pem_file.filepath.with_name(new_name)))
+                            except Exception as e:
+                                self.message.critical(self, "Renaming Error",
+                                                      f"The following error occured while renaming"
+                                                      f" {pem_file.filepath.name}: {e}.")
                             self.table.item(row, self.table_columns.index("File")).setText(new_name)
             self.table.blockSignals(False)
 

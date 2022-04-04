@@ -3,13 +3,16 @@
 ################################################################################
 ## Form generated from reading UI file 'derotator.ui'
 ##
-## Created by: Qt User Interface Compiler version 5.15.2
+## Created by: Qt User Interface Compiler version 5.14.1
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide2.QtCore import *
-from PySide2.QtGui import *
+from PySide2.QtCore import (QCoreApplication, QMetaObject, QObject, QPoint,
+    QRect, QSize, QUrl, Qt)
+from PySide2.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont,
+    QFontDatabase, QIcon, QLinearGradient, QPalette, QPainter, QPixmap,
+    QRadialGradient)
 from PySide2.QtWidgets import *
 
 from pyqtgraph import GraphicsLayoutWidget
@@ -17,9 +20,9 @@ from pyqtgraph import GraphicsLayoutWidget
 
 class Ui_Derotator(object):
     def setupUi(self, Derotator):
-        if not Derotator.objectName():
+        if Derotator.objectName():
             Derotator.setObjectName(u"Derotator")
-        Derotator.resize(1080, 701)
+        Derotator.resize(1080, 699)
         self.actionPEM_File = QAction(Derotator)
         self.actionPEM_File.setObjectName(u"actionPEM_File")
         self.actionStats = QAction(Derotator)
@@ -36,6 +39,10 @@ class Ui_Derotator(object):
         self.actionShow_Scatter.setChecked(True)
         self.actionReverse_XY = QAction(Derotator)
         self.actionReverse_XY.setObjectName(u"actionReverse_XY")
+        self.actionView_Ineligible_Data = QAction(Derotator)
+        self.actionView_Ineligible_Data.setObjectName(u"actionView_Ineligible_Data")
+        self.actionPair_wise_ineligible_data = QAction(Derotator)
+        self.actionPair_wise_ineligible_data.setObjectName(u"actionPair_wise_ineligible_data")
         self.centralwidget = QWidget(Derotator)
         self.centralwidget.setObjectName(u"centralwidget")
         self.horizontalLayout_2 = QGridLayout(self.centralwidget)
@@ -57,34 +64,13 @@ class Ui_Derotator(object):
         self.frame.setFrameShadow(QFrame.Plain)
         self.gridLayout_3 = QGridLayout(self.frame)
         self.gridLayout_3.setObjectName(u"gridLayout_3")
-        self.groupBox_2 = QGroupBox(self.frame)
-        self.groupBox_2.setObjectName(u"groupBox_2")
-        sizePolicy.setHeightForWidth(self.groupBox_2.sizePolicy().hasHeightForWidth())
-        self.groupBox_2.setSizePolicy(sizePolicy)
-        self.verticalLayout_2 = QVBoxLayout(self.groupBox_2)
-        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
-        self.soa_sbox = QSpinBox(self.groupBox_2)
-        self.soa_sbox.setObjectName(u"soa_sbox")
-        sizePolicy1 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        sizePolicy1.setHorizontalStretch(0)
-        sizePolicy1.setVerticalStretch(0)
-        sizePolicy1.setHeightForWidth(self.soa_sbox.sizePolicy().hasHeightForWidth())
-        self.soa_sbox.setSizePolicy(sizePolicy1)
-        self.soa_sbox.setMinimum(-359)
-        self.soa_sbox.setMaximum(359)
-
-        self.verticalLayout_2.addWidget(self.soa_sbox)
-
-
-        self.gridLayout_3.addWidget(self.groupBox_2, 1, 0, 1, 1)
-
         self.groupBox = QGroupBox(self.frame)
         self.groupBox.setObjectName(u"groupBox")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.groupBox.sizePolicy().hasHeightForWidth())
-        self.groupBox.setSizePolicy(sizePolicy2)
+        sizePolicy1 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+        sizePolicy1.setHorizontalStretch(0)
+        sizePolicy1.setVerticalStretch(0)
+        sizePolicy1.setHeightForWidth(self.groupBox.sizePolicy().hasHeightForWidth())
+        self.groupBox.setSizePolicy(sizePolicy1)
         self.verticalLayout = QVBoxLayout(self.groupBox)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.acc_btn = QRadioButton(self.groupBox)
@@ -124,35 +110,39 @@ class Ui_Derotator(object):
 
         self.gridLayout_3.addWidget(self.groupBox, 0, 0, 1, 1)
 
-        self.button_box = QDialogButtonBox(self.frame)
-        self.button_box.setObjectName(u"button_box")
-        sizePolicy1.setHeightForWidth(self.button_box.sizePolicy().hasHeightForWidth())
-        self.button_box.setSizePolicy(sizePolicy1)
-        self.button_box.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
-        self.button_box.setCenterButtons(True)
+        self.groupBox_2 = QGroupBox(self.frame)
+        self.groupBox_2.setObjectName(u"groupBox_2")
+        sizePolicy.setHeightForWidth(self.groupBox_2.sizePolicy().hasHeightForWidth())
+        self.groupBox_2.setSizePolicy(sizePolicy)
+        self.verticalLayout_2 = QVBoxLayout(self.groupBox_2)
+        self.verticalLayout_2.setObjectName(u"verticalLayout_2")
+        self.soa_sbox = QSpinBox(self.groupBox_2)
+        self.soa_sbox.setObjectName(u"soa_sbox")
+        sizePolicy2 = QSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        sizePolicy2.setHorizontalStretch(0)
+        sizePolicy2.setVerticalStretch(0)
+        sizePolicy2.setHeightForWidth(self.soa_sbox.sizePolicy().hasHeightForWidth())
+        self.soa_sbox.setSizePolicy(sizePolicy2)
+        self.soa_sbox.setMinimum(-359)
+        self.soa_sbox.setMaximum(359)
 
-        self.gridLayout_3.addWidget(self.button_box, 5, 0, 1, 1, Qt.AlignHCenter)
+        self.verticalLayout_2.addWidget(self.soa_sbox)
 
-        self.bad_stations_label = QLabel(self.frame)
-        self.bad_stations_label.setObjectName(u"bad_stations_label")
-        sizePolicy.setHeightForWidth(self.bad_stations_label.sizePolicy().hasHeightForWidth())
-        self.bad_stations_label.setSizePolicy(sizePolicy)
-        font = QFont()
-        font.setBold(True)
-        font.setItalic(False)
-        font.setWeight(75)
-        self.bad_stations_label.setFont(font)
 
-        self.gridLayout_3.addWidget(self.bad_stations_label, 2, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.groupBox_2, 1, 0, 1, 1)
 
         self.verticalSpacer = QSpacerItem(10, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
 
-        self.gridLayout_3.addItem(self.verticalSpacer, 4, 0, 1, 1)
+        self.gridLayout_3.addItem(self.verticalSpacer, 2, 0, 1, 1)
 
-        self.list = QLabel(self.frame)
-        self.list.setObjectName(u"list")
+        self.button_box = QDialogButtonBox(self.frame)
+        self.button_box.setObjectName(u"button_box")
+        sizePolicy2.setHeightForWidth(self.button_box.sizePolicy().hasHeightForWidth())
+        self.button_box.setSizePolicy(sizePolicy2)
+        self.button_box.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.button_box.setCenterButtons(True)
 
-        self.gridLayout_3.addWidget(self.list, 3, 0, 1, 1)
+        self.gridLayout_3.addWidget(self.button_box, 3, 0, 1, 1, Qt.AlignHCenter)
 
         self.splitter.addWidget(self.frame)
         self.frame_2 = QFrame(self.splitter)
@@ -291,12 +281,15 @@ class Ui_Derotator(object):
         self.menuExport.setObjectName(u"menuExport")
         self.menuSettings = QMenu(self.menubar)
         self.menuSettings.setObjectName(u"menuSettings")
+        self.menuView = QMenu(self.menubar)
+        self.menuView.setObjectName(u"menuView")
         Derotator.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(Derotator)
         self.statusbar.setObjectName(u"statusbar")
         Derotator.setStatusBar(self.statusbar)
 
         self.menubar.addAction(self.menuFile.menuAction())
+        self.menubar.addAction(self.menuView.menuAction())
         self.menubar.addAction(self.menuSettings.menuAction())
         self.menuFile.addAction(self.actionReverse_XY)
         self.menuFile.addSeparator()
@@ -304,6 +297,7 @@ class Ui_Derotator(object):
         self.menuExport.addAction(self.actionPEM_File)
         self.menuExport.addAction(self.actionStats)
         self.menuSettings.addAction(self.actionShow_Scatter)
+        self.menuView.addAction(self.actionPair_wise_ineligible_data)
 
         self.retranslateUi(Derotator)
 
@@ -322,16 +316,15 @@ class Ui_Derotator(object):
         self.plot_mag_cbox.setText(QCoreApplication.translate("Derotator", u"Plot Mag", None))
         self.actionShow_Scatter.setText(QCoreApplication.translate("Derotator", u"Show Scatter", None))
         self.actionReverse_XY.setText(QCoreApplication.translate("Derotator", u"Reverse XY", None))
-        self.groupBox_2.setTitle(QCoreApplication.translate("Derotator", u"Sensor Offset Angle (SOA)", None))
+        self.actionView_Ineligible_Data.setText(QCoreApplication.translate("Derotator", u"View Ineligible Data", None))
+        self.actionPair_wise_ineligible_data.setText(QCoreApplication.translate("Derotator", u"Ineligible Data for Pair-Wise De-Rotation", None))
         self.groupBox.setTitle(QCoreApplication.translate("Derotator", u"De-rotation Method", None))
         self.acc_btn.setText(QCoreApplication.translate("Derotator", u"Accelerometer", None))
         self.mag_btn.setText(QCoreApplication.translate("Derotator", u"Magnetometer", None))
         self.pp_btn.setText(QCoreApplication.translate("Derotator", u"PP", None))
         self.none_btn.setText(QCoreApplication.translate("Derotator", u"None", None))
         self.unrotate_btn.setText(QCoreApplication.translate("Derotator", u"Un-rotate", None))
-        self.bad_stations_label.setText(QCoreApplication.translate("Derotator", u"Readings ineligible for de-rotation\n"
-"due to missing X and/or Y pair:", None))
-        self.list.setText(QCoreApplication.translate("Derotator", u"TextLabel", None))
+        self.groupBox_2.setTitle(QCoreApplication.translate("Derotator", u"Sensor Offset Angle (SOA)", None))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.lin_tab), QCoreApplication.translate("Derotator", u"X Component", None))
         self.tab_widget.setTabText(self.tab_widget.indexOf(self.log_tab), QCoreApplication.translate("Derotator", u"Y Component", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_3), QCoreApplication.translate("Derotator", u"Deviation", None))
@@ -341,5 +334,6 @@ class Ui_Derotator(object):
         self.menuFile.setTitle(QCoreApplication.translate("Derotator", u"File", None))
         self.menuExport.setTitle(QCoreApplication.translate("Derotator", u"Export...", None))
         self.menuSettings.setTitle(QCoreApplication.translate("Derotator", u"Settings", None))
+        self.menuView.setTitle(QCoreApplication.translate("Derotator", u"View", None))
     # retranslateUi
 

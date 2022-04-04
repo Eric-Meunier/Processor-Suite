@@ -84,13 +84,13 @@ def dad_to_seg(df):
         az_count += abs(az)
         dip_count += abs(dip)
         if any([depth_count >= 10, az_count >= 1., dip_count >= 1.]):
-            seg = seg.append(df.iloc[i + 1])
+            seg = pd.concat([seg, df.iloc[[i + 1]]])
             # Reset the counters
             depth_count, az_count, dip_count = 0, 0, 0
 
     # Add the last segment if it isn't there from the iterative calculations
     if seg.tail(1).Depth.iloc[0] != df.tail(1).Depth.iloc[0]:
-        seg = pd.concat([seg, df.iloc[-1]])
+        seg = pd.concat([seg, df.iloc[[-1]]])
 
     seg_length = seg.Depth.diff()
     seg_length.iloc[0] = seg.Depth.iloc[0]

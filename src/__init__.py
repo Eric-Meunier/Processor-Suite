@@ -34,7 +34,7 @@ def timeit(method):
     return timed
 
 
-def profile(output_file=None, sort_by='cumulative', lines_to_print=None, strip_dirs=False):
+def profile(output_file=None, sort_by='cumulative', lines_to_print=None, strip_dirs=True):
     """A time profiler decorator.
     Inspired by and modified the profile decorator of Giampaolo Rodola:
     http://code.activestate.com/recipes/577817-profile-decorator/

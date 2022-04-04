@@ -9,10 +9,12 @@ import pyqtgraph as pg
 # from src.logger import Log
 from PySide2.QtCore import Signal, QEvent, QSettings
 from PySide2.QtGui import QKeySequence
-from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QApplication, QShortcut)
+from PySide2.QtWidgets import (QMainWindow, QMessageBox, QFileDialog, QApplication, QShortcut, QTableWidget, QWidget,
+                               QVBoxLayout, QAbstractItemView)
 
+from src import timeit
 from src.pem.pem_file import PEMFile, PEMGetter
-from src.qt_py import NonScientific, get_icon, get_line_color
+from src.qt_py import NonScientific, get_icon, get_line_color, df_to_table
 from src.ui.derotator import Ui_Derotator
 
 logger = logging.getLogger(__name__)
@@ -49,6 +51,15 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.soa = self.soa_sbox.value()
         self.message = QMessageBox()
 
+        self.ineligible_data_window = QWidget()
+        self.ineligible_data_window.resize(800, 600)
+        self.ineligible_data_window.setWindowTitle("Ineligible for pair-wise de-rotation")
+        self.ineligible_data_window.setWindowIcon(get_icon("derotate"))
+        self.ineligible_data_window.setLayout(QVBoxLayout())
+        self.ineligible_data_table = QTableWidget()
+        self.ineligible_data_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.ineligible_data_window.layout().addWidget(self.ineligible_data_table)
+
         self.setWindowTitle('XY De-rotation')
         self.setWindowIcon(get_icon('derotate.png'))
         self.actionReverse_XY.setIcon(get_icon("reverse.png"))
@@ -61,8 +72,6 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.change_component_shortcut = QShortcut(QKeySequence('c'), self)
         self.change_component_shortcut.activated.connect(self.change_tab)
 
-        self.bad_stations_label.hide()
-        self.list.setText('')
         self.statusBar().hide()
         self.separator.hide()
         self.unrotate_btn.hide()
@@ -207,6 +216,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.actionPEM_File.triggered.connect(self.export_pem_file)
         self.actionStats.triggered.connect(self.export_stats)
         self.actionShow_Scatter.triggered.connect(self.toggle_scatter)
+        self.actionPair_wise_ineligible_data.triggered.connect(lambda: self.ineligible_data_window.show())
 
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.close)
@@ -412,6 +422,15 @@ class Derotator(QMainWindow, Ui_Derotator):
         else:
             self.tab_widget.setCurrentIndex(0)
 
+    def show_ineligible_data(self):
+        _, ineligible_data = self.pem_file.get_eligible_derotation_data(pairwise=True)
+        if not ineligible_data.empty:
+            df_to_table(ineligible_data, self.ineligible_data_table)
+            self.message.warning(self, "Ineligible Data",
+                                 f"{len(ineligible_data)} readings are ineligible for pair-wise "
+                                 f"de-rotation. These readings will be averaged before de-rotation")
+            self.ineligible_data_window.show()
+
     def open(self, pem_file):
         """
         Open, rotate, and plot the PEMFile.
@@ -443,10 +462,10 @@ class Derotator(QMainWindow, Ui_Derotator):
                     self.unrotate_btn.setEnabled(False)
 
         try:
-            self.pem_file, ineligible_stations, error_msg = self.pem_file.prep_rotation(self.get_method())
+            self.pem_file, error_msg = self.pem_file.prep_rotation(self.get_method())
         except Exception as e:
             self.message.critical(self, "Error", f"Error preparing data for de-rotation:\n{e}.")
-            self.close()
+            # self.close()
             return
         else:
             if error_msg:
@@ -455,14 +474,6 @@ class Derotator(QMainWindow, Ui_Derotator):
         self.setWindowTitle(f"XY De-rotation - {pem_file.filepath.name}")
 
         self.set_pp()
-
-        # Fill the table with the ineligible stations
-        if not ineligible_stations.empty:
-            self.fill_table(ineligible_stations)
-            self.bad_stations_label.show()
-        else:
-            self.bad_stations_label.hide()
-
         # Limit the profile plots to only show the station range
         stations = self.pem_file.get_stations(converted=True)
         for ax in np.concatenate([self.x_view_axes, self.y_view_axes]):
@@ -470,7 +481,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         for ax in [self.dev_ax, self.dip_ax, self.mag_ax, self.rot_ax, self.pp_ax]:
             ax.setLimits(yMin=stations.min() - 1, yMax=stations.max() + 1)
 
-        self.set_default_soa()
+        # self.set_default_soa()
         self.rotate()
         if self.pem_file.has_d7():
             self.check_verticality()
@@ -480,18 +491,8 @@ class Derotator(QMainWindow, Ui_Derotator):
             self.tabWidget.setTabEnabled(1, False)
 
         self.show()
+        self.show_ineligible_data()
         self.reset_range()
-
-    def fill_table(self, stations):
-        """
-        Fill the stations list with the ineligible readings
-        :param stations: pd.DataFrame of ineligible readings
-        """
-        list = []
-        for s in stations.itertuples():
-            result = f"{s.Station} {s.Component} - reading # {s.Reading_number} (index {s.Reading_index})"
-            list.append(result)
-        self.list.setText("\n".join(list))
 
     def plot_mag(self):
         mag_df = self.pem_file.get_mag(average=False)
@@ -628,6 +629,7 @@ class Derotator(QMainWindow, Ui_Derotator):
                                                         f"Magnetic de-rotation set as default.")
             self.mag_btn.click()
 
+    @timeit
     def plot_pem(self, pem_file):
         """
         Plot the PEM file in a LIN plot style, with both components in separate plots
@@ -647,13 +649,12 @@ class Derotator(QMainWindow, Ui_Derotator):
                 df = df.groupby('Station').mean()
                 x, y = df.to_numpy(), df.index.to_numpy()
 
-                ax.plot(x=x, y=y,
-                        pen=pg.mkPen(self.foreground_color, width=0.8))
+                ax.plot(x=x, y=y, pen=pg.mkPen(self.foreground_color, width=0.8))
 
             component_profile_data = self.profile_data[self.profile_data.Component == component].drop(
                 columns=["Component", "Deleted"]).set_index('Station', drop=True)
             if component_profile_data.empty:
-                raise ValueError(f'Profile data for {self.pem_file.filepath.name} is empty.')
+                raise ValueError(f'Profile data for {self.pem_file.filepath.name} - {component} component is empty.')
 
             for i, bounds in enumerate(channel_bounds):
                 # Select the correct axes based on the component
@@ -686,14 +687,14 @@ class Derotator(QMainWindow, Ui_Derotator):
             measured_pp_df = raw_pem.get_roll_data("Measured_PP", self.soa)
             acc_deviation = measured_pp_df.Angle - acc_df.Angle
             mag_deviation = measured_pp_df.Angle - mag_df.Angle
-            if all(acc_deviation < 0):
+            while all(acc_deviation < 0):
                 acc_deviation = acc_deviation + 360
-            if all(mag_deviation < 0):
+            while all(mag_deviation < 0):
                 mag_deviation = mag_deviation + 360
 
             # Calculate the average deviation for the curve line
-            acc_dev_df = pd.DataFrame([acc_deviation, acc_df.Station]).T
-            mag_dev_df = pd.DataFrame([mag_deviation, mag_df.Station]).T
+            acc_dev_df = pd.DataFrame([acc_deviation, acc_df.Station]).T.dropna()
+            mag_dev_df = pd.DataFrame([mag_deviation, mag_df.Station]).T.dropna()
             acc_avg_df = acc_dev_df.groupby("Station", as_index=False).mean()
             mag_avg_df = mag_dev_df.groupby("Station", as_index=False).mean()
 
@@ -707,54 +708,56 @@ class Derotator(QMainWindow, Ui_Derotator):
             Plot the rotation angle of the tool (if selected) and the PP rotation angles for comparison.
             """
             method = self.get_method()
-            if method is not None:
+            if method is None:
+                return
 
-                if self.pp_btn.isEnabled():
-                    # Add the cleaned PP information for non-fluxgate surveys
-                    if not pem_file.is_fluxgate():
-                        # pp_angle_cleaned = rotation_data.RAD_tool.map(lambda x: x.cleaned_pp_roll_angle)
-                        cleaned_pp_df = raw_pem.get_roll_data("Cleaned_PP", self.soa)
-                        cleaned_pp_avg = cleaned_pp_df.groupby("Station", as_index=False).mean()
+            if self.pp_btn.isEnabled():
+                # Add the cleaned PP information for non-fluxgate surveys
+                if not pem_file.is_fluxgate():
+                    # pp_angle_cleaned = rotation_data.RAD_tool.map(lambda x: x.cleaned_pp_roll_angle)
+                    cleaned_pp_df = raw_pem.get_roll_data("Cleaned_PP", self.soa)
+                    cleaned_pp_avg = cleaned_pp_df.groupby("Station", as_index=False).mean()
 
-                        self.cpp_rot_curve.setData(cleaned_pp_avg.Angle.to_numpy(), cleaned_pp_avg.Station.to_numpy())
-                        self.cpp_rot_scatter.setData(cleaned_pp_df.Angle, cleaned_pp_df.Station)
+                    self.cpp_rot_curve.setData(cleaned_pp_avg.Angle.to_numpy(), cleaned_pp_avg.Station.to_numpy())
+                    self.cpp_rot_scatter.setData(cleaned_pp_df.Angle, cleaned_pp_df.Station)
 
-                    # pp_angle_measured = rotation_data.RAD_tool.map(lambda x: x.measured_pp_roll_angle)
-                    measured_pp_df = raw_pem.get_roll_data("Measured_PP", self.soa)
-                    measured_pp_avg = measured_pp_df.groupby("Station", as_index=False).mean()
-                    self.mpp_rot_curve.setData(measured_pp_avg.Angle.to_numpy(), measured_pp_avg.Station.to_numpy())
-                    self.mpp_rot_scatter.setData(measured_pp_df.Angle, measured_pp_df.Station)
+                # pp_angle_measured = rotation_data.RAD_tool.map(lambda x: x.measured_pp_roll_angle)
+                measured_pp_df = raw_pem.get_roll_data("Measured_PP", self.soa)
+                measured_pp_avg = measured_pp_df.groupby("Station", as_index=False).mean()
+                self.mpp_rot_curve.setData(measured_pp_avg.Angle.to_numpy(), measured_pp_avg.Station.to_numpy())
+                self.mpp_rot_scatter.setData(measured_pp_df.Angle, measured_pp_df.Station)
 
-                # Tool rotations
-                if self.pem_file.has_d7():
-                    acc_df = raw_pem.get_roll_data("Acc", self.soa)
-                    acc_avg = acc_df.groupby("Station", as_index=False).mean()
-                    self.acc_rot_curve.setData(acc_avg.Angle.to_numpy(), acc_avg.Station.to_numpy())
-                    self.acc_rot_scatter.setData(acc_df.Angle, acc_df.Station)
+            # Tool rotations
+            if self.pem_file.has_d7():
+                acc_df = raw_pem.get_roll_data("Acc", self.soa)
+                acc_avg = acc_df.groupby("Station", as_index=False).mean()
+                self.acc_rot_curve.setData(acc_avg.Angle.to_numpy(), acc_avg.Station.to_numpy())
+                self.acc_rot_scatter.setData(acc_df.Angle, acc_df.Station)
 
-                    mag_df = raw_pem.get_roll_data("Mag", self.soa)
-                    mag_avg = mag_df.groupby("Station", as_index=False).mean()
-                    self.mag_rot_curve.setData(mag_avg.Angle.to_numpy(), mag_avg.Station.to_numpy())
-                    self.mag_rot_scatter.setData(mag_df.Angle, mag_df.Station)
+                mag_df = raw_pem.get_roll_data("Mag", self.soa)
+                mag_avg = mag_df.groupby("Station", as_index=False).mean()
+                self.mag_rot_curve.setData(mag_avg.Angle.to_numpy(), mag_avg.Station.to_numpy())
+                self.mag_rot_scatter.setData(mag_df.Angle, mag_df.Station)
 
-                    if self.acc_rot_curve not in self.rot_ax.items:
-                        self.rot_ax.addItem(self.acc_rot_curve)
-                        self.rot_ax.addItem(self.acc_rot_scatter)
+                if self.acc_rot_curve not in self.rot_ax.items:
+                    self.rot_ax.addItem(self.acc_rot_curve)
+                    self.rot_ax.addItem(self.acc_rot_scatter)
 
-                    if self.mag_rot_curve not in self.rot_ax.items:
-                        self.rot_ax.addItem(self.mag_rot_curve)
-                        self.rot_ax.addItem(self.mag_rot_scatter)
+                if self.mag_rot_curve not in self.rot_ax.items:
+                    self.rot_ax.addItem(self.mag_rot_curve)
+                    self.rot_ax.addItem(self.mag_rot_scatter)
 
-                else:
-                    # Tool used to calculate angle is unknown
-                    tool_df = raw_pem.get_roll_data("Tool", self.soa)
-                    tool_avg = tool_df.groupby("Station", as_index=False).mean()
-                    self.tool_rot_curve.setData(tool_avg.Angle.to_numpy(), tool_avg.Station.to_numpy())
-                    self.tool_rot_scatter.setData(tool_df.Angle, tool_df.Station)
+            else:
+                # Tool used to calculate angle is unknown
+                tool_df = raw_pem.get_roll_data("Tool", self.soa)
+                print(f"{tool_df=}")
+                tool_avg = tool_df.groupby("Station", as_index=False).mean()
+                self.tool_rot_curve.setData(tool_avg.Angle.to_numpy(), tool_avg.Station.to_numpy())
+                self.tool_rot_scatter.setData(tool_df.Angle, tool_df.Station)
 
-                    if self.tool_rot_curve not in self.rot_ax.items:
-                        self.rot_ax.addItem(self.tool_rot_curve)
-                        self.rot_ax.addItem(self.tool_rot_scatter)
+                if self.tool_rot_curve not in self.rot_ax.items:
+                    self.rot_ax.addItem(self.tool_rot_curve)
+                    self.rot_ax.addItem(self.tool_rot_scatter)
 
         if not pem_file:
             return
@@ -775,7 +778,7 @@ class Derotator(QMainWindow, Ui_Derotator):
         channel_bounds = self.pem_file.get_channel_bounds()
 
         # Use all roll angles from all unique RAD tool measurements
-        rotation_data = raw_pem.data[(raw_pem.data.Component == "X") | (raw_pem.data.Component == "Y")]
+        rotation_data = raw_pem.get_xy_data()
         rotation_data = rotation_data.drop_duplicates(subset="RAD_ID")  # .dropna()
         rotation_data.Station = rotation_data.Station.astype(float)
         rotation_data.sort_values("Station", inplace=True)
@@ -859,10 +862,10 @@ def main():
     #     app.processEvents()
         # input()
 
-    # pem_files = pem_g.parse(r"C:\_Data\Trevali Peru Data\SAN-232-18\RAW\XY.PEM")
-    pem_files = pem_g.get_pems(folder="Rotation Testing", file="em10-10xy_0403.PEM")
+    # pem_files = pem_g.parse(r"G:\Data\2022\Eastern\Stony Rapids\GC22-01\RAW\xy_0330.dmp2")
+    # pem_files = pem_g.get_pems(folder="Rotation Testing", file="em10-10xy_0403.PEM")
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_BX-081 XY.PEM")
-    # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_MRC-067 XY.PEM")
+    pem_files = pem_g.get_pems(folder="Rotation Testing", file="_MRC-067 XY.PEM")
     # pem_files = pem_g.get_pems(folder="Rotation Testing", file="_MX-198 XY.PEM")
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY.PEM")
     # pem_files = pem_g.get_pems(folder="Raw Boreholes", file="XY (derotated).PEM")

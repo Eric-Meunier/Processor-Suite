@@ -986,7 +986,6 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
 
         @timeit
         def plot_lin(profile_data, axes):
-
             def plot_lines(df, ax):
                 """
                 Plot the lines on the pyqtgraph ax

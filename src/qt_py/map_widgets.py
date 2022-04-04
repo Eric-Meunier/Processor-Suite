@@ -26,7 +26,7 @@ from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 from scipy import interpolate as interp
 
-from src import app_data_dir
+from src import app_data_dir, profile, timeit
 from src.qt_py import get_icon, CustomProgressDialog, NonScientific, get_line_color, MapToolbar, ScreenshotWindow
 from src.gps.gps_editor import BoreholeGeometry
 from src.pem.pem_plotter import plot_line, plot_loop
@@ -458,6 +458,7 @@ class Map3DViewer(ScreenshotWindow):
         QTimer.singleShot(1000, lambda: self.statusBar().hide())
 
 
+# TODO Make ContourMapViewer a MainWindow and inherit ScreenshotWindow
 class ContourMapViewer(QWidget, Ui_ContourMap):
     """
     Widget to display contour maps. Filters the given PEMFiles to only include surface surveys. Either all files
@@ -605,12 +606,12 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
         # Averages any file not already averaged.
         if not all([pem_file.is_averaged() for pem_file in self.pem_files]):
             for pem_file in self.pem_files:
-                pem_file = pem_file.average()
+                pem_file.average()
 
         # Either all files must be split or all un-split
         if not all([pem_file.is_split() for pem_file in self.pem_files]):
             for pem_file in self.pem_files:
-                pem_file = pem_file.split()
+                pem_file.split()
 
         self.components = np.append(np.unique(np.hstack(np.array([file.get_components() for file in self.pem_files],
                                                         dtype=object))), 'TF')
@@ -634,6 +635,7 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
 
         self.draw_map(self.figure)
 
+    @timeit
     def get_contour_data(self):
         """
         Create contour data (GPS + channel reading) for all PEMFiles.
@@ -646,7 +648,7 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
                 if dlg.wasCanceled():
                     break
                 pem_data = pem_file.get_contour_data()
-                self.data = self.data.append(pem_data)
+                self.data = pd.concat([self.data, pem_data])
                 dlg += 1
 
     def toggle_grid(self):
@@ -657,6 +659,9 @@ class ContourMapViewer(QWidget, Ui_ContourMap):
             self.ax.grid(False)
         self.canvas.draw_idle()
 
+
+    @profile()
+    @timeit
     def draw_map(self, figure, channel=None):
         """
         Plot the map on the canvas
@@ -1324,20 +1329,20 @@ if __name__ == '__main__':
     pg.setConfigOption('foreground', "w" if darkmode else (53, 53, 53))
 
     getter = PEMGetter()
+    files = getter.get_pems(folder=r'Iscaycruz\Loop 1')
     # files = getter.get_pems(folder='Iscaycruz', subfolder='Loop 1')
-    # files = getter.get_pems(folder='Iscaycruz', subfolder='Loop 1')
-    files = getter.get_pems(folder=r'Final folders\PX20002-W01\Final', file='XY.PEM')
+    # files = getter.get_pems(folder=r'Final folders\PX20002-W01\Final', file='XY.PEM')
     # files = getter.get_pems(client="Iscaycruz", number=10, random=True)
 
-    m = TileMapViewer()
+    # m = TileMapViewer()
+    m = ContourMapViewer(darkmode=darkmode)
     # m = GPSViewer(darkmode=darkmode)
     # m = Map3DViewer(darkmode=darkmode)
     m.open(files)
     m.show()
+    app.processEvents()
     # m.save_img()
 
-    # cmap = ContourMapViewer(darkmode=darkmode)
-    # cmap.show()
     # app.processEvents()
     # cmap.open(files)
     # cmap.channel_list_edit.setText("1, 3, 100, 4")
