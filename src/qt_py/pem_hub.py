@@ -64,7 +64,6 @@ logger = logging.getLogger(__name__)
 # TODO Add quick view to unpacker? Or separate EXE entirely?
 # TODO create large PDF with summary of file, including 3d map.
 # TODO Hybrid PEMGeometry selection
-# TODO Plot some profile channels on plan map
 # TODO Log recently opened files.
 # TODO Could add std plot to the right of decay plots
 # TODO Add a Recent projects list, below project GPS, which will be a history of recently clicked folders.
@@ -80,7 +79,7 @@ logger = logging.getLogger(__name__)
 # TODO Auto add median current to PEM files in unpacker
 # TODO Add favorites for project folders
 # TODO (later) Add PEM files to SQL data base (instead of importing filed logs?)
-
+# TODO Add dead readings warning
 
 # Keep a list of widgets so they don't get garbage collected
 refs = []

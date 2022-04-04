@@ -442,6 +442,26 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         for item in self.station_cursors:
             item.show() if self.show_station_cursor_cbox.isChecked() else item.hide()
 
+    def toggle_profile_selection(self):
+        """Enable the edit buttons and set the profile selection text"""
+        if self.selected_profile_stations.any():
+            self.change_comp_profile_btn.setEnabled(True)
+            if not self.pem_file.is_borehole():
+                self.change_profile_suffix_btn.setEnabled(True)
+            self.shift_station_profile_btn.setEnabled(True)
+            self.flip_profile_btn.setEnabled(True)
+            self.remove_profile_btn.setEnabled(True)
+            self.profile_selection_text.show()
+            self.profile_selection_text.setText(
+                f"Station {self.selected_profile_stations.min()} - {self.selected_profile_stations.max()}")
+        else:
+            self.change_comp_profile_btn.setEnabled(False)
+            self.change_profile_suffix_btn.setEnabled(False)
+            self.shift_station_profile_btn.setEnabled(False)
+            self.flip_profile_btn.setEnabled(False)
+            self.remove_profile_btn.setEnabled(False)
+            self.profile_selection_text.hide()
+
     def save_settings(self):
         settings = QSettings("Crone Geophysics", "PEMPro")
         settings.beginGroup("pem_plot_editor")
@@ -1558,7 +1578,10 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         for ax in self.profile_axes:
             ax.vb.lr.hide()
 
+        # Reset any profile box selection
         self.profile_selection_text.setText("")
+        self.selected_profile_stations = np.array([])
+        self.toggle_profile_selection()
 
     def decay_mouse_moved(self, evt):
         """
@@ -1643,11 +1666,10 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         :param evt: MouseClick event
         """
         if self.active_ax_ind is not None:
-
+            self.current_component = ["X", "Y", "Z"][self.active_ax_ind]
             self.profile_tab_widget.setCurrentIndex(self.active_ax_ind)
 
             if self.nearest_decay:
-
                 self.line_selected = True
                 if keyboard.is_pressed('ctrl'):
                     self.selected_lines.append(self.nearest_decay)
@@ -1701,57 +1723,44 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         self.highlight_lines()
         self.get_selected_decay_data()
 
-    def box_select_profile_plot(self, range, start):
+    def box_select_profile_plot(self, box_range, start):
         """
         Signal slot, select stations from the profile plot when click-and-dragged
-        :param range: tuple, range of the linearRegionItem
+        :param box_range: tuple, range of the linearRegionItem
         :param start: bool, if box select has just been started
         """
         # Using the range given by the signal doesn't always work properly when the click begins off-plot.
         if start:
             # If it's the start of the select, use the hover station since it seems to work better
             hover_station = self.profile_axes[0].items[1].x()  # The station hover line
-            range = np.hstack([range, [hover_station]]).min(), np.hstack([range, [hover_station]]).max()
+            box_range = np.hstack([box_range, [hover_station]]).min(), np.hstack([box_range, [hover_station]]).max()
         else:
-            range = (min(range), max(range))
+            box_range = (min(box_range), max(box_range))
 
         # Force the range to use existing stations
-        x0 = self.find_nearest_station(range[0])
-        x1 = self.find_nearest_station(range[1])
+        x0 = self.find_nearest_station(box_range[0])
+        x1 = self.find_nearest_station(box_range[1])
         # logger.info(f"Selecting stations from {x0} to {x1}")
 
         comp_profile_axes = self.get_component_profile_axes(self.current_component)
         comp_stations = self.pem_file.data[self.pem_file.data.Component == self.current_component].Station
         comp_stations = np.array([convert_station(s) for s in comp_stations])
 
+        # Reset any previous selections
+        for ax in self.profile_axes:
+            if ax not in comp_profile_axes:
+                ax.vb.lr.hide()
+
         # Update the pg.LinearRegionItem for each axes of the current component
         for ax in comp_profile_axes:
             ax.vb.lr.setRegion((x0, x1))
             ax.vb.lr.show()
-
         # Find the stations that fall within the selection range
         self.selected_profile_stations = comp_stations[np.where((comp_stations <= x1) & (comp_stations >= x0))]
         # Copy so the selected component doesn't change when cycling components
         self.selected_profile_component = copy.deepcopy(self.current_component)
 
-        # Enable the edit buttons and set the profile selection text
-        if self.selected_profile_stations.any():
-            self.change_comp_profile_btn.setEnabled(True)
-            if not self.pem_file.is_borehole():
-                self.change_profile_suffix_btn.setEnabled(True)
-            self.shift_station_profile_btn.setEnabled(True)
-            self.flip_profile_btn.setEnabled(True)
-            self.remove_profile_btn.setEnabled(True)
-            self.profile_selection_text.show()
-            self.profile_selection_text.setText(
-                f"Station {self.selected_profile_stations.min()} - {self.selected_profile_stations.max()}")
-        else:
-            self.change_comp_profile_btn.setEnabled(False)
-            self.change_profile_suffix_btn.setEnabled(False)
-            self.shift_station_profile_btn.setEnabled(False)
-            self.flip_profile_btn.setEnabled(False)
-            self.remove_profile_btn.setEnabled(False)
-            self.profile_selection_text.hide()
+        self.toggle_profile_selection()
 
     def get_component_profile_axes(self, comp):
         """
@@ -1787,11 +1796,14 @@ class PEMPlotEditor(QMainWindow, Ui_PEMPlotEditor):
         Return the corresponding data of the currently selected stations from the profile plots
         :return: pandas DataFrame
         """
-        df = self.pem_file.data
-        filt = ((df.Component == self.selected_profile_component) &
-                (df.cStation >= self.selected_profile_stations.min()) &
-                (df.cStation <= self.selected_profile_stations.max()))
-        data = self.pem_file.data[filt]
+        if self.selected_profile_stations.any():
+            df = self.pem_file.data
+            filt = ((df.Component == self.selected_profile_component) &
+                    (df.cStation >= self.selected_profile_stations.min()) &
+                    (df.cStation <= self.selected_profile_stations.max()))
+            data = self.pem_file.data[filt]
+        else:
+            data = pd.DataFrame()
         return data
 
     def get_active_component(self):
