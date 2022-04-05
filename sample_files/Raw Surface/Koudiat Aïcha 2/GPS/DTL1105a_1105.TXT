@@ -1,7 +1,0 @@
-Device: GIS Datalogger on Windows Mobile
-
-Receive operation Completed.
-1 File(s) Successfully Transferred.
-Details are as follows:
-
-1:28:38 PM 11/5/2021	Received File C:\Scott\2021\MangagemGroup\Kokiak Aicha\Nov5\GPS\KALOOP2.SSF from Default. Completed.	
